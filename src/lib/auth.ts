@@ -1,0 +1,232 @@
+import { getServerSession } from 'next-auth/next'
+import { redirect } from 'next/navigation'
+import { NextAuthOptions } from 'next-auth'
+import { PrismaAdapter } from '@next-auth/prisma-adapter'
+import CredentialsProvider from 'next-auth/providers/credentials'
+import GoogleProvider from 'next-auth/providers/google'
+import GitHubProvider from 'next-auth/providers/github'
+import { prisma } from '@/lib/db'
+import { verifyPassword } from '@/lib/db/users'
+import { Plan } from '@prisma/client'
+import { getSubscriptionInfo, isSubscriptionActive } from '@/lib/subscription'
+
+export const authOptions: NextAuthOptions = {
+  // Temporarily disable Prisma adapter for testing
+  // adapter: PrismaAdapter(prisma),
+  providers: [
+    CredentialsProvider({
+      name: 'credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' }
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null
+        }
+
+        try {
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              password: true,
+              plan: true,
+              creditsUsed: true,
+              creditsLimit: true,
+              subscriptionStatus: true,
+              subscriptionId: true,
+              asaasCustomerId: true
+            }
+          })
+
+          if (!user || !user.password) {
+            return null
+          }
+
+          const isValid = await verifyPassword(credentials.password, user.password)
+          if (!isValid) {
+            return null
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name || undefined,
+            plan: user.plan,
+            creditsUsed: user.creditsUsed,
+            creditsLimit: user.creditsLimit,
+            subscriptionStatus: user.subscriptionStatus,
+            subscriptionId: user.subscriptionId,
+            asaasCustomerId: user.asaasCustomerId
+          }
+        } catch (error) {
+          console.error('Database connection error during authentication:', error)
+          return null
+        }
+      }
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+    GitHubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    })
+  ],
+  callbacks: {
+    async jwt({ token, user, account, trigger, session }) {
+      if (user) {
+        token.plan = user.plan || 'STARTER'
+        token.creditsUsed = user.creditsUsed || 0
+        token.creditsLimit = user.creditsLimit || 100
+        // Load Asaas billing fields from user
+        // @ts-ignore dynamic fields on token
+        token.asaasCustomerId = (user as any).asaasCustomerId || null
+        // @ts-ignore
+        token.subscriptionId = (user as any).subscriptionId || null
+        // @ts-ignore
+        token.subscriptionStatus = (user as any).subscriptionStatus || null
+        // @ts-ignore - Load subscription state from user
+        token.hasActiveSubscription = (user as any).hasActiveSubscription || false
+        // @ts-ignore - Load development mode from user
+        token.isInDevelopmentMode = (user as any).isInDevelopmentMode || false
+
+        // Debug log
+        console.log('🔐 JWT Callback - User Login:', {
+          plan: token.plan,
+          subscriptionStatus: token.subscriptionStatus,
+          subscriptionId: token.subscriptionId
+        })
+      }
+
+      // Handle session updates - refetch user data from database
+      if (trigger === 'update') {
+        try {
+          const userId = token.sub
+          if (userId) {
+            const updatedUser = await prisma.user.findUnique({
+              where: { id: userId },
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                plan: true,
+                creditsUsed: true,
+                creditsLimit: true,
+                asaasCustomerId: true,
+                subscriptionId: true,
+                subscriptionStatus: true
+              }
+            })
+
+            if (updatedUser) {
+              token.name = updatedUser.name
+              token.plan = updatedUser.plan
+              token.creditsUsed = updatedUser.creditsUsed
+              token.creditsLimit = updatedUser.creditsLimit
+              // @ts-ignore
+              token.asaasCustomerId = updatedUser.asaasCustomerId || null
+              // @ts-ignore
+              token.subscriptionId = updatedUser.subscriptionId || null
+              // @ts-ignore
+              token.subscriptionStatus = updatedUser.subscriptionStatus || null
+            }
+          }
+        } catch (error) {
+          console.error('Error updating session from database:', error)
+        }
+      }
+
+      return token
+    },
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.sub as string
+        session.user.plan = token.plan as Plan
+        session.user.creditsUsed = token.creditsUsed as number
+        session.user.creditsLimit = token.creditsLimit as number
+        // @ts-ignore surfaced billing fields from Asaas
+        session.user.asaasCustomerId = (token as any).asaasCustomerId || null
+        // @ts-ignore
+        session.user.subscriptionId = (token as any).subscriptionId || null
+        // @ts-ignore
+        session.user.subscriptionStatus = (token as any).subscriptionStatus || null
+        // @ts-ignore enhanced subscription fields
+        session.user.hasActiveSubscription = (token as any).hasActiveSubscription || false
+        // @ts-ignore
+        session.user.isInDevelopmentMode = (token as any).isInDevelopmentMode || false
+
+        // Debug log
+        console.log('📋 Session Callback:', {
+          plan: session.user.plan,
+          subscriptionStatus: session.user.subscriptionStatus,
+          hasActiveSubscription: session.user.hasActiveSubscription
+        })
+      }
+      return session
+    },
+    async signIn({ user, account, profile }) {
+      // Skip database checks during testing to avoid connection issues
+      return true
+    }
+  },
+  session: {
+    strategy: 'jwt'
+  },
+  pages: {
+    signIn: '/auth/signin'
+  }
+}
+
+export async function getSession() {
+  return await getServerSession(authOptions)
+}
+
+export async function getCurrentUser() {
+  const session = await getSession()
+  return session?.user
+}
+
+export async function requireAuth() {
+  const session = await getSession()
+  
+  if (!session || !session.user?.id) {
+    redirect('/auth/signin')
+  }
+  
+  return session
+}
+
+// Separate function for API routes that returns JSON error instead of redirect
+export async function requireAuthAPI() {
+  const session = await getSession()
+  
+  if (!session || !session.user?.id) {
+    throw new Error('Unauthorized')
+  }
+  
+  return session
+}
+
+export async function requirePlan(requiredPlan: 'PREMIUM' | 'GOLD') {
+  const session = await requireAuth()
+  
+  const planHierarchy = {
+    'STARTER': 0,
+    'PREMIUM': 1,
+    'GOLD': 2
+  }
+  
+  const userPlanLevel = planHierarchy[session.user.plan]
+  const requiredPlanLevel = planHierarchy[requiredPlan]
+  
+  if (userPlanLevel < requiredPlanLevel) {
+    redirect('/billing/upgrade')
+  }
+  
+  return session
+}
