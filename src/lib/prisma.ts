@@ -58,10 +58,6 @@ export const prisma =
         url: getDatabaseUrl(),
       },
     },
-    // CRITICAL: Disable prepared statements in serverless to prevent conflicts
-    // This trades slight performance for stability in Vercel/serverless environments
-    // https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections/pgbouncer
-    adapter: undefined,
   })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
