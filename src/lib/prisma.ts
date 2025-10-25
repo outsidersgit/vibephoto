@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 
+// Force serverless reconnection on cold starts
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
