@@ -40,24 +40,25 @@ export function isSubscriptionActive(status: string | null): boolean {
  * Get comprehensive subscription information for a user
  */
 export async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      plan: true,
-      subscriptionId: true,
-      subscriptionStatus: true
-    }
-  })
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        plan: true,
+        subscriptionId: true,
+        subscriptionStatus: true
+      }
+    })
 
-  if (!user) {
-    return {
-      hasActiveSubscription: false,
-      subscriptionStatus: null,
-      subscriptionId: null,
-      plan: 'STARTER',
-      isInDevelopmentMode: isDevelopmentMode()
+    if (!user) {
+      return {
+        hasActiveSubscription: false,
+        subscriptionStatus: null,
+        subscriptionId: null,
+        plan: 'STARTER',
+        isInDevelopmentMode: isDevelopmentMode()
+      }
     }
-  }
 
   // Development mode: simulate active subscription
   if (isDevelopmentMode()) {
@@ -70,17 +71,28 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
     }
   }
 
-  // Production: ONLY check subscriptionStatus field
-  // ALL plans (STARTER, PREMIUM, GOLD) are PAID
-  // Access is controlled ONLY by subscriptionStatus === 'ACTIVE'
-  const hasActiveSubscription = user.subscriptionStatus === 'ACTIVE'
+    // Production: ONLY check subscriptionStatus field
+    // ALL plans (STARTER, PREMIUM, GOLD) are PAID
+    // Access is controlled ONLY by subscriptionStatus === 'ACTIVE'
+    const hasActiveSubscription = user.subscriptionStatus === 'ACTIVE'
 
-  return {
-    hasActiveSubscription,
-    subscriptionStatus: user.subscriptionStatus === 'ACTIVE' ? 'active' : 'inactive',
-    subscriptionId: user.subscriptionId,
-    plan: user.plan || 'STARTER', // Default to STARTER for display purposes if null
-    isInDevelopmentMode: false
+    return {
+      hasActiveSubscription,
+      subscriptionStatus: user.subscriptionStatus === 'ACTIVE' ? 'active' : 'inactive',
+      subscriptionId: user.subscriptionId,
+      plan: user.plan || 'STARTER', // Default to STARTER for display purposes if null
+      isInDevelopmentMode: false
+    }
+  } catch (error) {
+    console.error('Error fetching subscription info:', error)
+    // Return safe default on database error
+    return {
+      hasActiveSubscription: false,
+      subscriptionStatus: null,
+      subscriptionId: null,
+      plan: 'STARTER',
+      isInDevelopmentMode: isDevelopmentMode()
+    }
   }
 }
 
