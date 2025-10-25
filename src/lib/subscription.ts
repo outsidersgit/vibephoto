@@ -41,6 +41,8 @@ export function isSubscriptionActive(status: string | null): boolean {
  */
 export async function getSubscriptionInfo(userId: string): Promise<SubscriptionInfo> {
   try {
+    console.log('[Subscription] Fetching subscription info for user:', userId)
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -51,6 +53,7 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
     })
 
     if (!user) {
+      console.warn('[Subscription] User not found:', userId)
       return {
         hasActiveSubscription: false,
         subscriptionStatus: null,
@@ -60,8 +63,16 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
       }
     }
 
+    console.log('[Subscription] User data:', {
+      userId,
+      plan: user.plan,
+      subscriptionStatus: user.subscriptionStatus,
+      hasSubscriptionId: !!user.subscriptionId
+    })
+
   // Development mode: simulate active subscription
   if (isDevelopmentMode()) {
+    console.log('[Subscription] Development mode: simulating active subscription')
     return {
       hasActiveSubscription: true,
       subscriptionStatus: 'active',
@@ -76,6 +87,12 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
     // Access is controlled ONLY by subscriptionStatus === 'ACTIVE'
     const hasActiveSubscription = user.subscriptionStatus === 'ACTIVE'
 
+    console.log('[Subscription] Subscription check result:', {
+      userId,
+      hasActiveSubscription,
+      subscriptionStatus: user.subscriptionStatus
+    })
+
     return {
       hasActiveSubscription,
       subscriptionStatus: user.subscriptionStatus === 'ACTIVE' ? 'active' : 'inactive',
@@ -84,7 +101,12 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
       isInDevelopmentMode: false
     }
   } catch (error) {
-    console.error('Error fetching subscription info:', error)
+    console.error('[Subscription] Error fetching subscription info:', {
+      userId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    })
+
     // Return safe default on database error
     return {
       hasActiveSubscription: false,
