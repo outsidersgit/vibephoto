@@ -19,24 +19,29 @@ const getDatabaseUrl = () => {
 
   // ALWAYS apply in production/serverless to prevent prepared statement errors
   if (isServerless || process.env.NODE_ENV !== 'production') {
-    const url = new URL(baseUrl)
+    try {
+      const url = new URL(baseUrl)
 
-    // Only add params if not already using a pooler (like Neon, Supabase, etc)
-    if (!baseUrl.includes('pooler') && !baseUrl.includes('pgbouncer')) {
-      // Clear any existing parameters that might conflict
-      url.search = ''
+      // Only add params if not already using a pooler (like Neon, Supabase, etc)
+      if (!baseUrl.includes('pooler') && !baseUrl.includes('pgbouncer')) {
+        // Clear ALL existing parameters to avoid conflicts
+        url.search = ''
 
-      // Critical: pgbouncer=true prevents prepared statement conflicts in serverless
-      url.searchParams.set('pgbouncer', 'true')
-      url.searchParams.set('connection_limit', '1')
-      url.searchParams.set('pool_timeout', '0')
+        // Critical: pgbouncer=true prevents prepared statement conflicts in serverless
+        url.searchParams.set('pgbouncer', 'true')
+        url.searchParams.set('connection_limit', '1')
+        url.searchParams.set('pool_timeout', '0')
 
-      // SSL mode
-      if (!url.searchParams.has('sslmode')) {
+        // Add sslmode if database requires it
         url.searchParams.set('sslmode', 'require')
-      }
 
-      return url.toString()
+        const finalUrl = url.toString()
+        console.log('[Prisma] Using pgbouncer mode for serverless:', finalUrl.replace(/:[^:@]+@/, ':***@'))
+        return finalUrl
+      }
+    } catch (error) {
+      console.error('[Prisma] Error parsing DATABASE_URL:', error)
+      return baseUrl
     }
   }
 
@@ -53,6 +58,17 @@ export const prisma =
         url: getDatabaseUrl(),
       },
     },
+    // CRITICAL: Disable prepared statements in serverless to prevent conflicts
+    // This trades slight performance for stability in Vercel/serverless environments
+    // https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections/pgbouncer
+    adapter: undefined,
   })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+
+// Force disconnect on module reload to prevent stale connections
+if (typeof window === 'undefined') {
+  process.on('beforeExit', async () => {
+    await prisma.$disconnect()
+  })
+}
