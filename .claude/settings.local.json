@@ -9,7 +9,9 @@
       "Bash(npx prisma generate:*)",
       "Bash(npx tsc:*)",
       "Bash(taskkill:*)",
-      "Bash(npx prisma db push:*)"
+      "Bash(npx prisma db push:*)",
+      "Bash(curl:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []
