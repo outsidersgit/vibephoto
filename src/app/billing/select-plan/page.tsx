@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -9,13 +9,13 @@ import { Badge } from '@/components/ui/badge'
 import { Check, Crown, Zap, Users, ArrowRight, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
-export default function SelectPlanPage() {
+function SelectPlanPageContent() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [selectedPlan, setSelectedPlan] = useState<'STARTER' | 'PREMIUM' | 'GOLD'>('STARTER')
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
-  
+
   // Check if this is a required plan selection (user tried to access protected feature)
   const isRequired = searchParams.get('required') === 'true'
   const isNewUser = searchParams.get('newuser') === 'true'
@@ -280,5 +280,20 @@ export default function SelectPlanPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SelectPlanPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    }>
+      <SelectPlanPageContent />
+    </Suspense>
   )
 }
