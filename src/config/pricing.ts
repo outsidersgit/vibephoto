@@ -35,8 +35,8 @@ export const PLANS: Plan[] = [
   {
     id: 'STARTER',
     name: 'Starter',
-    monthlyPrice: 89,
-    annualPrice: 708,
+    monthlyPrice: 5,
+    annualPrice: 10,
     monthlyEquivalent: 59,
     description: 'Perfeito para começar sua jornada com IA',
     features: [

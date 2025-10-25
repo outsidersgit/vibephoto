@@ -41,8 +41,8 @@ function SelectPlanPageContent() {
     {
       id: 'STARTER',
       name: 'Starter',
-      monthlyPrice: 5,
-      annualPrice: 10,
+      monthlyPrice: 89,
+      annualPrice: 708,
       monthlyEquivalent: 59,
       description: 'Perfeito para começar',
       features: [
