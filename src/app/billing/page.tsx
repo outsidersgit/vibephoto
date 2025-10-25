@@ -2,6 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
+import { Suspense, useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,7 +16,6 @@ import {
   CreditCard
 } from 'lucide-react'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -35,8 +35,7 @@ import { UpdateCardModal } from '@/components/payments/update-card-modal'
 const plans: Plan[] = PLANS
 const creditPackages: CreditPackage[] = CREDIT_PACKAGES
 
-
-export default function BillingPage() {
+function BillingPageContent() {
   const { data: session, status, update: updateSession } = useSession()
   const searchParams = useSearchParams()
   const tabFromUrl = searchParams?.get('tab')
@@ -831,5 +830,20 @@ export default function BillingPage() {
         />
       )}
     </div>
+  )
+}
+
+export default function BillingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#667EEA] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    }>
+      <BillingPageContent />
+    </Suspense>
   )
 }
