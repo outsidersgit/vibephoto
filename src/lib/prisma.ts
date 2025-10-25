@@ -10,11 +10,15 @@ const getDatabaseUrl = () => {
   const baseUrl = process.env.DATABASE_URL
   if (!baseUrl) throw new Error('DATABASE_URL is not defined')
 
-  // Check if running in serverless environment (Vercel)
-  const isServerless = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME
+  // Check if running in serverless environment (Vercel, AWS Lambda, etc)
+  const isServerless = !!(
+    process.env.VERCEL === '1' ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.VERCEL_ENV // Additional Vercel check
+  )
 
-  // In serverless OR development, configure for connection pooling
-  if (isServerless || process.env.NODE_ENV === 'development') {
+  // ALWAYS apply in production/serverless to prevent prepared statement errors
+  if (isServerless || process.env.NODE_ENV !== 'production') {
     const url = new URL(baseUrl)
 
     // Only add params if not already using a pooler (like Neon, Supabase, etc)
