@@ -4,25 +4,35 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// Configure database URL with definitive solution for development
+// Configure database URL for serverless environments (Vercel)
 const getDatabaseUrl = () => {
   const baseUrl = process.env.DATABASE_URL
   if (!baseUrl) throw new Error('DATABASE_URL is not defined')
 
-  // In development, use session mode to avoid prepared statement conflicts entirely
-  if (process.env.NODE_ENV === 'development') {
+  // Check if running in serverless environment (Vercel)
+  const isServerless = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME
+
+  // In serverless OR development, configure for connection pooling
+  if (isServerless || process.env.NODE_ENV === 'development') {
     const url = new URL(baseUrl)
 
-    // Clear any existing parameters that might conflict
-    url.search = ''
+    // Only add params if not already using a pooler (like Neon, Supabase, etc)
+    if (!baseUrl.includes('pooler') && !baseUrl.includes('pgbouncer')) {
+      // Clear any existing parameters that might conflict
+      url.search = ''
 
-    // Use transaction mode instead of session mode for better compatibility
-    url.searchParams.set('pgbouncer', 'true')
-    url.searchParams.set('connection_limit', '1')
-    url.searchParams.set('pool_timeout', '0') // Disable connection pooling
-    url.searchParams.set('sslmode', 'require')
+      // Critical: pgbouncer=true prevents prepared statement conflicts in serverless
+      url.searchParams.set('pgbouncer', 'true')
+      url.searchParams.set('connection_limit', '1')
+      url.searchParams.set('pool_timeout', '0')
 
-    return url.toString()
+      // SSL mode
+      if (!url.searchParams.has('sslmode')) {
+        url.searchParams.set('sslmode', 'require')
+      }
+
+      return url.toString()
+    }
   }
 
   return baseUrl
