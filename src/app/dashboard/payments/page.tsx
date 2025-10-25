@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth/auth-options'
+import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { PaymentDashboard } from '@/components/payments/payment-dashboard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

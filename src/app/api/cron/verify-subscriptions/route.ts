@@ -5,23 +5,6 @@ import { prisma } from '@/lib/db'
 import { updateSubscriptionStatus } from '@/lib/db/subscriptions'
 import { Plan } from '@prisma/client'
 
-/**
- * Subscription Verification Cron Job
- * Runs every 6 hours to verify subscription status with Asaas
- *
- * Checks:
- * 1. OVERDUE payments that haven't been updated
- * 2. Annual subscriptions that expired after 12 months
- * 3. Subscriptions marked ACTIVE in DB but CANCELLED/EXPIRED in Asaas
- *
- * Configure in vercel.json:
- * {
- *   "crons": [{
- *     "path": "/api/cron/verify-subscriptions",
- *     "schedule": "0 */6 * * *"
- *   }]
- * }
- */
 export async function GET(request: NextRequest) {
   try {
     // Verify this is a legitimate cron request
