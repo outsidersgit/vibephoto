@@ -6,12 +6,17 @@ import { getToken } from 'next-auth/jwt'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Skip middleware for static files and API auth routes
+  // Skip middleware for static files, API auth routes, and public pages
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/auth') ||
     pathname.includes('.') ||
-    pathname === '/favicon.ico'
+    pathname === '/favicon.ico' ||
+    pathname === '/' ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/pricing') ||
+    pathname.startsWith('/legal') ||
+    pathname.startsWith('/support')
   ) {
     return NextResponse.next()
   }
