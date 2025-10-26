@@ -64,7 +64,9 @@ export function PixPayment({
     return () => clearInterval(timer)
   }, [timeRemaining, onPaymentExpired])
 
-  // Poll payment status
+  // Payment status check - Webhook-based with polling as backup
+  // In production, Asaas webhook will update the payment status
+  // Polling only used as backup in case webhook fails (every 30s instead of 5s)
   useEffect(() => {
     if (!paymentId || paymentStatus !== 'waiting') return
 
@@ -87,13 +89,17 @@ export function PixPayment({
       }
     }
 
-    // Poll every 5 seconds
-    const pollInterval = setInterval(pollPayment, 5000)
-    
-    // Initial poll
-    pollPayment()
+    // Backup polling: only check every 30 seconds (webhook handles real-time updates)
+    // This is just a fallback in case webhook delivery fails
+    const pollInterval = setInterval(pollPayment, 30000) // Changed from 5s to 30s
 
-    return () => clearInterval(pollInterval)
+    // Initial check after 10 seconds (give webhook time to arrive first)
+    const initialCheck = setTimeout(pollPayment, 10000)
+
+    return () => {
+      clearInterval(pollInterval)
+      clearTimeout(initialCheck)
+    }
   }, [paymentId, paymentStatus, onPaymentConfirmed, isPolling])
 
   const handleCopyPayload = async () => {

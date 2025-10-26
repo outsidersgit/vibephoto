@@ -1,15 +1,14 @@
 import { asaas } from '@/lib/payments/asaas'
 import { prisma } from '@/lib/prisma'
 import { getCreditPackageById, getPlanById } from '@/config/pricing'
+import { getAsaasEnvironment, getAsaasCheckoutUrl, getWebhookBaseUrl } from '@/lib/utils/environment'
 
-// URLs de callback para Asaas (não aceita localhost)
-const CALLBACK_BASE = 'https://example.com/asaas/checkout'
+// URLs de callback para Asaas
+const CALLBACK_BASE = getWebhookBaseUrl() || 'https://vibephoto-delta.vercel.app'
 
-// URL base do Asaas baseada no ambiente
-const ASAAS_ENVIRONMENT = process.env.ASAAS_ENVIRONMENT || 'sandbox'
-const ASAAS_CHECKOUT_BASE = ASAAS_ENVIRONMENT === 'production'
-  ? 'https://www.asaas.com'
-  : 'https://sandbox.asaas.com'
+// URL base do Asaas baseada no ambiente (com validação automática)
+const ASAAS_ENVIRONMENT = getAsaasEnvironment()
+const ASAAS_CHECKOUT_BASE = getAsaasCheckoutUrl()
 
 /**
  * Buscar ou criar cliente no Asaas

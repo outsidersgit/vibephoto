@@ -31,6 +31,23 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔔 Astria webhook received')
 
+    // Security: Validate webhook secret
+    const authHeader = request.headers.get('authorization') || request.headers.get('x-astria-secret')
+    const webhookSecret = process.env.ASTRIA_WEBHOOK_SECRET
+
+    if (webhookSecret) {
+      if (!authHeader || authHeader !== webhookSecret) {
+        console.error('❌ Astria webhook authentication failed')
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+      console.log('✅ Astria webhook authenticated')
+    } else {
+      console.warn('⚠️ ASTRIA_WEBHOOK_SECRET not configured - webhook is INSECURE!')
+    }
+
     // Parse the webhook payload
     const payload: AstriaWebhookPayload = await request.json()
     console.log('📋 Astria webhook payload:', {
@@ -38,7 +55,9 @@ export async function POST(request: NextRequest) {
       status: payload.status,
       object: payload.object,
       hasImages: !!payload.images?.length,
-      errorMessage: payload.error_message
+      errorMessage: payload.error_message,
+      environment: process.env.NODE_ENV,
+      timestamp: new Date().toISOString()
     })
 
     // Handle different object types

@@ -236,26 +236,36 @@ export async function POST(request: NextRequest) {
     console.log(`🔄 [GENERATE_DEBUG] Current provider: ${currentProvider}`)
     console.log(`🔄 [GENERATE_DEBUG] Generation response ID: ${generationResponse.id}`)
 
+    // Import environment helpers
+    const { shouldUseWebhooks, shouldUsePolling } = await import('@/lib/utils/environment')
+
     // Check if we have a valid webhook URL (requires HTTPS in production)
     const hasValidWebhook = generationRequest.webhookUrl !== undefined && (
       process.env.NODE_ENV === 'development' ||
       generationRequest.webhookUrl.startsWith('https://')
     )
 
-    const shouldPoll = !hasValidWebhook || process.env.NODE_ENV === 'development'
+    // Determine if polling is needed
+    // Priority: webhook-first in production, polling in development or when webhook fails
+    const webhooksEnabled = shouldUseWebhooks()
+    const pollingEnabled = shouldUsePolling()
+    const shouldPoll = pollingEnabled || !hasValidWebhook || currentProvider === 'astria'
 
     console.log(`🔍 [GENERATE_DECISION] Generation flow decision:`, {
       currentProvider,
       hasWebhookUrl: !!generationRequest.webhookUrl,
       webhookUrl: generationRequest.webhookUrl,
       hasValidWebhook,
+      webhooksEnabled,
+      pollingEnabled,
       shouldPoll,
       environment: process.env.NODE_ENV,
       predictionId: generationResponse.id,
-      forcePolling: currentProvider === 'astria' || currentProvider === 'hybrid'
+      strategy: webhooksEnabled && hasValidWebhook ? 'webhook-first' : 'polling-only'
     })
 
-    // Always use polling in development, or when webhook is not available
+    // Use polling in development, when webhook is not available, or for Astria
+    // In production with webhooks, polling acts as backup (starts after 60s timeout)
     if (shouldPoll && generationResponse.id) {
       console.log(`🔄 [GENERATE_POLLING] Starting polling for prediction ${generationResponse.id}`)
       console.log(`📊 [GENERATE_POLLING] Config: webhook=${hasValidWebhook ? 'yes' : 'no'}, provider=${currentProvider}, generationId=${generation.id}`)
