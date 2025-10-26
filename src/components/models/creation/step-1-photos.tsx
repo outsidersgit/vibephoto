@@ -14,9 +14,10 @@ interface ModelCreationStep1Props {
     facePhotos: File[]
   }
   setModelData: (data: any) => void
+  modelCostInfo?: any
 }
 
-export function ModelCreationStep1({ modelData, setModelData }: ModelCreationStep1Props) {
+export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: ModelCreationStep1Props) {
   const [dragActive, setDragActive] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
 
@@ -154,19 +155,40 @@ export function ModelCreationStep1({ modelData, setModelData }: ModelCreationSte
 
   return (
     <div className="space-y-6">
-      {/* Credit Cost Warning */}
-      <Card className="border-purple-200 bg-purple-50">
-        <CardContent className="p-4">
-          <div className="flex-1">
-            <h4 className="text-sm font-semibold mb-1 text-purple-900">
-              ⚠️ Atenção - Modelo Adicional
-            </h4>
-            <p className="text-xs text-purple-700">
-              Este modelo custará <strong>500 créditos</strong> para treinar. Certifique-se de ter créditos suficientes antes de continuar.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Credit Cost Warning - Only show if NOT first free model */}
+      {modelCostInfo && modelCostInfo.nextModelCost > 0 && (
+        <Card className="border-purple-200 bg-purple-50">
+          <CardContent className="p-4">
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold mb-1 text-purple-900">
+                ⚠️ Atenção - Modelo Adicional
+              </h4>
+              <p className="text-xs text-purple-700">
+                Este modelo custará <strong>500 créditos</strong> para treinar. Certifique-se de ter créditos suficientes antes de continuar.
+              </p>
+              <p className="text-xs text-purple-600 mt-2">
+                Você possui <strong>{modelCostInfo.creditsAvailable} créditos</strong> disponíveis.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Free Model Message - Show if first free model */}
+      {modelCostInfo && modelCostInfo.nextModelCost === 0 && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="p-4">
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold mb-1 text-green-900">
+                ✅ Primeiro Modelo Gratuito
+              </h4>
+              <p className="text-xs text-green-700">
+                Este é seu primeiro modelo e está <strong>incluso na sua assinatura</strong>. Nenhum crédito será cobrado!
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tips for Better Results */}
       <Card className="bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border border-slate-600/30 shadow-2xl">

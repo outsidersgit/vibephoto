@@ -21,6 +21,7 @@ export default function CreateModelPage() {
   const { addToast } = useToast()
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [modelCostInfo, setModelCostInfo] = useState<any>(null)
 
   const [modelData, setModelData] = useState({
     name: '',
@@ -29,8 +30,24 @@ export default function CreateModelPage() {
     halfBodyPhotos: [] as File[],
     fullBodyPhotos: [] as File[]
   })
-  
+
   const [consentAccepted, setConsentAccepted] = useState(false)
+
+  // Fetch model cost info on mount
+  useEffect(() => {
+    const fetchModelCostInfo = async () => {
+      try {
+        const response = await fetch('/api/models/cost-info')
+        if (response.ok) {
+          const data = await response.json()
+          setModelCostInfo(data)
+        }
+      } catch (error) {
+        console.error('Error fetching model cost info:', error)
+      }
+    }
+    fetchModelCostInfo()
+  }, [])
 
   const steps = [
     {
@@ -229,6 +246,7 @@ export default function CreateModelPage() {
             <ModelCreationStep1
               modelData={modelData}
               setModelData={setModelData}
+              modelCostInfo={modelCostInfo}
             />
           )}
 
