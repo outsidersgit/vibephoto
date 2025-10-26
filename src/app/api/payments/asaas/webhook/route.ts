@@ -51,13 +51,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or update webhook event record
+    // Note: asaasCustomerId field removed temporarily due to missing column in production DB
+    // TODO: Add migration to create asaasCustomerId column, then restore this field
     const webhookEvent = await prisma.webhookEvent.upsert({
       where: { idempotencyKey },
       create: {
         event,
         asaasPaymentId: payment?.id,
         asaasSubscriptionId: subscription?.id,
-        asaasCustomerId: payment?.customer || subscription?.customer,
+        // asaasCustomerId: payment?.customer || subscription?.customer, // Temporarily disabled
         idempotencyKey,
         processed: false,
         rawPayload: body
