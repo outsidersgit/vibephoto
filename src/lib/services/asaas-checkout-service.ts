@@ -257,13 +257,8 @@ export async function createSubscriptionCheckout(
   // Calcular valor baseado no ciclo
   const value = cycle === 'YEARLY' ? plan.annualPrice : plan.monthlyPrice
 
-  // Calcular próxima data de cobrança
+  // Data de cobrança IMEDIATA (hoje) - primeira cobrança acontece assim que checkout for pago
   const nextDueDate = new Date()
-  if (cycle === 'YEARLY') {
-    nextDueDate.setFullYear(nextDueDate.getFullYear() + 1)
-  } else {
-    nextDueDate.setMonth(nextDueDate.getMonth() + 1)
-  }
 
   // Preparar dados do checkout
   const checkoutData: any = {
@@ -280,7 +275,7 @@ export async function createSubscriptionCheckout(
     ],
     subscription: {
       cycle,
-      nextDueDate: nextDueDate.toISOString().split('T')[0]
+      nextDueDate: nextDueDate.toISOString().split('T')[0] // Cobrança imediata no dia do pagamento
     },
     callback: {
       successUrl: `${CALLBACK_BASE}/success`,
