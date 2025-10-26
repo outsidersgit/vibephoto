@@ -145,12 +145,12 @@ export class CreditManager {
           throw new Error('User not found')
         }
 
-        // VALIDAÇÃO: Créditos de planos anuais expirados não podem ser usados
+        // VALIDAÇÃO: Créditos do plano (mensais ou anuais) expirados não podem ser usados
         const now = new Date()
         let planCreditsAvailable = 0
 
-        if (user.billingCycle === 'YEARLY' && user.creditsExpiresAt && user.creditsExpiresAt < now) {
-          // Créditos do plano anual expiraram - zera créditos disponíveis do plano
+        if (user.creditsExpiresAt && user.creditsExpiresAt < now) {
+          // Créditos do plano expiraram (tanto MONTHLY quanto YEARLY) - zera créditos disponíveis do plano
           planCreditsAvailable = 0
         } else {
           // Calcula créditos disponíveis do PLANO (prioridade 1)

@@ -21,10 +21,12 @@ export async function createSubscription(data: {
     ? (data.billingCycle === 'YEARLY' ? creditsLimit * 12 : creditsLimit)
     : 0 // Se pagamento não confirmado, créditos = 0
 
-  // Planos ANUAIS: créditos expiram em 1 ano
+  // CRÉDITOS DO PLANO EXPIRAM:
+  // - Planos MONTHLY: 1 mês após início (não acumulam para próximo ciclo)
+  // - Planos YEARLY: 1 ano após início (não acumulam)
   const creditsExpiresAt = data.billingCycle === 'YEARLY'
     ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000) // + 1 ano
-    : null // Planos mensais não têm expiração (renovam todo mês)
+    : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // + 1 mês (30 dias)
 
   return prisma.user.update({
     where: { id: data.userId },
@@ -79,11 +81,12 @@ export async function updateSubscriptionStatus(
     // Planos ANUAIS recebem créditos multiplicados por 12 (todos de uma vez)
     const totalCredits = currentBillingCycle === 'YEARLY' ? creditsLimit * 12 : creditsLimit
 
-    // Planos ANUAIS: créditos expiram em 1 ano
-    // IMPORTANTE: Se for renovação anual, créditos anteriores NÃO acumulam
+    // CRÉDITOS DO PLANO EXPIRAM:
+    // - Planos MONTHLY: 1 mês após início/renovação (não acumulam para próximo ciclo)
+    // - Planos YEARLY: 1 ano após início/renovação (não acumulam)
     const creditsExpiresAt = currentBillingCycle === 'YEARLY'
       ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000) // + 1 ano
-      : null
+      : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // + 1 mês (30 dias)
 
     updateData.plan = plan
     updateData.creditsLimit = totalCredits
