@@ -623,30 +623,29 @@ model WebhookEvent {
   event               String // PAYMENT_CONFIRMED, SUBSCRIPTION_EXPIRED, etc
   asaasPaymentId      String? // Payment ID from Asaas
   asaasSubscriptionId String? // Subscription ID from Asaas
+  asaasCustomerId     String? // Customer ID from Asaas
 
   // Processing status
-  status       String  @default("PENDING") // PENDING, PROCESSED, FAILED
-  processedAt  DateTime?
-  errorMessage String?
-  retryCount   Int     @default(0)
-  maxRetries   Int     @default(3)
+  processed       Boolean @default(false)
+  processingError String? // Error message if processing failed
+  retryCount      Int     @default(0)
+
+  // Idempotency
+  idempotencyKey String? @unique // To prevent duplicate processing
 
   // Raw data
-  rawData Json @db.JsonB // Full webhook payload
-
-  // Security and tracking
-  signature String? // Webhook signature for validation
-  userAgent String? // User agent from webhook request
-  ipAddress String? // IP address from webhook request
+  rawPayload Json // Full webhook payload
 
   // Timestamps
-  createdAt DateTime @default(now()) @db.Timestamp(3)
-  updatedAt DateTime @default(now()) @updatedAt @db.Timestamp(3)
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+  lastRetryAt DateTime?
 
   @@index([event])
-  @@index([status])
+  @@index([processed])
   @@index([asaasPaymentId])
-  @@index([createdAt])
+  @@index([asaasSubscriptionId])
+  @@index([receivedAt])
   @@map("webhook_events")
 }
 

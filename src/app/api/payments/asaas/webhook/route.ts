@@ -33,39 +33,37 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     })
 
-    // Generate idempotency key from event data
-    const idempotencyKey = generateIdempotencyKey(event, payment?.id, subscription?.id)
-
-    // Check if this webhook was already processed (idempotency)
-    const existingEvent = await prisma.webhookEvent.findUnique({
-      where: { idempotencyKey }
+    // Check if this webhook was already processed (deduplication)
+    const existingEvent = await prisma.webhookEvent.findFirst({
+      where: {
+        event,
+        asaasPaymentId: payment?.id || null,
+        asaasSubscriptionId: subscription?.id || null,
+        status: 'PROCESSED'
+      }
     })
 
-    if (existingEvent?.processed) {
-      console.log('⚠️  Webhook already processed:', idempotencyKey)
+    if (existingEvent) {
+      console.log('⚠️  Webhook already processed:', existingEvent.id)
       return NextResponse.json({
         received: true,
         message: 'Event already processed',
-        idempotencyKey
+        eventId: existingEvent.id
       })
     }
 
-    // Create or update webhook event record
-    // Note: asaasCustomerId field removed temporarily due to missing column in production DB
-    // TODO: Add migration to create asaasCustomerId column, then restore this field
-    const webhookEvent = await prisma.webhookEvent.upsert({
-      where: { idempotencyKey },
-      create: {
+    // Create webhook event record
+    const webhookEvent = await prisma.webhookEvent.create({
+      data: {
         event,
         asaasPaymentId: payment?.id,
         asaasSubscriptionId: subscription?.id,
-        // asaasCustomerId: payment?.customer || subscription?.customer, // Temporarily disabled
-        idempotencyKey,
-        processed: false,
-        rawPayload: body
-      },
-      update: {
-        retryCount: { increment: 1 }
+        status: 'PENDING',
+        rawData: body,
+        userAgent: request.headers.get('user-agent') || undefined,
+        ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] ||
+                   request.headers.get('x-real-ip') ||
+                   undefined
       }
     })
 
@@ -191,35 +189,35 @@ export async function POST(request: NextRequest) {
     // Mark webhook as processed
     await prisma.webhookEvent.update({
       where: { id: webhookEvent.id },
-      data: { processed: true }
+      data: {
+        status: 'PROCESSED',
+        processedAt: new Date()
+      }
     })
 
-    console.log('✅ Webhook processed successfully:', idempotencyKey)
+    console.log('✅ Webhook processed successfully:', webhookEvent.id)
 
     return NextResponse.json({
       received: true,
-      idempotencyKey,
-      webhookEventId: webhookEvent.id
+      webhookEventId: webhookEvent.id,
+      event
     })
 
   } catch (error: any) {
     console.error('❌ Webhook error:', error)
 
-    // Try to log the error if we have an idempotencyKey
+    // Try to log the error if we have a webhookEvent
     try {
-      const idempotencyKey = generateIdempotencyKey(
-        error.event,
-        error.payment?.id,
-        error.subscription?.id
-      )
-
-      await prisma.webhookEvent.updateMany({
-        where: { idempotencyKey },
-        data: {
-          processingError: error.message,
-          retryCount: { increment: 1 }
-        }
-      })
+      if (error.webhookEventId) {
+        await prisma.webhookEvent.update({
+          where: { id: error.webhookEventId },
+          data: {
+            status: 'FAILED',
+            errorMessage: error.message,
+            retryCount: { increment: 1 }
+          }
+        })
+      }
     } catch (logError) {
       console.error('Failed to log webhook error:', logError)
     }
@@ -229,19 +227,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
-
-// Generate idempotency key to prevent duplicate processing
-function generateIdempotencyKey(
-  event: string,
-  paymentId?: string,
-  subscriptionId?: string
-): string {
-  const parts = [event, paymentId, subscriptionId].filter(Boolean)
-  return crypto
-    .createHash('sha256')
-    .update(parts.join(':'))
-    .digest('hex')
 }
 
 async function handlePaymentSuccess(payment: any) {
