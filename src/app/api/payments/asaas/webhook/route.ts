@@ -253,7 +253,8 @@ async function handlePaymentSuccess(payment: any) {
       where: {
         OR: [
           { asaasPaymentId: payment.id },
-          { asaasCheckoutId: payment.externalReference }
+          { asaasCheckoutId: payment.externalReference },
+          { asaasCheckoutId: payment.checkoutSession } // Asaas usa checkoutSession, não externalReference
         ]
       }
     })
