@@ -315,31 +315,59 @@ async function handlePaymentSuccess(payment: any) {
       // This is a subscription payment
       console.log('🔄 Processing subscription payment for user:', user.id)
 
-      // Find the payment record to get the plan and billing cycle
-      const paymentRecord = await prisma.payment.findFirst({
-        where: {
-          OR: [
-            { asaasPaymentId: payment.id },
-            { asaasCheckoutId: payment.externalReference }
-          ]
-        },
-        select: { planType: true, billingCycle: true }
-      })
+      // Get subscription data from Asaas to extract plan info
+      let planType: any = null
+      let billingCycle: 'MONTHLY' | 'YEARLY' | null = null
+
+      if (payment.subscription) {
+        try {
+          const asaasSubscription = await asaas.getSubscription(payment.subscription)
+          console.log('📋 Asaas subscription data:', JSON.stringify(asaasSubscription, null, 2))
+
+          // Map cycle from Asaas format to our format
+          if (asaasSubscription.cycle === 'MONTHLY') billingCycle = 'MONTHLY'
+          if (asaasSubscription.cycle === 'YEARLY') billingCycle = 'YEARLY'
+
+          // Try to infer plan from value
+          const value = asaasSubscription.value
+          if (billingCycle === 'MONTHLY') {
+            if (value === 39) planType = 'STARTER'
+            else if (value === 69) planType = 'PREMIUM'
+            else if (value === 149) planType = 'GOLD'
+          } else if (billingCycle === 'YEARLY') {
+            if (value === 390) planType = 'STARTER'  // 39 * 10
+            else if (value === 690) planType = 'PREMIUM'  // 69 * 10
+            else if (value === 1490) planType = 'GOLD'  // 149 * 10
+          }
+
+          console.log(`💡 Inferred plan: ${planType}, cycle: ${billingCycle}, value: ${value}`)
+
+          // Save subscription ID if not saved
+          if (!user.subscriptionId || user.subscriptionId !== payment.subscription) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { subscriptionId: payment.subscription }
+            })
+          }
+        } catch (error) {
+          console.error('Error fetching subscription from Asaas:', error)
+        }
+      }
 
       // Update subscription status to active with plan and cycle
-      if (paymentRecord?.planType) {
+      if (planType && billingCycle) {
         await updateSubscriptionStatus(
           user.id,
           'ACTIVE',
           undefined,
-          paymentRecord.planType,
-          paymentRecord.billingCycle as 'MONTHLY' | 'YEARLY' | undefined
+          planType,
+          billingCycle
         )
-        console.log(`✅ Activated ${paymentRecord.planType} ${paymentRecord.billingCycle || ''} subscription for user ${user.id}`)
+        console.log(`✅ Activated ${planType} ${billingCycle} subscription for user ${user.id}`)
       } else {
-        // Fallback: activate without changing plan
+        // Fallback: activate without changing plan (keeps existing plan if any)
         await updateSubscriptionStatus(user.id, 'ACTIVE')
-        console.log(`⚠️ Activated subscription for user ${user.id} (plan not found in payment record)`)
+        console.log(`⚠️ Activated subscription for user ${user.id} (plan could not be determined)`)
       }
     }
 
