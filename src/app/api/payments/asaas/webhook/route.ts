@@ -273,6 +273,14 @@ async function handlePaymentSuccess(payment: any) {
         }
       })
 
+      // Get current user balance before update
+      const currentUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { creditsBalance: true }
+      })
+
+      const balanceAfter = (currentUser?.creditsBalance || 0) + creditPurchase.creditAmount
+
       // Add credits to user account (using correct field: creditsBalance)
       await prisma.user.update({
         where: { id: user.id },
@@ -281,7 +289,28 @@ async function handlePaymentSuccess(payment: any) {
         }
       })
 
-      console.log(`✅ Added ${creditPurchase.creditAmount} credits to user ${user.id}`)
+      // Create credit transaction record for /account/orders page
+      await prisma.creditTransaction.create({
+        data: {
+          userId: user.id,
+          type: 'EARNED',
+          source: 'PURCHASE',
+          amount: creditPurchase.creditAmount,
+          description: `Compra de ${creditPurchase.packageName || 'Pacote de Créditos'} - ${creditPurchase.creditAmount} créditos`,
+          referenceId: payment.id,
+          creditPurchaseId: creditPurchase.id,
+          balanceAfter: balanceAfter,
+          metadata: {
+            packageName: creditPurchase.packageName,
+            packageId: creditPurchase.packageId,
+            value: creditPurchase.value,
+            asaasPaymentId: payment.id,
+            billingType: payment.billingType
+          }
+        }
+      })
+
+      console.log(`✅ Added ${creditPurchase.creditAmount} credits to user ${user.id} and created transaction record`)
     } else {
       // This is a subscription payment
       console.log('🔄 Processing subscription payment for user:', user.id)
