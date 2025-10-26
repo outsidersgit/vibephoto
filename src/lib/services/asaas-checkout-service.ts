@@ -13,35 +13,49 @@ const ASAAS_CHECKOUT_BASE = getAsaasCheckoutUrl()
 /**
  * Buscar ou criar cliente no Asaas
  * Evita criar duplicados ao buscar por CPF primeiro
+ *
+ * IMPORTANTE: Customer IDs são específicos por ambiente (sandbox vs production)
+ * Não podemos reutilizar um customer ID de sandbox em produção e vice-versa
  */
 async function getOrCreateAsaasCustomer(user: any): Promise<string> {
-  // Se já tem customer ID salvo, retornar
-  if (user.asaasCustomerId) {
-    console.log('♻️ Reutilizando customer ID existente:', user.asaasCustomerId)
-    return user.asaasCustomerId
-  }
+  console.log('='.repeat(80))
+  console.log('🔍 BUSCANDO/CRIANDO CLIENTE NO ASAAS')
+  console.log('🌍 Ambiente Asaas:', ASAAS_ENVIRONMENT)
+  console.log('👤 Usuário:', user.email)
+  console.log('💾 Customer ID salvo no DB:', user.asaasCustomerId || 'nenhum')
+  console.log('='.repeat(80))
 
-  // Buscar cliente existente no Asaas por CPF
+  // ⚠️ NÃO reutilizar customer ID salvo - ele pode ser de outro ambiente!
+  // Sempre buscar/criar no ambiente atual baseado no CPF
+
+  // Buscar cliente existente no Asaas por CPF (no ambiente atual)
   if (user.cpfCnpj) {
     const cpfClean = user.cpfCnpj.replace(/\D/g, '')
+    console.log(`🔎 Buscando cliente no Asaas ${ASAAS_ENVIRONMENT} por CPF:`, cpfClean)
+
     const existingCustomers = await asaas.findCustomerByCpfCnpj(cpfClean)
 
     if (existingCustomers?.data && existingCustomers.data.length > 0) {
       const existingCustomer = existingCustomers.data[0]
-      console.log('♻️ Cliente encontrado no Asaas:', existingCustomer.id)
+      console.log(`♻️ Cliente encontrado no Asaas ${ASAAS_ENVIRONMENT}:`, existingCustomer.id)
 
-      // Salvar customer ID no usuário para próximas compras
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { asaasCustomerId: existingCustomer.id }
-      })
+      // Salvar customer ID no usuário (sobrescrever se for de outro ambiente)
+      if (user.asaasCustomerId !== existingCustomer.id) {
+        console.log(`💾 Atualizando customer ID no DB: ${user.asaasCustomerId || 'null'} → ${existingCustomer.id}`)
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { asaasCustomerId: existingCustomer.id }
+        })
+      }
 
       return existingCustomer.id
     }
+
+    console.log(`⚠️ Cliente NÃO encontrado no Asaas ${ASAAS_ENVIRONMENT} - criando novo...`)
   }
 
   // Cliente não existe, criar novo
-  console.log('📝 Criando novo cliente no Asaas...')
+  console.log(`📝 Criando novo cliente no Asaas ${ASAAS_ENVIRONMENT}...`)
   const newCustomer = await asaas.createCustomer({
     name: user.name,
     email: user.email,
@@ -60,7 +74,7 @@ async function getOrCreateAsaasCustomer(user: any): Promise<string> {
     throw new Error('Erro ao criar cliente no Asaas')
   }
 
-  console.log('✅ Novo cliente criado:', newCustomer.id)
+  console.log(`✅ Novo cliente criado no ${ASAAS_ENVIRONMENT}:`, newCustomer.id)
 
   // Salvar customer ID no usuário
   await prisma.user.update({
