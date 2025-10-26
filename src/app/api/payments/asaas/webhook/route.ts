@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         asaasCustomerId: payment?.customer || subscription?.customer,
         idempotencyKey,
         processed: false,
-        payload: body
+        rawPayload: body
       },
       update: {
         retryCount: { increment: 1 }
