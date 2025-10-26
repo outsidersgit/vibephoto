@@ -97,7 +97,7 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
     id: 'essencial',
     name: 'Essencial',
     credits: 350,
-    price: 89,
+    price: 5, // Valor de teste temporário (era 89)
     photos: 35,
     description: 'Perfeito para projetos pequenos'
   },
