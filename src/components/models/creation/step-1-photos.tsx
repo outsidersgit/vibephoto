@@ -229,7 +229,7 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
             <label className="block text-lg font-semibold text-gray-900 mb-2">
               Classe
             </label>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-1.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
               {classOptions.map((option) => {
                 const Icon = option.icon
                 return (
@@ -502,7 +502,7 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
 
           {/* Photo Preview Grid */}
           {modelData.facePhotos.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
               {modelData.facePhotos.map((file, index) => (
                 <div key={index} className="relative group">
                   <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">

@@ -213,7 +213,7 @@ function PricingPageContent() {
       <div className="max-w-7xl mx-auto px-6 py-20">
         {/* Hero Section */}
         <div className="text-center mb-16" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-10" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-10" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
             Escolha seu plano
           </h1>
 
@@ -242,7 +242,7 @@ function PricingPageContent() {
               >
                 Anual
                 {billingCycle === 'annual' && (
-                  <span className="absolute -top-2.5 -right-2 bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded-full font-semibold shadow-sm whitespace-nowrap">
+                  <span className="absolute -top-2.5 -right-2 bg-gray-900 text-white text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full font-semibold shadow-sm whitespace-nowrap">
                     4 meses grátis
                   </span>
                 )}
@@ -253,7 +253,7 @@ function PricingPageContent() {
         </div>
 
         {/* Plans Grid */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-8" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto mb-8" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
           {plans.map((plan) => {
             const isSelected = selectedPlan === plan.id
             return (

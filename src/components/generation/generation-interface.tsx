@@ -282,10 +282,10 @@ export function GenerationInterface({
   return (
     <div className="space-y-8">
       {/* Step Navigation */}
-      <div className="bg-white rounded-lg border p-6">
-        <div className="flex items-center justify-between">
+      <div className="bg-white rounded-lg border p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4 sm:gap-0">
           {steps.map((step, index) => (
-            <div key={step.number} className="flex items-center">
+            <div key={step.number} className="flex flex-col sm:flex-row items-center w-full sm:w-auto">
               <div
                 className={`flex items-center cursor-pointer ${
                   currentStep === step.number ? 'text-purple-600' :
@@ -293,7 +293,7 @@ export function GenerationInterface({
                 }`}
                 onClick={() => goToStep(step.number)}
               >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 flex-shrink-0 ${
                   currentStep === step.number ? 'border-purple-600 bg-purple-50' :
                   isStepComplete(step.number) ? 'border-green-600 bg-green-50' : 'border-gray-300 bg-gray-50'
                 }`}>
@@ -304,12 +304,12 @@ export function GenerationInterface({
                   )}
                 </div>
                 <div className="ml-3">
-                  <div className="font-medium">{step.title}</div>
-                  <div className="text-sm text-gray-500">{step.description}</div>
+                  <div className="font-medium text-sm sm:text-base">{step.title}</div>
+                  <div className="text-xs sm:text-sm text-gray-500">{step.description}</div>
                 </div>
               </div>
               {index < steps.length - 1 && (
-                <ChevronRight className="w-5 h-5 mx-6 text-slate-300" />
+                <ChevronRight className="hidden sm:block w-5 h-5 mx-6 text-slate-300" />
               )}
             </div>
           ))}

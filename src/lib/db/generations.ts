@@ -166,10 +166,22 @@ export async function updateGenerationStatus(
 }
 
 export async function deleteGeneration(generationId: string, userId: string) {
-  return prisma.generation.delete({
+  // First verify ownership
+  const generation = await prisma.generation.findFirst({
     where: {
       id: generationId,
-      userId // Ensure user owns the generation
+      userId
+    }
+  })
+
+  if (!generation) {
+    throw new Error('Generation not found or access denied')
+  }
+
+  // Delete the generation
+  return prisma.generation.delete({
+    where: {
+      id: generationId
     }
   })
 }

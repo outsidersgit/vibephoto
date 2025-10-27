@@ -575,47 +575,47 @@ export function GalleryGrid({
                   {/* Hover Actions */}
                   {!bulkSelectMode && hoveredImage === currentImageUrl && (
                     <div className="absolute inset-0 bg-black bg-opacity-30 rounded-lg flex items-center justify-center px-2 z-10">
-                      <div className="flex flex-wrap items-center justify-center gap-1 max-w-full">
+                      <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-1 max-w-full">
                         {/* 1. Ver imagem */}
                         <Button
                           size="sm"
                           variant="secondary"
-                          className="h-7 w-7 p-0"
+                          className="h-9 w-9 sm:h-7 sm:w-7 p-0"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleMediaClick(currentImageUrl, generation)
                           }}
                           title="Ver imagem"
                         >
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                         </Button>
 
                         {/* 2. Baixar imagem */}
                         <Button
                           size="sm"
                           variant="secondary"
-                          className="h-7 w-7 p-0"
+                          className="h-9 w-9 sm:h-7 sm:w-7 p-0"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleImageAction('download', currentImageUrl, generation)
                           }}
                           title="Baixar imagem"
                         >
-                          <Download className="w-3.5 h-3.5" />
+                          <Download className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                         </Button>
 
                         {/* 3. Favoritar */}
                         <Button
                           size="sm"
                           variant="secondary"
-                          className={`h-7 w-7 p-0 ${favoriteImages.includes(currentImageUrl) ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-[#667EEA]' : ''}`}
+                          className={`h-9 w-9 sm:h-7 sm:w-7 p-0 ${favoriteImages.includes(currentImageUrl) ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-[#667EEA]' : ''}`}
                           onClick={(e) => {
                             e.stopPropagation()
                             handleImageAction('favorite', currentImageUrl, generation)
                           }}
                           title={favoriteImages.includes(currentImageUrl) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
                         >
-                          <Heart className={`w-3.5 h-3.5 ${favoriteImages.includes(currentImageUrl) ? 'fill-current' : ''}`} />
+                          <Heart className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${favoriteImages.includes(currentImageUrl) ? 'fill-current' : ''}`} />
                         </Button>
 
                         {/* 4. Fazer upscale */}
@@ -623,14 +623,14 @@ export function GalleryGrid({
                           <Button
                             size="sm"
                             variant="secondary"
-                            className="h-7 w-7 p-0"
+                            className="h-9 w-9 sm:h-7 sm:w-7 p-0"
                             onClick={(e) => {
                               e.stopPropagation()
                               handleImageAction('upscale', currentImageUrl, generation)
                             }}
                             title="Fazer upscale"
                           >
-                            <ZoomIn className="w-3.5 h-3.5" />
+                            <ZoomIn className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                           </Button>
                         )}
 
@@ -638,14 +638,14 @@ export function GalleryGrid({
                         <Button
                           size="sm"
                           variant="secondary"
-                          className="h-7 w-7 p-0"
+                          className="h-9 w-9 sm:h-7 sm:w-7 p-0"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleImageAction('edit', currentImageUrl, generation)
                           }}
                           title="Editar imagem"
                         >
-                          <Edit className="w-3.5 h-3.5" />
+                          <Edit className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                         </Button>
 
                         {/* 6. Criar vídeo */}
@@ -655,7 +655,7 @@ export function GalleryGrid({
                           generation={generation}
                           userPlan={userPlan || 'FREE'}
                           variant="secondary"
-                          className="h-7 w-7 p-0"
+                          className="h-9 w-9 sm:h-7 sm:w-7 p-0"
                         />
 
                         {/* 7. Compartilhar */}
@@ -663,19 +663,19 @@ export function GalleryGrid({
                           <Button
                             size="sm"
                             variant="secondary"
-                            className="h-7 w-7 p-0"
+                            className="h-9 w-9 sm:h-7 sm:w-7 p-0"
                             onClick={(e) => {
                               e.stopPropagation()
                               handleImageAction('share-dropdown', currentImageUrl, generation)
                             }}
                             title="Compartilhar"
                           >
-                            <Share2 className="w-3.5 h-3.5" />
+                            <Share2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                           </Button>
 
                           {/* Share Dropdown */}
                           {shareDropdown === currentImageUrl && (
-                            <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border p-2 min-w-[180px] z-30">
+                            <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border p-2 min-w-[200px] sm:min-w-[180px] z-30">
                               <button
                                 className="flex items-center space-x-2 w-full p-2 hover:bg-gray-100 rounded text-sm"
                                 onClick={(e) => {

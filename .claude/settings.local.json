@@ -11,7 +11,8 @@
       "Bash(taskkill:*)",
       "Bash(npx prisma db push:*)",
       "Bash(curl:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

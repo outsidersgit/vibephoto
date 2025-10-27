@@ -789,11 +789,11 @@ export default function HomePage() {
                 Com IA, você cria imagens únicas, sofisticadas e feitas sob medida.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center w-full sm:w-auto px-4 sm:px-0">
                 <Button
                   size="lg"
                   asChild
-                  className="bg-white text-black hover:bg-gray-100 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-lg border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-w-[160px] sm:min-w-[180px]"
+                  className="bg-white text-black hover:bg-gray-100 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-lg border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 w-full sm:w-auto sm:min-w-[180px]"
                 >
                   <Link href="/auth/signup">
                     Começar Agora
@@ -802,7 +802,7 @@ export default function HomePage() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-black px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-lg backdrop-blur-sm hover:shadow-lg transform hover:scale-105 transition-all duration-200 min-w-[160px] sm:min-w-[180px]"
+                  className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-black px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-lg backdrop-blur-sm hover:shadow-lg transform hover:scale-105 transition-all duration-200 w-full sm:w-auto sm:min-w-[180px]"
                   onClick={() => {
                     const gallerySection = document.querySelector('#gallery-section');
                     if (gallerySection) {
@@ -1087,10 +1087,10 @@ export default function HomePage() {
             </div>
 
             {/* Main Layout */}
-            <div className="grid lg:grid-cols-5 gap-8 lg:gap-12 items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-12 items-center">
               {/* Left Side - Small Cards Grid 2x2 */}
               <div className="lg:col-span-2 order-1 lg:order-1">
-                <div className="grid grid-cols-2 gap-4 max-w-md mx-auto lg:max-w-none">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-md mx-auto lg:max-w-none">
                   {/* Original Photos */}
                   <div className="aspect-square rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 transform-gpu">
                     <img
@@ -1205,7 +1205,7 @@ export default function HomePage() {
               </div>
             </div>
             
-            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
               {plans.map((plan) => {
                 const isSelected = selectedPlan === plan.id
                 return (
@@ -1346,7 +1346,7 @@ export default function HomePage() {
         /* User Options Section */
         <section className="py-16 px-6 bg-gray-900" style={{ fontFamily: '-apple-system, "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif' }}>
           <div className="max-w-6xl mx-auto">
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {/* Modelo de IA */}
               <Card className="group border border-gray-700 bg-gray-800 hover:shadow-xl hover:shadow-xl transition-all duration-300 hover:scale-105">
                 <CardContent className="p-6 text-center">
