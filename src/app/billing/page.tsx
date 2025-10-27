@@ -565,13 +565,21 @@ function BillingPageContent() {
 
                     <CardContent>
                       <ul className="space-y-3 mb-8">
-                        {plan.features.map((feature, index) => (
+                        {plan.features.map((feature, index) => {
+                          // Adjust credits display based on billing cycle
+                          let displayFeature = feature
+                          if (billingCycle === 'annual' && feature.includes('créditos/mês')) {
+                            const yearlyCredits = plan.credits * 12
+                            displayFeature = feature.replace(/\d+\.?\d*\s*créditos\/mês/, `${yearlyCredits.toLocaleString('pt-BR')} créditos/ano`)
+                          }
+
+                          return (
                           <li key={index} className="flex items-center text-sm">
                             <div className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center mr-3">
                               <Check className="w-3 h-3 text-gray-600" />
                             </div>
                             <span className="text-gray-700 flex items-center" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                              {feature}
+                              {displayFeature}
                               {feature === '1 modelo de IA' && (
                                 <div className="relative ml-2 group">
                                   <button className="w-3 h-3 bg-gray-600 text-white rounded-full flex items-center justify-center text-xs hover:bg-gray-700 transition-colors">
@@ -587,7 +595,8 @@ function BillingPageContent() {
                               )}
                             </span>
                           </li>
-                        ))}
+                          )
+                        })}
                       </ul>
 
                       {isCurrentPlan ? (
@@ -690,15 +699,7 @@ function BillingPageContent() {
                           <Check className="w-2.5 h-2.5 text-gray-600" />
                         </div>
                         <span className="text-gray-700" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                          {pkg.id === 'essencial' ? 35 : pkg.id === 'avancado' ? 100 : pkg.id === 'pro' ? 220 : 500} fotos
-                        </span>
-                      </li>
-                      <li className="flex items-center text-xs">
-                        <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center mr-2">
-                          <Check className="w-2.5 h-2.5 text-gray-600" />
-                        </div>
-                        <span className="text-gray-700" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                          Máxima resolução
+                          {pkg.photos} fotos
                         </span>
                       </li>
                     </ul>
