@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
       </div>
     `
 
-    const attachmentsText = attachmentDetails.length > 0 ? `\n\nAnexos (${attachmentDetails.length}):\n${attachmentDetails.map(att => `- ${att.name} (${(att.size / 1024 / 1024).toFixed(2)} MB)`).join('\n')}` : ''
+    const attachmentsText = attachmentDetails.length > 0 ? `\n\nAnexos (${attachmentDetails.length}):\n${attachmentDetails.map(att => `- ${att.filename} (${(att.size / 1024 / 1024).toFixed(2)} MB)`).join('\n')}` : ''
 
     const emailText = `
       Nova mensagem de suporte
