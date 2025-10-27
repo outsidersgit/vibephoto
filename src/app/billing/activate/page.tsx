@@ -284,9 +284,17 @@ function ActivatePageContent() {
                     <CardContent className="space-y-2">
                       <div className="text-sm text-gray-600 mb-3">{plan.description}</div>
                       <div className="space-y-1 text-sm">
-                        {plan.features.map((feature, index) => (
-                          <div key={index}>✓ {feature}</div>
-                        ))}
+                        {plan.features.map((feature, index) => {
+                          // Adjust credits display based on billing cycle
+                          let displayFeature = feature
+                          if (billingCycle === 'annual' && feature.includes('créditos/mês')) {
+                            const yearlyCredits = plan.credits * 12
+                            displayFeature = feature.replace(/\d+\.?\d*\s*créditos\/mês/, `${yearlyCredits.toLocaleString('pt-BR')} créditos/ano`)
+                          }
+                          return (
+                          <div key={index}>✓ {displayFeature}</div>
+                          )
+                        })}
                       </div>
                     </CardContent>
                   </Card>

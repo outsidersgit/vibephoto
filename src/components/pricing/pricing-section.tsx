@@ -6,69 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Check, Crown, Zap, Users } from 'lucide-react'
 import Link from 'next/link'
+import { PLANS, type Plan } from '@/config/pricing'
 
-interface Plan {
-  id: 'STARTER' | 'PREMIUM' | 'GOLD'
-  name: string
-  monthlyPrice: number
-  annualPrice: number
-  monthlyEquivalent: number
-  description: string
-  features: string[]
-  popular: boolean
-  color: 'blue' | 'purple' | 'yellow'
-}
-
-const plans: Plan[] = [
-  {
-    id: 'STARTER',
-    name: 'Starter',
-    monthlyPrice: 89,
-    annualPrice: 708,
-    monthlyEquivalent: 59,
-    description: 'Perfeito para começar',
-    features: [
-      '1 modelo de IA por mês',
-      '50 créditos por mês',
-      'Resolução padrão',
-      'Processamento padrão'
-    ],
-    popular: false,
-    color: 'blue'
-  },
-  {
-    id: 'PREMIUM',
-    name: 'Premium',
-    monthlyPrice: 269,
-    annualPrice: 2148,
-    monthlyEquivalent: 179,
-    description: 'Para usuários regulares',
-    features: [
-      '3 modelos de IA por mês',
-      '200 créditos por mês',
-      'Alta resolução',
-      'Processamento prioritário'
-    ],
-    popular: true,
-    color: 'purple'
-  },
-  {
-    id: 'GOLD',
-    name: 'Gold',
-    monthlyPrice: 449,
-    annualPrice: 3588,
-    monthlyEquivalent: 299,
-    description: 'Para uso intensivo',
-    features: [
-      '10 modelos de IA por mês',
-      '1000 créditos por mês',
-      'Máxima resolução',
-      'Processamento rápido'
-    ],
-    popular: false,
-    color: 'yellow'
-  }
-]
+// Use centralized pricing configuration
+const plans: Plan[] = PLANS
 
 const calculateSavings = (monthlyPrice: number, annualPrice: number) => {
   const savings = (monthlyPrice * 12) - annualPrice
@@ -171,12 +112,20 @@ export default function PricingSection() {
               </CardHeader>
 
               <CardContent className="space-y-3">
-                {plan.features.map((feature, index) => (
+                {plan.features.map((feature, index) => {
+                  // Adjust credits display based on billing cycle
+                  let displayFeature = feature
+                  if (billingCycle === 'annual' && feature.includes('créditos/mês')) {
+                    const yearlyCredits = plan.credits * 12
+                    displayFeature = feature.replace(/\d+\.?\d*\s*créditos\/mês/, `${yearlyCredits.toLocaleString('pt-BR')} créditos/ano`)
+                  }
+                  return (
                   <div key={index} className="flex items-center">
                     <Check className="w-5 h-5 text-green-600 mr-3 flex-shrink-0" />
-                    <span className="text-gray-700">{feature}</span>
+                    <span className="text-gray-700">{displayFeature}</span>
                   </div>
-                ))}
+                  )
+                })}
                 <Button className="w-full mt-6" variant={plan.popular ? 'default' : 'outline'} asChild>
                   <Link href="/auth/signup">Começar Agora</Link>
                 </Button>

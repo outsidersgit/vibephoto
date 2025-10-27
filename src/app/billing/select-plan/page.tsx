@@ -234,12 +234,20 @@ function SelectPlanPageContent() {
 
               <CardContent>
                 <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature, index) => (
+                  {plan.features.map((feature, index) => {
+                    // Adjust credits display based on billing cycle
+                    let displayFeature = feature
+                    if (billingCycle === 'annual' && feature.includes('créditos/mês')) {
+                      const yearlyCredits = plan.credits * 12
+                      displayFeature = feature.replace(/\d+\.?\d*\s*créditos\/mês/, `${yearlyCredits.toLocaleString('pt-BR')} créditos/ano`)
+                    }
+                    return (
                     <li key={index} className="flex items-center">
                       <Check className="w-5 h-5 text-green-600 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">{feature}</span>
+                      <span className="text-gray-700">{displayFeature}</span>
                     </li>
-                  ))}
+                    )
+                  })}
                 </ul>
 
                 <Button 

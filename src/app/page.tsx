@@ -70,6 +70,7 @@ interface Plan {
   features: string[]
   popular: boolean
   color: 'blue' | 'purple' | 'yellow'
+  credits: number
 }
 
 const plans: Plan[] = [
@@ -82,12 +83,13 @@ const plans: Plan[] = [
     description: 'Perfeito para começar sua jornada com IA',
     features: [
       '1 modelo de IA',
-      '500 créditos por mês',
+      '500 créditos/mês',
       '50 fotos por mês',
       'Máxima resolução'
     ],
     popular: false,
-    color: 'blue'
+    color: 'blue',
+    credits: 500
   },
   {
     id: 'PREMIUM',
@@ -98,12 +100,13 @@ const plans: Plan[] = [
     description: 'Ideal para criadores de conteúdo',
     features: [
       '1 modelo de IA',
-      '1200 créditos por mês',
+      '1.200 créditos/mês',
       '120 fotos por mês',
       'Máxima resolução'
     ],
     popular: true,
-    color: 'purple'
+    color: 'purple',
+    credits: 1200
   },
   {
     id: 'GOLD',
@@ -114,12 +117,13 @@ const plans: Plan[] = [
     description: 'Para profissionais e agências',
     features: [
       '1 modelo de IA',
-      '2500 créditos por mês',
+      '2.500 créditos/mês',
       '250 fotos por mês',
       'Máxima resolução'
     ],
     popular: false,
-    color: 'yellow'
+    color: 'yellow',
+    credits: 2500
   }
 ]
 
@@ -1246,13 +1250,21 @@ export default function HomePage() {
 
                   <CardContent>
                     <ul className="space-y-3 mb-8">
-                      {plan.features.map((feature, index) => (
+                      {plan.features.map((feature, index) => {
+                        // Adjust credits display based on billing cycle
+                        let displayFeature = feature
+                        if (billingCycle === 'annual' && feature.includes('créditos/mês')) {
+                          const yearlyCredits = plan.credits * 12
+                          displayFeature = feature.replace(/\d+\.?\d*\s*créditos\/mês/, `${yearlyCredits.toLocaleString('pt-BR')} créditos/ano`)
+                        }
+
+                        return (
                         <li key={index} className="flex items-center text-sm">
                           <div className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center mr-3">
                             <Check className="w-3 h-3 text-gray-600" />
                           </div>
                           <span className="text-gray-700 flex items-center">
-                            {feature}
+                            {displayFeature}
                             {feature === '1 modelo de IA' && (
                               <div className="relative ml-2 group">
                                 <button className="w-3 h-3 bg-gray-600 text-white rounded-full flex items-center justify-center text-xs hover:bg-gray-700 transition-colors">
@@ -1268,7 +1280,8 @@ export default function HomePage() {
                             )}
                           </span>
                         </li>
-                      ))}
+                        )
+                      })}
                     </ul>
 
                     <Button
