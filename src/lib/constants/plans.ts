@@ -27,10 +27,10 @@ export const PLAN_CONFIGS: Record<Plan, PlanConfig> = {
     models: 1, // 1 modelo incluído, modelos adicionais custam 500 créditos
     resolution: '512x512',
     features: [
-      '500 créditos/mês (6.000/ano)',
+      '500 créditos/mês',
       '1 modelo de IA incluído',
       'Modelos adicionais: 500 créditos',
-      'Resolução 512x512',
+      'Máxima resolução',
       'Galeria pessoal',
       'Suporte por email'
     ],
@@ -44,10 +44,10 @@ export const PLAN_CONFIGS: Record<Plan, PlanConfig> = {
     models: 1, // 1 modelo incluído, modelos adicionais custam 500 créditos
     resolution: '1024x1024',
     features: [
-      '1.200 créditos/mês (14.400/ano)',
+      '1.200 créditos/mês',
       '1 modelo de IA incluído',
       'Modelos adicionais: 500 créditos',
-      'Resolução 1024x1024',
+      'Máxima resolução',
       'Pacotes premium inclusos',
       'Galeria ampliada',
       'Suporte prioritário'
@@ -62,10 +62,10 @@ export const PLAN_CONFIGS: Record<Plan, PlanConfig> = {
     models: 1, // 1 modelo incluído, modelos adicionais custam 500 créditos
     resolution: '2048x2048',
     features: [
-      '2.500 créditos/mês (30.000/ano)',
+      '2.500 créditos/mês',
       '1 modelo de IA incluído',
       'Modelos adicionais: 500 créditos',
-      'Resolução 2048x2048',
+      'Máxima resolução',
       'Todos os pacotes premium',
       'API de integração',
       'Galeria ilimitada',

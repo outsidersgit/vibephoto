@@ -41,8 +41,9 @@ export const PLANS: Plan[] = [
     description: 'Perfeito para começar sua jornada com IA',
     features: [
       '1 modelo de IA',
-      '500 créditos/mês (6.000/ano)',
-      '50 fotos por mês'
+      '500 créditos/mês',
+      '50 fotos por mês',
+      'Máxima resolução'
     ],
     popular: false,
     credits: 500,
@@ -58,8 +59,9 @@ export const PLANS: Plan[] = [
     description: 'Ideal para criadores de conteúdo',
     features: [
       '1 modelo de IA',
-      '1.200 créditos/mês (14.400/ano)',
-      '120 fotos por mês'
+      '1.200 créditos/mês',
+      '120 fotos por mês',
+      'Máxima resolução'
     ],
     popular: true,
     credits: 1200,
@@ -75,8 +77,9 @@ export const PLANS: Plan[] = [
     description: 'Para profissionais e agências',
     features: [
       '1 modelo de IA',
-      '2.500 créditos/mês (30.000/ano)',
-      '250 fotos por mês'
+      '2.500 créditos/mês',
+      '250 fotos por mês',
+      'Máxima resolução'
     ],
     popular: false,
     credits: 2500,

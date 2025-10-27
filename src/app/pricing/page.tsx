@@ -294,13 +294,21 @@ function PricingPageContent() {
 
               <CardContent>
                 <ul className="space-y-3 mb-8">
-                  {plan.features.map((feature, index) => (
+                  {plan.features.map((feature, index) => {
+                    // Adjust credits display based on billing cycle
+                    let displayFeature = feature
+                    if (billingCycle === 'annual' && feature.includes('créditos/mês')) {
+                      const yearlyCredits = plan.credits * 12
+                      displayFeature = feature.replace(/créditos\/mês/, `créditos/mês (${yearlyCredits.toLocaleString('pt-BR')}/ano)`)
+                    }
+
+                    return (
                     <li key={index} className="flex items-center text-sm">
                       <div className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center mr-3">
                         <Check className="w-3 h-3 text-gray-600" />
                       </div>
                       <span className="text-gray-700 flex items-center" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                        {feature}
+                        {displayFeature}
                         {feature === '1 modelo de IA' && (
                           <div className="relative ml-2 group">
                             <button className="w-3 h-3 bg-gray-600 text-white rounded-full flex items-center justify-center text-xs hover:bg-gray-700 transition-colors">
@@ -316,7 +324,8 @@ function PricingPageContent() {
                         )}
                       </span>
                     </li>
-                  ))}
+                    )
+                  })}
                 </ul>
 
                 <Button

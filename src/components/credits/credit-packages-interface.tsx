@@ -244,14 +244,6 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
                     {pkg.photos} fotos
                   </span>
                 </li>
-                <li className="flex items-center text-xs">
-                  <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center mr-2">
-                    <Check className="w-2.5 h-2.5 text-gray-600" />
-                  </div>
-                  <span className="text-gray-700" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                    Máxima resolução
-                  </span>
-                </li>
               </ul>
 
               <Button
