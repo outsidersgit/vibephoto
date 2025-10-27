@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import nodemailer from 'nodemailer'
 
+// Support contact form API endpoint - handles email sending with attachments
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
