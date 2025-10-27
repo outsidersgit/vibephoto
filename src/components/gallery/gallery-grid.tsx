@@ -476,13 +476,18 @@ export function GalleryGrid({
                       setHoveredImage(null)
                     }
                   }}
+                  onClick={(e) => {
+                    // Allow clicks on the card itself (not just the image)
+                    if (e.target === e.currentTarget || (e.target as HTMLElement).tagName === 'IMG') {
+                      handleMediaClick(currentImageUrl, generation)
+                    }
+                  }}
                 >
                   <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                     <img
                       src={generation.thumbnailUrls?.[currentIndex] || currentImageUrl}
                       alt={`Generated image ${currentIndex + 1} of ${generation.imageUrls.length}`}
                       className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                      onClick={() => handleMediaClick(currentImageUrl, generation)}
                     />
                   </div>
 
