@@ -41,9 +41,8 @@ export const PLANS: Plan[] = [
     description: 'Perfeito para começar sua jornada com IA',
     features: [
       '1 modelo de IA',
-      '500 créditos por mês',
-      '50 fotos por mês',
-      'Máxima resolução'
+      '500 créditos/mês (6.000/ano)',
+      '50 fotos por mês'
     ],
     popular: false,
     credits: 500,
@@ -59,9 +58,8 @@ export const PLANS: Plan[] = [
     description: 'Ideal para criadores de conteúdo',
     features: [
       '1 modelo de IA',
-      '1200 créditos por mês',
-      '120 fotos por mês',
-      'Máxima resolução'
+      '1.200 créditos/mês (14.400/ano)',
+      '120 fotos por mês'
     ],
     popular: true,
     credits: 1200,
@@ -77,9 +75,8 @@ export const PLANS: Plan[] = [
     description: 'Para profissionais e agências',
     features: [
       '1 modelo de IA',
-      '2500 créditos por mês',
-      '250 fotos por mês',
-      'Máxima resolução'
+      '2.500 créditos/mês (30.000/ano)',
+      '250 fotos por mês'
     ],
     popular: false,
     credits: 2500,
@@ -95,7 +92,7 @@ export const PLANS: Plan[] = [
 export const CREDIT_PACKAGES: CreditPackage[] = [
   {
     id: 'essencial',
-    name: 'Essencial',
+    name: 'Pacote 350',
     credits: 350,
     price: 5, // Valor de teste temporário (era 89)
     photos: 35,
@@ -103,7 +100,7 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
   },
   {
     id: 'avancado',
-    name: 'Avançado',
+    name: 'Pacote 1000',
     credits: 1000,
     price: 179,
     photos: 100,
@@ -112,7 +109,7 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
   },
   {
     id: 'pro',
-    name: 'Pro',
+    name: 'Pacote 2200',
     credits: 2200,
     price: 359,
     photos: 220,
@@ -120,7 +117,7 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
   },
   {
     id: 'enterprise',
-    name: 'Enterprise',
+    name: 'Pacote 5000',
     credits: 5000,
     price: 899,
     photos: 500,
