@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import nodemailer from 'nodemailer'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,8 +19,7 @@ export async function POST(request: NextRequest) {
 
     // Handle file attachments
     const attachments = formData.getAll('attachments') as File[]
-    const attachmentPaths: string[] = []
-    const attachmentDetails: Array<{name: string, path: string, size: number}> = []
+    const attachmentDetails: Array<{filename: string, content: Buffer, contentType: string, size: number}> = []
 
     // Validação dos campos obrigatórios
     if (!account || !subject || !problemType || !description) {
@@ -34,29 +30,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'A descrição deve ter pelo menos 20 caracteres' }, { status: 400 })
     }
 
-    // Process file attachments if any
+    // Process file attachments if any (convert to buffer for email attachment)
     if (attachments.length > 0) {
-      const uploadDir = join(process.cwd(), 'uploads', 'support')
-
-      // Create upload directory if it doesn't exist
-      if (!existsSync(uploadDir)) {
-        await mkdir(uploadDir, { recursive: true })
-      }
-
       for (const file of attachments) {
         if (file.size > 0) { // Check if file is not empty
-          const fileName = `${Date.now()}-${session.user.id}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-          const filePath = join(uploadDir, fileName)
+          // Limit file size to 10MB
+          if (file.size > 10 * 1024 * 1024) {
+            return NextResponse.json({ error: 'Arquivos devem ter no máximo 10MB' }, { status: 400 })
+          }
 
-          // Convert file to buffer and save
+          // Convert file to buffer
           const bytes = await file.arrayBuffer()
           const buffer = Buffer.from(bytes)
-          await writeFile(filePath, buffer)
 
-          attachmentPaths.push(filePath)
           attachmentDetails.push({
-            name: file.name,
-            path: filePath,
+            filename: file.name,
+            content: buffer,
+            contentType: file.type || 'application/octet-stream',
             size: file.size
           })
         }
@@ -87,7 +77,7 @@ export async function POST(request: NextRequest) {
         <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px;">
           ${attachmentDetails.map(att => `
             <div style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">
-              <strong>${att.name}</strong> (${(att.size / 1024 / 1024).toFixed(2)} MB)
+              <strong>${att.filename}</strong> (${(att.size / 1024 / 1024).toFixed(2)} MB)
             </div>
           `).join('')}
         </div>
@@ -169,11 +159,12 @@ export async function POST(request: NextRequest) {
       replyTo: session.user.email,
     }
 
-    // Add attachments if any
-    if (attachmentPaths.length > 0) {
+    // Add attachments if any (using buffer instead of file path for serverless)
+    if (attachmentDetails.length > 0) {
       mailOptions.attachments = attachmentDetails.map(att => ({
-        filename: att.name,
-        path: att.path
+        filename: att.filename,
+        content: att.content,
+        contentType: att.contentType
       }))
     }
 

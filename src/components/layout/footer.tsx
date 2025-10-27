@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Sparkles, Mail, FileText, Shield, Cookie, HelpCircle } from 'lucide-react'
+import { Mail, FileText, Cookie, HelpCircle } from 'lucide-react'
 import { VibePhotoLogo } from '@/components/ui/vibephoto-logo'
 
 export function Footer() {
@@ -140,15 +140,9 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-gray-200 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="border-t border-gray-200 mt-8 pt-8 text-center">
           <div className="text-sm text-gray-500">
             © {currentYear} VibePhoto™. Todos os direitos reservados.
-          </div>
-          <div className="flex items-center gap-6 text-sm text-gray-500">
-            <span className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-green-600" />
-              Conforme LGPD
-            </span>
           </div>
         </div>
       </div>
