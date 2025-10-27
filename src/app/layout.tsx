@@ -3,7 +3,6 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { AuthProvider } from '@/components/providers/auth-provider'
 import { ThemeProvider } from '@/components/providers/theme-provider'
-import { ConsentProvider } from '@/components/providers/consent-provider'
 import { AutoStorageProvider } from '@/components/providers/auto-storage-provider'
 import { QueryProvider } from '@/providers/query-provider'
 import { Toaster } from '@/components/ui/toaster'
@@ -41,19 +40,17 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <AuthProvider>
-              <ConsentProvider>
-                <AutoStorageProvider>
-                  <div className="min-h-screen flex flex-col">
-                    <PremiumNavigation />
-                    <main className="flex-1 pt-20">
-                      {children}
-                    </main>
-                    <Footer />
-                  </div>
-                  <Toaster />
-                  <CustomToaster />
-                </AutoStorageProvider>
-              </ConsentProvider>
+              <AutoStorageProvider>
+                <div className="min-h-screen flex flex-col">
+                  <PremiumNavigation />
+                  <main className="flex-1 pt-20">
+                    {children}
+                  </main>
+                  <Footer />
+                </div>
+                <Toaster />
+                <CustomToaster />
+              </AutoStorageProvider>
             </AuthProvider>
           </ThemeProvider>
         </QueryProvider>

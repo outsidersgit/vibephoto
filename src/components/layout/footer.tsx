@@ -21,7 +21,9 @@ export function Footer() {
             </p>
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Mail className="w-4 h-4" />
-              <span>outsiders.agency.ai@gmail.com</span> 
+              <a href="mailto:suporte@vibephoto.app" className="hover:text-purple-600 transition-colors">
+                suporte@vibephoto.app
+              </a>
             </div>
           </div>
 
@@ -71,9 +73,9 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="mailto:outsiders.agency.ai@gmail.com" className="text-gray-600 hover:text-purple-600 transition-colors">
+                <a href="mailto:suporte@vibephoto.app" className="text-gray-600 hover:text-purple-600 transition-colors">
                   Entre em Contato
-                </Link>
+                </a>
               </li>
               <li>
                 <Link href="/billing" className="text-gray-600 hover:text-purple-600 transition-colors">
@@ -147,7 +149,6 @@ export function Footer() {
               <Shield className="w-4 h-4 text-green-600" />
               Conforme LGPD
             </span>
-            <span>CNPJ: [CNPJ da Empresa]</span>
           </div>
         </div>
       </div>

@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
     // Configuração do email com anexos
     const mailOptions: any = {
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: 'outsiders.agency.ai@gmail.com',
+      to: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'suporte@vibephoto.app',
       subject: `[Suporte] ${subject}`,
       text: emailText,
       html: emailHtml,
