@@ -576,21 +576,7 @@ export function GalleryGrid({
                   {!bulkSelectMode && hoveredImage === currentImageUrl && (
                     <div className="absolute inset-0 bg-black bg-opacity-30 rounded-lg flex items-center justify-center px-2 z-10">
                       <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-1 max-w-full">
-                        {/* 1. Ver imagem */}
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="h-9 w-9 sm:h-7 sm:w-7 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleMediaClick(currentImageUrl, generation)
-                          }}
-                          title="Ver imagem"
-                        >
-                          <Eye className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                        </Button>
-
-                        {/* 2. Baixar imagem */}
+                        {/* Baixar imagem */}
                         <Button
                           size="sm"
                           variant="secondary"
@@ -604,7 +590,7 @@ export function GalleryGrid({
                           <Download className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                         </Button>
 
-                        {/* 3. Favoritar */}
+                        {/* Favoritar */}
                         <Button
                           size="sm"
                           variant="secondary"
@@ -618,7 +604,7 @@ export function GalleryGrid({
                           <Heart className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${favoriteImages.includes(currentImageUrl) ? 'fill-current' : ''}`} />
                         </Button>
 
-                        {/* 4. Fazer upscale */}
+                        {/* Fazer upscale */}
                         {onUpscale && (
                           <Button
                             size="sm"
@@ -634,7 +620,7 @@ export function GalleryGrid({
                           </Button>
                         )}
 
-                        {/* 5. Editar imagem */}
+                        {/* Editar imagem */}
                         <Button
                           size="sm"
                           variant="secondary"
@@ -648,7 +634,7 @@ export function GalleryGrid({
                           <Edit className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                         </Button>
 
-                        {/* 6. Criar vídeo */}
+                        {/* Criar vídeo */}
                         <CompactVideoButton
                           imageUrl={currentImageUrl}
                           mode="image-to-video"
@@ -658,7 +644,7 @@ export function GalleryGrid({
                           className="h-9 w-9 sm:h-7 sm:w-7 p-0"
                         />
 
-                        {/* 7. Compartilhar */}
+                        {/* Compartilhar */}
                         <div className="relative">
                           <Button
                             size="sm"
