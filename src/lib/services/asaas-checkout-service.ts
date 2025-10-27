@@ -3,8 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { getCreditPackageById, getPlanById } from '@/config/pricing'
 import { getAsaasEnvironment, getAsaasCheckoutUrl, getWebhookBaseUrl } from '@/lib/utils/environment'
 
-// URLs de callback para Asaas
-const CALLBACK_BASE = getWebhookBaseUrl() || 'https://vibephoto-delta.vercel.app'
+// URLs de callback para Asaas - usa domínio de produção
+const CALLBACK_BASE = getWebhookBaseUrl() || 'https://vibephoto.app'
 
 // URL base do Asaas baseada no ambiente (com validação automática)
 const ASAAS_ENVIRONMENT = getAsaasEnvironment()
@@ -132,10 +132,11 @@ export async function createCreditPackageCheckout(
     billingTypes: [billingType],
     chargeTypes: ['DETACHED'], // Pagamento único
     minutesToExpire: 60, // 1 hora de validade
+    autoRedirect: true, // Redireciona automaticamente após pagamento
     callback: {
-      successUrl: `${CALLBACK_BASE}/success`,
-      cancelUrl: `${CALLBACK_BASE}/cancel`,
-      expiredUrl: `${CALLBACK_BASE}/expired`
+      successUrl: `${CALLBACK_BASE}/`, // Redireciona para área logada
+      cancelUrl: `${CALLBACK_BASE}/pricing?required=true`, // Volta para escolha de plano
+      expiredUrl: `${CALLBACK_BASE}/pricing?required=true` // Volta para escolha de plano
     },
     items: [
       {
@@ -277,10 +278,11 @@ export async function createSubscriptionCheckout(
       cycle,
       nextDueDate: nextDueDate.toISOString().split('T')[0] // Cobrança imediata no dia do pagamento
     },
+    autoRedirect: true, // Redireciona automaticamente após pagamento
     callback: {
-      successUrl: `${CALLBACK_BASE}/success`,
-      cancelUrl: `${CALLBACK_BASE}/cancel`,
-      expiredUrl: `${CALLBACK_BASE}/expired`
+      successUrl: `${CALLBACK_BASE}/`, // Redireciona para área logada
+      cancelUrl: `${CALLBACK_BASE}/pricing?required=true`, // Volta para escolha de plano
+      expiredUrl: `${CALLBACK_BASE}/pricing?required=true` // Volta para escolha de plano
     }
   }
 
