@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Mail, FileText, Cookie, HelpCircle } from 'lucide-react'
+import { Mail, FileText, Cookie, HelpCircle, Shield } from 'lucide-react'
 import { VibePhotoLogo } from '@/components/ui/vibephoto-logo'
 
 export function Footer() {
