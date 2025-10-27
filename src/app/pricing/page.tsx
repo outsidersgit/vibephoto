@@ -299,7 +299,7 @@ function PricingPageContent() {
                     let displayFeature = feature
                     if (billingCycle === 'annual' && feature.includes('créditos/mês')) {
                       const yearlyCredits = plan.credits * 12
-                      displayFeature = feature.replace(/créditos\/mês/, `créditos/mês (${yearlyCredits.toLocaleString('pt-BR')}/ano)`)
+                      displayFeature = feature.replace(/\d+\.?\d*\s*créditos\/mês/, `${yearlyCredits.toLocaleString('pt-BR')} créditos/ano`)
                     }
 
                     return (
