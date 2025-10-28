@@ -43,7 +43,8 @@ export async function GET(request: NextRequest) {
         completedAt: true,
         jobId: true,
         errorMessage: true,
-        creditsUsed: true
+        estimatedCost: true,
+        processingTime: true
       }
     })
 
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      if (gen.creditsUsed && gen.creditsUsed > 0 && (!gen.imageUrls || gen.imageUrls.length === 0)) {
+      if (gen.estimatedCost && gen.estimatedCost > 0 && (!gen.imageUrls || gen.imageUrls.length === 0)) {
         problems.push('🔴 CRITICAL: Credits charged but no images saved!')
       }
 
@@ -80,7 +81,8 @@ export async function GET(request: NextRequest) {
         createdAt: gen.createdAt,
         completedAt: gen.completedAt,
         imageCount: gen.imageUrls?.length || 0,
-        creditsUsed: gen.creditsUsed,
+        estimatedCost: gen.estimatedCost,
+        processingTime: gen.processingTime ? `${gen.processingTime}ms` : null,
         imageUrls: gen.imageUrls,
         errorMessage: gen.errorMessage,
         problems
