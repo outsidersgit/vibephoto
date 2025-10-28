@@ -13,13 +13,13 @@ import { Footer } from '@/components/layout/footer'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'VibePhoto - AI Photo Generation SaaS',
-  description: 'Create stunning AI-generated photos with custom trained models',
+  title: 'VibePhoto',
+  description: 'Retratos que parecem arte',
   keywords: ['AI', 'photo generation', 'machine learning', 'fine-tuning', 'SaaS', 'VibePhoto'],
   authors: [{ name: 'VibePhoto Team' }],
   openGraph: {
-    title: 'VibePhoto - AI Photo Generation',
-    description: 'Create stunning AI-generated photos with custom trained models',
+    title: 'VibePhoto',
+    description: 'Retratos que parecem arte',
     type: 'website',
   },
 }
