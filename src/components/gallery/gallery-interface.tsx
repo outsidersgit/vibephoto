@@ -130,7 +130,7 @@ export function GalleryInterface({
     setSearchQuery('')
   }
 
-  const handleBulkAction = (action: string) => {
+  const handleBulkAction = async (action: string) => {
     switch (action) {
       case 'download':
         // Implement bulk download
@@ -141,11 +141,10 @@ export function GalleryInterface({
         console.log('Bulk favorite:', selectedImages)
         break
       case 'delete':
-        // Implement bulk delete
-        console.log('Bulk delete:', selectedImages)
+        await handleBulkDelete()
         break
     }
-    
+
     setSelectedImages([])
     setBulkSelectMode(false)
   }
@@ -158,9 +157,72 @@ export function GalleryInterface({
     )
   }
 
-  // Delete handler
+  // Bulk delete handler
+  const handleBulkDelete = async () => {
+    if (selectedImages.length === 0) return
+
+    const confirmed = confirm(
+      `Tem certeza que deseja excluir ${selectedImages.length} ${selectedImages.length === 1 ? 'imagem' : 'imagens'}? Esta ação não pode ser desfeita.`
+    )
+
+    if (!confirmed) return
+
+    setLoading(true)
+
+    try {
+      // Map selected image URLs to generation IDs
+      const generationIds = selectedImages
+        .map(imageUrl => {
+          const mediaItem = currentData.find(item => item.url === imageUrl)
+          return mediaItem?.generation?.id
+        })
+        .filter(Boolean) // Remove undefined values
+
+      console.log('🗑️ Bulk deleting generations:', generationIds)
+
+      // Delete each generation
+      const deletePromises = generationIds.map(generationId =>
+        fetch('/api/generations/delete', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ generationId })
+        })
+      )
+
+      const results = await Promise.allSettled(deletePromises)
+
+      // Check for failures
+      const failures = results.filter(r => r.status === 'rejected')
+
+      if (failures.length > 0) {
+        console.error('Some deletions failed:', failures)
+        alert(`Erro ao excluir ${failures.length} ${failures.length === 1 ? 'imagem' : 'imagens'}. Tente novamente.`)
+      } else {
+        console.log('✅ All deletions successful')
+      }
+
+      // Refresh gallery using router
+      router.refresh()
+
+      // Also reload the page to ensure fresh data
+      window.location.reload()
+
+    } catch (error) {
+      console.error('Bulk delete failed:', error)
+      alert('Erro ao excluir imagens. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Single delete handler (from modal)
   const handleDelete = async (generationId: string) => {
-    // Refresh gallery after deletion
+    console.log('🗑️ Deleting generation:', generationId)
+
+    // Refresh gallery using router
+    router.refresh()
+
+    // Reload to ensure fresh data
     window.location.reload()
   }
 
