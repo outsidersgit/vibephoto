@@ -178,39 +178,48 @@ export function GalleryInterface({
         })
         .filter(Boolean) // Remove undefined values
 
+      if (generationIds.length === 0) {
+        alert('Nenhuma imagem válida selecionada para exclusão.')
+        return
+      }
+
       console.log('🗑️ Bulk deleting generations:', generationIds)
 
       // Delete each generation
-      const deletePromises = generationIds.map(generationId =>
-        fetch('/api/generations/delete', {
+      const deletePromises = generationIds.map(async generationId => {
+        const response = await fetch('/api/generations/delete', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ generationId })
         })
-      )
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || `Failed to delete ${generationId}`)
+        }
+
+        return { generationId, success: true }
+      })
 
       const results = await Promise.allSettled(deletePromises)
 
       // Check for failures
       const failures = results.filter(r => r.status === 'rejected')
+      const successes = results.filter(r => r.status === 'fulfilled')
+
+      console.log(`✅ Successfully deleted: ${successes.length}/${generationIds.length}`)
 
       if (failures.length > 0) {
-        console.error('Some deletions failed:', failures)
-        alert(`Erro ao excluir ${failures.length} ${failures.length === 1 ? 'imagem' : 'imagens'}. Tente novamente.`)
-      } else {
-        console.log('✅ All deletions successful')
+        console.error('❌ Some deletions failed:', failures)
+        alert(`${successes.length} ${successes.length === 1 ? 'imagem excluída' : 'imagens excluídas'} com sucesso.\n${failures.length} ${failures.length === 1 ? 'falhou' : 'falharam'}.`)
       }
 
-      // Refresh gallery using router
-      router.refresh()
-
-      // Also reload the page to ensure fresh data
+      // Reload the page to ensure fresh data
       window.location.reload()
 
     } catch (error) {
-      console.error('Bulk delete failed:', error)
+      console.error('❌ Bulk delete failed:', error)
       alert('Erro ao excluir imagens. Tente novamente.')
-    } finally {
       setLoading(false)
     }
   }

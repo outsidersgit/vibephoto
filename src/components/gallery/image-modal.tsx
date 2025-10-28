@@ -164,17 +164,24 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
       })
 
       if (!response.ok) {
-        throw new Error('Failed to delete generation')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to delete generation')
       }
 
-      // Close modal and notify parent
+      console.log('✅ Generation deleted successfully')
+
+      // Close modal first
       onClose()
-      if (onDelete) {
-        onDelete(currentImage.generation.id)
-      }
+
+      // Notify parent after a small delay to ensure modal is closed
+      setTimeout(() => {
+        if (onDelete) {
+          onDelete(currentImage.generation.id)
+        }
+      }, 100)
 
     } catch (error) {
-      console.error('Delete failed:', error)
+      console.error('❌ Delete failed:', error)
       alert('Erro ao excluir geração. Tente novamente.')
     }
   }
