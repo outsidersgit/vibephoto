@@ -52,6 +52,8 @@ export async function downloadAndStoreImages(
 
     console.log(`📥 [STORAGE_SIMPLE] Using TRAINING pattern for ${temporaryUrls.length} images, generation ${generationId}`)
 
+    const errors: string[] = []
+
     for (let i = 0; i < temporaryUrls.length; i++) {
       const tempUrl = temporaryUrls[i]
 
@@ -163,17 +165,24 @@ export async function downloadAndStoreImages(
         }
 
       } catch (error) {
+        const errorMsg = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
         console.error(`❌ [STORAGE_SIMPLE] Failed to process image ${i + 1}:`, error)
+        console.error(`❌ [STORAGE_SIMPLE] Error stack:`, error instanceof Error ? error.stack : 'No stack')
+        errors.push(`Image ${i + 1}: ${errorMsg}`)
         // Continue with other images
         continue
       }
     }
 
     if (permanentUrls.length === 0) {
-      console.error(`❌ [STORAGE_SIMPLE] Failed to store any images`)
+      const detailedError = errors.length > 0
+        ? `Failed to store images. Errors: ${errors.join('; ')}`
+        : 'Failed to download and store any images using training pattern'
+
+      console.error(`❌ [STORAGE_SIMPLE] Failed to store any images. Collected errors:`, errors)
       return {
         success: false,
-        error: 'Failed to download and store any images using training pattern'
+        error: detailedError
       }
     }
 
