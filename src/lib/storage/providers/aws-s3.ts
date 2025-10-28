@@ -113,7 +113,8 @@ export class AWSS3Provider extends StorageProvider {
         Body: buffer,
         ContentType: mimeType,
         ContentDisposition: options.isVideo ? 'inline' : 'inline', // Allow inline viewing for both images and videos
-        ACL: options.makePublic ? 'public-read' : undefined,
+        // ACL removed - using Bucket Policy for public access instead (AWS best practice)
+        // This allows bucket to work with "Bucket owner enforced" Object Ownership setting
         Metadata: {
           originalName,
           uploadedAt: new Date().toISOString()
