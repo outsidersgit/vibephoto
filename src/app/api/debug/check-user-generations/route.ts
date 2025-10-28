@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         imageUrls: true,
         createdAt: true,
         completedAt: true,
-        externalId: true,
+        jobId: true,
         errorMessage: true,
         creditsUsed: true
       }
@@ -74,13 +74,15 @@ export async function GET(request: NextRequest) {
 
       return {
         id: gen.id,
-        externalId: gen.externalId,
+        jobId: gen.jobId,
+        prompt: gen.prompt?.substring(0, 100) + (gen.prompt?.length > 100 ? '...' : ''),
         status: gen.status,
         createdAt: gen.createdAt,
         completedAt: gen.completedAt,
         imageCount: gen.imageUrls?.length || 0,
         creditsUsed: gen.creditsUsed,
         imageUrls: gen.imageUrls,
+        errorMessage: gen.errorMessage,
         problems
       }
     })
