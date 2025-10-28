@@ -17,8 +17,11 @@ export async function GET(request: NextRequest) {
         id: true,
         email: true,
         name: true,
-        credits: true,
-        creditsUsed: true
+        creditsBalance: true,
+        creditsUsed: true,
+        creditsLimit: true,
+        plan: true,
+        subscriptionStatus: true
       }
     })
 
@@ -87,8 +90,12 @@ export async function GET(request: NextRequest) {
         id: user.id,
         email: user.email,
         name: user.name,
-        credits: user.credits,
-        creditsUsed: user.creditsUsed
+        plan: user.plan,
+        subscriptionStatus: user.subscriptionStatus,
+        creditsBalance: user.creditsBalance,
+        creditsUsed: user.creditsUsed,
+        creditsLimit: user.creditsLimit,
+        availableCredits: (user.creditsLimit - user.creditsUsed) + user.creditsBalance
       },
       totalGenerations: generations.length,
       generations: issues,

@@ -8,7 +8,7 @@ This document describes all required and optional environment variables for the 
 
 ```bash
 # ✅ REQUIRED - Core Application
-NEXTAUTH_URL=https://vibephoto-delta.vercel.app
+NEXTAUTH_URL=https://vibephoto.app
 NEXTAUTH_SECRET=<generate-with: openssl rand -base64 32>
 NODE_ENV=production
 
@@ -27,7 +27,7 @@ REPLICATE_USERNAME=vibephoto
 REPLICATE_WEBHOOK_SECRET=<your-secure-secret>
 ASTRIA_API_KEY=sd_...
 ASTRIA_WEBHOOK_SECRET=<your-secure-secret>  # ⚠️ NEW: Add security to Astria webhook
-ASTRIA_WEBHOOK_URL=https://vibephoto-delta.vercel.app/api/webhooks/astria
+ASTRIA_WEBHOOK_URL=https://vibephoto.app/api/webhooks/astria
 
 # ✅ REQUIRED - Storage (AWS S3)
 STORAGE_PROVIDER=aws
@@ -56,7 +56,7 @@ GITHUB_CLIENT_SECRET=<your-github-client-secret>
 
 #### `NEXTAUTH_URL` (Required)
 - **Format:** `https://yourdomain.com` (must use HTTPS in production)
-- **Example:** `https://vibephoto-delta.vercel.app`
+- **Example:** `https://vibephoto.app`
 - **Description:** Base URL for NextAuth callbacks and webhooks.
 - **⚠️ Production:** MUST use HTTPS for webhooks to work!
 
@@ -305,18 +305,18 @@ After configuring environment variables, register webhooks in each platform:
 
 ### Asaas Webhook
 1. Go to: https://www.asaas.com/config/webhook
-2. Add URL: `https://vibephoto-delta.vercel.app/api/payments/asaas/webhook`
+2. Add URL: `https://vibephoto.app/api/payments/asaas/webhook`
 3. Set token: Same as `ASAAS_WEBHOOK_TOKEN`
 4. Enable events: PAYMENT_CONFIRMED, PAYMENT_RECEIVED, SUBSCRIPTION_*
 
 ### Replicate Webhook
 1. Go to: https://replicate.com/account/webhooks
-2. Add URL: `https://vibephoto-delta.vercel.app/api/webhooks/replicate`
+2. Add URL: `https://vibephoto.app/api/webhooks/replicate`
 3. Set secret: Same as `REPLICATE_WEBHOOK_SECRET`
 
 ### Astria Webhook
 1. Go to: https://www.astria.ai/settings
-2. Add webhook URL: `https://vibephoto-delta.vercel.app/api/webhooks/astria`
+2. Add webhook URL: `https://vibephoto.app/api/webhooks/astria`
 3. Set authentication header: `x-astria-secret: <ASTRIA_WEBHOOK_SECRET>`
 
 ---
@@ -362,7 +362,7 @@ STORAGE_PROVIDER=local
 ### `.env.production` (Vercel)
 ```bash
 NODE_ENV=production
-NEXTAUTH_URL=https://vibephoto-delta.vercel.app
+NEXTAUTH_URL=https://vibephoto.app
 NEXTAUTH_SECRET=<strong-random-secret>
 DATABASE_URL=postgresql://...?pgbouncer=true&statement_cache_size=0
 ASAAS_ENVIRONMENT=production
