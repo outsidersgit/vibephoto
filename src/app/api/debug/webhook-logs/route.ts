@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const generationId = searchParams.get('generationId')
-    const externalId = searchParams.get('externalId')
+    const jobId = searchParams.get('jobId')
 
     let generation
 
@@ -22,9 +22,9 @@ export async function GET(request: NextRequest) {
           }
         }
       })
-    } else if (externalId) {
+    } else if (jobId) {
       generation = await prisma.generation.findFirst({
-        where: { externalId },
+        where: { jobId },
         include: {
           user: {
             select: {
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       generation: {
         id: generation.id,
-        externalId: generation.externalId,
+        jobId: generation.jobId,
         status: generation.status,
         createdAt: generation.createdAt,
         completedAt: generation.completedAt,
