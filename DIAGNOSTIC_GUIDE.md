@@ -7,7 +7,7 @@ Gerações estão sendo cobradas (créditos deduzidos), mas as imagens não est�
 
 ### 1. Verificar Gerações do Usuário
 
-**URL:** `https://vibephoto-delta.vercel.app/api/debug/check-user-generations?email=tainabuenojg@gmail.com`
+**URL:** `https://vibephoto.app/api/debug/check-user-generations?email=tainabuenojg@gmail.com`
 
 **O que verifica:**
 - ✅ Todas as gerações recentes do usuário (últimas 10)
@@ -48,7 +48,7 @@ Gerações estão sendo cobradas (créditos deduzidos), mas as imagens não est�
 
 ### 2. Verificar Geração Específica
 
-**URL:** `https://vibephoto-delta.vercel.app/api/debug/webhook-logs?generationId=GEN_ID`
+**URL:** `https://vibephoto.app/api/debug/webhook-logs?generationId=GEN_ID`
 
 **O que verifica:**
 - ✅ Detalhes completos da geração
@@ -85,7 +85,7 @@ Gerações estão sendo cobradas (créditos deduzidos), mas as imagens não est�
       "AWS_SECRET_ACCESS_KEY": "✅ SET"
     },
     "webhook": {
-      "ASTRIA_WEBHOOK_URL": "https://vibephoto-delta.vercel.app/api/webhooks/astria",
+      "ASTRIA_WEBHOOK_URL": "https://vibephoto.app/api/webhooks/astria",
       "ASTRIA_WEBHOOK_SECRET": "✅ SET"
     }
   }
@@ -107,7 +107,7 @@ Gerações estão sendo cobradas (créditos deduzidos), mas as imagens não est�
 
 **Solução:**
 - Verificar se webhook está configurado na Astria
-- Verificar se URL está correta: `https://vibephoto-delta.vercel.app/api/webhooks/astria`
+- Verificar se URL está correta: `https://vibephoto.app/api/webhooks/astria`
 - Verificar se `ASTRIA_WEBHOOK_SECRET` está correto
 
 ### Cenário 2: Webhook é chamado mas S3 falha
@@ -172,7 +172,7 @@ Gerações estão sendo cobradas (créditos deduzidos), mas as imagens não est�
 ### Passo 1: Executar diagnóstico geral
 ```bash
 # Abrir no navegador:
-https://vibephoto-delta.vercel.app/api/debug/check-user-generations?email=tainabuenojg@gmail.com
+https://vibephoto.app/api/debug/check-user-generations?email=tainabuenojg@gmail.com
 ```
 
 ### Passo 2: Identificar geração problemática
@@ -182,7 +182,7 @@ https://vibephoto-delta.vercel.app/api/debug/check-user-generations?email=tainab
 ### Passo 3: Analisar geração específica
 ```bash
 # Substituir GEN_ID pelo ID copiado:
-https://vibephoto-delta.vercel.app/api/debug/webhook-logs?generationId=GEN_ID
+https://vibephoto.app/api/debug/webhook-logs?generationId=GEN_ID
 ```
 
 ### Passo 4: Verificar logs da Vercel
