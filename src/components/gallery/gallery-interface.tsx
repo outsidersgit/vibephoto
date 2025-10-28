@@ -151,11 +151,17 @@ export function GalleryInterface({
   }
 
   const toggleImageSelection = (imageUrl: string) => {
-    setSelectedImages(prev => 
-      prev.includes(imageUrl) 
+    setSelectedImages(prev =>
+      prev.includes(imageUrl)
         ? prev.filter(url => url !== imageUrl)
         : [...prev, imageUrl]
     )
+  }
+
+  // Delete handler
+  const handleDelete = async (generationId: string) => {
+    // Refresh gallery after deletion
+    window.location.reload()
   }
 
   // Upscale functions
@@ -741,13 +747,21 @@ export function GalleryInterface({
       )}
 
       {/* Image Modal */}
-      {selectedImage && (
-        <ImageModal
-          imageUrl={selectedImage}
-          onClose={() => setSelectedImage(null)}
-          mediaItems={currentData}
-        />
-      )}
+      {selectedImage && (() => {
+        const mediaItem = currentData.find(item => item.url === selectedImage)
+        if (!mediaItem) return null
+
+        return (
+          <ImageModal
+            mediaItem={mediaItem}
+            allImages={currentData}
+            onClose={() => setSelectedImage(null)}
+            onUpscale={handleOpenUpscale}
+            onDelete={handleDelete}
+            userPlan={session?.user?.plan || 'FREE'}
+          />
+        )
+      })()}
 
       {/* Upscale Modal */}
       {upscaleModal.isOpen && (

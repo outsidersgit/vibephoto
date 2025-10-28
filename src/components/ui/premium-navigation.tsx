@@ -60,15 +60,13 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
       const response = await fetch('/api/credits/balance')
       const data = await response.json()
       if (data.success && data.balance) {
-        setCreditsBalance(data.balance.totalCredits || data.balance.availableCredits || 3790)
+        setCreditsBalance(data.balance.totalCredits || data.balance.availableCredits || 0)
       } else {
-        // Fallback para desenvolvimento
-        setCreditsBalance(3790)
+        setCreditsBalance(0)
       }
     } catch (error) {
       console.error('Error fetching credits:', error)
-      // Fallback para desenvolvimento
-      setCreditsBalance(3790)
+      setCreditsBalance(0)
     }
   }
 
@@ -76,9 +74,6 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
   useEffect(() => {
     if (session?.user) {
       fetchCredits()
-    } else {
-      // Para usuário não logado, mostrar valor exemplo
-      setCreditsBalance(3790)
     }
   }, [session])
 

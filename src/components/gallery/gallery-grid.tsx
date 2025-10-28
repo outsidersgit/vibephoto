@@ -476,11 +476,9 @@ export function GalleryGrid({
                       setHoveredImage(null)
                     }
                   }}
-                  onClick={(e) => {
-                    // Allow clicks on the card itself (not just the image)
-                    if (e.target === e.currentTarget || (e.target as HTMLElement).tagName === 'IMG') {
-                      handleMediaClick(currentImageUrl, generation)
-                    }
+                  onClick={() => {
+                    // Card is clickable anywhere except on buttons (which have stopPropagation)
+                    handleMediaClick(currentImageUrl, generation)
                   }}
                 >
                   <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
@@ -579,7 +577,17 @@ export function GalleryGrid({
 
                   {/* Hover Actions */}
                   {!bulkSelectMode && hoveredImage === currentImageUrl && (
-                    <div className="absolute inset-0 bg-black bg-opacity-30 rounded-lg flex items-center justify-center px-2 z-10">
+                    <div
+                      className="absolute inset-0 bg-black bg-opacity-30 rounded-lg flex items-center justify-center px-2 z-10"
+                      onClick={(e) => {
+                        // Allow clicks through the overlay to trigger card click
+                        // Buttons will still stopPropagation
+                        if (e.target === e.currentTarget) {
+                          e.stopPropagation()
+                          handleMediaClick(currentImageUrl, generation)
+                        }
+                      }}
+                    >
                       <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-1 max-w-full">
                         {/* Baixar imagem */}
                         <Button
