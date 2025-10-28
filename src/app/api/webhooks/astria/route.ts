@@ -222,9 +222,22 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
           finalImageUrls = imageUrls
         }
       } catch (storageError) {
-        console.error('❌ Storage failed:', storageError)
+        console.error('❌ Storage failed with exception:', storageError)
+        console.error('❌ Error name:', storageError instanceof Error ? storageError.name : 'Unknown')
+        console.error('❌ Error message:', storageError instanceof Error ? storageError.message : 'Unknown')
+        console.error('❌ Error stack:', storageError instanceof Error ? storageError.stack : 'No stack')
+
         // Don't fail the webhook for storage errors - images are still accessible via original URLs
+        // But mark generation with error message for debugging
         finalImageUrls = imageUrls
+
+        // Store error in generation for debugging
+        await prisma.generation.update({
+          where: { id: generation.id },
+          data: {
+            errorMessage: `Warning: Storage failed, images may expire. Error: ${storageError instanceof Error ? storageError.message : 'Unknown'}`
+          }
+        })
       }
     }
 
