@@ -226,7 +226,6 @@ export async function chargeModelCreationCredits(
           type: 'SPENT',
           source: 'MODEL_CREATION',
           description: `Criação de modelo adicional: ${modelName || modelId}`,
-          balanceBefore,
           balanceAfter,
           metadata: {
             modelId,
@@ -234,7 +233,8 @@ export async function chargeModelCreationCredits(
             costPerModel: MODEL_CREATION_COST,
             currentModelsCount: eligibility.currentModels + 1,
             debitFromSubscription,
-            debitFromPurchased
+            debitFromPurchased,
+            balanceBefore
           }
         }
       })
