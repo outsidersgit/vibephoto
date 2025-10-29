@@ -1031,10 +1031,12 @@ export default function HomePage() {
                       >
                         <div className="relative w-full" style={{ aspectRatio: '4/5' }}>
                           {/* Background Image - Full Cover */}
-                          <img
+                          <Image
                             src={style.image}
                             alt={style.title}
-                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 320px"
+                            className="object-cover transition-transform duration-700 group-hover:scale-105"
                           />
 
                           {/* Gradient Overlay for text readability - only show on hover */}
@@ -1095,35 +1097,43 @@ export default function HomePage() {
               <div className="lg:col-span-2 order-1 lg:order-1">
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 max-w-md mx-auto lg:max-w-none">
                   {/* Original Photos */}
-                  <div className="aspect-square rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 transform-gpu">
-                    <img
+                  <div className="aspect-square rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 transform-gpu relative">
+                    <Image
                       src="/examples/transformation/before-1.jpg"
                       alt="Foto original"
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
+                      className="object-cover hover:scale-105 transition-transform duration-500"
                     />
                   </div>
 
-                  <div className="aspect-square rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 transform-gpu">
-                    <img
+                  <div className="aspect-square rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 transform-gpu relative">
+                    <Image
                       src="/examples/transformation/before-2.jpg"
                       alt="Foto original"
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
+                      className="object-cover hover:scale-105 transition-transform duration-500"
                     />
                   </div>
 
-                  <div className="aspect-square rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 transform-gpu">
-                    <img
+                  <div className="aspect-square rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 transform-gpu relative">
+                    <Image
                       src="/examples/transformation/before-3.jpg"
                       alt="Foto original"
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
+                      className="object-cover hover:scale-105 transition-transform duration-500"
                     />
                   </div>
 
-                  <div className="aspect-square rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 transform-gpu">
-                    <img
+                  <div className="aspect-square rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 transform-gpu relative">
+                    <Image
                       src="/examples/transformation/before-4.jpg"
                       alt="Foto original"
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
+                      className="object-cover hover:scale-105 transition-transform duration-500"
                     />
                   </div>
                 </div>
@@ -1132,11 +1142,13 @@ export default function HomePage() {
               {/* Right Side - Large AI Result Card */}
               <div className="lg:col-span-3 order-2 lg:order-2">
                 <div className="relative group">
-                  <div className="aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl hover:shadow-3xl hover:-translate-y-2 transition-all duration-500 transform-gpu bg-white">
-                    <img
+                  <div className="aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl hover:shadow-3xl hover:-translate-y-2 transition-all duration-500 transform-gpu bg-white relative">
+                    <Image
                       src="/examples/transformation/after-3.jpg"
                       alt="Resultado gerado por IA"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 60vw, 600px"
+                      className="object-cover group-hover:scale-105 transition-transform duration-700 cursor-pointer"
                       onClick={() => setSelectedImage({
                         src: "/examples/transformation/after-3.jpg",
                         alt: "Resultado gerado por IA",

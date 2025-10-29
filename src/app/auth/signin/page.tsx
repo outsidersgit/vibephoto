@@ -22,19 +22,20 @@ export default function SignInPage() {
     setError('')
 
     try {
-      // Performance: Usar callbackUrl para redirect server-side (Sprint 1 - Eliminar FOUC)
-      // NextAuth redireciona automaticamente após verificar sessão no servidor
+      // Performance: Redirect manual após login para evitar FOUC (Sprint 1 - Fix)
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: true, // Deixar NextAuth fazer redirect server-side
-        callbackUrl: '/dashboard' // Middleware verifica subscription e redireciona se necessário
+        redirect: false // Manter false para controlar redirect manualmente
       })
 
-      // Se chegou aqui, houve erro (redirect = true não retorna em caso de sucesso)
       if (result?.error) {
         setError('Email ou senha inválidos')
         setIsLoading(false)
+      } else if (result?.ok) {
+        // Redirect imediato via router.push (mais rápido que window.location)
+        // Middleware irá verificar subscription e redirecionar se necessário
+        router.push('/dashboard')
       }
     } catch (error) {
       console.error('Login error:', error)
@@ -45,7 +46,7 @@ export default function SignInPage() {
 
   const handleOAuthSignIn = async (provider: string) => {
     setIsLoading(true)
-    // Performance: OAuth redirect server-side via NextAuth (Sprint 1)
+    // OAuth redirect com callbackUrl (NextAuth gerencia)
     await signIn(provider, { callbackUrl: '/dashboard' })
   }
 
