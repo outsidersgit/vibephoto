@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-})
+// Bundle analyzer - apenas em desenvolvimento
+const withBundleAnalyzer = process.env.ANALYZE === 'true' 
+  ? require('@next/bundle-analyzer')({ enabled: true })
+  : (config) => config
 
 const nextConfig = {
   turbopack: {
