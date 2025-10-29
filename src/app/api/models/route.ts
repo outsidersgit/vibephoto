@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     
     // Filter by status if provided
     const filteredModels = status 
-      ? models.filter(model => model.status === status)
+      ? models.filter((model: any) => model.status === status)
       : models
 
     // Apply pagination
@@ -138,20 +138,26 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Credit check passed. Free model: ${!eligibility.needsPayment}, Credits required: ${eligibility.creditsRequired}`)
 
-    const formData = await request.formData()
-    const name = formData.get('name') as string
-    const modelClass = formData.get('class') as string
-    
-    // Extract photos from FormData
-    const facePhotos = formData.getAll('facePhotos') as File[]
-    const halfBodyPhotos = formData.getAll('halfBodyPhotos') as File[]
-    const fullBodyPhotos = formData.getAll('fullBodyPhotos') as File[]
+    const contentType = request.headers.get('content-type') || ''
+    if (contentType.includes('multipart/form-data')) {
+      return NextResponse.json(
+        { error: 'Uploads diretos não são aceitos aqui. Use presign e envie apenas URLs.' },
+        { status: 400 }
+      )
+    }
+
+    const body = await request.json()
+    const name = body?.name as string
+    const modelClass = body?.class as string
+    const facePhotoUrls = (body?.facePhotoUrls || []) as string[]
+    const halfBodyPhotoUrls = (body?.halfBodyPhotoUrls || []) as string[]
+    const fullBodyPhotoUrls = (body?.fullBodyPhotoUrls || []) as string[]
 
     console.log(`📋 Model data: name=${name}, class=${modelClass}`)
-    console.log(`📸 Photos: face=${facePhotos?.length}, half=${halfBodyPhotos?.length}, full=${fullBodyPhotos?.length}`)
+    console.log(`📸 Photo URLs: face=${facePhotoUrls?.length}, half=${halfBodyPhotoUrls?.length}, full=${fullBodyPhotoUrls?.length}`)
 
     // Validate required fields
-    if (!name || !modelClass || !facePhotos || !halfBodyPhotos || !fullBodyPhotos) {
+    if (!name || !modelClass || !facePhotoUrls || !halfBodyPhotoUrls || !fullBodyPhotoUrls) {
       console.log('❌ Missing required fields')
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -160,52 +166,39 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate photo counts
-    if (facePhotos.length < 5 || facePhotos.length > 10) {
-      console.log(`❌ Invalid face photos count: ${facePhotos.length}`)
+    if (facePhotoUrls.length < 5 || facePhotoUrls.length > 10) {
+      console.log(`❌ Invalid face photos count: ${facePhotoUrls.length}`)
       return NextResponse.json(
         { error: 'Face photos must be between 5-10 images' },
         { status: 400 }
       )
     }
 
-    if (halfBodyPhotos.length < 5 || halfBodyPhotos.length > 10) {
-      console.log(`❌ Invalid half body photos count: ${halfBodyPhotos.length}`)
+    if (halfBodyPhotoUrls.length < 5 || halfBodyPhotoUrls.length > 10) {
+      console.log(`❌ Invalid half body photos count: ${halfBodyPhotoUrls.length}`)
       return NextResponse.json(
         { error: 'Half body photos must be between 5-10 images' },
         { status: 400 }
       )
     }
 
-    if (fullBodyPhotos.length < 5 || fullBodyPhotos.length > 10) {
-      console.log(`❌ Invalid full body photos count: ${fullBodyPhotos.length}`)
+    if (fullBodyPhotoUrls.length < 5 || fullBodyPhotoUrls.length > 10) {
+      console.log(`❌ Invalid full body photos count: ${fullBodyPhotoUrls.length}`)
       return NextResponse.json(
         { error: 'Full body photos must be between 5-10 images' },
         { status: 400 }
       )
     }
 
-    // Step 1: Convert File objects to serializable format for database
+    // Step 1: Build photo metadata from URLs for database
     console.log('📝 Preparing photo metadata for database...')
-    const facePhotoData = facePhotos.map((file: File, index: number) => ({
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      order: index + 1
-    }))
-    
-    const halfBodyPhotoData = halfBodyPhotos.map((file: File, index: number) => ({
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      order: index + 1
-    }))
-    
-    const fullBodyPhotoData = fullBodyPhotos.map((file: File, index: number) => ({
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      order: index + 1
-    }))
+    const toMeta = (urls: string[]) => urls.map((u: string, index: number) => {
+      const name = (() => { try { const p = new URL(u).pathname; return p.split('/').pop() || `photo_${index+1}.jpg` } catch { return `photo_${index+1}.jpg` } })()
+      return { name, size: 0, type: 'image/jpeg', order: index + 1 }
+    })
+    const facePhotoData = toMeta(facePhotoUrls)
+    const halfBodyPhotoData = toMeta(halfBodyPhotoUrls)
+    const fullBodyPhotoData = toMeta(fullBodyPhotoUrls)
 
     // Step 2: Create model in database with photo metadata
     console.log('💾 Creating model in database...')
@@ -245,13 +238,8 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      // Step 3: Save photos to storage (using File objects)
-      console.log('💾 Saving photos to storage...')
-      const facePaths = await savePhotosToStorage(facePhotos, 'face', model.id)
-      const halfBodyPaths = await savePhotosToStorage(halfBodyPhotos, 'half-body', model.id)
-      const fullBodyPaths = await savePhotosToStorage(fullBodyPhotos, 'full-body', model.id)
-
-      console.log(`✅ Photos saved: ${facePaths.length + halfBodyPaths.length + fullBodyPaths.length} files`)
+      // Step 3: As fotos já estão no storage; seguimos para processamento
+      console.log('💾 Using provided photo URLs from direct uploads...')
 
       // Step 3: Prepare training data
       console.log('🔄 Updating model status to PROCESSING...')
@@ -267,7 +255,7 @@ export async function POST(request: NextRequest) {
         modelName: model.name,
         name: model.name,
         class: model.class as any,
-        imageUrls: [...facePaths, ...halfBodyPaths, ...fullBodyPaths],
+        imageUrls: [...facePhotoUrls, ...halfBodyPhotoUrls, ...fullBodyPhotoUrls],
         triggerWord: `${model.name.toLowerCase().replace(/\s+/g, '')}_person`,
         classWord: model.class.toLowerCase(),
         params: {

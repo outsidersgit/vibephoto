@@ -111,32 +111,94 @@ export default function CreateModelPage() {
         fullBodyPhotosCount: modelData.fullBodyPhotos.length
       })
 
-      // Create FormData with all the photos and model data
-      const formData = new FormData()
-      formData.append('name', modelData.name)
-      formData.append('class', modelData.class)
+      // 1) Presign request
+      const allFiles = [
+        ...modelData.facePhotos.map(f => ({ file: f, category: 'face' })),
+        ...modelData.halfBodyPhotos.map(f => ({ file: f, category: 'half-body' })),
+        ...modelData.fullBodyPhotos.map(f => ({ file: f, category: 'full-body' }))
+      ]
 
-      // Add face photos
-      modelData.facePhotos.forEach((photo, index) => {
-        formData.append('facePhotos', photo, `face_${index + 1}_${photo.name}`)
+      const presignRes = await fetch('/api/uploads/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: session?.user?.id,
+          files: allFiles.map(({ file, category }) => ({ name: file.name, type: file.type, category }))
+        })
+      })
+      if (!presignRes.ok) {
+        const err = await presignRes.json().catch(() => ({}))
+        throw new Error(err?.error || 'Falha ao pré-assinar uploads')
+      }
+      const presignData = await presignRes.json()
+
+      // 2) Upload direto para S3 (PUT)
+      const uploads = presignData.uploads as Array<{ uploadUrl: string; publicUrl: string; key: string; contentType: string }>
+      if (!uploads || uploads.length !== allFiles.length) {
+        throw new Error('Resposta de presign inválida')
+      }
+
+      await Promise.all(uploads.map((u, idx) => {
+        const { file } = allFiles[idx]
+        return fetch(u.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type || 'application/octet-stream' },
+          body: file
+        }).then(res => {
+          if (!res.ok) throw new Error(`Falha ao subir arquivo: ${file.name}`)
+        })
+      }))
+
+      // 3) Separar URLs por categoria
+      const facePhotoUrls: string[] = []
+      const halfBodyPhotoUrls: string[] = []
+      const fullBodyPhotoUrls: string[] = []
+      uploads.forEach((u, idx) => {
+        const category = allFiles[idx].category
+        if (category === 'face') facePhotoUrls.push(u.publicUrl)
+        else if (category === 'half-body') halfBodyPhotoUrls.push(u.publicUrl)
+        else if (category === 'full-body') fullBodyPhotoUrls.push(u.publicUrl)
       })
 
-      // Add half body photos
-      modelData.halfBodyPhotos.forEach((photo, index) => {
-        formData.append('halfBodyPhotos', photo, `half_${index + 1}_${photo.name}`)
+      // 3.5) Validar URLs antes de criar o modelo
+      const validateRes = await fetch('/api/uploads/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          facePhotoUrls,
+          halfBodyPhotoUrls,
+          fullBodyPhotoUrls,
+          enforceDomain: true
+        })
       })
+      if (!validateRes.ok) {
+        const err = await validateRes.json().catch(() => ({}))
+        throw new Error(err?.error || 'Falha ao validar URLs')
+      }
+      const validateData = await validateRes.json()
+      if (!validateData.valid) {
+        console.warn('URL validation errors:', validateData.errors)
+        addToast({
+          title: 'URLs inválidas',
+          description: 'Algumas fotos não passaram na validação. Verifique e tente novamente.',
+          type: 'error'
+        })
+        return
+      }
 
-      // Add full body photos
-      modelData.fullBodyPhotos.forEach((photo, index) => {
-        formData.append('fullBodyPhotos', photo, `full_${index + 1}_${photo.name}`)
-      })
+      console.log('📤 Sending request to /api/models with URLs...')
 
-      console.log('📤 Sending request to /api/models...')
-
-      // Send request to create model
+      // 4) Criar modelo com URLs
       const response = await fetch('/api/models', {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: modelData.name,
+          class: modelData.class,
+          facePhotoUrls,
+          halfBodyPhotoUrls,
+          fullBodyPhotoUrls
+        })
       })
 
       const result = await response.json()
