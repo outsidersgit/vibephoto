@@ -26,6 +26,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: '*.cloudfront.net',
       },
+      {
+        protocol: 'https',
+        hostname: '*.astria.ai',
+      },
     ],
   },
   typescript: {
