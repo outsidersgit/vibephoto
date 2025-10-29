@@ -465,13 +465,15 @@ export function GalleryGrid({
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {generations.map((generation) => (
+        {generations.map((generation, index) => (
           <div key={generation.id} className="space-y-3">
           {/* Single Image with Carousel for Variations */}
           {generation.status === 'COMPLETED' && generation.imageUrls.length > 0 ? (
             (() => {
               const currentIndex = getCurrentVariationIndex(generation.id)
               const currentImageUrl = generation.imageUrls[currentIndex]
+              // Priorizar primeiras 6 imagens (above the fold) - Speed Index fix
+              const isPriority = index < 6
 
               return (
                 <div
@@ -502,9 +504,10 @@ export function GalleryGrid({
                       alt={`Generated image ${currentIndex + 1} of ${generation.imageUrls.length}`}
                       fill
                       objectFit="cover"
+                      priority={isPriority}
+                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
                       className="transition-transform group-hover:scale-105"
                       thumbnailUrl={generation.thumbnailUrls?.[currentIndex]}
-                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                     />
                   </div>
 

@@ -113,6 +113,14 @@ export async function middleware(request: NextRequest) {
     response.headers.set('X-Content-Type-Options', 'nosniff')
     response.headers.set('Referrer-Policy', 'origin-when-cross-origin')
     
+    // Back/Forward Cache optimization (fix Lighthouse warning)
+    // Remover headers que bloqueiam bfcache apenas em páginas públicas
+    if (pathname === '/' || pathname.startsWith('/pricing') || pathname.startsWith('/legal')) {
+      response.headers.delete('Cache-Control')
+      // Permitir bfcache para navegação
+      response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate')
+    }
+    
     return response
   } catch (error) {
     console.error('Middleware error:', error)
