@@ -1,6 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 
+// ISR: Revalidar a cada 24 horas (Fase 2 - Otimização de Performance)
+export const revalidate = 86400
+
 export default function TermsPage() {
   const lastUpdated = '26 de Agosto de 2025'
 

@@ -59,7 +59,7 @@ export function useGalleryData(filters: GalleryFilters) {
 
 /**
  * Hook para deletar geração individual
- * Invalida cache automaticamente após sucesso
+ * Implementa optimistic updates para UX instantâneo (Fase 2 - Otimização de Performance)
  */
 export function useDeleteGeneration() {
   const queryClient = useQueryClient()
@@ -79,8 +79,38 @@ export function useDeleteGeneration() {
 
       return response.json()
     },
-    onSuccess: () => {
-      // Invalidar cache da galeria para recarregar dados
+    // Optimistic update: remove da UI antes da resposta do servidor
+    onMutate: async (generationId: string) => {
+      // Cancelar queries em andamento para evitar conflitos
+      await queryClient.cancelQueries({ queryKey: ['gallery'] })
+      
+      // Salvar estado anterior para rollback
+      const previousData = queryClient.getQueryData(['gallery'])
+      
+      // Atualizar cache otimisticamente
+      queryClient.setQueriesData({ queryKey: ['gallery'] }, (old: any) => {
+        if (!old) return old
+        
+        return {
+          ...old,
+          generations: old.generations?.filter((g: any) => g.id !== generationId) || [],
+          stats: {
+            ...old.stats,
+            totalGenerations: Math.max(0, (old.stats?.totalGenerations || 0) - 1)
+          }
+        }
+      })
+      
+      return { previousData }
+    },
+    // Se erro, reverter para estado anterior
+    onError: (err, generationId, context: any) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(['gallery'], context.previousData)
+      }
+    },
+    // Sempre revalidar após completar (sucesso ou erro)
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['gallery'] })
     }
   })
@@ -88,7 +118,7 @@ export function useDeleteGeneration() {
 
 /**
  * Hook para deletar item do histórico de edição
- * Invalida cache automaticamente após sucesso
+ * Implementa optimistic updates para UX instantâneo (Fase 2 - Otimização de Performance)
  */
 export function useDeleteEditHistory() {
   const queryClient = useQueryClient()
@@ -106,7 +136,32 @@ export function useDeleteEditHistory() {
 
       return response.json()
     },
-    onSuccess: () => {
+    // Optimistic update: remove da UI instantaneamente
+    onMutate: async (editId: string) => {
+      await queryClient.cancelQueries({ queryKey: ['gallery'] })
+      const previousData = queryClient.getQueryData(['gallery'])
+      
+      queryClient.setQueriesData({ queryKey: ['gallery'] }, (old: any) => {
+        if (!old) return old
+        
+        return {
+          ...old,
+          editHistory: old.editHistory?.filter((e: any) => e.id !== editId) || [],
+          stats: {
+            ...old.stats,
+            totalEdited: Math.max(0, (old.stats?.totalEdited || 0) - 1)
+          }
+        }
+      })
+      
+      return { previousData }
+    },
+    onError: (err, editId, context: any) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(['gallery'], context.previousData)
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['gallery'] })
     }
   })
@@ -114,7 +169,7 @@ export function useDeleteEditHistory() {
 
 /**
  * Hook para deletar vídeo individual
- * Invalida cache automaticamente após sucesso
+ * Implementa optimistic updates para UX instantâneo (Fase 2 - Otimização de Performance)
  */
 export function useDeleteVideo() {
   const queryClient = useQueryClient()
@@ -132,7 +187,32 @@ export function useDeleteVideo() {
 
       return response.json()
     },
-    onSuccess: () => {
+    // Optimistic update: remove da UI instantaneamente
+    onMutate: async (videoId: string) => {
+      await queryClient.cancelQueries({ queryKey: ['gallery'] })
+      const previousData = queryClient.getQueryData(['gallery'])
+      
+      queryClient.setQueriesData({ queryKey: ['gallery'] }, (old: any) => {
+        if (!old) return old
+        
+        return {
+          ...old,
+          videos: old.videos?.filter((v: any) => v.id !== videoId) || [],
+          stats: {
+            ...old.stats,
+            totalVideos: Math.max(0, (old.stats?.totalVideos || 0) - 1)
+          }
+        }
+      })
+      
+      return { previousData }
+    },
+    onError: (err, videoId, context: any) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(['gallery'], context.previousData)
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['gallery'] })
     }
   })

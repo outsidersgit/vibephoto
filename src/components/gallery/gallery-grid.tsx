@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,13 +28,26 @@ import {
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { calculateOperationCost, getCostDescription } from '@/lib/utils/cost-calculator'
-import { ComparisonModal } from './comparison-modal'
-import { ImageModal } from './image-modal'
-import { VideoPlayerModal } from './video-player-modal'
 import { CompactVideoButton } from '@/components/video/video-button'
 import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
 import { sharePhoto, SharePlatform } from '@/lib/utils/social-share'
 import { OptimizedImage } from '@/components/ui/optimized-image'
+
+// Lazy load modals pesados (Fase 2 - Otimização de Performance)
+const ComparisonModal = dynamic(() => import('./comparison-modal').then(mod => ({ default: mod.ComparisonModal })), {
+  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
+  ssr: false
+})
+
+const ImageModal = dynamic(() => import('./image-modal').then(mod => ({ default: mod.ImageModal })), {
+  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
+  ssr: false
+})
+
+const VideoPlayerModal = dynamic(() => import('./video-player-modal').then(mod => ({ default: mod.VideoPlayerModal })), {
+  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
+  ssr: false
+})
 
 interface GalleryGridProps {
   generations: any[]

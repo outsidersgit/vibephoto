@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -26,12 +27,25 @@ import { GalleryGrid } from './gallery-grid'
 import { GalleryList } from './gallery-list'
 import { GalleryStats } from './gallery-stats'
 import { FilterPanel } from './filter-panel'
-import { ImageModal } from './image-modal'
-import { UpscaleModal } from '@/components/upscale/upscale-modal'
 import { UpscaleProgress } from '@/components/upscale/upscale-progress'
-import { UpscalePreview } from '@/components/upscale/upscale-preview'
 import { combineAllMediaItems, generationToMediaItems, editHistoryToMediaItems, videoToMediaItems } from '@/lib/utils/media-transformers'
 import { MediaItem } from '@/types'
+
+// Lazy load modals pesados (Fase 2 - Otimização de Performance)
+const ImageModal = dynamic(() => import('./image-modal').then(mod => ({ default: mod.ImageModal })), {
+  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
+  ssr: false
+})
+
+const UpscaleModal = dynamic(() => import('@/components/upscale/upscale-modal').then(mod => ({ default: mod.UpscaleModal })), {
+  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
+  ssr: false
+})
+
+const UpscalePreview = dynamic(() => import('@/components/upscale/upscale-preview').then(mod => ({ default: mod.UpscalePreview })), {
+  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
+  ssr: false
+})
 
 interface GalleryInterfaceProps {
   generations: any[]

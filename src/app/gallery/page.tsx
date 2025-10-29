@@ -35,21 +35,15 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const videoStatus = params.status
   const videoQuality = params.quality
 
-  // Get user's models for filtering with error handling
+  // Otimização: Buscar modelos e gerações em paralelo para reduzir latência (Fase 2 - Performance)
   let models = []
-  try {
-    models = await getModelsByUserId(userId)
-  } catch (error) {
-    console.error('Database error fetching models:', error)
-    models = []
-  }
-
-  // Get generations based on filters and active tab with error handling
   let generationsData = { generations: [], totalCount: 0 }
+  
   try {
+    // Executar todas as queries em paralelo com Promise.all
+    const skip = (page - 1) * limit
+    
     if (activeTab === 'packages') {
-      // For packages tab, get only generations with packageId
-      const skip = (page - 1) * limit
       const where = {
         userId,
         status: 'COMPLETED' as any,
@@ -63,17 +57,23 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
         })
       }
 
-      const [generations, total] = await Promise.all([
+      // Query paralela: models + generations + count
+      const [modelsResult, generations, total] = await Promise.all([
+        getModelsByUserId(userId),
         prisma.generation.findMany({
           where,
           skip,
           take: limit,
           orderBy: { createdAt: 'desc' },
           include: {
-            model: true,
+            model: {
+              select: { id: true, name: true, class: true, thumbnailUrl: true }
+            },
             userPackage: {
               include: {
-                package: true
+                package: {
+                  select: { id: true, name: true, slug: true }
+                }
               }
             }
           }
@@ -81,34 +81,50 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
         prisma.generation.count({ where })
       ])
 
+      models = modelsResult
       generationsData = { generations, totalCount: total }
+      
     } else if (searchQuery) {
-      generationsData = await searchGenerations(userId, searchQuery, page, limit)
+      // Query paralela: models + search
+      const [modelsResult, searchResult] = await Promise.all([
+        getModelsByUserId(userId),
+        searchGenerations(userId, searchQuery, page, limit)
+      ])
+      
+      models = modelsResult
+      generationsData = searchResult
+      
     } else {
-      // For generated tab, exclude packages (get only generations without packageId)
-      const skip = (page - 1) * limit
       const where = {
         userId,
         status: 'COMPLETED' as any,
-        packageId: null, // Exclude package generations
+        packageId: null,
         ...(modelFilter && { modelId: modelFilter })
       }
 
-      const [generations, total] = await Promise.all([
+      // Query paralela: models + generations + count
+      const [modelsResult, generations, total] = await Promise.all([
+        getModelsByUserId(userId),
         prisma.generation.findMany({
           where,
           skip,
           take: limit,
           orderBy: { createdAt: 'desc' },
-          include: { model: true }
+          include: { 
+            model: {
+              select: { id: true, name: true, class: true, thumbnailUrl: true }
+            }
+          }
         }),
         prisma.generation.count({ where })
       ])
 
+      models = modelsResult
       generationsData = { generations, totalCount: total }
     }
   } catch (error) {
-    console.error('Database error fetching generations:', error)
+    console.error('Database error:', error)
+    models = []
     generationsData = { generations: [], totalCount: 0 }
   }
 
@@ -148,28 +164,24 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
     }
   }
 
-  // Get stats based on active tab
+  // Otimização: Usar query agregada única ao invés de múltiplas counts (Fase 2 - Performance)
   let totalCount = 0
   let completedCount = 0
 
   try {
-    if (activeTab === 'packages') {
-      // Count only package generations
-      const results = await Promise.all([
-        prisma.generation.count({ where: { userId, packageId: { not: null } } }),
-        prisma.generation.count({ where: { userId, packageId: { not: null }, status: 'COMPLETED' } })
-      ])
-      totalCount = results[0]
-      completedCount = results[1]
-    } else {
-      // Count only non-package generations
-      const results = await Promise.all([
-        prisma.generation.count({ where: { userId, packageId: null } }),
-        prisma.generation.count({ where: { userId, packageId: null, status: 'COMPLETED' } })
-      ])
-      totalCount = results[0]
-      completedCount = results[1]
-    }
+    // Uma única query agregada com groupBy por status
+    const packageCondition = activeTab === 'packages' 
+      ? { packageId: { not: null } } 
+      : { packageId: null }
+    
+    const statsAgg = await prisma.generation.groupBy({
+      by: ['status'],
+      where: { userId, ...packageCondition },
+      _count: { status: true }
+    })
+    
+    totalCount = statsAgg.reduce((sum, stat) => sum + stat._count.status, 0)
+    completedCount = statsAgg.find(s => s.status === 'COMPLETED')?._count.status || 0
   } catch (error) {
     console.error('Database error in gallery stats:', error)
     // Use fallback stats from generationsData

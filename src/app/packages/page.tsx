@@ -1,6 +1,9 @@
 import { requireActiveSubscription } from '@/lib/subscription'
 import { PackagesPageClient } from './packages-client'
 
+// ISR: Revalidar a cada 30 minutos (Fase 2 - Otimização de Performance)
+export const revalidate = 1800
+
 export default async function PackagesPage() {
   const session = await requireActiveSubscription()
 

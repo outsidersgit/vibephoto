@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -27,10 +28,15 @@ import { MediaItem } from '@/types'
 import { calculateOperationCost, getCostDescription } from '@/lib/utils/cost-calculator'
 import Link from 'next/link'
 import { CompactVideoButton } from '@/components/video/video-button'
-import { VideoModal } from '@/components/video/video-modal'
 import { FeedbackModal } from '@/components/feedback/feedback-modal'
 import { useFeedback } from '@/hooks/useFeedback'
 import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
+
+// Lazy load VideoModal (Fase 2 - Otimização de Performance)
+const VideoModal = dynamic(() => import('@/components/video/video-modal').then(mod => ({ default: mod.VideoModal })), {
+  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
+  ssr: false
+})
 
 interface ImageModalProps {
   mediaItem: MediaItem

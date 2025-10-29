@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 import { useToast } from '@/hooks/use-toast'
 import { useGalleryData, useDeleteGeneration, useDeleteEditHistory, useBulkDeleteVideos } from '@/hooks/useGalleryData'
@@ -36,11 +37,24 @@ import { GalleryGrid } from './gallery-grid'
 import { GalleryList } from './gallery-list'
 import { GalleryStats } from './gallery-stats'
 import { FilterPanel } from './filter-panel'
-import { ImageModal } from './image-modal'
-import { ComparisonModal } from './comparison-modal'
 import { UpscaleProgress } from '@/components/upscale/upscale-progress'
-import { UpscaleConfigModal } from '@/components/upscale/upscale-config-modal'
 import { VideoGalleryWrapper } from './video-gallery-wrapper'
+
+// Lazy load modals pesados (Fase 2 - Otimização de Performance)
+const ImageModal = dynamic(() => import('./image-modal').then(mod => ({ default: mod.ImageModal })), {
+  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
+  ssr: false
+})
+
+const ComparisonModal = dynamic(() => import('./comparison-modal').then(mod => ({ default: mod.ComparisonModal })), {
+  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
+  ssr: false
+})
+
+const UpscaleConfigModal = dynamic(() => import('@/components/upscale/upscale-config-modal').then(mod => ({ default: mod.UpscaleConfigModal })), {
+  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
+  ssr: false
+})
 
 interface AutoSyncGalleryInterfaceProps {
   initialGenerations: any[]
