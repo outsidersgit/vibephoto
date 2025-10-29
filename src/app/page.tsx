@@ -687,7 +687,18 @@ export default function HomePage() {
     setMounted(true)
   }, [])
 
+  // Carrossel auto-play
+  useEffect(() => {
+    if (!isCarouselPaused) {
+      const interval = setInterval(() => {
+        setCurrentCarouselIndex((prev) => (prev + 1) % carouselStyles.length)
+      }, 4000)
+      return () => clearInterval(interval)
+    }
+  }, [isCarouselPaused])
+
   // Show loading skeleton during session check to prevent FOUC (Sprint 1 - Fix FOUC definitivo)
+  // Movido para DEPOIS dos useEffects para evitar erro React #310
   if (status === 'loading' || !mounted) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -698,16 +709,6 @@ export default function HomePage() {
       </div>
     )
   }
-
-  // Carrossel auto-play
-  useEffect(() => {
-    if (!isCarouselPaused) {
-      const interval = setInterval(() => {
-        setCurrentCarouselIndex((prev) => (prev + 1) % carouselStyles.length)
-      }, 4000)
-      return () => clearInterval(interval)
-    }
-  }, [isCarouselPaused])
 
   const nextSlide = () => {
     setCurrentCarouselIndex((prev) => (prev + 1) % carouselStyles.length)
