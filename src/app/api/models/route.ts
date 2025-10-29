@@ -279,9 +279,9 @@ export async function POST(request: NextRequest) {
         data: {
           status: 'TRAINING',
           progress: 20,
-          trainingJobId: trainingResponse.id,
+          trainingJobId: String(trainingResponse.id),
           trainingConfig: {
-            trainingId: trainingResponse.id,
+            trainingId: String(trainingResponse.id),
             fluxModel: true,
             startedAt: new Date().toISOString(),
             estimatedTime: trainingResponse.estimatedTime,
