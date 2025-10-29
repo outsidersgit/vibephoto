@@ -35,7 +35,7 @@ export default function TermsPage() {
                 Bem-vindo ao <strong>Vibe Photo</strong>! Estes Termos de Uso regulamentam o uso de nossa plataforma de geração de fotos com inteligência artificial. Ao acessar ou utilizar nossos serviços, você concorda em cumprir estes termos.
               </p>
               <p className="text-gray-700">
-                O <strong>Vibe Photo</strong> é operado por [Nome da Empresa], empresa brasileira inscrita no CNPJ [CNPJ], com sede em [Endereço Completo].
+                O <strong>Vibe Photo</strong> é operado por [OUTSIDERS DIGITAL LTDA], empresa brasileira inscrita no CNPJ [57.047.328/0001-80], com sede em [Avenida Paulista, 726 Conjunto 1202, Bela Vista, São Paulo, SP].
               </p>
               <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
                 <p className="text-amber-800 text-sm">
