@@ -6,6 +6,9 @@ export const metadata = {
   description: 'Extrato detalhado de todas as movimentações de créditos'
 }
 
+// ISR: Cache de 1 minuto (Sprint 2 - Performance)
+export const revalidate = 60
+
 export default async function CreditOrdersPage() {
   const session = await requireActiveSubscription()
 

@@ -6,6 +6,9 @@ export const metadata = {
   description: 'Veja todo o histórico de pagamentos de assinaturas e compras'
 }
 
+// ISR: Cache de 2 minutos (Sprint 2 - Performance)
+export const revalidate = 120
+
 export default async function PaymentHistoryPage() {
   const session = await requireActiveSubscription()
 

@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CreditCard, Calendar, CheckCircle2, XCircle, Clock, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
+import { usePaymentHistory } from '@/hooks/useAccountData'
 
 interface Payment {
   id: string
@@ -38,44 +39,13 @@ interface PaymentHistoryClientProps {
 }
 
 export function PaymentHistoryClient({ userId }: PaymentHistoryClientProps) {
-  const [payments, setPayments] = useState<Payment[]>([])
-  const [pagination, setPagination] = useState<Pagination | null>(null)
-  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'subscription' | 'purchase'>('all')
   const [currentPage, setCurrentPage] = useState(1)
 
-  // Fetch payments from API
-  const fetchPayments = async (page: number = 1) => {
-    try {
-      setLoading(true)
-      const response = await fetch(`/api/account/payments?page=${page}&limit=20`)
-      const data = await response.json()
-
-      if (data.success) {
-        setPayments(data.payments)
-        setPagination(data.pagination)
-        setCurrentPage(page)
-      }
-    } catch (error) {
-      console.error('Error fetching payments:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Initial fetch
-  useEffect(() => {
-    fetchPayments()
-  }, [])
-
-  // Auto-refresh every 30 seconds for payment status updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchPayments(currentPage)
-    }, 30000) // 30 seconds
-
-    return () => clearInterval(interval)
-  }, [currentPage])
+  // Performance: React Query com cache (Sprint 2 - Otimizar /account/history)
+  const { data, isLoading: loading } = usePaymentHistory(currentPage, 20)
+  const payments = data?.payments || []
+  const pagination = data?.pagination || null
 
   // Filter payments
   const filteredPayments = payments.filter(payment => {
@@ -221,7 +191,7 @@ export function PaymentHistoryClient({ userId }: PaymentHistoryClientProps) {
 
           <div className="flex items-center gap-2">
             <Button
-              onClick={() => fetchPayments(currentPage - 1)}
+              onClick={() => setCurrentPage(currentPage - 1)}
               disabled={!pagination.hasPrevPage || loading}
               variant="outline"
               size="sm"
@@ -236,7 +206,7 @@ export function PaymentHistoryClient({ userId }: PaymentHistoryClientProps) {
             </span>
 
             <Button
-              onClick={() => fetchPayments(currentPage + 1)}
+              onClick={() => setCurrentPage(currentPage + 1)}
               disabled={!pagination.hasNextPage || loading}
               variant="outline"
               size="sm"

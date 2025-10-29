@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
+import { useCreditBalance } from '@/hooks/useCredits'
 
 interface PremiumNavigationProps {
   className?: string
@@ -23,9 +24,12 @@ interface PremiumNavigationProps {
 export function PremiumNavigation({ className }: PremiumNavigationProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [creditsBalance, setCreditsBalance] = useState<number | null>(null)
   const [showPackageSelector, setShowPackageSelector] = useState(false)
   const { data: session } = useSession()
+  
+  // Performance: Usar React Query para cache de créditos (Sprint 2 - Navegação Rápida)
+  const { data: balance } = useCreditBalance()
+  const creditsBalance = balance?.totalCredits || null
 
   // Helper: Check if user has active subscription access
   const hasActiveAccess = () => {
@@ -33,12 +37,14 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
 
     const user = session.user as any
 
-    // Debug log
-    console.log('🔍 PremiumNavigation Access Check:', {
-      subscriptionStatus: user.subscriptionStatus,
-      plan: user.plan,
-      hasAccess: user.subscriptionStatus === 'ACTIVE'
-    })
+    // Debug log apenas em desenvolvimento (Sprint 2 - Limpar Console)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 PremiumNavigation Access Check:', {
+        subscriptionStatus: user.subscriptionStatus,
+        plan: user.plan,
+        hasAccess: user.subscriptionStatus === 'ACTIVE'
+      })
+    }
 
     // STRICT: Only allow access if subscriptionStatus is ACTIVE
     return user.subscriptionStatus === 'ACTIVE'
@@ -49,33 +55,9 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
   }
 
   const handlePurchaseSuccess = async () => {
-    // Recarregar saldo de créditos
-    await fetchCredits()
+    // React Query invalida cache automaticamente
+    // Não precisa mais de fetchCredits manual
   }
-
-  const fetchCredits = async () => {
-    if (!session?.user) return
-
-    try {
-      const response = await fetch('/api/credits/balance')
-      const data = await response.json()
-      if (data.success && data.balance) {
-        setCreditsBalance(data.balance.totalCredits || data.balance.availableCredits || 0)
-      } else {
-        setCreditsBalance(0)
-      }
-    } catch (error) {
-      console.error('Error fetching credits:', error)
-      setCreditsBalance(0)
-    }
-  }
-
-  // Hook para buscar saldo de créditos
-  useEffect(() => {
-    if (session?.user) {
-      fetchCredits()
-    }
-  }, [session])
 
   useEffect(() => {
     const handleScroll = () => {

@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Loader2, Calendar, Image, Video, Wand2, Bot, ArrowUp, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useCreditTransactions } from '@/hooks/useAccountData'
 
 interface CreditTransaction {
   id: string
@@ -33,44 +34,13 @@ interface CreditOrdersClientProps {
 }
 
 export function CreditOrdersClient({ userId }: CreditOrdersClientProps) {
-  const [transactions, setTransactions] = useState<CreditTransaction[]>([])
-  const [pagination, setPagination] = useState<Pagination | null>(null)
-  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'earned' | 'spent'>('all')
   const [currentPage, setCurrentPage] = useState(1)
 
-  // Fetch transactions from API
-  const fetchTransactions = async (page: number = 1) => {
-    try {
-      setLoading(true)
-      const response = await fetch(`/api/account/credit-transactions?page=${page}&limit=20`)
-      const data = await response.json()
-
-      if (data.success) {
-        setTransactions(data.transactions)
-        setPagination(data.pagination)
-        setCurrentPage(page)
-      }
-    } catch (error) {
-      console.error('Error fetching credit transactions:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Initial fetch
-  useEffect(() => {
-    fetchTransactions()
-  }, [])
-
-  // Auto-refresh every 30 seconds for transaction updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchTransactions(currentPage)
-    }, 30000) // 30 seconds
-
-    return () => clearInterval(interval)
-  }, [currentPage])
+  // Performance: React Query com cache (Sprint 2 - Otimizar /account/orders)
+  const { data, isLoading: loading } = useCreditTransactions(currentPage, 20)
+  const transactions = data?.transactions || []
+  const pagination = data?.pagination || null
 
   // Filter transactions
   const filteredTransactions = transactions.filter(transaction => {
@@ -205,7 +175,7 @@ export function CreditOrdersClient({ userId }: CreditOrdersClientProps) {
 
           <div className="flex items-center gap-2">
             <Button
-              onClick={() => fetchTransactions(currentPage - 1)}
+              onClick={() => setCurrentPage(currentPage - 1)}
               disabled={!pagination.hasPrevPage || loading}
               variant="outline"
               size="sm"
@@ -220,7 +190,7 @@ export function CreditOrdersClient({ userId }: CreditOrdersClientProps) {
             </span>
 
             <Button
-              onClick={() => fetchTransactions(currentPage + 1)}
+              onClick={() => setCurrentPage(currentPage + 1)}
               disabled={!pagination.hasNextPage || loading}
               variant="outline"
               size="sm"
