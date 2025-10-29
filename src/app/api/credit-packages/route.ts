@@ -2,17 +2,32 @@
  * API para gerenciamento de pacotes de créditos
  * GET - Lista pacotes disponíveis
  * POST - Processa compra de pacote de créditos
+ * 
+ * Performance: Cache de 5min (pacotes mudam raramente) - Sprint 1
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { CreditPackageService } from '@/lib/services/credit-package-service'
+import { unstable_cache } from 'next/cache'
 
 // GET /api/credit-packages - Lista pacotes disponíveis
 export async function GET() {
   try {
-    const packages = CreditPackageService.getAvailablePackages()
+    // Cache de 5 minutos para pacotes (mudam raramente) - Sprint 1
+    const getCachedPackages = unstable_cache(
+      async () => {
+        return CreditPackageService.getAvailablePackages()
+      },
+      ['credit-packages'],
+      {
+        revalidate: 300, // 5 minutos
+        tags: ['credit-packages']
+      }
+    )
+
+    const packages = await getCachedPackages()
     
     return NextResponse.json({
       success: true,

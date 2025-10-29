@@ -22,49 +22,19 @@ export default function SignInPage() {
     setError('')
 
     try {
+      // Performance: Usar callbackUrl para redirect server-side (Sprint 1 - Eliminar FOUC)
+      // NextAuth redireciona automaticamente após verificar sessão no servidor
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false
+        redirect: true, // Deixar NextAuth fazer redirect server-side
+        callbackUrl: '/dashboard' // Middleware verifica subscription e redireciona se necessário
       })
 
+      // Se chegou aqui, houve erro (redirect = true não retorna em caso de sucesso)
       if (result?.error) {
         setError('Email ou senha inválidos')
         setIsLoading(false)
-      } else if (result?.ok) {
-        // Login bem-sucedido - atualizar sessão e redirecionar
-        console.log('✅ Login successful, updating session...')
-
-        // Forçar atualização da sessão
-        const session = await getSession()
-
-        if (session) {
-          console.log('✅ Session updated, redirecting to dashboard...')
-
-          // Check subscription status and redirect accordingly
-          try {
-            const response = await fetch('/api/subscription/status')
-            if (response.ok) {
-              const subscriptionInfo = await response.json()
-              if (subscriptionInfo.hasActiveSubscription) {
-                // Usar window.location para forçar navegação completa
-                window.location.href = '/dashboard'
-              } else {
-                window.location.href = '/pricing?required=true'
-              }
-            } else {
-              // Fallback to dashboard if subscription check fails
-              window.location.href = '/dashboard'
-            }
-          } catch (error) {
-            console.error('Error checking subscription:', error)
-            // Fallback to dashboard if subscription check fails
-            window.location.href = '/dashboard'
-          }
-        } else {
-          setError('Erro ao atualizar sessão. Tente novamente.')
-          setIsLoading(false)
-        }
       }
     } catch (error) {
       console.error('Login error:', error)
@@ -75,8 +45,8 @@ export default function SignInPage() {
 
   const handleOAuthSignIn = async (provider: string) => {
     setIsLoading(true)
-    // OAuth will handle redirect through NextAuth callback
-    await signIn(provider)
+    // Performance: OAuth redirect server-side via NextAuth (Sprint 1)
+    await signIn(provider, { callbackUrl: '/dashboard' })
   }
 
   return (

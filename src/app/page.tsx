@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { ArrowRight, ArrowDown, Sparkles, Users, Zap, Shield, Plus, ImageIcon, TrendingUp, Crown, CreditCard, Upload, Bot, Wand2, Camera, Star, User, X, Calendar, Check, Video, ArrowUp, Edit3, Play, Pause } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useEffect, useState, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 // Swiper imports
@@ -477,14 +478,13 @@ const AIToolsShowcase = () => {
           {currentTool.type === 'comparison' && (
             <div className="relative aspect-video rounded-2xl overflow-hidden bg-gray-200 group/slider">
               <div className="absolute inset-0">
-                <img
+                <Image
                   src={currentExample?.before || currentTool.beforeImage}
                   alt="Antes"
-                  className="absolute inset-0 w-full h-full object-cover"
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1024px"
+                  className="object-cover"
                   style={{ objectPosition: 'center top' }}
-                  onError={(e) => {
-                    e.currentTarget.src = '/examples/professional-woman.jpg'
-                  }}
                 />
                 <div
                   className="absolute inset-0 transition-all duration-300 ease-out"
@@ -492,14 +492,13 @@ const AIToolsShowcase = () => {
                     clipPath: 'polygon(50% 0, 100% 0, 100% 100%, 50% 100%)'
                   }}
                 >
-                  <img
+                  <Image
                     src={currentExample?.after || currentTool.afterImage}
                     alt="Depois"
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1024px"
+                    className="object-cover"
                     style={{ objectPosition: 'center top' }}
-                    onError={(e) => {
-                      e.currentTarget.src = '/examples/card-fotos-profissionais.jpg'
-                    }}
                   />
                 </div>
               </div>
@@ -1342,10 +1341,14 @@ export default function HomePage() {
         <section className="bg-white">
           <div className="relative group">
             <div className="relative overflow-hidden" style={{ aspectRatio: '2.5/1' }}>
-              <img
+              <Image
                 src="/examples/hero/hero-image.jpg"
                 alt="Transforme suas fotos com IA - Exemplo profissional"
-                className="w-full h-full object-cover group-hover:scale-105 transition-all duration-700 ease-out"
+                fill
+                priority
+                sizes="100vw"
+                quality={90}
+                className="object-cover group-hover:scale-105 transition-all duration-700 ease-out"
               />
 
               {/* Subtle Light Sweep */}

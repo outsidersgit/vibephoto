@@ -10,6 +10,7 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { PackageConfigModal } from './package-config-modal'
+import { useCreditBalance, useCreditPackages, useInvalidateCredits } from '@/hooks/useCredits'
 
 interface Package {
   id: string
@@ -37,41 +38,15 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
   const [isActivating, setIsActivating] = useState(false)
   const [activationStatus, setActivationStatus] = useState<'idle' | 'activating' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
-  const [userCredits, setUserCredits] = useState(0)
   const [showCreditsPurchase, setShowCreditsPurchase] = useState(false)
   const [showConfigModal, setShowConfigModal] = useState(false)
-  const [creditPackages, setCreditPackages] = useState<any[]>([])
-  const [loadingCredits, setLoadingCredits] = useState(true)
 
-  // Buscar créditos reais do usuário e pacotes disponíveis
-  React.useEffect(() => {
-    const fetchCreditsData = async () => {
-      try {
-        // Buscar saldo de créditos
-        const balanceResponse = await fetch('/api/credits/balance')
-        if (balanceResponse.ok) {
-          const balanceData = await balanceResponse.json()
-          setUserCredits(balanceData.balance?.totalCredits || 0)
-        }
-
-        // Buscar pacotes de créditos disponíveis
-        const packagesResponse = await fetch('/api/credit-packages')
-        if (packagesResponse.ok) {
-          const packagesData = await packagesResponse.json()
-          setCreditPackages(packagesData.packages || [])
-        }
-      } catch (error) {
-        console.error('Error fetching credits data:', error)
-        // Fallback para valores padrão em caso de erro
-        setUserCredits(150)
-        setCreditPackages([])
-      } finally {
-        setLoadingCredits(false)
-      }
-    }
-
-    fetchCreditsData()
-  }, [])
+  // Performance: Usar React Query para cache instantâneo (Sprint 1)
+  const { data: balance, isLoading: loadingCredits } = useCreditBalance()
+  const { data: creditPackages = [] } = useCreditPackages()
+  const { invalidateBalance } = useInvalidateCredits()
+  
+  const userCredits = balance?.totalCredits || 0
 
   const handleOpenConfigModal = () => {
     // Verificar se tem créditos suficientes
@@ -110,8 +85,8 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
 
       if (data.success) {
         setActivationStatus('success')
-        // Debitar créditos
-        setUserCredits(prev => prev - pkg.price)
+        // Invalidar cache de créditos (React Query atualiza automaticamente)
+        invalidateBalance()
 
         // Show success message and redirect to gallery after 3 seconds
         setTimeout(() => {
@@ -130,8 +105,8 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
   }
 
   const handlePurchaseCredits = (credits: number) => {
-    // Simular compra de créditos
-    setUserCredits(prev => prev + credits)
+    // Simular compra de créditos e invalidar cache
+    invalidateBalance()
     setShowCreditsPurchase(false)
   }
 
@@ -316,8 +291,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
                         size="sm"
                         className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5A6FD8] to-[#6A4190] text-white"
                         onClick={() => {
-                          setUserCredits(prev => prev + creditPkg.creditAmount)
-                          setShowCreditsPurchase(false)
+                          handlePurchaseCredits(creditPkg.creditAmount)
                         }}
                       >
                         R$ {creditPkg.price.toFixed(2).replace('.', ',')}

@@ -10,9 +10,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Configurações padrão para todas as queries
-            staleTime: 30 * 1000, // 30 segundos - dados considerados frescos
-            gcTime: 5 * 60 * 1000, // 5 minutos - tempo de garbage collection
+            // Configurações otimizadas (Sprint 1 - Performance)
+            staleTime: 5 * 60 * 1000, // 5 minutos - dados considerados frescos (aumentado para reduzir requisições)
+            gcTime: 10 * 60 * 1000, // 10 minutos - tempo de garbage collection (aumentado para melhor cache)
             refetchOnWindowFocus: false, // NÃO revalidar ao focar (evita requisições extras)
             refetchOnMount: false, // NÃO revalidar ao montar (usa cache se disponível)
             refetchOnReconnect: false, // NÃO revalidar ao reconectar internet
