@@ -64,95 +64,39 @@ export class AstriaProvider extends AIProvider {
     classWord?: string
   } = {}): Promise<{ id: string; status: string }> {
     try {
-      const formData = new FormData()
-
-      // Configurações do tune - limpar nome para atender validação Astria
-      const cleanName = (options.name || 'person')
-        .replace(/[^a-zA-Z0-9\s]/g, ' ') // Remove caracteres especiais
-        .replace(/\s+/g, ' ') // Normaliza espaços
+      // Conforme documentação Astria, podemos enviar JSON com image_urls
+      // https://docs.astria.ai/docs/api/tune/create/
+      const tuneName = (options.classWord || options.name || 'person')
+        .replace(/[^a-zA-Z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
         .trim()
-        .substring(0, 30) // Limita tamanho
+        .substring(0, 30)
 
-      if (!cleanName || cleanName.length === 0) {
-        throw new AIError('Model name cannot be empty after cleaning', 'INVALID_MODEL_NAME')
+      if (!tuneName) {
+        throw new AIError('Astria tune name is required', 'INVALID_MODEL_NAME')
       }
 
-      formData.append('tune[name]', cleanName)
-      formData.append('tune[title]', cleanName) // Adicionar title também
-
-      const modelType = options.modelType || 'lora'
-      formData.append('tune[model_type]', modelType)
-
-      // Trigger word (token) - usar 'ohwx' como padrão
-      if (modelType !== 'faceid') {
-        const triggerWord = options.triggerWord || 'ohwx'
-        formData.append('tune[token]', triggerWord)
-      }
-
-      // Class word - sempre incluir se fornecido
-      if (options.classWord) {
-        formData.append('tune[class_word]', options.classWord)
-      }
-
-      // Configurações específicas para cada tipo de modelo
-      if (modelType === 'lora') {
-        // Configurações para LoRA
-        formData.append('tune[branch]', 'flux1')
-        formData.append('tune[preset]', 'flux-lora-portrait')
-        formData.append('tune[base_tune]', 'Flux.1 dev')
-      } else if (modelType === 'sd15') {
-        formData.append('tune[base_tune_id]', '1')
-      } else if (modelType === 'sdxl1') {
-        formData.append('tune[base_tune_id]', '2')
-      }
-
-      // Modo de teste (gratuito)
-      if (options.testMode) {
-        formData.append('tune[branch]', 'fast')
-      }
-
-      // Adicionar callback se fornecido
-      if (options.callback) {
-        formData.append('tune[callback]', options.callback)
-      }
-
-      // Baixar e anexar as imagens como arquivos
       if (images.length === 0) {
         throw new AIError('At least one image is required for tune creation', 'MISSING_IMAGES')
       }
 
-      console.log(`📥 Downloading ${images.length} images for Astria tune...`)
+      const modelType = options.modelType || 'lora'
+      const token = modelType !== 'faceid' ? (options.triggerWord || 'ohwx') : undefined
 
-      for (let i = 0; i < images.length; i++) {
-        const imageUrl = images[i]
-        try {
-          console.log(`📥 Downloading image ${i + 1}/${images.length}: ${imageUrl.substring(0, 100)}...`)
-
-          const response = await fetch(imageUrl)
-          if (!response.ok) {
-            throw new Error(`Failed to download image: HTTP ${response.status}`)
-          }
-
-          const buffer = await response.arrayBuffer()
-
-          // Detectar content type da resposta
-          const contentType = response.headers.get('content-type') || 'image/jpeg'
-
-          // Extrair extensão da URL ou usar jpg como padrão
-          const extension = imageUrl.match(/\.(jpg|jpeg|png|webp)(\?|$)/i)?.[1] || 'jpg'
-          const filename = `image_${i + 1}.${extension}`
-
-          // Criar File object com dados corretos
-          const file = new File([buffer], filename, { type: contentType })
-          formData.append('tune[images][]', file)
-          console.log(`✅ Image ${i + 1} downloaded and added: ${filename}`)
-        } catch (error) {
-          console.error(`❌ Failed to download image ${i + 1}:`, error)
-          throw new AIError(`Failed to download image ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`, 'IMAGE_DOWNLOAD_ERROR')
+      const payload: any = {
+        tune: {
+          title: options.name || tuneName,
+          name: tuneName,
+          model_type: modelType,
+          image_urls: images
         }
       }
 
-      const result = await this.makeRequest('POST', '/tunes', formData)
+      if (token) payload.tune.token = token
+      if (options.callback) payload.tune.callback = options.callback
+      if (options.testMode) payload.tune.branch = 'fast'
+
+      const result = await this.makeRequest('POST', '/tunes', payload)
 
       return {
         id: result.id,
@@ -179,7 +123,7 @@ export class AstriaProvider extends AIProvider {
         modelType: 'lora', // Usar LoRA conforme especificação
         testMode: process.env.ASTRIA_TEST_MODE === 'true',
         triggerWord: request.triggerWord || 'ohwx',
-        classWord: request.classWord,
+        classWord: request.classWord, // Será usado como tune[name] conforme docs
         callback: request.webhookUrl
       })
 

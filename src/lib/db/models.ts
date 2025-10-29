@@ -10,6 +10,14 @@ export async function createAIModel(data: {
   fullBodyPhotos: any[]
 }) {
   const totalPhotos = data.facePhotos.length + data.halfBodyPhotos.length + data.fullBodyPhotos.length
+  const classWordMap: Record<ModelClass, string> = {
+    MAN: 'man',
+    WOMAN: 'woman',
+    BOY: 'boy',
+    GIRL: 'girl',
+    ANIMAL: 'animal'
+  }
+  const classWord = classWordMap[data.class]
   
   return prisma.aIModel.create({
     data: {
@@ -19,6 +27,7 @@ export async function createAIModel(data: {
       facePhotos: data.facePhotos,
       halfBodyPhotos: data.halfBodyPhotos,
       fullBodyPhotos: data.fullBodyPhotos,
+      classWord,
       totalPhotos,
       status: ModelStatus.UPLOADING
     }
