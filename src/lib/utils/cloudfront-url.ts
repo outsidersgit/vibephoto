@@ -1,28 +1,16 @@
 /**
  * Converte URLs S3 antigas para CloudFront
  *
- * Problema: URLs salvas no banco antes da implementação do CloudFront
- * são diretas do S3 (ensaio-fotos-prod.s3.us-east-2.amazonaws.com)
- *
- * Solução: Substituir dinamicamente no frontend por CloudFront URLs
+ * IMPORTANTE: Apenas converte URLs S3 do nosso bucket.
+ * URLs externas (Astria, Replicate, etc) são mantidas intactas.
  */
 
 const CLOUDFRONT_URL = process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL || ''
-const S3_BUCKET = process.env.NEXT_PUBLIC_AWS_S3_BUCKET || 'ensaio-fotos-prod'
-const S3_REGION = process.env.NEXT_PUBLIC_AWS_REGION || 'us-east-2'
-
-// Possíveis formatos de URL S3
-const S3_URL_PATTERNS = [
-  `${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com`,
-  `${S3_BUCKET}.s3.amazonaws.com`,
-  `s3.${S3_REGION}.amazonaws.com/${S3_BUCKET}`,
-  `s3.amazonaws.com/${S3_BUCKET}`,
-]
 
 /**
- * Converte URL S3 para CloudFront (se CloudFront estiver configurado)
- * @param url URL original (pode ser S3 ou já CloudFront)
- * @returns URL otimizada com CloudFront
+ * Converte URL S3 para CloudFront (se for S3 do nosso bucket)
+ * @param url URL original (S3, CloudFront, Astria, Replicate, etc)
+ * @returns URL otimizada (CloudFront se S3, original caso contrário)
  */
 export function toCloudFrontUrl(url: string | null | undefined): string {
   // Retorna vazio se não houver URL
@@ -34,20 +22,31 @@ export function toCloudFrontUrl(url: string | null | undefined): string {
   // Se já for CloudFront, retorna sem modificar
   if (url.includes('cloudfront.net')) return url
 
-  // Tenta encontrar e substituir padrão S3 por CloudFront
-  for (const pattern of S3_URL_PATTERNS) {
-    if (url.includes(pattern)) {
-      // Extrai o path (tudo depois do bucket/região)
-      const pathMatch = url.match(new RegExp(`${pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/(.*)`))
+  // Se for URL externa (Astria, Replicate, etc), retorna original
+  if (url.includes('astria.ai') ||
+      url.includes('replicate.delivery') ||
+      url.includes('replicate.com')) {
+    return url
+  }
 
-      if (pathMatch && pathMatch[1]) {
-        const path = pathMatch[1]
-        return `${CLOUDFRONT_URL}/${path}`
-      }
+  // Detecta qualquer URL S3 da AWS
+  const s3Patterns = [
+    /https?:\/\/([^.]+)\.s3\.([^.]+)\.amazonaws\.com\/(.+)/,  // bucket.s3.region.amazonaws.com/path
+    /https?:\/\/([^.]+)\.s3\.amazonaws\.com\/(.+)/,           // bucket.s3.amazonaws.com/path
+    /https?:\/\/s3\.([^.]+)\.amazonaws\.com\/([^/]+)\/(.+)/,  // s3.region.amazonaws.com/bucket/path
+    /https?:\/\/s3\.amazonaws\.com\/([^/]+)\/(.+)/,           // s3.amazonaws.com/bucket/path
+  ]
+
+  for (const pattern of s3Patterns) {
+    const match = url.match(pattern)
+    if (match) {
+      // Extrai o path (último grupo capturado)
+      const path = match[match.length - 1]
+      return `${CLOUDFRONT_URL}/${path}`
     }
   }
 
-  // Se não encontrou padrão S3, retorna original
+  // Se não encontrou padrão S3, retorna original (importante para URLs externas)
   return url
 }
 
