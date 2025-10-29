@@ -67,7 +67,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
           orderBy: { createdAt: 'desc' },
           include: {
             model: {
-              select: { id: true, name: true, class: true, thumbnailUrl: true }
+              select: { id: true, name: true, class: true }
             },
             userPackage: {
               include: {
@@ -112,7 +112,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
           orderBy: { createdAt: 'desc' },
           include: { 
             model: {
-              select: { id: true, name: true, class: true, thumbnailUrl: true }
+              select: { id: true, name: true, class: true }
             }
           }
         }),
