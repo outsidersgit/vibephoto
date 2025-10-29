@@ -1148,6 +1148,7 @@ export default function HomePage() {
                       alt="Resultado gerado por IA"
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1024px) 60vw, 600px"
+                      quality={95}
                       className="object-cover group-hover:scale-105 transition-transform duration-700 cursor-pointer"
                       onClick={() => setSelectedImage({
                         src: "/examples/transformation/after-3.jpg",
@@ -1359,7 +1360,7 @@ export default function HomePage() {
                 fill
                 priority
                 sizes="100vw"
-                quality={90}
+                quality={95}
                 className="object-cover group-hover:scale-105 transition-all duration-700 ease-out"
               />
 

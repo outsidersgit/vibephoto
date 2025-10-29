@@ -22,20 +22,20 @@ export default function SignInPage() {
     setError('')
 
     try {
-      // Performance: Redirect manual após login para evitar FOUC (Sprint 1 - Fix)
+      // Performance: Redirect com recarregamento completo para atualizar sessão (Sprint 1 - Fix v2)
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false // Manter false para controlar redirect manualmente
+        redirect: false // Controlar redirect manualmente
       })
 
       if (result?.error) {
         setError('Email ou senha inválidos')
         setIsLoading(false)
       } else if (result?.ok) {
-        // Redirect imediato via router.push (mais rápido que window.location)
-        // Middleware irá verificar subscription e redirecionar se necessário
-        router.push('/dashboard')
+        // Usar window.location.href para forçar recarregamento completo e atualizar sessão
+        // Isso garante que navbar + conteúdo sejam atualizados juntos
+        window.location.href = '/dashboard'
       }
     } catch (error) {
       console.error('Login error:', error)
