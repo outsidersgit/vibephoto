@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { toCloudFrontUrl } from '@/lib/utils/cloudfront-url'
 
 interface OptimizedImageProps {
   src: string
@@ -48,6 +49,10 @@ export function OptimizedImage({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(false)
 
+  // Converter URLs S3 antigas para CloudFront
+  const optimizedSrc = toCloudFrontUrl(src)
+  const optimizedThumbnail = thumbnailUrl ? toCloudFrontUrl(thumbnailUrl) : undefined
+
   // Fallback para imagens com erro
   const handleError = () => {
     setError(true)
@@ -87,7 +92,7 @@ export function OptimizedImage({
   }
 
   const imageProps = {
-    src,
+    src: optimizedSrc,
     alt,
     quality,
     priority,
@@ -101,9 +106,9 @@ export function OptimizedImage({
     ),
     onClick,
     // Use thumbnail as blur placeholder if available
-    ...(thumbnailUrl && !priority && {
+    ...(optimizedThumbnail && !priority && {
       placeholder: 'blur' as const,
-      blurDataURL: thumbnailUrl
+      blurDataURL: optimizedThumbnail
     })
   }
 
