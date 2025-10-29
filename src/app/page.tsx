@@ -687,6 +687,18 @@ export default function HomePage() {
     setMounted(true)
   }, [])
 
+  // Show loading skeleton during session check to prevent FOUC (Sprint 1 - Fix FOUC definitivo)
+  if (status === 'loading' || !mounted) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+
   // Carrossel auto-play
   useEffect(() => {
     if (!isCarouselPaused) {
@@ -754,17 +766,6 @@ export default function HomePage() {
     }
   }
   
-  // Skip loading state - show content immediately after mount
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando...</p>
-        </div>
-      </div>
-    )
-  }
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
