@@ -135,6 +135,13 @@ export class AWSS3Provider extends StorageProvider {
         mimeType
       }
 
+      // Generate modern formats (WebP/AVIF) for images (Fase 3 - Performance)
+      if (!options.isVideo && buffer && options.generateModernFormats !== false) {
+        const modernFormats = await this.generateModernFormats(buffer, key, options)
+        if (modernFormats.webpUrl) result.webpUrl = modernFormats.webpUrl
+        if (modernFormats.avifUrl) result.avifUrl = modernFormats.avifUrl
+      }
+
       // Generate thumbnail if requested
       if (options.generateThumbnail && options.userId) {
         let thumbnailPath: string
@@ -394,6 +401,80 @@ export class AWSS3Provider extends StorageProvider {
         `Failed to process image: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'IMAGE_PROCESSING_ERROR'
       )
+    }
+  }
+
+  /**
+   * Generate modern image formats (WebP and AVIF) for better performance
+   * Fase 3 - Performance Optimization
+   */
+  private async generateModernFormats(
+    originalBuffer: Buffer,
+    key: string,
+    options: UploadOptions
+  ): Promise<{ webpUrl?: string; avifUrl?: string }> {
+    try {
+      const result: { webpUrl?: string; avifUrl?: string } = {}
+      
+      // Generate WebP version (30-50% menor que JPEG)
+      try {
+        const webpBuffer = await sharp(originalBuffer)
+          .webp({
+            quality: 85,
+            effort: 4 // Balance entre compressão e velocidade
+          })
+          .toBuffer()
+        
+        const webpKey = key.replace(/\.(jpg|jpeg|png)$/i, '.webp')
+        await this.s3Client.send(new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: webpKey,
+          Body: webpBuffer,
+          ContentType: 'image/webp',
+          CacheControl: 'public, max-age=31536000, immutable',
+          Metadata: {
+            originalFormat: 'webp',
+            uploadedAt: new Date().toISOString()
+          }
+        }))
+        
+        result.webpUrl = this.getPublicUrl(webpKey)
+      } catch (webpError) {
+        console.warn('Failed to generate WebP:', webpError)
+      }
+
+      // Generate AVIF version (50-60% menor que JPEG, mas mais lento)
+      try {
+        const avifBuffer = await sharp(originalBuffer)
+          .avif({
+            quality: 75,
+            effort: 4,
+            chromaSubsampling: '4:2:0'
+          })
+          .toBuffer()
+        
+        const avifKey = key.replace(/\.(jpg|jpeg|png)$/i, '.avif')
+        await this.s3Client.send(new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: avifKey,
+          Body: avifBuffer,
+          ContentType: 'image/avif',
+          CacheControl: 'public, max-age=31536000, immutable',
+          Metadata: {
+            originalFormat: 'avif',
+            uploadedAt: new Date().toISOString()
+          }
+        }))
+        
+        result.avifUrl = this.getPublicUrl(avifKey)
+      } catch (avifError) {
+        console.warn('Failed to generate AVIF:', avifError)
+      }
+
+      return result
+    } catch (error) {
+      console.error('Error generating modern formats:', error)
+      return {}
     }
   }
 }

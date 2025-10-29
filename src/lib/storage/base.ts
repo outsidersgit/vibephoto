@@ -6,6 +6,8 @@ export interface UploadResult {
   size: number
   mimeType: string
   thumbnailUrl?: string
+  webpUrl?: string  // Fase 3 - WebP format (30-50% menor)
+  avifUrl?: string  // Fase 3 - AVIF format (50-60% menor)
 }
 
 export interface UploadOptions {
@@ -17,6 +19,7 @@ export interface UploadOptions {
   generateThumbnail?: boolean
   makePublic?: boolean
   isVideo?: boolean
+  generateModernFormats?: boolean  // Fase 3 - Gerar WebP/AVIF (default: true)
 }
 
 export interface FileValidation {
