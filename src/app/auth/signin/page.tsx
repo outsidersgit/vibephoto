@@ -33,9 +33,10 @@ export default function SignInPage() {
         setError('Email ou senha inválidos')
         setIsLoading(false)
       } else if (result?.ok) {
-        // Usar window.location.href para forçar recarregamento completo e atualizar sessão
-        // Isso garante que navbar + conteúdo sejam atualizados juntos
-        window.location.href = '/dashboard'
+        // Redirecionar direto para '/' (home) ao invés de '/dashboard'
+        // Dashboard redireciona para '/' de qualquer forma, então vamos direto
+        // Isso elimina 1 redirect intermediário e reduz FOUC
+        window.location.href = '/'
       }
     } catch (error) {
       console.error('Login error:', error)
@@ -46,8 +47,8 @@ export default function SignInPage() {
 
   const handleOAuthSignIn = async (provider: string) => {
     setIsLoading(true)
-    // OAuth redirect com callbackUrl (NextAuth gerencia)
-    await signIn(provider, { callbackUrl: '/dashboard' })
+    // OAuth redirect direto para '/' (elimina redirect intermediário)
+    await signIn(provider, { callbackUrl: '/' })
   }
 
   return (

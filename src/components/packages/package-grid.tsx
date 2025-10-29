@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Sparkles } from 'lucide-react'
+import Image from 'next/image'
 
 interface Package {
   id: string
@@ -69,23 +70,22 @@ export function PackageGrid({ packages, onPackageSelect }: PackageGridProps) {
             <div className="grid grid-cols-2 h-full gap-1">
               {(pkg.previewImages || []).slice(0, 4).map((image, index) => (
                 <div key={index} className="relative overflow-hidden">
-                  <img
+                  <Image
                     src={image}
-                    alt={`Preview ${index + 1}`}
-                    className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none'
-                      e.currentTarget.nextElementSibling?.classList.remove('hidden')
-                    }}
+                    alt={`${pkg.name} - Preview ${index + 1}`}
+                    fill
+                    sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    quality={90}
+                    className="object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
                   />
-                  <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center hidden">
+                  <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center hidden absolute inset-0 z-10">
                     <span className="text-2xl opacity-50">
                       {getCategoryIcon(pkg.category)}
                     </span>
                   </div>
 
                   {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent group-hover:from-black/60 transition-all duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent group-hover:from-black/60 transition-all duration-300 z-20" />
                 </div>
               ))}
             </div>
