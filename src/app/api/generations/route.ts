@@ -123,6 +123,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Para Astria, o modelUrl deve ser o trainingJobId (tune ID)
+    // Se modelUrl não existir, usar trainingJobId como fallback
+    const effectiveModelUrl = model.modelUrl || model.trainingJobId
+
+    if (!effectiveModelUrl) {
+      console.error(`❌ Model ${modelId} is READY but has no modelUrl or trainingJobId`)
+      return NextResponse.json(
+        { 
+          error: 'Model configuration error: missing model URL. Please contact support.',
+          details: {
+            modelId: model.id,
+            status: model.status,
+            hasModelUrl: !!model.modelUrl,
+            hasTrainingJobId: !!model.trainingJobId
+          }
+        },
+        { status: 500 }
+      )
+    }
+
+    console.log(`✅ Model URL resolved:`, {
+      modelId: model.id,
+      modelUrl: model.modelUrl || '(null)',
+      trainingJobId: model.trainingJobId || '(null)',
+      effectiveModelUrl,
+      provider: process.env.AI_PROVIDER || 'hybrid'
+    })
+
     // Check if user has enough credits (10 credits per image generated)
     const creditsNeeded = variations * 10
     const canUseCredits = await canUserUseCredits(session.user.id, creditsNeeded)
@@ -184,12 +212,12 @@ export async function POST(request: NextRequest) {
       
       // Calculate optimal parameters based on resolution and user plan
       const megapixels = (width * height) / (1024 * 1024)
-      const optimalSteps = calculateOptimalSteps(userPlan, megapixels, model.modelUrl ? 'custom' : 'base')
+      const optimalSteps = calculateOptimalSteps(userPlan, megapixels, effectiveModelUrl ? 'custom' : 'base')
       const optimalGuidance = calculateOptimalGuidance(userPlan, megapixels)
       
       // Build generation request - parâmetros serão mapeados conforme provider (Astria/Replicate)
       const generationRequest = {
-        modelUrl: model.modelUrl!, // We know it's ready so modelUrl exists
+        modelUrl: effectiveModelUrl, // Usa modelUrl ou trainingJobId como fallback
         prompt,
         negativePrompt,
         triggerWord: model.triggerWord || undefined,
@@ -235,12 +263,13 @@ export async function POST(request: NextRequest) {
 
       // Extract tune_id - for Astria use trainingJobId (contains tune_id), for Replicate use modelUrl
       const tuneId = (currentProvider === 'astria' || currentProvider === 'hybrid')
-        ? model.trainingJobId || model.modelUrl
-        : model.modelUrl
+        ? model.trainingJobId || effectiveModelUrl
+        : effectiveModelUrl
 
       console.log(`🔍 [GENERATIONS_DEBUG] Tune ID resolution:`, {
         modelUrl: model.modelUrl,
         trainingJobId: model.trainingJobId,
+        effectiveModelUrl,
         metadataTuneId: generationResponse.metadata?.tune_id,
         finalTuneId: tuneId,
         generationResponseId: generationResponse.id
@@ -375,6 +404,8 @@ export async function POST(request: NextRequest) {
           stack: generationError.stack,
           modelId: model.id,
           modelUrl: model.modelUrl,
+          trainingJobId: model.trainingJobId,
+          effectiveModelUrl,
           userId: session.user.id,
           prompt: prompt.substring(0, 100)
         })
@@ -404,7 +435,9 @@ export async function POST(request: NextRequest) {
         details: {
           errorType: 'GENERATION_START_ERROR',
           modelStatus: model.status,
-          hasModelUrl: !!model.modelUrl
+          hasModelUrl: !!model.modelUrl,
+          hasTrainingJobId: !!model.trainingJobId,
+          effectiveModelUrl: effectiveModelUrl || null
         }
       }, { status: 500 })
     }
