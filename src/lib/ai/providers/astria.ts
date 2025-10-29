@@ -62,6 +62,7 @@ export class AstriaProvider extends AIProvider {
     callback?: string
     triggerWord?: string
     classWord?: string
+    title?: string // Idempotent title (idealmente modelId)
   } = {}): Promise<{ id: string; status: string }> {
     try {
       // Conforme documentação Astria, podemos enviar JSON com image_urls
@@ -85,7 +86,9 @@ export class AstriaProvider extends AIProvider {
 
       const payload: any = {
         tune: {
-          title: options.name || tuneName,
+          // Idempotent title: se fornecido (modelId), Astria retornará tune existente em caso de retry
+          // Conforme: https://docs.astria.ai/docs/api/overview/#idempotency
+          title: options.title || options.name || tuneName,
           name: tuneName,
           model_type: modelType,
           image_urls: images,
@@ -101,7 +104,34 @@ export class AstriaProvider extends AIProvider {
       if (options.callback) payload.tune.callback = options.callback
       if (options.testMode) payload.tune.branch = 'fast'
 
-      const result = await this.makeRequest('POST', '/tunes', payload)
+      // Retry resiliente para 429/5xx (ex.: 503 Service Unavailable)
+      const maxAttempts = 5
+      let lastError: any = null
+      let result: any
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          result = await this.makeRequest('POST', '/tunes', payload)
+          break
+        } catch (error) {
+          lastError = error
+          const message = error instanceof Error ? error.message : String(error)
+          const shouldRetry = /HTTP\s(429|5\d\d)/.test(message)
+
+          if (!shouldRetry || attempt === maxAttempts) {
+            throw new AIError(
+              `Failed to create Astria tune: ${message}`,
+              'TUNE_CREATION_ERROR'
+            )
+          }
+
+          const backoff = Math.min(1000 * Math.pow(2, attempt - 1), 8000)
+          const jitter = Math.floor(Math.random() * 400)
+          const delayMs = backoff + jitter
+          console.warn(`⚠️ Astria /tunes attempt ${attempt} failed (${message}). Retrying in ${delayMs}ms...`)
+          await new Promise(res => setTimeout(res, delayMs))
+        }
+      }
 
       return {
         id: result.id,
@@ -123,13 +153,15 @@ export class AstriaProvider extends AIProvider {
       }
 
       // Criar tune na Astria com configurações LoRA
+      // title = modelId para idempotência (Astria retornará tune existente se já criado)
       const tuneResult = await this.createTune(request.imageUrls, {
         name: request.name,
         modelType: 'lora', // Usar LoRA conforme especificação
         testMode: process.env.ASTRIA_TEST_MODE === 'true',
         triggerWord: request.triggerWord || 'ohwx',
         classWord: request.classWord, // Será usado como tune[name] conforme docs
-        callback: request.webhookUrl
+        callback: request.webhookUrl,
+        title: request.modelId // Idempotent title conforme doc Astria
       })
 
       console.log(`✅ Astria tune created with ID: ${tuneResult.id}`)
@@ -190,6 +222,58 @@ export class AstriaProvider extends AIProvider {
     } catch (error) {
       console.error('Failed to cancel Astria training:', error)
       return false
+    }
+  }
+
+  /**
+   * Find tune by title (for idempotency recovery)
+   * Lista tunes recentes e busca pelo título exato
+   */
+  async findTuneByTitle(title: string): Promise<{ id: string; status: string } | null> {
+    try {
+      console.log(`🔍 Searching for Astria tune with title: ${title}`)
+      
+      // List recent tunes (paginação - buscar primeiras páginas)
+      // Astria não oferece filtro por título, então listamos e filtramos client-side
+      const maxPages = 3
+      const perPage = 50
+      
+      for (let page = 1; page <= maxPages; page++) {
+        try {
+          // GET /tunes (lista todos)
+          const tunes = await this.makeRequest('GET', `/tunes?page=${page}&per_page=${perPage}`)
+          
+          // Se for array, buscar diretamente
+          const tunesList = Array.isArray(tunes) ? tunes : (tunes.tunes || [])
+          
+          const found = tunesList.find((tune: any) => tune.title === title)
+          
+          if (found) {
+            console.log(`✅ Found Astria tune by title "${title}": ID ${found.id}, status: ${found.status}`)
+            return {
+              id: String(found.id),
+              status: found.status || 'unknown'
+            }
+          }
+          
+          // Se última página ou lista vazia, parar
+          if (tunesList.length < perPage) {
+            break
+          }
+        } catch (pageError) {
+          console.warn(`⚠️ Failed to fetch page ${page} of tunes:`, pageError)
+          if (page === 1) {
+            // Se primeira página falhar, não continuar
+            break
+          }
+        }
+      }
+      
+      console.log(`⚠️ Astria tune with title "${title}" not found in recent tunes`)
+      return null
+    } catch (error) {
+      console.error(`❌ Error searching for tune by title "${title}":`, error)
+      return null
     }
   }
 

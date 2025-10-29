@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { broadcastModelStatusChange } from '@/lib/services/realtime-service'
+import { refundModelCreationCredits } from '@/lib/services/model-credit-service'
 
 interface AstriaWebhookPayload {
   id: string
@@ -153,6 +154,20 @@ async function handleTuneWebhook(payload: AstriaWebhookPayload) {
       } catch (sampleError) {
         console.error('❌ Sample generation failed:', sampleError)
         // Don't fail the webhook for sample generation errors
+      }
+    }
+    
+    // If training failed, refund credits (idempotente)
+    if (internalStatus === 'FAILED') {
+      try {
+        const refund = await refundModelCreationCredits(model.userId, model.id, model.name)
+        if (refund.success) {
+          console.log(`↩️ Credits refunded via webhook for model ${model.id}: +${refund.refundedAmount}`)
+        } else {
+          console.warn('⚠️ Webhook refund skipped:', refund.message)
+        }
+      } catch (err) {
+        console.error('❌ Webhook refund error:', err)
       }
     }
 

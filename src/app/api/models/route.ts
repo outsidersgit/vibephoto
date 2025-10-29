@@ -6,7 +6,10 @@ import { getAIProvider } from '@/lib/ai'
 import { getStorageProvider } from '@/lib/storage'
 import { AIError } from '@/lib/ai/base'
 import { prisma } from '@/lib/db'
-import { checkModelCreationEligibility, chargeModelCreationCredits } from '@/lib/services/model-credit-service'
+import { checkModelCreationEligibility, chargeModelCreationCredits, refundModelCreationCredits } from '@/lib/services/model-credit-service'
+import { AstriaProvider } from '@/lib/ai/providers/astria'
+import { startTrainingPolling } from '@/lib/services/training-polling-service'
+import { broadcastModelStatusChange } from '@/lib/services/realtime-service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -214,6 +217,7 @@ export async function POST(request: NextRequest) {
     console.log(`✅ Model created in database with ID: ${model.id}`)
 
     // Step 2.5: Charge credits if needed (for extra models)
+    let creditsCharged = false
     if (eligibility.needsPayment) {
       console.log('💳 Charging credits for extra model...')
       const chargeResult = await chargeModelCreationCredits(session.user.id, model.id, model.name)
@@ -233,9 +237,14 @@ export async function POST(request: NextRequest) {
       }
 
       console.log(`✅ Credits charged successfully. New balance: ${chargeResult.newBalance}`)
+      creditsCharged = true
     } else {
       console.log('🎁 First model is free - no credits charged')
     }
+
+    // Step 4: Get AI provider (antes do try para usar na recuperação)
+    console.log('🤖 Getting AI provider...')
+    const aiProvider = getAIProvider()
 
     try {
       // Step 3: As fotos já estão no storage; seguimos para processamento
@@ -244,10 +253,6 @@ export async function POST(request: NextRequest) {
       // Step 3: Prepare training data
       console.log('🔄 Updating model status to PROCESSING...')
       await updateModelStatus(model.id, 'PROCESSING', 10)
-
-      // Step 4: Get AI provider and start training
-      console.log('🤖 Getting AI provider...')
-      const aiProvider = getAIProvider()
 
       // Create training request
       const trainingRequest = {
@@ -304,10 +309,108 @@ export async function POST(request: NextRequest) {
     } catch (trainingError: any) {
       console.error('❌ Error during training setup:', trainingError)
       
-      // Update model status to failed
-      await updateModelStatus(model.id, 'ERROR', 0, trainingError.message)
+      // TENTATIVA DE RECUPERAÇÃO: buscar tune no Astria usando idempotência (title = modelId)
+      let recoverySuccess = false
+      if (aiProvider instanceof AstriaProvider) {
+        try {
+          console.log(`🔄 Attempting Astria tune recovery for model ${model.id}...`)
+          const foundTune = await aiProvider.findTuneByTitle(model.id)
+          
+          if (foundTune) {
+            console.log(`✅ Found tune in Astria! ID: ${foundTune.id}, Status: ${foundTune.status}`)
+            
+            // Mapear status do Astria
+            let internalStatus: 'TRAINING' | 'READY' | 'ERROR'
+            let progress = 20
+            
+            if (foundTune.status === 'trained') {
+              internalStatus = 'READY'
+              progress = 100
+            } else if (foundTune.status === 'failed' || foundTune.status === 'cancelled') {
+              internalStatus = 'ERROR'
+              progress = 0
+            } else {
+              internalStatus = 'TRAINING'
+              progress = 20
+            }
+            
+            // Atualizar modelo no banco
+            const updatedModel = await prisma.aIModel.update({
+              where: { id: model.id },
+              data: {
+                status: internalStatus,
+                progress,
+                trainingJobId: foundTune.id,
+                modelUrl: internalStatus === 'READY' ? foundTune.id : undefined,
+                trainedAt: internalStatus === 'READY' ? new Date() : undefined,
+                trainingConfig: {
+                  trainingId: foundTune.id,
+                  fluxModel: true,
+                  startedAt: new Date().toISOString(),
+                  provider: 'astria',
+                  recovered: true
+                }
+              }
+            })
+            
+            // Emitir SSE para atualizar UI
+            await broadcastModelStatusChange(model.id, session.user.id, internalStatus, {
+              progress,
+              modelUrl: foundTune.id,
+              recovered: true
+            })
+            
+            // Se TRAINING, iniciar polling
+            if (internalStatus === 'TRAINING') {
+              setTimeout(() => {
+                startTrainingPolling(foundTune.id, model.id, session.user.id).catch(err => {
+                  console.error('Failed to start polling after recovery:', err)
+                })
+              }, 2000)
+            }
+            
+            recoverySuccess = true
+            console.log(`🎉 Model ${model.id} recovered successfully! Status: ${internalStatus}`)
+            
+            return NextResponse.json({
+              success: true,
+              message: 'Model creation started successfully (recovered from Astria)',
+              modelId: model.id,
+              trainingId: foundTune.id,
+              status: internalStatus,
+              recovered: true
+            })
+          } else {
+            console.log(`⚠️ Tune not found in Astria for model ${model.id}`)
+          }
+        } catch (recoveryError) {
+          console.error('❌ Recovery attempt failed:', recoveryError)
+        }
+      }
       
-      throw trainingError
+      // Se recuperação falhou, proceder com erro e reembolso
+      if (!recoverySuccess) {
+        // Update model status to failed
+        await updateModelStatus(model.id, 'ERROR', 0, trainingError.message)
+        
+        // Refund credits if they were charged
+        try {
+          if (creditsCharged) {
+            const refund = await refundModelCreationCredits(session.user.id, model.id, model.name)
+            if (refund.success) {
+              console.log(`↩️ Credits refunded for model ${model.id}: +${refund.refundedAmount}`)
+            } else {
+              console.warn('⚠️ Failed to refund credits:', refund.message)
+            }
+          }
+        } catch (refundError) {
+          console.error('⚠️ Refund processing error:', refundError)
+        }
+      }
+      
+      if (!recoverySuccess) {
+        throw trainingError
+      }
     }
 
   } catch (error: any) {

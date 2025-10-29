@@ -30,6 +30,13 @@ export interface ChargeModelCreditsResult {
   message?: string
 }
 
+export interface RefundModelCreditsResult {
+  success: boolean
+  refundedAmount?: number
+  newBalance?: number
+  message?: string
+}
+
 /**
  * Checks if user can create a new model and if they need to pay credits
  */
@@ -273,6 +280,120 @@ export async function chargeModelCreationCredits(
       success: false,
       message: 'Erro ao cobrar créditos pela criação do modelo'
     }
+  }
+}
+
+/**
+ * Refund credits for a failed/cancelled model creation
+ * - Reverts in the same buckets used on debit (subscription first, then purchased)
+ * - Idempotent: if a REFUNDED transaction for this model already exists, it won't double refund
+ */
+export async function refundModelCreationCredits(
+  userId: string,
+  modelId: string,
+  modelName?: string
+): Promise<RefundModelCreditsResult> {
+  try {
+    // Check if there is a SPENT transaction for this model and no previous REFUNDED
+    const spentTx = await prisma.creditTransaction.findFirst({
+      where: {
+        userId,
+        type: 'SPENT',
+        source: 'MODEL_CREATION',
+        metadata: {
+          path: ['modelId'],
+          equals: modelId
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    if (!spentTx) {
+      return { success: false, message: 'Nenhum débito encontrado para reembolso' }
+    }
+
+    const alreadyRefunded = await prisma.creditTransaction.findFirst({
+      where: {
+        userId,
+        type: 'REFUNDED',
+        source: 'MODEL_CREATION',
+        metadata: {
+          path: ['modelId'],
+          equals: modelId
+        }
+      }
+    })
+
+    if (alreadyRefunded) {
+      return {
+        success: true,
+        refundedAmount: Math.abs(alreadyRefunded.amount),
+        newBalance: alreadyRefunded.balanceAfter || undefined,
+        message: 'Reembolso já processado anteriormente'
+      }
+    }
+
+    // Amounts used on debit
+    const meta: any = spentTx.metadata || {}
+    let debitFromSubscription = Number(meta.debitFromSubscription || 0)
+    let debitFromPurchased = Number(meta.debitFromPurchased || 0)
+    let totalToRefund = Math.abs(spentTx.amount)
+
+    // Fallback if metadata missing: refund as much as possível para assinatura (reduz creditsUsed)
+    // e o restante para créditos comprados
+    if (debitFromSubscription + debitFromPurchased !== totalToRefund) {
+      debitFromSubscription = totalToRefund
+      debitFromPurchased = 0
+    }
+
+    // Apply refund
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        // Reduce used subscription credits (cannot go below 0)
+        creditsUsed: debitFromSubscription > 0 ? { decrement: debitFromSubscription } : undefined,
+        // Increase purchased credits balance
+        creditsBalance: debitFromPurchased > 0 ? { increment: debitFromPurchased } : undefined
+      },
+      select: {
+        creditsUsed: true,
+        creditsLimit: true,
+        creditsBalance: true
+      }
+    })
+
+    const subscriptionAfter = Math.max(0, updated.creditsLimit - updated.creditsUsed)
+    const purchasedAfter = updated.creditsBalance || 0
+    const balanceAfter = subscriptionAfter + purchasedAfter
+
+    // Record refund transaction
+    const refundTx = await prisma.creditTransaction.create({
+      data: {
+        userId,
+        amount: totalToRefund, // Positive for refund
+        type: 'REFUNDED',
+        source: 'MODEL_CREATION',
+        description: `Reembolso por falha na criação do modelo: ${modelName || modelId}`,
+        balanceAfter,
+        metadata: {
+          modelId,
+          modelName,
+          refundToSubscription: debitFromSubscription,
+          refundToPurchased: debitFromPurchased
+        }
+      }
+    })
+
+    return {
+      success: true,
+      refundedAmount: refundTx.amount,
+      newBalance: balanceAfter,
+      message: 'Créditos reembolsados com sucesso'
+    }
+
+  } catch (error) {
+    logger.error('Error refunding model creation credits', { userId, modelId, error })
+    return { success: false, message: 'Erro ao processar reembolso de créditos' }
   }
 }
 
