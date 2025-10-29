@@ -324,8 +324,31 @@ export class AstriaProvider extends AIProvider {
       // Exemplo: "ohwx person, elegante executivo minimalista"
 
       // Construir prompt com token e classWord (com fallbacks para compatibilidade)
-      const token = request.triggerWord || 'ohwx' // Default token usado no treinamento
-      const classWord = request.classWord || 'person' // Fallback para modelos antigos
+      let token = request.triggerWord || ''
+      let classWord = request.classWord || 'person'
+
+      // Se não temos token no modelo, buscar do tune na Astria (ex.: "bruninha_person")
+      if (!token && request.modelUrl) {
+        try {
+          const tune = await this.makeRequest('GET', `/tunes/${request.modelUrl}`)
+          if (tune?.token) {
+            token = String(tune.token)
+            console.log(`🔑 [ASTRIA_DEBUG] Retrieved token from tune ${request.modelUrl}: ${token}`)
+          }
+          // Alguns tunes trazem o nome/classe no campo name
+          if (!request.classWord && tune?.name) {
+            classWord = String(tune.name)
+            console.log(`🗂️  [ASTRIA_DEBUG] Retrieved classWord from tune ${request.modelUrl}: ${classWord}`)
+          }
+        } catch (fetchTuneError) {
+          console.warn(`⚠️ Failed to fetch tune details for ${request.modelUrl} to get token/classWord:`, fetchTuneError)
+        }
+      }
+
+      // Fallback final para garantir um token (evitar 422 da Astria)
+      if (!token) {
+        token = 'ohwx'
+      }
 
       // Verificar se o prompt já inclui o token (para evitar duplicação)
       const promptLower = request.prompt.toLowerCase()
