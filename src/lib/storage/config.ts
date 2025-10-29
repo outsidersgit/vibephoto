@@ -8,7 +8,7 @@ export const STORAGE_CONFIG = {
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
     region: process.env.AWS_REGION || 'us-east-1',
     bucket: process.env.AWS_S3_BUCKET || '',
-    cloudFrontUrl: process.env.AWS_CLOUDFRONT_URL || ''
+    cloudFrontUrl: process.env.NEXT_PUBLIC_AWS_CLOUDFRONT_URL || ''
   },
   
   // Cloudinary Configuration
