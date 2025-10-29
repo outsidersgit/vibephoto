@@ -44,8 +44,34 @@ export class AstriaProvider extends AIProvider {
       const response = await fetch(url, options)
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(`HTTP ${response.status}: ${errorData.detail || response.statusText}`)
+        let errorData: any = {}
+        let errorText = ''
+        try {
+          errorText = await response.text()
+          errorData = errorText ? JSON.parse(errorText) : {}
+          console.error(`❌ [ASTRIA_API_ERROR] Error Response:`, {
+            endpoint: `${this.baseUrl}${endpoint}`,
+            method,
+            status: response.status,
+            statusText: response.statusText,
+            errorData,
+            errorText,
+            rawError: errorText
+          })
+        } catch (parseError) {
+          console.error(`❌ [ASTRIA_API_ERROR] Failed to parse error response:`, {
+            parseError,
+            rawText: errorText,
+            status: response.status,
+            statusText: response.statusText
+          })
+        }
+        
+        // Construir mensagem de erro mais informativa
+        const errorMessage = errorData.detail || errorData.message || errorData.error || response.statusText
+        const fullErrorMessage = errorText ? `HTTP ${response.status}: ${errorMessage}. Raw response: ${errorText}` : `HTTP ${response.status}: ${errorMessage}`
+        
+        throw new Error(fullErrorMessage)
       }
 
       return await response.json()
@@ -372,9 +398,13 @@ export class AstriaProvider extends AIProvider {
 
       // Enhancements fixos conforme solicitado
       // super_resolution sempre true
+      // NOTA: Astria pode esperar boolean true/false ou string "true"/"false"
+      // Testando com string primeiro (conforme documentação de exemplos)
       formData.append('prompt[super_resolution]', 'true')
 
       // inpaint_faces sempre true
+      // NOTA: Pode não ser compatível com todos os tipos de modelo LoRA
+      // Se der erro 422, tentar removendo este parâmetro
       formData.append('prompt[inpaint_faces]', 'true')
 
       // NOTA: style não é enviado (conforme solicitado)
@@ -439,8 +469,17 @@ export class AstriaProvider extends AIProvider {
         incompatibleParamsOmitted: ['face_correct', 'face_swap', 'hires_fix', 'output_quality']
       })
 
+      // Validar se temos tune ID para modelos customizados
+      if (!request.modelUrl) {
+        throw new AIError('Model URL (tune ID) is required for generation', 'MISSING_TUNE_ID')
+      }
+
       // Fazer request para Astria usando URL e FormData corretas
-      const endpoint = request.modelUrl ? `/tunes/${request.modelUrl}/prompts` : '/prompts'
+      const endpoint = `/tunes/${request.modelUrl}/prompts`
+      
+      console.log(`🚀 [ASTRIA_POST] Sending POST to: ${this.baseUrl}${endpoint}`)
+      console.log(`📦 [ASTRIA_POST] FormData entries count: ${Array.from(formData.entries()).length}`)
+      
       const prediction = await this.makeRequest('POST', endpoint, formData)
       // CRÍTICO: usar sempre o modelUrl como tune_id correto, pois prediction.tune_id retorna o prompt_id
       const tuneId = request.modelUrl || prediction.tune_id
@@ -481,15 +520,43 @@ export class AstriaProvider extends AIProvider {
       // Tratar erros específicos da Astria
       if (error instanceof Error) {
         const errorMessage = error.message.toLowerCase()
+        const fullMessage = error.message
+
+        // Log detalhado do erro para debugging
+        console.error(`❌ [ASTRIA_GENERATION_ERROR] Full error message:`, {
+          message: error.message,
+          stack: error.stack,
+          modelUrl: request.modelUrl,
+          endpoint: request.modelUrl ? `/tunes/${request.modelUrl}/prompts` : '/prompts',
+          prompt: request.prompt.substring(0, 100)
+        })
 
         if (errorMessage.includes('422')) {
-          throw new AIError('Invalid parameters. Check your settings.', 'INVALID_INPUT')
+          // Incluir mensagem original do erro para ajudar no debugging
+          // Se o erro mencionar inpaint_faces, pode ser incompatibilidade com o modelo
+          console.error(`⚠️ [ASTRIA_422] Possible causes:`, {
+            message: fullMessage,
+            possibleIssues: [
+              'inpaint_faces may not be compatible with this model type',
+              'aspect_ratio format may be incorrect',
+              'model (tune) may not accept certain parameters',
+              'parameter combination may be invalid'
+            ],
+            suggestion: 'Try removing inpaint_faces if error persists'
+          })
+          
+          throw new AIError(
+            `Invalid parameters (422). Astria API error: ${fullMessage}. Check your settings and ensure all parameters are valid. If the error persists, the model may not support inpaint_faces.`,
+            'INVALID_INPUT'
+          )
         } else if (errorMessage.includes('429')) {
           throw new AIError('Rate limit exceeded. Please wait a few seconds.', 'RATE_LIMIT_ERROR')
         } else if (errorMessage.includes('500')) {
           throw new AIError('Server error. Trying again...', 'SERVER_ERROR')
         } else if (errorMessage.includes('504')) {
           throw new AIError('Timeout. Generation may still be in progress.', 'TIMEOUT_ERROR')
+        } else if (errorMessage.includes('404')) {
+          throw new AIError(`Model (tune) not found. Tune ID: ${request.modelUrl}. The model may not exist or may have been deleted.`, 'MODEL_NOT_FOUND')
         }
       }
 
