@@ -465,7 +465,7 @@ export function GalleryGrid({
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {generations.map((generation) => (
+        {generations.map((generation, index) => (
           <div key={generation.id} className="space-y-3">
           {/* Single Image with Carousel for Variations */}
           {generation.status === 'COMPLETED' && generation.imageUrls.length > 0 ? (
