@@ -88,24 +88,7 @@ export function RealtimeModelList({ initialModels, userId }: RealtimeModelListPr
 
   return (
     <div className="space-y-8">
-      {/* Status discreto apenas se houver problemas */}
-      {(!isConnected || connectionError) && (
-        <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg p-3">
-          <div className="flex items-center space-x-2">
-            <WifiOff className="w-4 h-4 text-amber-600" />
-            <span className="text-sm text-amber-700">
-              Verificando atualizações dos modelos...
-            </span>
-          </div>
-          <button
-            onClick={handleRefresh}
-            className="flex items-center space-x-1 px-2 py-1 rounded hover:bg-amber-100 text-amber-700 text-xs"
-          >
-            <RefreshCw className="w-3 h-3" />
-            <span>Atualizar</span>
-          </button>
-        </div>
-      )}
+      {/* Conexão realtime acontece nos bastidores - não mostrar status */}
 
       {/* Models by Status */}
       {modelsByStatus.training.length > 0 && (
