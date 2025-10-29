@@ -93,46 +93,76 @@ export async function POST(request: NextRequest) {
 async function handleTuneWebhook(payload: AstriaWebhookPayload) {
   try {
     // Find the corresponding AI model in our database
+    // Tentar tanto como string quanto como número (Astria pode retornar ambos)
+    const tuneId = String(payload.id)
+    const tuneIdNum = typeof payload.id === 'number' ? payload.id : parseInt(tuneId)
+    
     const model = await prisma.aIModel.findFirst({
       where: {
-        trainingJobId: payload.id
+        OR: [
+          { trainingJobId: tuneId },
+          { trainingJobId: String(tuneIdNum) },
+          // Fallback: buscar por metadata em trainingConfig
+          {
+            trainingConfig: {
+              path: ['trainingId'],
+              equals: tuneId
+            }
+          }
+        ]
       }
     })
 
     if (!model) {
-      console.warn('⚠️ No model found for Astria tune:', payload.id)
+      console.warn(`⚠️ No model found for Astria tune: ${payload.id} (tried as string "${tuneId}" and number ${tuneIdNum})`)
+      console.warn('📋 Available trainingJobIds in database:', await prisma.aIModel.findMany({
+        where: { status: { in: ['TRAINING', 'PROCESSING'] } },
+        select: { id: true, trainingJobId: true, name: true }
+      }).then(models => models.map(m => ({ modelId: m.id, trainingJobId: m.trainingJobId, name: m.name }))))
       return
     }
 
     console.log(`🎯 Processing Astria tune webhook for model: ${model.id}`)
 
     // Map Astria status to our internal status
+    console.log(`📊 Astria webhook payload status: "${payload.status}" (type: ${typeof payload.status})`)
+    
     let internalStatus: 'TRAINING' | 'READY' | 'FAILED'
-    switch (payload.status) {
-      case 'trained':
-        internalStatus = 'READY'
-        break
-      case 'failed':
-      case 'cancelled':
-        internalStatus = 'FAILED'
-        break
-      default:
-        internalStatus = 'TRAINING'
+    const statusLower = String(payload.status).toLowerCase()
+    
+    if (statusLower === 'trained') {
+      internalStatus = 'READY'
+      console.log(`✅ Mapping Astria "trained" → READY`)
+    } else if (statusLower === 'failed' || statusLower === 'cancelled') {
+      internalStatus = 'FAILED'
+      console.log(`❌ Mapping Astria "${payload.status}" → FAILED`)
+    } else {
+      internalStatus = 'TRAINING'
+      console.log(`⏳ Mapping Astria "${payload.status}" → TRAINING`)
     }
 
     // Update the model with the new status
+    const updateData: any = {
+      status: internalStatus as any,
+      progress: internalStatus === 'READY' ? 100 : (internalStatus === 'TRAINING' ? model.progress || 20 : 0),
+      errorMessage: payload.error_message || undefined
+    }
+
+    if (statusLower === 'trained') {
+      updateData.modelUrl = String(payload.id) // Use tune ID as model URL
+      updateData.trainedAt = payload.trained_at ? new Date(payload.trained_at) : new Date()
+    }
+
+    if (payload.logs) {
+      updateData.trainingLogs = [payload.logs]
+    }
+
     const updatedModel = await prisma.aIModel.update({
       where: { id: model.id },
-      data: {
-        status: internalStatus as any,
-        modelUrl: payload.status === 'trained' ? payload.id : model.modelUrl, // Use tune ID as model URL
-        trainedAt: payload.trained_at ? new Date(payload.trained_at) : undefined,
-        trainingLogs: payload.logs ? [payload.logs] : undefined,
-        errorMessage: payload.error_message || undefined
-      }
+      data: updateData
     })
 
-    console.log(`✅ Astria tune ${payload.id} updated to status: ${internalStatus}`)
+    console.log(`✅ Astria tune ${payload.id} updated to status: ${internalStatus}, progress: ${updateData.progress}%`)
 
     // Broadcast model status change to the owner
     try {

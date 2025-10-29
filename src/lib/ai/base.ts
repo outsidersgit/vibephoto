@@ -76,11 +76,19 @@ export interface GenerationParams {
   seed?: number
   num_outputs?: number
   safety_checker?: boolean
-  // FLUX-specific parameters
+  // Astria-specific parameters
+  aspectRatio?: string // enum: 1:1, 16:9, 9:16, etc
+  super_resolution?: boolean
+  inpaint_faces?: boolean
+  style?: string // enum: Cinematic, Photographic, etc
+  color_grading?: string // enum: Film Velvia, Film Portra, Ektar
+  film_grain?: boolean
+  use_lpw?: boolean
+  // FLUX/Replicate-specific parameters (ignorados pelo Astria)
   safety_tolerance?: number
   raw_mode?: boolean
   output_format?: string
-  output_quality?: number
+  output_quality?: number // DEPRECATED: não suportado pela API Astria
 }
 
 export interface GenerationResponse {
@@ -96,6 +104,7 @@ export interface GenerationResponse {
     prompt: string
     seed: number
     params: GenerationParams
+    tune_id?: string // Astria tune ID (para polling)
   }
 }
 

@@ -321,40 +321,72 @@ export class AstriaProvider extends AIProvider {
         note: 'LoRA will be applied automatically by Astria API'
       })
 
-      // Preparar FormData para Astria (não JSON)
+      // Preparar FormData para Astria conforme documentação:
+      // https://docs.astria.ai/docs/api/prompt/create/
       const formData = new FormData()
+      
+      // text (required) - Descrição da imagem
       formData.append('prompt[text]', finalPrompt)
-      formData.append('prompt[num_images]', String(request.params.num_outputs || 1))
+      
+      // negative_prompt (optional)
+      if (request.negativePrompt) {
+        formData.append('prompt[negative_prompt]', request.negativePrompt)
+      }
+      
+      // num_images (optional) - Range: 1-8
+      const numImages = Math.min(Math.max(1, request.params.num_outputs || 1), 8)
+      formData.append('prompt[num_images]', String(numImages))
 
-      // Dimensões
-      formData.append('prompt[w]', String(request.params.width || 1024))
-      formData.append('prompt[h]', String(request.params.height || 1024))
+      // Dimensões: usar aspect_ratio OU w/h (não ambos)
+      // Se aspectRatio fornecido, usar aspect_ratio; senão usar w/h
+      if (request.params.aspectRatio) {
+        // aspect_ratio enum: 1:1, 16:9, 9:16, etc
+        formData.append('prompt[aspect_ratio]', request.params.aspectRatio)
+      } else {
+        // w e h em múltiplos de 8
+        const width = Math.floor((request.params.width || 1024) / 8) * 8
+        const height = Math.floor((request.params.height || 1024) / 8) * 8
+        formData.append('prompt[w]', String(width))
+        formData.append('prompt[h]', String(height))
+      }
 
-      // CORRIGIDO: Parâmetros corretos conforme documentação oficial
-      formData.append('prompt[cfg_scale]', String(request.params.guidance_scale || 7.5))
-      formData.append('prompt[steps]', String(request.params.steps || 50))
+      // cfg_scale (fixo em 3 conforme solicitado)
+      formData.append('prompt[cfg_scale]', '3')
 
-      // Usar scheduler padrão ou especificado
-      formData.append('prompt[scheduler]', 'euler_a')
+      // steps (optional) - Integer 0-50
+      if (request.params.steps) {
+        formData.append('prompt[steps]', String(Math.min(50, Math.max(0, request.params.steps))))
+      }
 
-      // CORRIGIDO: Enhancements compatíveis com LoRA conforme documentação
-      formData.append('prompt[super_resolution]', 'true')
-      formData.append('prompt[inpaint_faces]', 'true')
+      // scheduler (optional) - enum
+      if (request.params.scheduler) {
+        formData.append('prompt[scheduler]', request.params.scheduler)
+      } else {
+        formData.append('prompt[scheduler]', 'euler_a')
+      }
 
-      // CRÍTICO: NÃO enviar parâmetros não suportados por LoRA
-      // A API Astria considera qualquer valor presente (mesmo 'false' string) como ativado
-      // Solução: simplesmente não incluir esses parâmetros no FormData
-
-      // CORRIGIDO: Qualidade de output conforme documentação
-      formData.append('prompt[output_quality]', String(request.params.output_quality || 95))
-
-      // Seed para reprodutibilidade
-      if (request.params.seed) {
+      // Seed (optional) - Range: 0 to 2^32
+      if (request.params.seed !== undefined && request.params.seed !== null) {
         formData.append('prompt[seed]', String(request.params.seed))
       }
 
-      // CRÍTICO: Debug completo dos FormData parameters sendo enviados
-      console.log(`📋 [ASTRIA_DEBUG] FormData parameters being sent:`)
+      // Enhancements fixos conforme solicitado
+      // super_resolution sempre true
+      formData.append('prompt[super_resolution]', 'true')
+
+      // inpaint_faces sempre true
+      formData.append('prompt[inpaint_faces]', 'true')
+
+      // NOTA: style não é enviado (conforme solicitado)
+      // NOTA: color_grading não é enviado (conforme solicitado)
+      // NOTA: film_grain sempre false, então não enviamos (conforme solicitado)
+      // NOTA: use_lpw sempre false, então não enviamos (conforme solicitado)
+
+      // CRÍTICO: NÃO enviar face_correct, face_swap, hires_fix para LoRA
+      // Conforme documentação e comentários anteriores no código
+
+      // Debug completo dos FormData parameters sendo enviados
+      console.log(`📋 [ASTRIA_DEBUG] FormData parameters being sent to Astria API:`)
       const formDataEntries: { [key: string]: string } = {}
       for (const [key, value] of formData.entries()) {
         formDataEntries[key] = value as string
@@ -362,15 +394,18 @@ export class AstriaProvider extends AIProvider {
       }
       console.log(`📊 [ASTRIA_DEBUG] Total parameters: ${Object.keys(formDataEntries).length}`)
 
-      // CRÍTICO: Verificar especificamente os parâmetros de enhancement
+      // Verificar especificamente os parâmetros de enhancement
       const criticalParams = [
         'prompt[super_resolution]',
-        'prompt[inpaint_faces]'
+        'prompt[inpaint_faces]',
+        'prompt[cfg_scale]'
       ]
-      console.log(`🔍 [ASTRIA_CRITICAL] Enhancement parameters verification:`)
+      console.log(`🔍 [ASTRIA_CRITICAL] Fixed parameters verification:`)
       criticalParams.forEach(param => {
         console.log(`  ${param}: ${formDataEntries[param] || 'NOT SET'}`)
       })
+      console.log(`  ✅ Fixed values: super_resolution=true, inpaint_faces=true, cfg_scale=3`)
+      console.log(`  ✅ Omitted params: style, color_grading, film_grain (false), use_lpw (false)`)
       console.log(`  ✅ Incompatible LoRA params (face_correct, face_swap, hires_fix) are NOT sent`)
 
       // Configurar callback se disponível - permitir HTTP em desenvolvimento
@@ -378,7 +413,7 @@ export class AstriaProvider extends AIProvider {
         request.webhookUrl.startsWith('https://') ||
         (process.env.NODE_ENV === 'development' && request.webhookUrl.startsWith('http://'))
       )
-      if (hasValidWebhook) {
+      if (hasValidWebhook && request.webhookUrl) {
         formData.append('prompt[callback]', request.webhookUrl)
         console.log('📡 Callback configured for generation:', request.webhookUrl)
       } else if (request.webhookUrl) {
@@ -387,14 +422,21 @@ export class AstriaProvider extends AIProvider {
 
       console.log('🎨 Astria generation input parameters:', {
         prompt: finalPrompt.substring(0, 100) + '...',
-        dimensions: `${request.params.width || 1024}x${request.params.height || 1024}`,
+        dimensions: request.params.aspectRatio 
+          ? `aspect_ratio: ${request.params.aspectRatio}`
+          : `${request.params.width || 1024}x${request.params.height || 1024}`,
+        num_images: numImages,
         hasCustomModel: !!request.modelUrl,
         modelUrl: request.modelUrl,
-        enhancementsEnabled: {
-          super_resolution: true,
-          inpaint_faces: true
+        fixedParameters: {
+          cfg_scale: '3',
+          super_resolution: 'true',
+          inpaint_faces: 'true',
+          film_grain: 'false (not sent)',
+          use_lpw: 'false (not sent)'
         },
-        incompatibleParamsOmitted: ['face_correct', 'face_swap', 'hires_fix']
+        omittedParams: ['style', 'color_grading'],
+        incompatibleParamsOmitted: ['face_correct', 'face_swap', 'hires_fix', 'output_quality']
       })
 
       // Fazer request para Astria usando URL e FormData corretas

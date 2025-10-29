@@ -295,6 +295,18 @@ export async function POST(request: NextRequest) {
         }
       })
 
+      // Iniciar polling como fallback caso webhook não funcione
+      if (aiProvider instanceof AstriaProvider) {
+        setTimeout(async () => {
+          try {
+            await startTrainingPolling(String(trainingResponse.id), model.id, session.user.id)
+            console.log(`📡 Training polling started for model ${model.id}`)
+          } catch (pollError) {
+            console.error(`❌ Failed to start polling for model ${model.id}:`, pollError)
+          }
+        }, 5000) // Esperar 5 segundos antes de iniciar polling
+      }
+
       console.log('🎉 Model creation process completed successfully!')
 
       return NextResponse.json({

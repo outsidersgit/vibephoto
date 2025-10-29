@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
       const optimalSteps = calculateOptimalSteps(userPlan, megapixels, model.modelUrl ? 'custom' : 'base')
       const optimalGuidance = calculateOptimalGuidance(userPlan, megapixels)
       
-      // Build generation request with all FLUX parameters
+      // Build generation request - parâmetros serão mapeados conforme provider (Astria/Replicate)
       const generationRequest = {
         modelUrl: model.modelUrl!, // We know it's ready so modelUrl exists
         prompt,
@@ -197,18 +197,25 @@ export async function POST(request: NextRequest) {
         params: {
           width,
           height,
-          // Core parameters (will be mapped based on model type)
+          aspectRatio: aspectRatio, // Para Astria usar aspect_ratio quando disponível
+          // Core parameters (serão mapeados conforme provider)
           steps: steps || optimalSteps,
           guidance_scale: guidance_scale || optimalGuidance,
           num_outputs: variations,
           seed: seed || Math.floor(Math.random() * 1000000),
-          // FLUX-specific parameters
+          scheduler: 'euler_a', // Default para Astria
+          // Astria-specific enhancements (fixos conforme configuração)
+          super_resolution: true, // Sempre true
+          inpaint_faces: true, // Sempre true
+          // NOTA: style, color_grading, film_grain, use_lpw não são enviados (conforme configuração)
+          // cfg_scale será fixado em 3 no provider
+          // Replicate/FLUX-specific parameters (serão ignorados pelo Astria)
           safety_tolerance: safety_tolerance || 2,
           raw_mode: raw_mode || false,
-          output_format: output_format || 'webp',
-          output_quality: output_quality || 95
+          output_format: output_format || 'webp'
+          // NOTA: output_quality removido - não é suportado pela API Astria
         },
-        webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/replicate?type=generation&id=${generation.id}&userId=${session.user.id}`,
+        webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/astria?type=prompt&id=${generation.id}&userId=${session.user.id}&secret=${process.env.ASTRIA_WEBHOOK_SECRET}`,
         userPlan // Pass user plan for model selection
       }
 
