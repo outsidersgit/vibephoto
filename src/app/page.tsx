@@ -689,26 +689,13 @@ export default function HomePage() {
 
   // Carrossel auto-play
   useEffect(() => {
-    if (!isCarouselPaused) {
+    if (!isCarouselPaused && mounted && status !== 'loading') {
       const interval = setInterval(() => {
         setCurrentCarouselIndex((prev) => (prev + 1) % carouselStyles.length)
       }, 4000)
       return () => clearInterval(interval)
     }
-  }, [isCarouselPaused])
-
-  // Show loading skeleton during session check to prevent FOUC (Sprint 1 - Fix FOUC definitivo)
-  // Movido para DEPOIS dos useEffects para evitar erro React #310
-  if (status === 'loading' || !mounted) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Carregando...</p>
-        </div>
-      </div>
-    )
-  }
+  }, [isCarouselPaused, mounted, status])
 
   const nextSlide = () => {
     setCurrentCarouselIndex((prev) => (prev + 1) % carouselStyles.length)
@@ -765,6 +752,19 @@ export default function HomePage() {
     } else {
       window.location.href = `/billing/upgrade?plan=${planId}&cycle=${billingCycle}`
     }
+  }
+
+  // Show loading skeleton during session check to prevent FOUC (Sprint 1 - Fix FOUC definitivo)
+  // Renderizado condicionalmente no JSX para evitar React error #310
+  if (status === 'loading' || !mounted) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Carregando...</p>
+        </div>
+      </div>
+    )
   }
   
   return (
