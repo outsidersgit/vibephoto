@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { broadcastModelStatusChange } from '@/lib/services/realtime-service'
 
 interface AstriaWebhookPayload {
   id: string
@@ -34,9 +35,18 @@ export async function POST(request: NextRequest) {
     // Security: Validate webhook secret
     const authHeader = request.headers.get('authorization') || request.headers.get('x-astria-secret')
     const webhookSecret = process.env.ASTRIA_WEBHOOK_SECRET
+    const url = new URL(request.url)
+    const secretParam = url.searchParams.get('secret')
 
     if (webhookSecret) {
-      if (!authHeader || authHeader !== webhookSecret) {
+      if (!authHeader && !secretParam) {
+        console.error('❌ Astria webhook authentication failed: missing auth')
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+      if (authHeader && authHeader !== webhookSecret && secretParam !== webhookSecret) {
         console.error('❌ Astria webhook authentication failed')
         return NextResponse.json(
           { error: 'Unauthorized' },
@@ -122,6 +132,16 @@ async function handleTuneWebhook(payload: AstriaWebhookPayload) {
     })
 
     console.log(`✅ Astria tune ${payload.id} updated to status: ${internalStatus}`)
+
+    // Broadcast model status change to the owner
+    try {
+      await broadcastModelStatusChange(model.id, updatedModel.userId, updatedModel.status, {
+        progress: updatedModel.status === 'READY' ? 100 : updatedModel.progress || 0,
+        modelUrl: updatedModel.modelUrl
+      })
+    } catch (e) {
+      console.warn('⚠️ Failed to broadcast model status change:', e)
+    }
 
     // If training completed successfully, generate sample images
     if (internalStatus === 'READY' && payload.status === 'trained') {

@@ -88,7 +88,12 @@ export class AstriaProvider extends AIProvider {
           title: options.name || tuneName,
           name: tuneName,
           model_type: modelType,
-          image_urls: images
+          image_urls: images,
+          // Conforme documentação, permitir definir um base_tune específico
+          // Valor fixo solicitado: 1504944 (Flux1.dev na doc)
+          base_tune_id: 1504944,
+          // Preset recomendado para LoRA (doc Astria)
+          preset: 'flux-lora-portrait'
         }
       }
 

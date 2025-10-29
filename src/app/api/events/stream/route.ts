@@ -2,6 +2,10 @@ import { NextRequest } from 'next/server'
 import { requireAuthAPI } from '@/lib/auth'
 import { setBroadcastFunction } from '@/lib/services/realtime-service'
 
+// Force dynamic route (no ISR) and disable revalidation for SSE
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // Store active connections with enhanced metadata
 const connections = new Map<string, { 
   controller: ReadableStreamDefaultController,
@@ -101,7 +105,8 @@ export async function GET(request: NextRequest) {
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Cache-Control'
+        'Access-Control-Allow-Headers': 'Cache-Control',
+        'X-Accel-Buffering': 'no'
       }
     })
 

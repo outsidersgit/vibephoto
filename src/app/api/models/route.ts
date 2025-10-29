@@ -265,7 +265,7 @@ export async function POST(request: NextRequest) {
           batchSize: 1,
           seed: Math.floor(Math.random() * 1000000)
         },
-        webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/replicate?type=training&modelId=${model.id}&userId=${session.user.id}`
+        webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/astria?type=training&modelId=${model.id}&userId=${session.user.id}&secret=${process.env.ASTRIA_WEBHOOK_SECRET || ''}`
       }
 
       console.log('🚀 Starting AI training...')
@@ -279,12 +279,13 @@ export async function POST(request: NextRequest) {
         data: {
           status: 'TRAINING',
           progress: 20,
+          trainingJobId: trainingResponse.id,
           trainingConfig: {
             trainingId: trainingResponse.id,
             fluxModel: true,
             startedAt: new Date().toISOString(),
             estimatedTime: trainingResponse.estimatedTime,
-            provider: 'replicate'
+            provider: 'astria'
           }
         }
       })

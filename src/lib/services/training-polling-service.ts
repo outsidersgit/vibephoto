@@ -1,5 +1,6 @@
 import { getAIProvider } from '@/lib/ai'
 import { prisma } from '@/lib/prisma'
+import { broadcastModelStatusChange, broadcastTrainingProgress } from '@/lib/services/realtime-service'
 
 interface TrainingPollingJob {
   trainingId: string
@@ -104,7 +105,7 @@ async function pollTraining(job: TrainingPollingJob) {
       case 'queued':    // Astria status
       case 'training':  // Astria status
         updateData.status = 'TRAINING'
-        updateData.progress = Math.min(job.attempts * 2, 95) // Simulate progress
+        updateData.progress = Math.min(job.attempts * 2, 95) // Simulated progress when provider não retorna
 
         // Continue polling
         scheduleNextTrainingPoll(job)
@@ -206,12 +207,22 @@ async function pollTraining(job: TrainingPollingJob) {
 
     // Update model in database
     if (Object.keys(updateData).length > 0) {
-      await prisma.aIModel.update({
+      const updated = await prisma.aIModel.update({
         where: { id: modelId },
         data: updateData
       })
 
       console.log(`📝 Updated model ${modelId} with status: ${updateData.status}`)
+
+      // Broadcast progress or status
+      if (updateData.status === 'TRAINING' && typeof updateData.progress === 'number') {
+        await broadcastTrainingProgress(modelId, updated.userId, updateData.progress)
+      } else {
+        await broadcastModelStatusChange(modelId, updated.userId, updateData.status, {
+          progress: updateData.progress,
+          modelUrl: updateData.modelUrl
+        })
+      }
     }
 
   } catch (error) {
