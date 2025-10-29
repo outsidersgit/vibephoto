@@ -170,40 +170,78 @@ export async function chargeModelCreationCredits(
       }
     }
 
-    // Charge credits for additional model
+    // Charge credits for additional model (debit subscription first, then purchased)
     const result = await prisma.$transaction(async (tx) => {
-      // Deduct credits
-      const updatedUser = await tx.user.update({
+      // Read current balances
+      const user = await tx.user.findUnique({
         where: { id: userId },
-        data: {
-          creditsBalance: {
-            decrement: MODEL_CREATION_COST
-          }
+        select: {
+          creditsUsed: true,
+          creditsLimit: true,
+          creditsBalance: true
         }
       })
 
-      // Create transaction record
+      if (!user) {
+        throw new Error('Usuário não encontrado para débito de créditos')
+      }
+
+      const subscriptionAvailable = Math.max(0, user.creditsLimit - user.creditsUsed)
+      const purchasedAvailable = user.creditsBalance || 0
+      const totalAvailable = subscriptionAvailable + purchasedAvailable
+      if (totalAvailable < MODEL_CREATION_COST) {
+        throw new Error('Saldo insuficiente no momento da cobrança')
+      }
+
+      const balanceBefore = totalAvailable
+
+      // Split debit
+      const debitFromSubscription = Math.min(subscriptionAvailable, MODEL_CREATION_COST)
+      const remaining = MODEL_CREATION_COST - debitFromSubscription
+      const debitFromPurchased = remaining > 0 ? remaining : 0
+
+      // Apply updates
+      const updated = await tx.user.update({
+        where: { id: userId },
+        data: {
+          creditsUsed: debitFromSubscription > 0 ? { increment: debitFromSubscription } : undefined,
+          creditsBalance: debitFromPurchased > 0 ? { decrement: debitFromPurchased } : undefined
+        },
+        select: {
+          creditsUsed: true,
+          creditsLimit: true,
+          creditsBalance: true
+        }
+      })
+
+      const subscriptionAfter = Math.max(0, updated.creditsLimit - updated.creditsUsed)
+      const purchasedAfter = updated.creditsBalance || 0
+      const balanceAfter = subscriptionAfter + purchasedAfter
+
+      // Create transaction record (single record consolidating débito)
       const transaction = await tx.creditTransaction.create({
         data: {
           userId,
           amount: -MODEL_CREATION_COST,
-          type: 'DEBIT',
+          type: 'SPENT',
           source: 'MODEL_CREATION',
           description: `Criação de modelo adicional: ${modelName || modelId}`,
-          balanceBefore: eligibility.creditsAvailable,
-          balanceAfter: updatedUser.creditsBalance || 0,
+          balanceBefore,
+          balanceAfter,
           metadata: {
             modelId,
             modelName,
             costPerModel: MODEL_CREATION_COST,
-            currentModelsCount: eligibility.currentModels + 1
+            currentModelsCount: eligibility.currentModels + 1,
+            debitFromSubscription,
+            debitFromPurchased
           }
         }
       })
 
       return {
         transactionId: transaction.id,
-        newBalance: updatedUser.creditsBalance || 0
+        newBalance: balanceAfter
       }
     })
 
