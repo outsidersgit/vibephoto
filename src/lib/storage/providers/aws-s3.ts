@@ -113,6 +113,10 @@ export class AWSS3Provider extends StorageProvider {
         Body: buffer,
         ContentType: mimeType,
         ContentDisposition: options.isVideo ? 'inline' : 'inline', // Allow inline viewing for both images and videos
+        // Cache-Control: aggressive caching for immutable content (1 year)
+        CacheControl: options.isVideo
+          ? 'public, max-age=31536000, immutable' // 1 year cache for videos
+          : 'public, max-age=31536000, immutable', // 1 year cache for images
         // ACL removed - using Bucket Policy for public access instead (AWS best practice)
         // This allows bucket to work with "Bucket owner enforced" Object Ownership setting
         Metadata: {

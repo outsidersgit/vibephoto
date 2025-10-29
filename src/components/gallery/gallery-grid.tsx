@@ -33,6 +33,7 @@ import { VideoPlayerModal } from './video-player-modal'
 import { CompactVideoButton } from '@/components/video/video-button'
 import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
 import { sharePhoto, SharePlatform } from '@/lib/utils/social-share'
+import { OptimizedImage } from '@/components/ui/optimized-image'
 
 interface GalleryGridProps {
   generations: any[]
@@ -481,11 +482,15 @@ export function GalleryGrid({
                     handleMediaClick(currentImageUrl, generation)
                   }}
                 >
-                  <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                    <img
-                      src={generation.thumbnailUrls?.[currentIndex] || currentImageUrl}
+                  <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative">
+                    <OptimizedImage
+                      src={currentImageUrl}
                       alt={`Generated image ${currentIndex + 1} of ${generation.imageUrls.length}`}
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                      fill
+                      objectFit="cover"
+                      className="transition-transform group-hover:scale-105"
+                      thumbnailUrl={generation.thumbnailUrls?.[currentIndex]}
+                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                     />
                   </div>
 
