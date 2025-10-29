@@ -26,13 +26,12 @@ export async function POST(req: NextRequest) {
       const contentType = typeof f?.type === 'string' ? f.type : 'application/octet-stream'
       const key = `${prefix}/${userId}/${category}/${Date.now()}_${i}_${safeName}`
 
+      // Importante: assinar apenas o que o cliente realmente enviará no PUT
+      // Se assinarmos cabeçalhos extras aqui, o navegador também precisa enviá-los, senão dá 403
       const command = new PutObjectCommand({
         Bucket: bucket,
         Key: key,
-        ContentType: contentType,
-        CacheControl: 'public, max-age=31536000, immutable',
-        ContentDisposition: 'inline',
-        Metadata: { uploadedAt: new Date().toISOString() }
+        ContentType: contentType
       })
 
       const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 900 })
