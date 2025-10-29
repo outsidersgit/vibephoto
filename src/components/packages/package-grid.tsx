@@ -75,8 +75,9 @@ export function PackageGrid({ packages, onPackageSelect }: PackageGridProps) {
                     alt={`${pkg.name} - Preview ${index + 1}`}
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                    quality={90}
+                    quality={78}
                     className="object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+                    loading={index < 8 ? 'eager' : 'lazy'}
                   />
                   <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center hidden absolute inset-0 z-10">
                     <span className="text-2xl opacity-50">

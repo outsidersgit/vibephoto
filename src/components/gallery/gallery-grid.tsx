@@ -504,10 +504,10 @@ export function GalleryGrid({
                       objectFit="cover"
                       className="transition-transform group-hover:scale-105"
                       thumbnailUrl={generation.thumbnailUrls?.[currentIndex]}
-                      // Mobile-first sizes: menor para mobile, evita carregar imagens grandes desnecessariamente
-                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
-                      // Priority apenas primeira imagem no mobile (LCP optimization)
-                      priority={index === 0}
+                      // Mobile portrait: 100vw (1 col), landscape: 50vw (2 cols) - Sprint 3 Mobile Fix
+                      sizes="(max-width: 480px) 100vw, (max-width: 640px) 50vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
+                      // Priority removido: primeira imagem pode estar below fold (filtros ocupam espaço)
+                      priority={false}
                     />
                   </div>
 

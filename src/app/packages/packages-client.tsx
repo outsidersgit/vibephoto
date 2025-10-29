@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { PackageGrid } from '@/components/packages/package-grid'
 import { PackageModal } from '@/components/packages/package-modal'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,11 +20,9 @@ import {
   Loader2
 } from 'lucide-react'
 import { EnhancedPhotoPackage } from '@/types'
+import { usePackages } from '@/hooks/usePackages'
 
 export function PackagesPageClient() {
-  const [packages, setPackages] = useState<EnhancedPhotoPackage[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedPackage, setSelectedPackage] = useState<any>(null)
@@ -33,36 +31,9 @@ export function PackagesPageClient() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
 
-  // Fetch packages from API
-  useEffect(() => {
-    const fetchPackages = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch('/api/packages')
-        const data = await response.json()
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Erro ao carregar pacotes')
-        }
-
-        if (data.success) {
-          console.log('✅ Packages loaded from directory:', data.packages.length)
-          setPackages(data.packages)
-        } else {
-          throw new Error('Erro ao carregar pacotes')
-        }
-      } catch (error) {
-        console.error('Error fetching packages:', error)
-        setError(error instanceof Error ? error.message : 'Erro ao carregar pacotes')
-        // Show error, no fallback needed since API handles directory scanning
-        setPackages([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchPackages()
-  }, [])
+  // Performance: React Query com cache (Sprint 3 - Mobile Performance)
+  const { data: packages = [], isLoading: loading, error: queryError } = usePackages()
+  const error = queryError ? 'Erro ao carregar pacotes' : ''
 
 
   const categories = [
