@@ -504,7 +504,10 @@ export function GalleryGrid({
                       objectFit="cover"
                       className="transition-transform group-hover:scale-105"
                       thumbnailUrl={generation.thumbnailUrls?.[currentIndex]}
-                      sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      // Mobile-first sizes: menor para mobile, evita carregar imagens grandes desnecessariamente
+                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
+                      // Priority apenas primeira imagem no mobile (LCP optimization)
+                      priority={index === 0}
                     />
                   </div>
 

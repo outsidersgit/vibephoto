@@ -140,12 +140,17 @@ export function OptimizedImage({
   }
 
   if (fill) {
+    // Otimização mobile: sizes mais agressivos para reduzir LCP e Speed Index
+    const defaultSizes = sizes || 
+      // Mobile first: tamanhos menores para economizar banda (reduz 118 KiB)
+      '(max-width: 640px) 50vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw'
+    
     return (
       <Image
         {...imageProps}
         fill
         style={{ objectFit }}
-        sizes={sizes || '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'}
+        sizes={defaultSizes}
       />
     )
   }
