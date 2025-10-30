@@ -20,6 +20,7 @@ export async function GET() {
 
 const PlanEnum = z.enum(['STARTER','PREMIUM','GOLD'])
 const RoleEnumUpper = z.enum(['USER','ADMIN'])
+const SubscriptionStatusEnum = z.enum(['ACTIVE','CANCELLED','OVERDUE','EXPIRED','PENDING']).optional()
 
 export async function POST(request: NextRequest) {
   const ok = await ensureAdmin()
@@ -36,7 +37,12 @@ export async function POST(request: NextRequest) {
       ])
       .pipe(PlanEnum)
       .optional(),
-    subscriptionStatus: z.string().optional()
+    subscriptionStatus: z
+      .union([
+        z.string().transform(v => v.toUpperCase()),
+        SubscriptionStatusEnum
+      ])
+      .pipe(SubscriptionStatusEnum)
   })
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload', issues: parsed.error.issues }, { status: 400 })
@@ -50,6 +56,7 @@ export async function POST(request: NextRequest) {
   data.role = ((payload.role || 'user') as string).toUpperCase()
   // Map plan if provided to Prisma enum (STARTER | PREMIUM | GOLD)
   if (payload.plan) data.plan = String(payload.plan).toUpperCase()
+  if (payload.subscriptionStatus) data.subscriptionStatus = String(payload.subscriptionStatus).toUpperCase()
 
   const created = await prisma.user.create({ data })
   return NextResponse.json({ user: created })
@@ -71,7 +78,12 @@ export async function PUT(request: NextRequest) {
       ])
       .pipe(PlanEnum)
       .optional(),
-    subscriptionStatus: z.string().optional()
+    subscriptionStatus: z
+      .union([
+        z.string().transform(v => v.toUpperCase()),
+        SubscriptionStatusEnum
+      ])
+      .pipe(SubscriptionStatusEnum)
   })
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload', issues: parsed.error.issues }, { status: 400 })
@@ -79,6 +91,7 @@ export async function PUT(request: NextRequest) {
   const updateData: any = { ...rest }
   if (typeof rest.role === 'string') updateData.role = rest.role.toUpperCase()
   if (typeof rest.plan === 'string') updateData.plan = rest.plan.toUpperCase()
+  if (typeof rest.subscriptionStatus === 'string') updateData.subscriptionStatus = rest.subscriptionStatus.toUpperCase()
   const updated = await prisma.user.update({ where: { id }, data: updateData })
   return NextResponse.json({ user: updated })
 }
