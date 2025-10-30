@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { revalidateTag } from 'next/cache'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { z } from 'zod'
@@ -23,22 +24,26 @@ export async function POST(
   const user = await prisma.user.findUnique({ where: { id } })
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-  const creditsLimit = user.creditsLimit ?? 0
-  const newLimit = Math.max(0, creditsLimit + delta)
+  // Ajuste deve afetar o saldo disponível (creditsBalance), não o limite do plano.
+  const currentBalance = user.creditsBalance ?? 0
+  const newBalance = Math.max(0, currentBalance + delta)
 
   await prisma.$transaction([
-    prisma.user.update({ where: { id }, data: { creditsLimit: newLimit } }),
+    prisma.user.update({ where: { id }, data: { creditsBalance: newBalance } }),
     prisma.creditTransaction.create({
       data: {
         userId: id,
         type: delta >= 0 ? 'EARNED' : 'SPENT',
-        source: delta >= 0 ? 'BONUS' : 'GENERATION',
+        source: delta >= 0 ? 'BONUS' : 'ADJUSTMENT',
         amount: Math.abs(delta),
         description: reason || 'Ajuste manual (admin)',
-        balanceAfter: (user.creditsBalance ?? 0) + delta,
+        balanceAfter: newBalance,
       } as any
     })
   ])
+
+  // Invalida cache do saldo de créditos exibido no app
+  try { revalidateTag(`user-${id}-credits`) } catch {}
 
   return NextResponse.json({ ok: true })
 }

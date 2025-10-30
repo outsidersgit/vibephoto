@@ -6,7 +6,8 @@ import { z } from 'zod'
 
 async function ensureAdmin() {
   const session = await getServerSession(authOptions)
-  if (!session || (session.user as any).role !== 'admin') return null
+  const role = String(((session?.user as any)?.role) || '').toUpperCase()
+  if (!session || role !== 'ADMIN') return null
   return session
 }
 
