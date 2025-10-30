@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -6,6 +8,11 @@ export const dynamic = 'force-dynamic'
 type SearchParams = { searchParams?: Promise<{ page?: string; q?: string; status?: string; category?: string }> }
 
 export default async function AdminPhotoPackagesPage({ searchParams }: SearchParams) {
+  const session = await getServerSession(authOptions)
+  const role = String(((session?.user as any)?.role) || '').toUpperCase()
+  if (!session || role !== 'ADMIN') {
+    return <div className="p-6 text-sm text-gray-700">Acesso restrito ao administrador.</div>
+  }
   const { page = '1', q = '', status = 'all', category = '' } = (await (searchParams || Promise.resolve({}))) || {}
   const currentPage = Math.max(1, parseInt(page || '1'))
   const PAGE_SIZE = 20

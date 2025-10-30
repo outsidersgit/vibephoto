@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import dynamic from 'next/dynamic'
 
 export const dynamic = 'force-dynamic'
@@ -14,6 +16,11 @@ async function getKpis() {
 }
 
 export default async function AdminAnalyticsPage() {
+  const session = await getServerSession(authOptions)
+  const role = String(((session?.user as any)?.role) || '').toUpperCase()
+  if (!session || role !== 'ADMIN') {
+    return <div className="p-6 text-sm text-gray-700">Acesso restrito ao administrador.</div>
+  }
   const kpis = await getKpis()
   const Charts = dynamic(() => import('./charts'), { ssr: false })
   return (
