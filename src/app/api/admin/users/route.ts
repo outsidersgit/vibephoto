@@ -18,6 +18,9 @@ export async function GET() {
   return NextResponse.json({ users })
 }
 
+const PlanEnum = z.enum(['STARTER','PREMIUM','GOLD'])
+const RoleEnumUpper = z.enum(['USER','ADMIN'])
+
 export async function POST(request: NextRequest) {
   const ok = await ensureAdmin()
   if (!ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -25,13 +28,30 @@ export async function POST(request: NextRequest) {
   const schema = z.object({
     name: z.string().min(1).optional(),
     email: z.string().email(),
-    role: z.enum(['user','admin']).optional(),
-    plan: z.string().optional(),
+    role: z.union([z.enum(['user','admin']), RoleEnumUpper]).optional(),
+    plan: z
+      .union([
+        z.string().transform(v => v.toUpperCase()),
+        PlanEnum
+      ])
+      .pipe(PlanEnum)
+      .optional(),
     subscriptionStatus: z.string().optional()
   })
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload', issues: parsed.error.issues }, { status: 400 })
-  const created = await prisma.user.create({ data: parsed.data as any })
+  const payload = parsed.data as any
+  const data: any = {
+    name: payload.name,
+    email: payload.email,
+    subscriptionStatus: payload.subscriptionStatus,
+  }
+  // Map role string to Prisma enum (USER | ADMIN)
+  data.role = ((payload.role || 'user') as string).toUpperCase()
+  // Map plan if provided to Prisma enum (STARTER | PREMIUM | GOLD)
+  if (payload.plan) data.plan = String(payload.plan).toUpperCase()
+
+  const created = await prisma.user.create({ data })
   return NextResponse.json({ user: created })
 }
 
@@ -43,14 +63,23 @@ export async function PUT(request: NextRequest) {
     id: z.string().min(1),
     name: z.string().min(1).optional(),
     email: z.string().email().optional(),
-    role: z.enum(['user','admin']).optional(),
-    plan: z.string().optional(),
+    role: z.union([z.enum(['user','admin']), RoleEnumUpper]).optional(),
+    plan: z
+      .union([
+        z.string().transform(v => v.toUpperCase()),
+        PlanEnum
+      ])
+      .pipe(PlanEnum)
+      .optional(),
     subscriptionStatus: z.string().optional()
   })
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload', issues: parsed.error.issues }, { status: 400 })
   const { id, ...rest } = parsed.data
-  const updated = await prisma.user.update({ where: { id }, data: rest as any })
+  const updateData: any = { ...rest }
+  if (typeof rest.role === 'string') updateData.role = rest.role.toUpperCase()
+  if (typeof rest.plan === 'string') updateData.plan = rest.plan.toUpperCase()
+  const updated = await prisma.user.update({ where: { id }, data: updateData })
   return NextResponse.json({ user: updated })
 }
 
