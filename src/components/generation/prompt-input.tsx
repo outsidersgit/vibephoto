@@ -96,23 +96,30 @@ export function PromptInput({
   return (
     <div className="space-y-4">
       {/* Mode Toggle */}
-      <div className="flex items-center space-x-2 mb-2">
-        <span className={`text-xs ${!isGuidedMode ? 'text-purple-400 font-medium' : 'text-gray-500'}`}>Livre</span>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleMode}
-          className="p-1 hover:bg-gray-700"
+      {/* Tabs horizontais para modos */}
+      <div className="flex items-center mb-2 border-b border-slate-600/50">
+        <button
+          type="button"
+          onClick={() => setIsGuidedMode(false)}
+          className={`px-4 py-2 text-sm -mb-px border-b-2 transition-colors ${
+            !isGuidedMode
+              ? 'border-purple-400 text-white'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
         >
-          {isGuidedMode ? (
-            <ToggleRight className="w-5 h-5 text-purple-400" />
-          ) : (
-            <ToggleLeft className="w-5 h-5 text-purple-400" />
-          )}
-        </Button>
-
-        <span className={`text-xs ${isGuidedMode ? 'text-purple-400 font-medium' : 'text-gray-500'}`}>Guiado</span>
+          Modo Livre
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsGuidedMode(true)}
+          className={`px-4 py-2 text-sm -mb-px border-b-2 transition-colors ${
+            isGuidedMode
+              ? 'border-purple-400 text-white'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          Modo Guiado
+        </button>
       </div>
       <p className="text-xs text-gray-400 -mt-1 mb-2">
         {isGuidedMode

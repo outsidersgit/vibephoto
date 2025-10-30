@@ -47,16 +47,26 @@ export async function POST(
       }, { status: 404 })
     }
 
-    // Get package metadata to know the price
-    const packages = scanPackagesDirectory()
-    const packageMetadata = packages.find(p => p.id === packageId)
-
-    if (!packageMetadata) {
-      console.error('❌ Package metadata not found:', packageId)
-      return NextResponse.json({ error: 'Package not found' }, { status: 404 })
+    // Get package metadata (prefer DB, fallback filesystem)
+    let requiredCredits: number | null = null
+    try {
+      const dbPackage = await prisma.photoPackage.findUnique({ where: { id: packageId } })
+      if (dbPackage) {
+        requiredCredits = dbPackage.price || 0
+      }
+    } catch (err) {
+      console.warn('⚠️ Failed to read package from DB, will try filesystem:', err)
     }
 
-    const requiredCredits = packageMetadata.price
+    if (requiredCredits === null) {
+      const fsPackages = scanPackagesDirectory()
+      const fsMeta = fsPackages.find(p => p.id === packageId)
+      if (!fsMeta) {
+        console.error('❌ Package metadata not found in DB nor filesystem:', packageId)
+        return NextResponse.json({ error: 'Package not found' }, { status: 404 })
+      }
+      requiredCredits = fsMeta.price
+    }
 
     // Validate package exists and is active
     const photoPackage = await prisma.photoPackage.findUnique({

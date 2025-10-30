@@ -204,8 +204,18 @@ export async function POST(request: NextRequest) {
       console.log(`🎨 Starting generation for model ${model.name} (${model.id})`)
       const aiProvider = getAIProvider()
 
-      // Parse resolution
-      const [width, height] = resolution.split('x').map(Number)
+    // Derivar width/height do aspectRatio (sobrepõe qualquer width/height anterior)
+    const base = 1024
+    const ratioMap: Record<string, [number, number]> = {
+      '1:1': [base, base],
+      '4:3': [Math.round(base * 4/3), base],
+      '3:4': [base, Math.round(base * 4/3)],
+      '16:9': [Math.round(base * 16/9), base],
+      '9:16': [base, Math.round(base * 16/9)]
+    }
+    const [width, height] = (ratioMap[aspectRatio] || ratioMap['1:1'])
+      // Recalcular width/height a partir do aspectRatio para o provedor
+      const [width, height] = (ratioMap[aspectRatio] || ratioMap['1:1'])
 
       // Get user plan from session for quality optimization
       const userPlan = (session.user as any).plan || 'FREE'

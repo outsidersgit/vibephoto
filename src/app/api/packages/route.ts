@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { scanPackagesDirectory } from '@/lib/packages/scanner'
 import { unstable_cache } from 'next/cache'
+import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
@@ -8,17 +9,38 @@ export async function GET() {
     // Pacotes são estáticos no filesystem, mudam raramente
     const getCachedPackages = unstable_cache(
       async () => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('📦 Scanning packages from directory...')
+        // 1) Tentar buscar do banco (fonte de verdade)
+        try {
+          const dbPackages = await prisma.photoPackage.findMany({
+            where: { isActive: true },
+            orderBy: { sortOrder: 'asc' }
+          })
+          if (dbPackages && dbPackages.length > 0) {
+            return dbPackages.map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              category: p.category || 'PREMIUM',
+              description: p.description || '',
+              promptCount: Array.isArray(p.prompts) ? p.prompts.length : (p.promptCount || 20),
+              previewImages: p.previewImages || [],
+              price: p.price || 200,
+              isPremium: p.isPremium ?? true,
+              estimatedTime: p.estimatedTime || '5-8 min',
+              popularity: p.popularity || 0,
+              rating: p.rating || 5,
+              uses: p.uses || 0,
+              tags: p.tags || [],
+              features: p.features || [],
+              userStatus: { activated: false, status: null }
+            }))
+          }
+        } catch (err) {
+          console.warn('⚠️ Failed to read photo packages from DB, will fallback to filesystem:', err)
         }
-        
-        const packages = scanPackagesDirectory()
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`✅ Found ${packages.length} packages from directory`)
-        }
-        
-        return packages
+
+        // 2) Fallback: escanear diretório (compatibilidade)
+        const fsPackages = scanPackagesDirectory()
+        return fsPackages
       },
       ['packages-directory-scan'],
       {
