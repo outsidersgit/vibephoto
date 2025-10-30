@@ -20,8 +20,13 @@ export async function GET(
     prisma.generation.count({ where: { userId: id, operationType: 'upscale' } as any }).catch(() => 0),
     prisma.aIModel.count({ where: { userId: id } }).catch(() => 0),
     prisma.userPackage?.count?.({ where: { userId: id } } as any).catch(() => 0),
-    prisma.creditTransaction.aggregate({ _sum: { amount: true }, where: { userId: id, type: 'SPENT' as any } }).catch(() => ({ _sum: { amount: 0 } })),
-    prisma.creditTransaction.aggregate({ _sum: { amount: true }, where: { userId: id, type: 'EARNED' as any } }).catch(() => ({ _sum: { amount: 0 } })),
+    // Usa SQL com cast explícito para evitar conflito enum/texto
+    prisma.$queryRaw<{ sum: number }[]>`SELECT COALESCE(SUM(amount),0) AS sum FROM "CreditTransaction" WHERE "userId" = ${id} AND "type"::text = 'SPENT'`
+      .then(r => ({ _sum: { amount: (r?.[0]?.sum || 0) } }))
+      .catch(() => ({ _sum: { amount: 0 } })),
+    prisma.$queryRaw<{ sum: number }[]>`SELECT COALESCE(SUM(amount),0) AS sum FROM "CreditTransaction" WHERE "userId" = ${id} AND "type"::text = 'EARNED'`
+      .then(r => ({ _sum: { amount: (r?.[0]?.sum || 0) } }))
+      .catch(() => ({ _sum: { amount: 0 } })),
     prisma.generation.findFirst({ where: { userId: id }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }).catch(() => null),
     prisma.creditTransaction.findFirst({ where: { userId: id }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }).catch(() => null),
   ])

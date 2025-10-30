@@ -30,7 +30,7 @@ export default async function AdminPhotoPackagesPage({ searchParams }: SearchPar
 
   const [total, pkgs] = await Promise.all([
     prisma.photoPackage.count({ where }),
-    prisma.photoPackage.findMany({ where, orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }], skip: (currentPage - 1) * PAGE_SIZE, take: PAGE_SIZE })
+    prisma.photoPackage.findMany({ where, orderBy: [{ createdAt: 'desc' }], skip: (currentPage - 1) * PAGE_SIZE, take: PAGE_SIZE })
   ])
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 

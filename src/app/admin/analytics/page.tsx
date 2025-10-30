@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import dynamic from 'next/dynamic'
+import Charts from './charts'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,7 +22,6 @@ export default async function AdminAnalyticsPage() {
     return <div className="p-6 text-sm text-gray-700">Acesso restrito ao administrador.</div>
   }
   const kpis = await getKpis()
-  const Charts = dynamic(() => import('./charts'), { ssr: false })
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold text-gray-900">Analytics</h2>
