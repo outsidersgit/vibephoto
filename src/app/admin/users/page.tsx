@@ -104,7 +104,7 @@ export default async function AdminUsersPage({ searchParams }: SearchParams) {
                 <td className="px-3 py-2 whitespace-nowrap">
                   <div className="flex items-center gap-3">
                     <UserRowActions userId={u.id} />
-                    <UserActionsInline userId={u.id} onDone={() => location.reload()} />
+                    <UserActionsInline userId={u.id} />
                   </div>
                 </td>
               </tr>

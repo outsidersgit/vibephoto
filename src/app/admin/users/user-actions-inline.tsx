@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-export default function UserActionsInline({ userId, onDone }: { userId: string; onDone?: () => void }) {
+export default function UserActionsInline({ userId }: { userId: string }) {
   const [open, setOpen] = useState<'none' | 'credits' | 'delete'>('none')
   const [delta, setDelta] = useState<number>(0)
   const [loading, setLoading] = useState(false)
@@ -19,7 +19,9 @@ export default function UserActionsInline({ userId, onDone }: { userId: string; 
       })
       if (!res.ok) throw new Error('Falha ao ajustar créditos')
       setOpen('none')
-      onDone?.()
+      if (typeof window !== 'undefined') {
+        window.location.reload()
+      }
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -39,7 +41,9 @@ export default function UserActionsInline({ userId, onDone }: { userId: string; 
       })
       if (!res.ok) throw new Error('Falha ao excluir usuário')
       setOpen('none')
-      onDone?.()
+      if (typeof window !== 'undefined') {
+        window.location.reload()
+      }
     } catch (e: any) {
       setError(e.message)
     } finally {
