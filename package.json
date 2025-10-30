@@ -57,6 +57,7 @@
     "react": "18.3.0",
     "react-device-detect": "^2.2.3",
     "react-dom": "18.3.0",
+    "recharts": "^2.12.5",
     "replicate": "^1.0.1",
     "sharp": "^0.34.3",
     "swiper": "^12.0.2",
