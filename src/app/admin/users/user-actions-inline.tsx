@@ -1,0 +1,84 @@
+'use client'
+
+import { useState } from 'react'
+
+export default function UserActionsInline({ userId, onDone }: { userId: string; onDone?: () => void }) {
+  const [open, setOpen] = useState<'none' | 'credits' | 'delete'>('none')
+  const [delta, setDelta] = useState<number>(0)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function adjustCredits() {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/credits`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delta, reason: 'Ajuste rápido' })
+      })
+      if (!res.ok) throw new Error('Falha ao ajustar créditos')
+      setOpen('none')
+      onDone?.()
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function removeUser() {
+    if (!confirm('Excluir este usuário?')) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId })
+      })
+      if (!res.ok) throw new Error('Falha ao excluir usuário')
+      setOpen('none')
+      onDone?.()
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <button className="text-purple-700 hover:underline" onClick={() => setOpen('credits')}>Ajustar créditos</button>
+      <button className="text-red-600 hover:underline" onClick={() => setOpen('delete')}>Excluir</button>
+      {open === 'credits' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded p-4 w-full max-w-sm">
+            <div className="font-semibold mb-2">Ajustar créditos</div>
+            {error && <div className="text-sm text-red-600 mb-2">{error}</div>}
+            <input type="number" value={Number.isNaN(delta) ? 0 : delta} onChange={e => setDelta(parseInt(e.target.value || '0'))} className="w-full border rounded px-3 py-2 text-sm" placeholder="Ex.: 50 ou -50" />
+            <div className="mt-3 flex items-center gap-2">
+              <button onClick={adjustCredits} disabled={loading} className="rounded border px-3 py-2 text-sm">{loading ? 'Aplicando…' : 'Aplicar'}</button>
+              <button onClick={() => setOpen('none')} className="text-sm text-gray-700 hover:underline">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {open === 'delete' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded p-4 w-full max-w-sm">
+            <div className="font-semibold mb-2">Excluir usuário</div>
+            {error && <div className="text-sm text-red-600 mb-2">{error}</div>}
+            <p className="text-sm text-gray-600 mb-3">Esta ação é irreversível.</p>
+            <div className="flex items-center gap-2">
+              <button onClick={removeUser} disabled={loading} className="rounded border border-red-300 text-red-700 px-3 py-2 text-sm">{loading ? 'Excluindo…' : 'Excluir'}</button>
+              <button onClick={() => setOpen('none')} className="text-sm text-gray-700 hover:underline">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+
