@@ -83,28 +83,49 @@ export async function POST(req: NextRequest) {
     })
 
     const from = process.env.SMTP_FROM || process.env.SMTP_USER
-    const html = `
+    const subject = isAdmin ? 'Seu acesso ao VibePhoto' : 'Redefinição de senha - VibePhoto'
+    const html = isAdmin
+      ? `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333; border-bottom: 2px solid #667EEA; padding-bottom: 10px;">Bem-vindo ao VibePhoto</h2>
+        <p>Olá! Seu acesso ao VibePhoto foi criado para o e-mail <b>${email}</b>. Você pode entrar de duas formas:</p>
+        <ol style="margin: 12px 0 16px 18px; color:#333;">
+          <li style="margin:6px 0;"><b>Login com Google (recomendado):</b> use o mesmo e-mail (${email}).</li>
+          <li style="margin:6px 0;"><b>Definir uma senha:</b> clique no botão abaixo em até <b>30 minutos</b> para criar sua senha. Depois, você pode usar e-mail/senha normalmente.</li>
+        </ol>
+        <p style="margin: 20px 0;">
+          <a href="${url}" style="background:#6d28d9;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;display:inline-block">Definir minha senha</a>
+        </p>
+        <p>Se preferir, copie e cole este link no navegador:</p>
+        <p style="word-break:break-all;color:#555">${url}</p>
+        <hr style="margin:24px 0;border:none;border-top:1px solid #eee" />
+        <p style="font-size:12px;color:#888">Dúvidas? Responda este e-mail.</p>
+      </div>
+      `
+      : `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333; border-bottom: 2px solid #667EEA; padding-bottom: 10px;">Redefinição de senha</h2>
-        <p>Recebemos uma solicitação para definir a senha de acesso ao VibePhoto para o e-mail <b>${email}</b>.</p>
-        <p>Clique no botão abaixo para criar sua senha. Este link expira em <b>30 minutos</b>.</p>
+        <p>Recebemos uma solicitação para redefinir a senha da conta <b>${email}</b>.</p>
+        <p>Clique no botão abaixo para criar uma nova senha. Este link expira em <b>30 minutos</b>.</p>
         <p style="margin: 24px 0;">
-          <a href="${url}" style="background:#6d28d9;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;display:inline-block">Definir minha senha</a>
+          <a href="${url}" style="background:#6d28d9;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;display:inline-block">Redefinir minha senha</a>
         </p>
         <p>Se o botão não funcionar, copie e cole este link no navegador:</p>
         <p style="word-break:break-all;color:#555">${url}</p>
         <hr style="margin:24px 0;border:none;border-top:1px solid #eee" />
         <p style="font-size:12px;color:#888">Se você não solicitou este procedimento, ignore este e-mail.</p>
       </div>
-    `
-    const text = `Defina sua senha no VibePhoto (expira em 30 min): ${url}`
+      `
+    const text = isAdmin
+      ? `Olá! Seu acesso ao VibePhoto foi criado. Você pode entrar com Google usando ${email} ou definir sua senha (expira em 30 min): ${url}`
+      : `Redefinição de senha do VibePhoto (expira em 30 min): ${url}`
 
     const info = await transporter.sendMail({
       from: from,
       sender: process.env.SMTP_USER,
       to: email,
       replyTo: process.env.SMTP_FROM || process.env.SMTP_USER,
-      subject: 'Definir senha - VibePhoto',
+      subject,
       html,
       text
     })
