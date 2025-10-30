@@ -33,6 +33,7 @@ export const authOptions: NextAuthOptions = {
               email: true,
               name: true,
               password: true,
+              role: true,
               plan: true,
               creditsUsed: true,
               creditsLimit: true,
@@ -55,6 +56,7 @@ export const authOptions: NextAuthOptions = {
             id: user.id,
             email: user.email,
             name: user.name || undefined,
+            role: (user as any).role || 'user',
             plan: user.plan,
             creditsUsed: user.creditsUsed,
             creditsLimit: user.creditsLimit,
@@ -80,6 +82,8 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user, account, trigger, session }) {
       if (user) {
+        // @ts-ignore
+        token.role = ((user as any).role || 'user').toUpperCase()
         token.plan = user.plan || 'STARTER'
         token.creditsUsed = user.creditsUsed || 0
         token.creditsLimit = user.creditsLimit || 100
@@ -114,6 +118,7 @@ export const authOptions: NextAuthOptions = {
                 id: true,
                 email: true,
                 name: true,
+                role: true,
                 plan: true,
                 creditsUsed: true,
                 creditsLimit: true,
@@ -125,6 +130,8 @@ export const authOptions: NextAuthOptions = {
 
             if (updatedUser) {
               token.name = updatedUser.name
+              // @ts-ignore
+              token.role = (updatedUser.role || 'user').toUpperCase()
               token.plan = updatedUser.plan
               token.creditsUsed = updatedUser.creditsUsed
               token.creditsLimit = updatedUser.creditsLimit
@@ -146,6 +153,8 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.sub as string
+        // @ts-ignore
+        session.user.role = ((token as any).role || 'USER') as any
         session.user.plan = token.plan as Plan
         session.user.creditsUsed = token.creditsUsed as number
         session.user.creditsLimit = token.creditsLimit as number
@@ -162,6 +171,7 @@ export const authOptions: NextAuthOptions = {
 
         // Debug log
         console.log('📋 Session Callback:', {
+          role: (session.user as any).role,
           plan: session.user.plan,
           subscriptionStatus: session.user.subscriptionStatus,
           hasActiveSubscription: session.user.hasActiveSubscription
