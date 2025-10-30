@@ -16,7 +16,8 @@ function endOfDay(d: Date) {
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session || (session.user as any).role !== 'admin') {
+  const role = String(((session?.user as any)?.role) || '').toUpperCase()
+  if (!session || role !== 'ADMIN') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

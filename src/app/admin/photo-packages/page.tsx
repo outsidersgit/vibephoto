@@ -36,9 +36,28 @@ export default async function AdminPhotoPackagesPage({ searchParams }: SearchPar
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-xl font-semibold text-gray-900">Pacotes de Fotos</h2>
-        <a href="/admin/photo-packages/new" className="rounded-md bg-purple-600 text-white px-3 py-2 text-sm hover:bg-purple-700">Novo pacote</a>
+        <div className="flex items-center gap-2">
+          <form action="/api/admin/photo-packages/import" method="post" onSubmit={() => {}}
+            className="inline-flex">
+            <button className="rounded-md border px-3 py-2 text-sm" formAction="/api/admin/photo-packages/import"
+              onClick={async (e) => {
+                e.preventDefault()
+                try {
+                  const res = await fetch('/api/admin/photo-packages/import', { method: 'POST' })
+                  if (!res.ok) throw new Error('Falha ao sincronizar')
+                } finally {
+                  // Recarrega a página para refletir novas entradas
+                  // @ts-ignore
+                  if (typeof window !== 'undefined') window.location.reload()
+                }
+              }}>
+              Sincronizar do filesystem
+            </button>
+          </form>
+          <a href="/admin/photo-packages/new" className="rounded-md bg-purple-600 text-white px-3 py-2 text-sm hover:bg-purple-700">Novo pacote</a>
+        </div>
       </div>
       <form className="flex flex-col md:flex-row gap-2">
         <input name="q" defaultValue={q || ''} placeholder="Buscar por nome, descrição ou categoria..." className="w-full border rounded-md px-3 py-2" />

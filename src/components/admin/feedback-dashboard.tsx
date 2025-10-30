@@ -36,14 +36,38 @@ export function FeedbackDashboard() {
   const fetchAnalytics = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/admin/feedback')
+      const response = await fetch('/api/admin/feedback?limit=200')
 
       if (!response.ok) {
         throw new Error('Failed to fetch feedback analytics')
       }
 
       const result = await response.json()
-      setAnalytics(result.data)
+      if (result.mode === 'feedbacks') {
+        const items = Array.isArray(result.items) ? result.items : []
+        const totalFeedbacks = items.length
+        const averageRating = totalFeedbacks > 0
+          ? items.reduce((sum: number, f: any) => sum + (f.rating || 0), 0) / totalFeedbacks
+          : 0
+        const ratingDistribution = [1,2,3,4,5].map(r => ({
+          rating: r,
+          count: items.filter((f: any) => f.rating === r).length
+        }))
+        const recentFeedbacks = items.slice(0, 10).map((f: any) => ({
+          id: f.id,
+          rating: f.rating,
+          comment: f.comment,
+          createdAt: f.createdAt,
+          user: { name: f.user?.name ?? null, email: f.user?.email ?? '' },
+          generation: { id: '', prompt: '' }
+        }))
+        setAnalytics({ averageRating, totalFeedbacks, ratingDistribution, recentFeedbacks })
+      } else if (result.data) {
+        // Backward compatibility if API returns aggregated data
+        setAnalytics(result.data)
+      } else {
+        setAnalytics({ averageRating: 0, totalFeedbacks: 0, ratingDistribution: [], recentFeedbacks: [] })
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load analytics')
     } finally {
