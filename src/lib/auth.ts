@@ -5,14 +5,13 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import GitHubProvider from 'next-auth/providers/github'
-import { prisma } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { verifyPassword } from '@/lib/db/users'
 import { Plan } from '@prisma/client'
 import { getSubscriptionInfo, isSubscriptionActive } from '@/lib/subscription'
 
 export const authOptions: NextAuthOptions = {
-  // Temporarily disable Prisma adapter for testing
-  // adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -180,7 +179,42 @@ export const authOptions: NextAuthOptions = {
       return session
     },
     async signIn({ user, account, profile }) {
-      // Skip database checks during testing to avoid connection issues
+      // Ensure OAuth accounts link to existing users by email (no duplicates)
+      try {
+        if (account && account.provider !== 'credentials') {
+          const email = user.email || (profile as any)?.email
+          if (!email) return true
+
+          const existing = await prisma.user.findUnique({ where: { email } })
+          if (existing) {
+            // Force token to use existing user id
+            ;(user as any).id = existing.id
+
+            // Ensure Account row exists/links to same user
+            const hasAccount = await prisma.account.findFirst({
+              where: { provider: account.provider, providerAccountId: account.providerAccountId }
+            })
+            if (!hasAccount) {
+              await prisma.account.create({
+                data: {
+                  userId: existing.id,
+                  provider: account.provider,
+                  type: account.type,
+                  providerAccountId: account.providerAccountId,
+                  access_token: (account as any).access_token || null,
+                  token_type: (account as any).token_type || null,
+                  expires_at: (account as any).expires_at || null,
+                  id_token: (account as any).id_token || null,
+                  refresh_token: (account as any).refresh_token || null,
+                  scope: (account as any).scope || null,
+                }
+              })
+            }
+          }
+        }
+      } catch (e) {
+        console.error('signIn linking error:', e)
+      }
       return true
     }
   },
