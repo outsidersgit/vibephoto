@@ -2,13 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
 import nodemailer from 'nodemailer'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   const { email, recaptchaToken } = await req.json()
   if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 })
 
+  // Allow admins to bypass reCAPTCHA when triggering from the admin panel
+  const session = await getServerSession(authOptions)
+  const isAdmin = !!session && String(((session.user as any)?.role) || '').toUpperCase() === 'ADMIN'
+
   // Optional reCAPTCHA verification (enable when RECAPTCHA_SECRET is set)
-  if (process.env.RECAPTCHA_SECRET) {
+  if (process.env.RECAPTCHA_SECRET && !isAdmin) {
     try {
       const resp = await fetch('https://www.google.com/recaptcha/api/siteverify', {
         method: 'POST',
