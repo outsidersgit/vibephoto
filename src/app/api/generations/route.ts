@@ -214,8 +214,7 @@ export async function POST(request: NextRequest) {
       '9:16': [base, Math.round(base * 16/9)]
     }
     const [width, height] = (ratioMap[aspectRatio] || ratioMap['1:1'])
-      // Recalcular width/height a partir do aspectRatio para o provedor
-      const [width, height] = (ratioMap[aspectRatio] || ratioMap['1:1'])
+      // width/height já definidos a partir do aspectRatio acima
 
       // Get user plan from session for quality optimization
       const userPlan = (session.user as any).plan || 'FREE'
