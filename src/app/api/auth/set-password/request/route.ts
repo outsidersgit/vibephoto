@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
+import nodemailer from 'nodemailer'
 
 export async function POST(req: NextRequest) {
   const { email, recaptchaToken } = await req.json()
@@ -61,8 +62,53 @@ export async function POST(req: NextRequest) {
 
   const url = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/set-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`
 
-  // TODO: send email via provider; for now return link to be sent by admin
-  return NextResponse.json({ ok: true, url })
+  // Send email in production using SMTP
+  try {
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.warn('SMTP not configured, returning link in response')
+      return NextResponse.json({ ok: true, url })
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    })
+
+    const from = process.env.SMTP_FROM || process.env.SMTP_USER
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333; border-bottom: 2px solid #667EEA; padding-bottom: 10px;">Redefinição de senha</h2>
+        <p>Recebemos uma solicitação para definir a senha de acesso ao VibePhoto para o e-mail <b>${email}</b>.</p>
+        <p>Clique no botão abaixo para criar sua senha. Este link expira em <b>30 minutos</b>.</p>
+        <p style="margin: 24px 0;">
+          <a href="${url}" style="background:#6d28d9;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;display:inline-block">Definir minha senha</a>
+        </p>
+        <p>Se o botão não funcionar, copie e cole este link no navegador:</p>
+        <p style="word-break:break-all;color:#555">${url}</p>
+        <hr style="margin:24px 0;border:none;border-top:1px solid #eee" />
+        <p style="font-size:12px;color:#888">Se você não solicitou este procedimento, ignore este e-mail.</p>
+      </div>
+    `
+    const text = `Defina sua senha no VibePhoto (expira em 30 min): ${url}`
+
+    const info = await transporter.sendMail({
+      from: from,
+      sender: process.env.SMTP_USER,
+      to: email,
+      replyTo: process.env.SMTP_FROM || process.env.SMTP_USER,
+      subject: 'Definir senha - VibePhoto',
+      html,
+      text
+    })
+    console.log('📧 Password reset email sent:', { messageId: info.messageId, to: email })
+    return NextResponse.json({ ok: true, messageId: info.messageId })
+  } catch (e) {
+    console.error('Password email send error:', e)
+    // Fall back to returning the URL so o admin pode compartilhar manualmente
+    return NextResponse.json({ ok: true, url })
+  }
 }
 
 
