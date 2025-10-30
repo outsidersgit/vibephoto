@@ -131,32 +131,10 @@ export async function getReadyModelsByUserId(userId: string) {
 
 export async function canUserCreateModel(userId: string) {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { 
-        plan: true,
-        models: {
-          where: {
-            status: { not: ModelStatus.DELETED }
-          }
-        }
-      }
-    })
-    
+    // Novo comportamento: sem limite de modelos por plano
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } })
     if (!user) return false
-    
-    const modelCount = user.models.length
-    
-    switch (user.plan) {
-      case 'STARTER':
-        return modelCount < 1
-      case 'PREMIUM':
-        return modelCount < 3
-      case 'GOLD':
-        return modelCount < 10
-      default:
-        return false
-    }
+    return true
   } catch (error) {
     console.warn('Database connection issue in canUserCreateModel, allowing for testing:', (error as Error).message)
     // Durante instabilidade do banco, permite criação para teste (assumindo usuário PREMIUM)
@@ -165,18 +143,8 @@ export async function canUserCreateModel(userId: string) {
 }
 
 export function getModelLimitsByPlan(plan: string) {
-  switch (plan) {
-    case 'FREE':
-      return { limit: 1, label: '1 modelo' }
-    case 'STARTER':
-      return { limit: 1, label: '1 modelo por mês' }
-    case 'PREMIUM':
-      return { limit: 3, label: '3 modelos por mês' }
-    case 'GOLD':
-      return { limit: 10, label: '10 modelos por mês' }
-    default:
-      return { limit: 0, label: 'Nenhum modelo' }
-  }
+  // Sem limite exibido
+  return { limit: -1, label: 'Modelos ilimitados' }
 }
 
 export async function getModelStats(modelId: string) {

@@ -13,12 +13,9 @@ export default async function ModelsPage() {
   const session = await requireAuth()
   const userId = session.user.id
 
-  const [models, canCreate] = await Promise.all([
-    getModelsByUserId(userId),
-    canUserCreateModel(userId)
+  const [models] = await Promise.all([
+    getModelsByUserId(userId)
   ])
-
-  const modelLimits = getModelLimitsByPlan(session.user.plan)
   const activeModels = models.filter(m => m.status !== 'DELETED').length
 
   const modelsByStatus = {
@@ -38,21 +35,14 @@ export default async function ModelsPage() {
               <h1 className="text-3xl font-bold text-gray-900" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>Meus Modelos de IA</h1>
             </div>
             <div className="flex items-center space-x-4">
-              {canCreate ? (
+              {true ? (
                 <Button asChild className="bg-gradient-to-br from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-[#667EEA] shadow-lg shadow-[#667EEA]/25 transition-all duration-200 px-6 py-2 h-auto">
                   <Link href="/models/create">
                     Criar Modelo
                   </Link>
                 </Button>
               ) : (
-                <div className="text-right">
-                  <Button disabled>
-                    Limite Atingido
-                  </Button>
-                  <p className="text-xs text-amber-600 mt-1">
-                    Seu plano permite {modelLimits.label}
-                  </p>
-                </div>
+                <></>
               )}
             </div>
           </div>
@@ -71,21 +61,14 @@ export default async function ModelsPage() {
               Crie seu primeiro modelo de IA enviando fotos suas ou de outras pessoas.
               O modelo irá aprender a gerar novas fotos em diferentes estilos e cenários.
             </p>
-            {canCreate ? (
+            {true ? (
               <Button asChild size="lg" className="bg-gradient-to-br from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-[#667EEA] shadow-lg shadow-[#667EEA]/25 transition-all duration-200 px-8 py-3 h-auto">
                 <Link href="/models/create">
                   Criar Seu Primeiro Modelo
                 </Link>
               </Button>
             ) : (
-              <div className="space-y-2">
-                <Button disabled size="lg">
-                  Limite de Modelos Atingido
-                </Button>
-                <p className="text-sm text-gray-500" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                  Upgrade seu plano para criar mais modelos
-                </p>
-              </div>
+              <></>
             )}
           </div>
         ) : (

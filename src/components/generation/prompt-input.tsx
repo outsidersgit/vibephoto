@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,7 +12,6 @@ interface PromptInputProps {
   prompt: string
   negativePrompt: string
   onPromptChange: (prompt: string) => void
-  onNegativePromptChange: (negativePrompt: string) => void
   isGenerating: boolean
   modelClass?: string
 }
@@ -21,38 +20,24 @@ export function PromptInput({
   prompt,
   negativePrompt,
   onPromptChange,
-  onNegativePromptChange,
   isGenerating,
   modelClass = 'MAN'
 }: PromptInputProps) {
-  const [showNegativePrompt, setShowNegativePrompt] = useState(false)
   const [isGuidedMode, setIsGuidedMode] = useState(false)
-  const [showExamples, setShowExamples] = useState(false)
+  const promptRef = useRef<HTMLTextAreaElement | null>(null)
+  const adjustPromptHeight = () => {
+    const el = promptRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 600) + 'px'
+  }
+  useEffect(() => { adjustPromptHeight() }, [prompt])
 
   // Get gender-based prompt suggestions
   const modelGender = getModelGender(modelClass)
   const promptSuggestions = getGenderPromptSuggestions(modelGender)
 
-  const negativePromptSuggestions = [
-    'blurry',
-    'low quality',
-    'distorted',
-    'bad anatomy',
-    'extra limbs',
-    'duplicate',
-    'watermark',
-    'text',
-    'cartoon',
-    'cgi',
-    '3d render',  
-    'unrealistic eyes',
-    'plastic skin',
-    'distorted hands',
-    'extra limbs',
-    'anime',
-    'wax',
-    'smooth'
-  ]
+  // Negative prompt e sugestões removidos por solicitação
 
   const enhancePrompt = () => {
     if (!prompt.trim()) return
@@ -73,16 +58,10 @@ export function PromptInput({
     onPromptChange(enhancedPrompt)
   }
 
-  const addSuggestion = (suggestion: string, isNegative = false) => {
-    if (isNegative) {
-      const current = negativePrompt.trim()
-      const newPrompt = current ? `${current}, ${suggestion}` : suggestion
-      onNegativePromptChange(newPrompt)
-    } else {
-      const current = prompt.trim()
-      const newPrompt = current ? `${current}, ${suggestion}` : suggestion
-      onPromptChange(newPrompt)
-    }
+  const addSuggestion = (suggestion: string) => {
+    const current = prompt.trim()
+    const newPrompt = current ? `${current}, ${suggestion}` : suggestion
+    onPromptChange(newPrompt)
   }
 
   const copyPrompt = () => {
@@ -135,6 +114,11 @@ export function PromptInput({
 
         <span className={`text-xs ${isGuidedMode ? 'text-purple-400 font-medium' : 'text-gray-500'}`}>Guiado</span>
       </div>
+      <p className="text-xs text-gray-400 -mt-1 mb-2">
+        {isGuidedMode
+          ? 'Modo guiado: combine blocos (estilo, luz, câmera) para montar o prompt perfeito, sem precisar escrever tudo.'
+          : 'Modo livre: escreva seu prompt manualmente com total controle. Dica: detalhe estilo, iluminação, lente e ambiente.'}
+      </p>
 
       {/* Guided Mode - Prompt Builder */}
       {isGuidedMode ? (
@@ -186,102 +170,18 @@ export function PromptInput({
         <textarea
           id="prompt"
           value={prompt}
-          onChange={(e) => onPromptChange(e.target.value)}
+          ref={promptRef}
+          onChange={(e) => { onPromptChange(e.target.value); adjustPromptHeight() }}
           disabled={isGenerating}
           className="w-full px-3 py-3 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 resize-none text-white placeholder-slate-400"
           rows={3}
           maxLength={1500}
           placeholder="Descreva a foto que deseja criar... ex: 'foto profissional com roupa social, sorrindo, iluminação natural, alta qualidade'"
         />
-        
-        <div className="flex items-center justify-between mt-2">
-          <div className="flex items-center space-x-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowNegativePrompt(!showNegativePrompt)}
-              className="text-gray-400 hover:text-gray-200 hover:bg-gray-700"
-            >
-              {showNegativePrompt ? 'Ocultar' : 'Mostrar'} Prompt Negativo
-            </Button>
-          </div>
-
-          <p className="text-xs text-gray-400">
-            Seja específico para melhores resultados
-          </p>
-        </div>
-
-        {/* Prompt Suggestions */}
-        <div className="mt-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowExamples(!showExamples)}
-            className="text-gray-400 hover:text-gray-200 hover:bg-gray-700 mb-2"
-          >
-            {showExamples ? 'Ocultar' : 'Mostrar'} sugestões
-          </Button>
-
-          {showExamples && (
-            <div className="flex flex-wrap gap-2">
-              {promptSuggestions.map((suggestion, index) => (
-                <button
-                  key={index}
-                  onClick={() => addSuggestion(suggestion, false)}
-                  disabled={isGenerating}
-                  className="px-3 py-1 text-sm bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 rounded-full transition-colors disabled:opacity-50 border border-purple-700/50"
-                >
-                  + {suggestion}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <div className="mt-2 text-xs text-gray-400">Seja específico para melhores resultados. Exemplos: iluminação, ambiente, lente, estilo.</div>
       </div>
 
-
-      {/* Negative Prompt */}
-      {showNegativePrompt && (
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label htmlFor="negative-prompt" className="block text-sm font-medium text-gray-200">
-              Prompt Negativo
-            </label>
-            <Badge variant="secondary" className="text-xs bg-gray-700 text-gray-300 border-slate-600">
-              {negativePrompt.length}/200
-            </Badge>
-          </div>
-          
-          <textarea
-            id="negative-prompt"
-            value={negativePrompt}
-            onChange={(e) => onNegativePromptChange(e.target.value)}
-            disabled={isGenerating}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400 resize-none text-white placeholder-slate-400"
-            rows={2}
-            maxLength={200}
-            placeholder="Coisas a evitar na imagem... ex: 'blurry, low quality, distorted'"
-          />
-          
-          <div className="mt-2">
-            <p className="text-sm text-gray-300 mb-2">Exclusões comuns:</p>
-            <div className="flex flex-wrap gap-2">
-              {negativePromptSuggestions.map((suggestion, index) => (
-                <button
-                  key={index}
-                  onClick={() => addSuggestion(suggestion, true)}
-                  disabled={isGenerating}
-                  className="px-3 py-1 text-sm bg-red-900/30 hover:bg-red-900/50 text-red-300 rounded-full transition-colors disabled:opacity-50 border border-red-700/50"
-                >
-                  + {suggestion}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Seção de prompt negativo e 'mostrar sugestões' removidas conforme solicitado */}
         </>
       )}
 
