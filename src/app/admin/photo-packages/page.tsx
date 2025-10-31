@@ -70,7 +70,7 @@ export default async function AdminPhotoPackagesPage({ searchParams }: SearchPar
               <tr key={p.id} className="border-t">
                 <td className="px-3 py-2">{p.name}</td>
                 <td className="px-3 py-2">{p.category || '-'}</td>
-                <td className="px-3 py-2">{p.price ? `R$ ${p.price}` : '-'}</td>
+                <td className="px-3 py-2">{p.price ? `${p.price} créditos` : '-'}</td>
                 <td className="px-3 py-2">{p.isActive ? 'Ativo' : 'Inativo'}</td>
                 <td className="px-3 py-2 space-x-2 whitespace-nowrap">
                   <a className="text-gray-700 hover:underline" href={`/admin/photo-packages/${p.id}/edit`}>Editar</a>
