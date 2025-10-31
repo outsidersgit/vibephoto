@@ -198,34 +198,45 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
   const totalCardHeight = cardHeight + cardSpacing
 
   // Progresso de cada card baseado no scroll
-  // Cada card ocupa uma parte do progresso total da seção
+  // Cada card ocupa uma parte igual do progresso total da seção
   // Card 0: 0-0.33, Card 1: 0.33-0.66, Card 2: 0.66-1.0
   const cardStart = index / totalSteps
   const cardEnd = (index + 1) / totalSteps
-  const cardMidPoint = cardStart + (cardEnd - cardStart) * 0.6 // 60% do progresso do card
+  
+  // Zona de transição: primeira metade do progresso é a subida, segunda metade é a pausa
+  const transitionStart = cardStart + (cardEnd - cardStart) * 0.25 // 25% do card - início da subida
+  const cardMidPoint = cardStart + (cardEnd - cardStart) * 0.5 // 50% do card - meio da animação (onde pausa)
+  const pauseEnd = cardStart + (cardEnd - cardStart) * 0.75 // 75% do card - fim da pausa
+  const finalStart = cardStart + (cardEnd - cardStart) * 0.85 // 85% do card - início da finalização
 
   // Posição Y inicial (abaixo da tela)
-  const initialY = 500
+  const initialY = 700
+  // Posição Y durante subida inicial (transição rápida)
+  const midY = initialY * 0.5
   // Posição Y final (posição vertical sequencial)
   const finalY = index * totalCardHeight
 
-  // Animação progressiva: card sobe de baixo, pausa no meio, depois finaliza
-  // Criando uma zona de "pausa" clara no ponto médio
+  // Animação progressiva melhorada com múltiplas etapas: 
+  // - Começa abaixo (initialY)
+  // - Começa a subir aos 25% (transitionStart) até midY
+  // - Chega na posição final aos 50% (cardMidPoint) e PAUSA
+  // - Mantém posição final de 50% até 75% (pauseEnd)
+  // - Finaliza suavemente de 85% até 100%
   const y = useTransform(scrollYProgress, 
-    [cardStart, cardMidPoint - 0.05, cardMidPoint, cardMidPoint + 0.1, cardEnd],
-    [initialY, initialY * 0.3, finalY, finalY, finalY]
+    [cardStart, transitionStart, cardMidPoint, pauseEnd, finalStart, cardEnd],
+    [initialY, initialY * 0.7, finalY, finalY, finalY, finalY]
   )
 
   // Opacity: aparece gradualmente quando começa a subir
   const opacity = useTransform(scrollYProgress,
-    [cardStart, cardStart + 0.15, cardEnd],
-    [0, 1, 1]
+    [cardStart, transitionStart, cardEnd],
+    [0, 0.8, 1]
   )
 
-  // Scale: efeito sutil de crescimento
+  // Scale: efeito mais pronunciado de crescimento
   const scale = useTransform(scrollYProgress,
-    [cardStart, cardStart + 0.15, cardEnd],
-    [0.9, 1, 1]
+    [cardStart, transitionStart, pausePoint, cardEnd],
+    [0.85, 0.98, 1, 1]
   )
 
   return (
@@ -262,13 +273,14 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
 }
 
 // Components for scroll stacking effect - Progressivo vertical
-const ScrollStackingCards = ({ sectionRef }: { sectionRef: React.RefObject<HTMLElement> }) => {
-  const containerRef = useRef<HTMLDivElement>(null)
+const ScrollStackingCards = ({ scrollContainerRef }: { scrollContainerRef: React.RefObject<HTMLDivElement> }) => {
+  const cardsContainerRef = useRef<HTMLDivElement>(null)
   
-  // Usar a section pai para scroll tracking
+  // Usar o container de scroll (300vh) para tracking
+  // Offset ajustado para começar mais cedo e terminar mais tarde, garantindo animação completa
   const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start end", "end start"]
+    target: scrollContainerRef,
+    offset: ["start 0.9", "end 0.1"]
   })
 
   const steps = [
@@ -305,7 +317,7 @@ const ScrollStackingCards = ({ sectionRef }: { sectionRef: React.RefObject<HTMLE
 
   return (
     <div 
-      ref={containerRef} 
+      ref={cardsContainerRef}
       className="relative w-full"
       style={{ 
         height: `${totalHeight}px`,
@@ -684,7 +696,8 @@ const AIToolsShowcase = () => {
                   src={currentExample?.before || currentTool.beforeImage}
                   alt="Antes"
                   fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1024px"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1920px"
+                  quality={100}
                   className="object-cover"
                   style={{ objectPosition: 'center top' }}
                 />
@@ -698,7 +711,8 @@ const AIToolsShowcase = () => {
                     src={currentExample?.after || currentTool.afterImage}
                     alt="Depois"
                     fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1024px"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1920px"
+                    quality={100}
                     className="object-cover"
                     style={{ objectPosition: 'center top' }}
                   />
@@ -882,6 +896,7 @@ export default function HomePage() {
   const [isCarouselPaused, setIsCarouselPaused] = useState(false)
   const [hoveredSlideIndex, setHoveredSlideIndex] = useState<number | null>(null)
   const sectionRef = useRef<HTMLElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   
   // Prevent hydration mismatch
   useEffect(() => {
@@ -1049,7 +1064,7 @@ export default function HomePage() {
           <div className="hidden lg:block">
             {/* Container com scroll progressivo - altura suficiente para animação completa */}
             {/* Altura 300vh permite scroll suave e pausas momentâneas em cada card */}
-            <div className="h-[300vh] relative" style={{ willChange: 'transform' }}>
+            <div ref={scrollContainerRef} className="h-[300vh] relative" style={{ willChange: 'transform' }}>
               <div className="sticky top-0 h-screen flex items-center">
                 <div className="max-w-7xl mx-auto px-6 w-full">
                   <div className="grid grid-cols-2 gap-16 items-center">
@@ -1075,7 +1090,7 @@ export default function HomePage() {
 
                     {/* Right Side - Stacking Cards Progressivo */}
                     <div className="relative flex items-start justify-center" style={{ minHeight: '600px', height: '600px' }}>
-                      <ScrollStackingCards sectionRef={sectionRef} />
+                      <ScrollStackingCards scrollContainerRef={scrollContainerRef} />
                     </div>
                   </div>
                 </div>
