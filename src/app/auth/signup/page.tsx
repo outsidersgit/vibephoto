@@ -62,7 +62,21 @@ export default function SignUpPage() {
 
         if (result?.error) {
           setError('Conta criada, mas falha no login. Tente fazer login manualmente.')
-        } else {
+        } else if (result?.ok) {
+          // Wait a bit for session to be updated
+          await new Promise(resolve => setTimeout(resolve, 100))
+          
+          // Fetch session to check role and subscriptionStatus
+          const session = await getSession()
+          const user = session?.user as any
+          const role = String(user?.role || 'USER').toUpperCase()
+          
+          // ADMIN always goes to /admin
+          if (role === 'ADMIN') {
+            window.location.href = '/admin'
+            return
+          }
+          
           // New users always need to select a plan (subscriptionStatus is null)
           router.push('/pricing?newuser=true')
         }
