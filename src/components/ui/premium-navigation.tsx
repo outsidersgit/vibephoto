@@ -339,23 +339,23 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
 
                     {hasActiveAccess() ? (
                       <>
-                        <Link href="/billing" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors">
+                        <Link href="/billing" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                           <CreditCard className="w-5 h-5 text-slate-500" />
                           <span className="font-medium text-slate-700">Minha Assinatura</span>
                         </Link>
-                        <Link href="/account/history" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors">
+                        <Link href="/account/history" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                           <History className="w-5 h-5 text-slate-500" />
                           <span className="font-medium text-slate-700">Histórico de Pagamentos</span>
                         </Link>
-                        <Link href="/account/orders" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors">
+                        <Link href="/account/orders" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                           <List className="w-5 h-5 text-slate-500" />
                           <span className="font-medium text-slate-700">Ordens</span>
                         </Link>
-                        <Link href="/profile" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors">
+                        <Link href="/profile" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                           <UserCircle className="w-5 h-5 text-slate-500" />
                           <span className="font-medium text-slate-700">Perfil</span>
                         </Link>
-                        <Link href="/support" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors">
+                        <Link href="/support" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                           <MessageSquare className="w-5 h-5 text-slate-500" />
                           <span className="font-medium text-slate-700">Fale Conosco</span>
                         </Link>
@@ -365,7 +365,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                         <p className="text-sm text-slate-700 mb-2 font-medium">
                           Assine para acessar todas as funcionalidades
                         </p>
-                        <Link href="/pricing" className="block w-full">
+                        <Link href="/pricing" className="block w-full" onClick={() => setIsMobileMenuOpen(false)}>
                           <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-2">
                             Ver Planos
                           </Button>
@@ -373,7 +373,10 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                       </div>
                     )}
                     <button
-                      onClick={() => signOut()}
+                      onClick={() => {
+                        setIsMobileMenuOpen(false)
+                        signOut()
+                      }}
                       className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-red-50 transition-colors text-left mt-3"
                     >
                       <LogOut className="w-5 h-5 text-red-500" />
@@ -383,10 +386,10 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                 ) : (
                   <div className="space-y-3">
                     <Button variant="ghost" className="w-full justify-start" asChild>
-                      <Link href="/auth/signin">Entrar</Link>
+                      <Link href="/auth/signin" onClick={() => setIsMobileMenuOpen(false)}>Entrar</Link>
                     </Button>
                     <Button className="w-full bg-gray-900 hover:bg-gray-800" asChild>
-                      <Link href="/auth/signup">
+                      <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)}>
                         Começar Agora
                       </Link>
                     </Button>

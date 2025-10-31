@@ -9,18 +9,18 @@ export function Footer() {
 
   return (
     <footer className="bg-white border-t border-gray-200 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
           {/* Brand */}
           <div className="col-span-1">
-            <div className="mb-4">
+            <div className="mb-2 sm:mb-4">
               <VibePhotoLogo size="md" layout="horizontal" variant="monochrome" showText={true} />
             </div>
-            <p className="text-gray-600 text-sm mb-4">
+            <p className="text-gray-600 text-xs sm:text-sm mb-2 sm:mb-4">
               Transforme suas selfies em fotos profissionais com nossa tecnologia de IA avançada.
             </p>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Mail className="w-4 h-4 flex-shrink-0" />
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
+              <Mail className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
               <a href="mailto:suporte@vibephoto.app" className="hover:text-purple-600 transition-colors break-all sm:break-normal">
                 suporte@vibephoto.app
               </a>
@@ -29,8 +29,8 @@ export function Footer() {
 
           {/* Product */}
           <div>
-            <h3 className="font-medium text-gray-900 mb-4 text-sm">Produto</h3>
-            <ul className="space-y-3 text-sm">
+            <h3 className="font-medium text-gray-900 mb-2 sm:mb-4 text-xs sm:text-sm">Produto</h3>
+            <ul className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
               <li>
                 <Link href="/dashboard" className="text-gray-600 hover:text-purple-600 transition-colors">
                   Dashboard
@@ -61,14 +61,14 @@ export function Footer() {
 
           {/* Support */}
           <div>
-            <h3 className="font-medium text-gray-900 mb-4 text-sm">Suporte</h3>
-            <ul className="space-y-3 text-sm">
+            <h3 className="font-medium text-gray-900 mb-2 sm:mb-4 text-xs sm:text-sm">Suporte</h3>
+            <ul className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
               <li>
                 <Link 
                   href="/legal/faq" 
                   className="text-gray-600 hover:text-purple-600 transition-colors flex items-center gap-2"
                 >
-                  <HelpCircle className="w-4 h-4" />
+                  <HelpCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                   FAQ
                 </Link>
               </li>
@@ -92,14 +92,14 @@ export function Footer() {
 
           {/* Legal */}
           <div>
-            <h3 className="font-medium text-gray-900 mb-4 text-sm">Legal & Privacidade</h3>
-            <ul className="space-y-3 text-sm">
+            <h3 className="font-medium text-gray-900 mb-2 sm:mb-4 text-xs sm:text-sm">Legal & Privacidade</h3>
+            <ul className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
               <li>
                 <Link 
                   href="/legal/terms" 
                   className="text-gray-600 hover:text-purple-600 transition-colors flex items-center gap-2"
                 >
-                  <FileText className="w-4 h-4" />
+                  <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
                   Termos de Uso
                 </Link>
               </li>
@@ -108,7 +108,7 @@ export function Footer() {
                   href="/legal/privacy" 
                   className="text-gray-600 hover:text-purple-600 transition-colors flex items-center gap-2"
                 >
-                  <Shield className="w-4 h-4" />
+                  <Shield className="w-3 h-3 sm:w-4 sm:h-4" />
                   Política de Privacidade
                 </Link>
               </li>
@@ -117,7 +117,7 @@ export function Footer() {
                   href="/legal/cookies" 
                   className="text-gray-600 hover:text-purple-600 transition-colors flex items-center gap-2"
                 >
-                  <Cookie className="w-4 h-4" />
+                  <Cookie className="w-3 h-3 sm:w-4 sm:h-4" />
                   Política de Cookies
                 </Link>
               </li>
@@ -140,8 +140,8 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-gray-200 mt-8 pt-8 text-center">
-          <div className="text-sm text-gray-500">
+        <div className="border-t border-gray-200 mt-4 sm:mt-8 pt-4 sm:pt-8 text-center">
+          <div className="text-xs sm:text-sm text-gray-500">
             © {currentYear} VibePhoto™. Todos os direitos reservados.
           </div>
         </div>

@@ -926,7 +926,7 @@ const AIToolsShowcase = () => {
 
               {/* Slider Control */}
               <div
-                className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white shadow-lg transform -translate-x-0.5 cursor-ew-resize group-hover/slider:bg-blue-400 transition-colors"
+                className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white shadow-lg transform -translate-x-0.5 cursor-ew-resize group-hover/slider:bg-blue-400 transition-colors touch-none"
                 onMouseDown={(e) => {
                   e.preventDefault()
                   const container = e.currentTarget.parentElement
@@ -957,6 +957,46 @@ const AIToolsShowcase = () => {
                   document.body.style.userSelect = 'none'
                   document.addEventListener('mousemove', handleMouseMove)
                   document.addEventListener('mouseup', handleMouseUp)
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault()
+                  const container = e.currentTarget.parentElement
+                  const slider = e.currentTarget
+                  const rect = container?.getBoundingClientRect()
+
+                  if (!rect || !container || !slider) return
+
+                  const touch = e.touches[0]
+
+                  const handleTouchMove = (moveEvent: TouchEvent) => {
+                    if (moveEvent.touches.length === 0) return
+                    const moveTouch = moveEvent.touches[0]
+                    const x = Math.max(0, Math.min(1, (moveTouch.clientX - rect.left) / rect.width))
+                    const percentage = x * 100
+
+                    const afterImage = container.querySelector('[style*="clip-path"]') as HTMLElement
+                    if (afterImage) {
+                      afterImage.style.clipPath = `polygon(${percentage}% 0, 100% 0, 100% 100%, ${percentage}% 100%)`
+                    }
+                    slider.style.left = `${percentage}%`
+                  }
+
+                  const handleTouchEnd = () => {
+                    document.removeEventListener('touchmove', handleTouchMove)
+                    document.removeEventListener('touchend', handleTouchEnd)
+                  }
+
+                  document.addEventListener('touchmove', handleTouchMove, { passive: false })
+                  document.addEventListener('touchend', handleTouchEnd)
+                  
+                  // Mover slider para a posição inicial do touch
+                  const x = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width))
+                  const percentage = x * 100
+                  const afterImage = container.querySelector('[style*="clip-path"]') as HTMLElement
+                  if (afterImage) {
+                    afterImage.style.clipPath = `polygon(${percentage}% 0, 100% 0, 100% 100%, ${percentage}% 100%)`
+                  }
+                  slider.style.left = `${percentage}%`
                 }}
               >
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white/40 transition-colors border border-white/30">
@@ -1831,18 +1871,18 @@ export default function HomePage() {
                     </div>
 
                     <div
-                      className="absolute left-1/2 top-0 bottom-0 w-1 bg-white shadow-lg transform -translate-x-0.5 cursor-ew-resize group-hover/modal-slider:bg-blue-400 transition-colors"
+                      className="absolute left-1/2 top-0 bottom-0 w-1 bg-white shadow-lg transform -translate-x-0.5 cursor-ew-resize group-hover/modal-slider:bg-blue-400 transition-colors touch-none"
                       onMouseDown={(e) => {
                         e.preventDefault();
                         const container = e.currentTarget.parentElement;
                         const slider = e.currentTarget;
                         const rect = container.getBoundingClientRect();
 
-                        const handleMouseMove = (moveEvent) => {
+                        const handleMouseMove = (moveEvent: MouseEvent) => {
                           const x = Math.max(0, Math.min(1, (moveEvent.clientX - rect.left) / rect.width));
                           const percentage = x * 100;
 
-                          const afterImage = container.querySelector('[style*="clip-path"]');
+                          const afterImage = container.querySelector('[style*="clip-path"]') as HTMLElement;
                           if (afterImage) {
                             afterImage.style.clipPath = `polygon(${percentage}% 0, 100% 0, 100% 100%, ${percentage}% 100%)`;
                           }
@@ -1863,6 +1903,46 @@ export default function HomePage() {
                         document.body.style.userSelect = 'none';
                         document.addEventListener('mousemove', handleMouseMove);
                         document.addEventListener('mouseup', handleMouseUp);
+                      }}
+                      onTouchStart={(e) => {
+                        e.preventDefault();
+                        const container = e.currentTarget.parentElement;
+                        const slider = e.currentTarget;
+                        const rect = container.getBoundingClientRect();
+
+                        if (!rect || !container || !slider) return;
+
+                        const touch = e.touches[0];
+
+                        const handleTouchMove = (moveEvent: TouchEvent) => {
+                          if (moveEvent.touches.length === 0) return;
+                          const moveTouch = moveEvent.touches[0];
+                          const x = Math.max(0, Math.min(1, (moveTouch.clientX - rect.left) / rect.width));
+                          const percentage = x * 100;
+
+                          const afterImage = container.querySelector('[style*="clip-path"]') as HTMLElement;
+                          if (afterImage) {
+                            afterImage.style.clipPath = `polygon(${percentage}% 0, 100% 0, 100% 100%, ${percentage}% 100%)`;
+                          }
+                          slider.style.left = `${percentage}%`;
+                        };
+
+                        const handleTouchEnd = () => {
+                          document.removeEventListener('touchmove', handleTouchMove);
+                          document.removeEventListener('touchend', handleTouchEnd);
+                        };
+
+                        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+                        document.addEventListener('touchend', handleTouchEnd);
+                        
+                        // Mover slider para a posição inicial do touch
+                        const x = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+                        const percentage = x * 100;
+                        const afterImage = container.querySelector('[style*="clip-path"]') as HTMLElement;
+                        if (afterImage) {
+                          afterImage.style.clipPath = `polygon(${percentage}% 0, 100% 0, 100% 100%, ${percentage}% 100%)`;
+                        }
+                        slider.style.left = `${percentage}%`;
                       }}
                     >
                       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full shadow-xl flex items-center justify-center group-hover/modal-slider:bg-blue-50 transition-colors border-2 border-gray-200">
