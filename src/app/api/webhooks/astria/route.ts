@@ -394,12 +394,13 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
     }
 
     // Broadcast real-time status change to user (critical for redirection)
+    // Use internalStatus directly to maintain consistency
     try {
       const { broadcastGenerationStatusChange } = await import('@/lib/services/realtime-service')
       await broadcastGenerationStatusChange(
         updatedGeneration.id,
         updatedGeneration.userId,
-        internalStatus === 'COMPLETED' ? 'succeeded' : internalStatus.toLowerCase(),
+        internalStatus, // Send internalStatus directly (COMPLETED/FAILED/PROCESSING)
         {
           imageUrls: finalImageUrls,
           thumbnailUrls: finalImageUrls, // Use same URLs for thumbnails if separate ones aren't available
@@ -409,7 +410,7 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
           timestamp: new Date().toISOString()
         }
       )
-      console.log(`📡 Broadcast sent for generation ${updatedGeneration.id}`)
+      console.log(`📡 Broadcast sent for generation ${updatedGeneration.id} with status: ${internalStatus}`)
     } catch (broadcastError) {
       console.error('❌ Failed to broadcast generation status change:', broadcastError)
       // Don't fail the webhook for broadcast errors

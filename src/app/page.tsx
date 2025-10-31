@@ -1148,7 +1148,7 @@ function NavigationSteps() {
     {
       id: 2,
       title: 'Gere imagens',
-      description: 'Depois, vá em Gerar Imagem e escolha o estilo que quiser. Para aprimorar o resultado, use o botão de lupa no hover da imagem e aplique upscale — aumentando a resolução e deixando sua criação ainda mais nítida..',
+      description: 'Depois, vá em Gerar Imagem e escolha o estilo que quiser. Se quiser aprimorar o resultado, use o botão de lupa nos botões de ação da imagem e aplique upscale — aumentando a resolução e deixando sua criação ainda mais nítida..',
       action: 'Gerar Fotos',
       href: '/generate'
     },
@@ -1190,7 +1190,7 @@ function NavigationSteps() {
     {
       id: 8,
       title: '', // Sem título - apenas adendo
-      description: 'Acesse todas as ferramentas pelas páginas do app ou pelos botões hover da galeria. Cada imagem também tem um botão de compartilhamento — divulgue suas criações com um clique. Vamos nessa?',
+      description: 'Acesse todas as ferramentas pelas páginas do app ou pelos botões de ação nas minituras da galeria. Cada imagem também tem um botão de compartilhamento — divulgue suas criações com um clique. Vamos nessa?',
       action: 'Começar',
       href: '/models/create'
     }
