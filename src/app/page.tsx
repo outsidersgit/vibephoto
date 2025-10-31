@@ -8,12 +8,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useEffect, useState, useRef } from 'react'
 import { useSession } from 'next-auth/react'
-// Swiper imports
-import { Swiper, SwiperSlide } from 'swiper/react'
-import { EffectCoverflow, Pagination, Autoplay } from 'swiper/modules'
-import 'swiper/css'
-import 'swiper/css/effect-coverflow'
-import 'swiper/css/pagination'
 // Framer Motion imports
 import { motion, useScroll, useTransform, useInView } from 'framer-motion'
 
@@ -383,6 +377,197 @@ const MobileStackingCards = () => {
   )
 }
 
+// Infinite Marquee Carousel Component
+interface MarqueeItem {
+  id: string
+  title: string
+  description: string
+  image: string
+  prompt: string
+}
+
+interface MarqueeCarouselProps {
+  items: MarqueeItem[]
+  hoveredIndex: number | null
+  onHoverChange: (index: number | null) => void
+  onImageClick: (image: { src: string; alt: string; title: string }) => void
+}
+
+const MarqueeCarousel = ({ items, hoveredIndex, onHoverChange, onImageClick }: MarqueeCarouselProps) => {
+  const [isPaused, setIsPaused] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const marqueeRef = useRef<HTMLDivElement>(null)
+  const animationRef = useRef<number>(0)
+  const translateXRef = useRef(0)
+
+  // Check mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Duplicate items multiple times for seamless loop
+  const duplicatedItems = [...items, ...items, ...items]
+
+  useEffect(() => {
+    if (isPaused || isMobile) {
+      // Apply smooth transition when pausing
+      if (marqueeRef.current) {
+        marqueeRef.current.style.transition = 'transform 0.3s ease-in-out'
+      }
+      return
+    }
+
+    // Reset transition when resuming animation
+    if (marqueeRef.current) {
+      marqueeRef.current.style.transition = 'none'
+    }
+
+    const animate = () => {
+      if (!marqueeRef.current) return
+      
+      translateXRef.current -= 0.5 // Velocidade de scroll (ajustável)
+      
+      // Reset position when one set of items has scrolled completely
+      // Calculate dynamically based on actual card width
+      const cardElement = marqueeRef.current?.firstElementChild as HTMLElement
+      if (cardElement) {
+        const cardWidth = cardElement.offsetWidth || 320 // Fallback para w-80
+        const gap = 24 // gap-6 = 24px
+        const totalWidth = items.length * (cardWidth + gap)
+        
+        // Reset smoothly when reaching the end of one set
+        if (Math.abs(translateXRef.current) >= totalWidth) {
+          translateXRef.current = translateXRef.current + totalWidth
+        }
+      }
+      
+      if (marqueeRef.current) {
+        marqueeRef.current.style.transform = `translate3d(${translateXRef.current}px, 0, 0)`
+      }
+      
+      animationRef.current = requestAnimationFrame(animate)
+    }
+
+    animationRef.current = requestAnimationFrame(animate)
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
+  }, [isPaused, isMobile, items.length])
+
+  const handleMouseEnter = (index: number) => {
+    setIsPaused(true)
+    onHoverChange(index)
+  }
+
+  const handleMouseLeave = () => {
+    // Delay resumo para suavizar a transição
+    setTimeout(() => {
+      setIsPaused(false)
+    }, 100)
+    onHoverChange(null)
+  }
+
+  return (
+    <div
+      className="relative w-full overflow-x-hidden"
+      onMouseEnter={() => !isMobile && setIsPaused(true)}
+      onMouseLeave={() => {
+        if (!isMobile) {
+          setTimeout(() => setIsPaused(false), 100)
+        }
+      }}
+      onTouchStart={() => setIsPaused(true)}
+      onTouchEnd={() => {
+        setTimeout(() => setIsPaused(false), 300)
+      }}
+      style={{ willChange: 'transform' }}
+    >
+      <div
+        ref={marqueeRef}
+        className={`flex gap-6 will-change-transform ${isMobile ? 'overflow-x-auto snap-x snap-mandatory pb-4 px-4' : 'px-2 md:px-4'}`}
+        style={{
+          transform: isMobile ? 'none' : `translate3d(${translateXRef.current}px, 0, 0)`,
+          scrollBehavior: isMobile ? 'smooth' : 'auto',
+          WebkitOverflowScrolling: isMobile ? 'touch' : 'auto',
+        }}
+      >
+        {duplicatedItems.map((item, index) => {
+          const originalIndex = index % items.length
+          const isHovered = hoveredIndex !== null && 
+            (originalIndex === hoveredIndex)
+          const shouldBlur = hoveredIndex !== null && 
+            !isHovered && 
+            (originalIndex !== hoveredIndex)
+
+          return (
+            <div
+              key={`${item.id}-${index}`}
+              className={`flex-shrink-0 ${isMobile ? 'w-72 snap-center' : 'w-80'} h-auto`}
+              onMouseEnter={() => !isMobile && handleMouseEnter(originalIndex)}
+              onMouseLeave={handleMouseLeave}
+              onFocus={() => !isMobile && handleMouseEnter(originalIndex)}
+              onBlur={handleMouseLeave}
+              style={{ willChange: 'transform, filter, opacity' }}
+            >
+              <div
+                className={`bg-black rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-500 group cursor-pointer relative ${
+                  shouldBlur ? 'blur-sm opacity-60' : ''
+                }`}
+                onClick={() => onImageClick({
+                  src: item.image,
+                  alt: item.title,
+                  title: item.title
+                })}
+              >
+                <div className="relative w-full" style={{ aspectRatio: '4/5' }}>
+                  {/* Background Image */}
+                  <Image
+                    src={item.image}
+                    alt={item.title}
+                    fill
+                    sizes="320px"
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    style={{ willChange: 'transform' }}
+                  />
+
+                  {/* Gradient Overlay - only show on hover */}
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent transition-opacity duration-300 ${
+                      isHovered ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  />
+
+                  {/* Prompt Overlay - Bottom - only show on hover */}
+                  <div
+                    className={`absolute bottom-0 left-0 right-0 p-6 text-white transition-all duration-300 ${
+                      isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                    }`}
+                  >
+                    <div className="text-sm font-medium tracking-wide uppercase text-gray-300 mb-3">
+                      PROMPT
+                    </div>
+                    <p className="text-sm leading-relaxed text-gray-100 line-clamp-4">
+                      {item.prompt}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // AI Tools Showcase Component
 const AIToolsShowcase = () => {
   const [activeTab, setActiveTab] = useState<'upscale' | 'editor' | 'video'>('upscale')
@@ -678,8 +863,6 @@ export default function HomePage() {
   const [selectedPackage, setSelectedPackage] = useState<'ESSENCIAL' | 'AVANÇADO' | 'PRO' | 'ENTERPRISE'>('AVANÇADO')
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0)
   const [isCarouselPaused, setIsCarouselPaused] = useState(false)
-  const [swiperRef, setSwiperRef] = useState<any>(null)
-  const [isAutoplayPaused, setIsAutoplayPaused] = useState(false)
   const [hoveredSlideIndex, setHoveredSlideIndex] = useState<number | null>(null)
   
   // Prevent hydration mismatch
@@ -903,170 +1086,21 @@ export default function HomePage() {
 
       {/* Gallery Section */}
       {!session && (
-        <section className="py-20 px-6 bg-white">
-          <div className="max-w-6xl mx-auto">
-            {/* Coverflow Carousel Section */}
-            <div id="gallery-section" className="py-20" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-              <div className="text-center mb-16">
-                <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Explore toda sua imaginação</h2>
-              </div>
+        <section className="py-20 bg-white overflow-hidden" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+          {/* Coverflow Carousel Section */}
+          <div id="gallery-section" className="py-20 w-full">
+            <div className="text-center mb-16 px-4 md:px-6">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Explore toda sua imaginação</h2>
+            </div>
 
-              {/* Swiper Coverflow Carousel */}
-              <div className="relative">
-                <Swiper
-                  effect="coverflow"
-                  grabCursor={true}
-                  centeredSlides={true}
-                  slidesPerView="auto"
-                  spaceBetween={30}
-                  loop={true}
-                  coverflowEffect={{
-                    rotate: 30,
-                    stretch: 0,
-                    depth: 150,
-                    modifier: 1,
-                    slideShadows: true,
-                  }}
-                  autoplay={{
-                    delay: 4000,
-                    disableOnInteraction: false,
-                    pauseOnMouseEnter: true,
-                    waitForTransition: false,
-                    stopOnLastSlide: false,
-                  }}
-                  speed={1200}
-                  pagination={{
-                    clickable: true,
-                    el: '.swiper-pagination',
-                  }}
-                  modules={[EffectCoverflow, Pagination, Autoplay]}
-                  onSwiper={(swiper) => {
-                    setSwiperRef(swiper)
-                  }}
-                  onMouseEnter={() => {
-                    // Pause autoplay when mouse enters the swiper area
-                    if (swiperRef?.autoplay) {
-                      swiperRef.autoplay.pause()
-                    }
-                  }}
-                  onMouseLeave={() => {
-                    // Resume autoplay when mouse leaves the swiper area
-                    if (swiperRef?.autoplay) {
-                      swiperRef.autoplay.resume()
-                    }
-                  }}
-                  className="pb-12"
-                  breakpoints={{
-                    320: {
-                      slidesPerView: 1.2,
-                      spaceBetween: 20,
-                      coverflowEffect: {
-                        rotate: 20,
-                        stretch: 0,
-                        depth: 100,
-                        modifier: 1,
-                      },
-                    },
-                    640: {
-                      slidesPerView: 1.8,
-                      spaceBetween: 25,
-                      coverflowEffect: {
-                        rotate: 25,
-                        stretch: 0,
-                        depth: 120,
-                        modifier: 1,
-                      },
-                    },
-                    768: {
-                      slidesPerView: 2.2,
-                      spaceBetween: 30,
-                      coverflowEffect: {
-                        rotate: 30,
-                        stretch: 0,
-                        depth: 150,
-                        modifier: 1,
-                      },
-                    },
-                    1024: {
-                      slidesPerView: 3,
-                      spaceBetween: 40,
-                      coverflowEffect: {
-                        rotate: 30,
-                        stretch: 0,
-                        depth: 150,
-                        modifier: 1,
-                      },
-                    },
-                  }}
-                >
-                  {carouselStyles.map((style, index) => (
-                    <SwiperSlide
-                      key={style.id}
-                      className="!w-80 !h-auto"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        swiperRef?.slideTo(index)
-                      }}
-                    >
-                      <div className={`bg-black rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-500 group swiper-slide-card cursor-pointer relative ${
-                        hoveredSlideIndex !== null && hoveredSlideIndex !== index ? 'blur-sm opacity-60' : ''
-                      }`}
-                        onClick={() => setSelectedImage({
-                          src: style.image,
-                          alt: style.title,
-                          title: style.title
-                        })}
-                        onMouseEnter={() => {
-                          setHoveredSlideIndex(index)
-                          // Pause autoplay when hovering over a slide
-                          if (swiperRef?.autoplay) {
-                            swiperRef.autoplay.pause()
-                          }
-                        }}
-                        onMouseLeave={() => {
-                          setHoveredSlideIndex(null)
-                          // Resume autoplay when leaving a slide
-                          if (swiperRef?.autoplay) {
-                            swiperRef.autoplay.resume()
-                          }
-                        }}
-                      >
-                        <div className="relative w-full" style={{ aspectRatio: '4/5' }}>
-                          {/* Background Image - Full Cover */}
-                          <Image
-                            src={style.image}
-                            alt={style.title}
-                            fill
-                            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 320px"
-                            className="object-cover transition-transform duration-700 group-hover:scale-105"
-                          />
-
-                          {/* Gradient Overlay for text readability - only show on hover */}
-                          <div className={`absolute inset-0 gradient-overlay transition-opacity duration-300 ${
-                            hoveredSlideIndex === index ? 'opacity-100' : 'opacity-0'
-                          }`}></div>
-
-                          {/* Prompt Overlay - Bottom - only show on hover */}
-                          <div className={`absolute bottom-0 left-0 right-0 p-6 text-white transition-all duration-300 ${
-                            hoveredSlideIndex === index ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                          }`}>
-                            <div className="text-sm font-medium tracking-wide uppercase text-gray-300 mb-3">
-                              PROMPT
-                            </div>
-                            <p className="text-sm leading-relaxed text-gray-100 line-clamp-4">
-                              {style.prompt}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </SwiperSlide>
-                  ))}
-                </Swiper>
-
-
-                {/* Custom Pagination */}
-                <div className="swiper-pagination !bottom-0 [&_.swiper-pagination-bullet]:!bg-gray-300 [&_.swiper-pagination-bullet-active]:!bg-blue-500 [&_.swiper-pagination-bullet]:!w-3 [&_.swiper-pagination-bullet]:!h-3 [&_.swiper-pagination-bullet]:!mx-1"></div>
-              </div>
+            {/* Infinite Marquee Carousel - Full Width */}
+            <div className="relative w-full -mx-0">
+              <MarqueeCarousel
+                items={carouselStyles}
+                hoveredIndex={hoveredSlideIndex}
+                onHoverChange={setHoveredSlideIndex}
+                onImageClick={setSelectedImage}
+              />
             </div>
           </div>
         </section>
