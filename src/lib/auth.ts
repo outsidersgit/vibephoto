@@ -19,7 +19,11 @@ const customAdapter: Adapter = {
     const { image, ...restUser } = user
     const userData: any = {
       ...restUser,
-      ...(image && { avatar: image })
+      ...(image && { avatar: image }),
+      // Novos usuários OAuth também não têm plano, então creditsLimit = 0
+      creditsLimit: 0,
+      creditsUsed: 0,
+      creditsBalance: 0
     }
     
     const createdUser = await prisma.user.create({

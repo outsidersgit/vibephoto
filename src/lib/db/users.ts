@@ -12,11 +12,15 @@ export async function createUser(data: {
 }) {
   const hashedPassword = data.password ? await bcrypt.hash(data.password, 10) : undefined
   
+  // Créditos só são disponibilizados quando há plano ativo
+  // Novos usuários sem plano recebem 0 créditos
+  const creditsLimit = data.plan ? getCreditsLimitForPlan(data.plan) : 0
+  
   return prisma.user.create({
     data: {
       ...data,
       password: hashedPassword,
-      creditsLimit: getCreditsLimitForPlan(data.plan || Plan.STARTER)
+      creditsLimit // 0 se sem plano, ou valor do plano se houver
     }
   })
 }
