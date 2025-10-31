@@ -336,7 +336,14 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
                   poster={video.thumbnailUrl || video.sourceImageUrl}
                   className="w-full aspect-video object-contain"
                   onClick={togglePlay}
-                />
+                  preload="metadata"
+                  controls={false}
+                  muted={isMuted}
+                  playsInline
+                >
+                  <source src={video.videoUrl} type="video/mp4" />
+                  Seu navegador não suporta reprodução de vídeo.
+                </video>
 
                 {/* Video Controls */}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">

@@ -193,8 +193,8 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
   // Cada card sobe e "para" momentaneamente antes do próximo aparecer
   // Cards posicionados um abaixo do outro, sem sobreposição
 
-  const cardHeight = 160 // Altura de cada card
-  const cardSpacing = 32 // Espaçamento entre cards
+  const cardHeight = 180 // Altura de cada card (aumentado para visual premium)
+  const cardSpacing = 40 // Espaçamento entre cards (aumentado)
   const totalCardHeight = cardHeight + cardSpacing
 
   // Progresso de cada card baseado no scroll
@@ -206,14 +206,14 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
   const cardEnd = (index + 1) / totalSteps
   
   // Ajustar timing especialmente para o último card
-  // O último card precisa começar mais cedo e ter mais tempo
+  // O último card precisa começar mais cedo e ter mais tempo, com pausa extra para scroll normal
   
   // Para o último card: começa a subir mais cedo (15% ao invés de 25%)
   // Para os outros: mantém 25%
   const transitionStart = cardStart + (cardEnd - cardStart) * (isLastCard ? 0.15 : 0.25)
   const cardMidPoint = cardStart + (cardEnd - cardStart) * (isLastCard ? 0.4 : 0.5) // Último card chega mais cedo
-  const pauseEnd = cardStart + (cardEnd - cardStart) * (isLastCard ? 0.65 : 0.75) // Último card pausa por mais tempo
-  const finalStart = cardStart + (cardEnd - cardStart) * (isLastCard ? 0.75 : 0.85) // Último card finaliza mais devagar
+  const pauseEnd = cardStart + (cardEnd - cardStart) * (isLastCard ? 0.70 : 0.75) // Último card pausa por mais tempo (aumentado de 0.65 para 0.70)
+  const finalStart = cardStart + (cardEnd - cardStart) * (isLastCard ? 0.82 : 0.85) // Último card finaliza mais devagar (aumentado de 0.75 para 0.82)
 
   // Posição Y inicial (abaixo da tela)
   const initialY = 700
@@ -247,35 +247,138 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
     [0.85, isLastCard ? 0.99 : 0.98, 1, 1, 1]
   )
 
+  // Efeitos 3D baseados no scroll para premium feel
+  const rotateX = useTransform(scrollYProgress, 
+    [cardStart, cardMidPoint, pauseEnd, cardEnd],
+    [5, 0, 0, 0] // Leve inclinação inicial que se aplaina
+  )
+  
+  const rotateY = useTransform(scrollYProgress,
+    [cardStart, cardMidPoint, pauseEnd, cardEnd],
+    [-2, 0, 0, 0] // Leve rotação lateral
+  )
+  
+  // Efeito de profundidade com perspectiva
+  const z = useTransform(scrollYProgress,
+    [cardStart, transitionStart, cardMidPoint, pauseEnd, cardEnd],
+    [-50, 0, 20, 20, 0] // Elevação sutil durante a animação
+  )
+
   return (
     <motion.div
       style={{
         y,
         opacity,
         scale,
+        rotateX,
+        rotateY,
+        z,
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        willChange: 'transform'
+        willChange: 'transform',
+        perspective: 1000
       }}
     >
-      <div 
-        className="h-[160px] bg-white/90 backdrop-blur-md border border-gray-200 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300"
-        style={{ willChange: 'transform' }}
+      <motion.div 
+        className="h-[180px] relative overflow-hidden rounded-2xl shadow-2xl"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(250,250,252,0.98) 100%)',
+          border: '1px solid rgba(0,0,0,0.06)',
+          backdropFilter: 'blur(20px)',
+          willChange: 'transform',
+          boxShadow: '0 20px 60px -15px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset'
+        }}
+        whileHover={{ 
+          scale: 1.02,
+          boxShadow: '0 25px 80px -15px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.8) inset',
+          transition: { duration: 0.3 }
+        }}
       >
-        <div className="p-6 h-full flex items-center">
-          <div className="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center mr-5 flex-shrink-0 shadow-inner">
-            <span className="text-white font-light text-sm opacity-70">{step.id}</span>
+        {/* Marca d'água - número sutil premium */}
+        <motion.div
+          className="absolute top-6 left-6 z-0"
+          style={{
+            opacity: useTransform(scrollYProgress,
+              [cardStart, cardMidPoint, pauseEnd],
+              [0.06, 0.10, 0.08]
+            )
+          }}
+        >
+          <span 
+            className="text-[140px] font-extralight text-gray-900 leading-none"
+            style={{
+              fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+              fontWeight: 100,
+              letterSpacing: '-0.03em',
+              background: 'linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}
+          >
+            {step.id}
+          </span>
+        </motion.div>
+
+        {/* Conteúdo do card */}
+        <div className="p-8 h-full flex flex-col justify-between relative z-10">
+          {/* Título - maior, alinhado à esquerda */}
+          <div>
+            <h3 
+              className="text-2xl font-bold text-gray-900 mb-3 tracking-tight"
+              style={{
+                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                fontWeight: 700,
+                letterSpacing: '-0.01em',
+                lineHeight: '1.2'
+              }}
+            >
+              {step.title}
+            </h3>
           </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-gray-900 mb-2 tracking-wide drop-shadow-sm">{step.title}</h3>
-            <p className="text-sm text-gray-700 line-clamp-2 leading-relaxed font-medium">
+
+          {/* Descrição - centralizada com leve viés à direita */}
+          <div className="flex justify-center">
+            <p 
+              className="text-sm text-gray-600 line-clamp-2 leading-relaxed max-w-[90%] text-center"
+              style={{
+                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                fontWeight: 400,
+                letterSpacing: '0.015em',
+                paddingRight: '8px' // Leve offset à direita
+              }}
+            >
               {step.description}
             </p>
           </div>
         </div>
-      </div>
+
+        {/* Efeito de brilho sutil - gradiente overlay premium */}
+        <motion.div
+          className="absolute inset-0 pointer-events-none rounded-2xl"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%, rgba(0,0,0,0.03) 100%)',
+            opacity: useTransform(scrollYProgress, 
+              [cardStart, cardMidPoint, pauseEnd],
+              [0.4, 0.7, 0.5]
+            )
+          }}
+        />
+        
+        {/* Borda sutil premium no hover */}
+        <motion.div
+          className="absolute inset-0 pointer-events-none rounded-2xl"
+          style={{
+            border: '1px solid transparent',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
+            WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+            WebkitMaskComposite: 'xor',
+            maskComposite: 'exclude'
+          }}
+        />
+      </motion.div>
     </motion.div>
   )
 }
@@ -318,9 +421,9 @@ const ScrollStackingCards = ({ scrollContainerRef }: { scrollContainerRef: React
     }
   ]
 
-  // Altura total dos cards (incluindo espaçamento)
-  const cardHeight = 160
-  const cardSpacing = 32
+  // Altura total dos cards (incluindo espaçamento) - ajustado para cards maiores
+  const cardHeight = 180 // Aumentado de 160 para 180
+  const cardSpacing = 40 // Aumentado de 32 para 40
   const totalHeight = steps.length * (cardHeight + cardSpacing)
 
   return (
@@ -1071,8 +1174,8 @@ export default function HomePage() {
           {/* Desktop Layout */}
           <div className="hidden lg:block">
             {/* Container com scroll progressivo - altura suficiente para animação completa */}
-            {/* Altura 300vh permite scroll suave e pausas momentâneas em cada card */}
-            <div ref={scrollContainerRef} className="h-[300vh] relative" style={{ willChange: 'transform' }}>
+            {/* Altura 350vh permite scroll suave e pausas momentâneas em cada card com pausa extra após o terceiro */}
+            <div ref={scrollContainerRef} className="h-[350vh] relative" style={{ willChange: 'transform' }}>
               <div className="sticky top-0 h-screen flex items-center">
                 <div className="max-w-7xl mx-auto px-6 w-full">
                   <div className="grid grid-cols-2 gap-16 items-center">
@@ -1097,7 +1200,7 @@ export default function HomePage() {
                     </div>
 
                     {/* Right Side - Stacking Cards Progressivo */}
-                    <div className="relative flex items-start justify-center" style={{ minHeight: '600px', height: '600px' }}>
+                    <div className="relative flex items-start justify-center" style={{ minHeight: '680px', height: '680px' }}>
                       <ScrollStackingCards scrollContainerRef={scrollContainerRef} />
                     </div>
                   </div>

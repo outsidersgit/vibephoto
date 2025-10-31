@@ -221,21 +221,21 @@ export function VideoGallery({
                   {/* Thumbnail or Video Preview */}
                   <div className="aspect-video bg-gray-100 flex items-center justify-center relative overflow-hidden">
                     {video.status === 'COMPLETED' && video.videoUrl ? (
-                      // Show video thumbnail if available, otherwise use the video itself as preview
+                      // Sempre usar thumbnail/poster - NUNCA carregar o vídeo completo no preview
                       video.thumbnailUrl ? (
                         <img
                           src={video.thumbnailUrl}
                           alt="Video thumbnail"
                           className="w-full h-full object-cover"
+                          loading="lazy"
                         />
                       ) : (
-                        <video
-                          src={video.videoUrl}
+                        // Usar sourceImageUrl como poster - vídeo completo só carrega no modal
+                        <img
+                          src={video.sourceImageUrl || '/examples/professional-woman.jpg'}
+                          alt="Video poster"
                           className="w-full h-full object-cover"
-                          muted
-                          poster={video.sourceImageUrl || undefined}
-                          preload="none"
-                          playsInline
+                          loading="lazy"
                         />
                       )
                     ) : video.sourceImageUrl ? (
@@ -244,6 +244,7 @@ export function VideoGallery({
                         src={video.sourceImageUrl}
                         alt="Source image"
                         className="w-full h-full object-cover opacity-50"
+                        loading="lazy"
                       />
                     ) : (
                       // Show placeholder for text-to-video with no source image

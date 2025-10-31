@@ -14,7 +14,8 @@ import {
   Download,
   Eye,
   RefreshCw,
-  Filter
+  Filter,
+  Film
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -268,14 +269,20 @@ export function EnhancedGallery({
                     >
                       <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                         {item.type === 'video' ? (
-                          <video
-                            src={url}
-                            poster={displayThumbnails[index]}
-                            className="w-full h-full object-cover"
-                            controls={false}
-                            muted
-                            onClick={() => handleMediaClick(item.id)}
-                          />
+                          // Sempre usar thumbnail/poster - vídeo completo só carrega no modal
+                          displayThumbnails[index] ? (
+                            <img
+                              src={displayThumbnails[index]}
+                              alt="Video thumbnail"
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                              onClick={() => handleMediaClick(item.id)}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                              <Film className="w-12 h-12 text-gray-400" />
+                            </div>
+                          )
                         ) : (
                           <img
                             src={displayThumbnails[index] || url}

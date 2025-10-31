@@ -378,7 +378,13 @@ export function VideoPlayerModal({ mediaItem, onClose }: VideoPlayerModalProps) 
           onClick={togglePlayPause}
           poster={mediaItem.thumbnailUrl}
           preload="metadata"
-        />
+          controls={false}
+          muted
+          playsInline
+        >
+          <source src={mediaItem.url} type="video/mp4" />
+          Seu navegador não suporta reprodução de vídeo.
+        </video>
 
         {/* Play/Pause Overlay */}
         {!isLoading && showControls && (
