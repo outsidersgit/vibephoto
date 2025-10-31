@@ -480,19 +480,96 @@ const MobileStackingCard = ({ step, index }: {
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
       transition={{ duration: 0.6, delay: index * 0.15 }}
       style={{ scrollSnapAlign: 'start' }}
-      className="min-h-[300px] flex items-center mb-12"
+      className="min-h-[280px] flex items-center mb-12"
     >
-      <div className="w-full bg-gray-200 border border-gray-300 rounded-xl shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 transform-gpu hover:rotate-1 hover:scale-[1.03] backdrop-blur-sm">
-        <div className="p-8">
-          <div className="w-16 h-16 bg-gray-900 rounded-xl flex items-center justify-center mb-6 shadow-inner">
-            <span className="text-white font-light text-xl opacity-70">{step.id}</span>
-          </div>
-          <h3 className="text-3xl font-bold text-gray-900 mb-4 tracking-wide drop-shadow-sm">{step.title}</h3>
-          <p className="text-gray-700 leading-relaxed font-medium text-base">
-            {step.description}
-          </p>
+      <motion.div 
+        className="w-full relative overflow-hidden rounded-2xl shadow-2xl"
+        style={{
+          background: 'linear-gradient(135deg, rgba(0,0,0,0.98) 0%, rgba(15,15,25,0.98) 25%, rgba(25,25,35,0.98) 50%, rgba(15,15,25,0.98) 75%, rgba(5,5,15,0.98) 100%)',
+          border: '1px solid rgba(255,255,255,0.15)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 20px 60px -15px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1) inset'
+        }}
+        whileHover={{ 
+          scale: 1.02,
+          boxShadow: '0 25px 80px -15px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.2) inset',
+          transition: { duration: 0.3 }
+        }}
+      >
+        {/* Gradiente adicional para efeito premium */}
+        <div
+          className="absolute inset-0 pointer-events-none rounded-2xl"
+          style={{
+            background: 'linear-gradient(135deg, rgba(40,40,50,0.3) 0%, transparent 40%, transparent 60%, rgba(10,10,20,0.4) 100%)',
+            opacity: 0.6
+          }}
+        />
+
+        {/* Marca d'água - número com maior contraste */}
+        <div
+          className="absolute top-4 left-4 z-0 pointer-events-none"
+          style={{
+            opacity: 0.30
+          }}
+        >
+          <span 
+            className="text-[100px] font-extralight leading-none"
+            style={{
+              fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+              fontWeight: 100,
+              letterSpacing: '-0.03em',
+              color: 'rgba(120,120,135,0.9)', // Cinza médio com muito mais contraste
+              textShadow: '0 0 40px rgba(120,120,135,0.4), 0 0 80px rgba(120,120,135,0.2)'
+            }}
+          >
+            {step.id}
+          </span>
         </div>
-      </div>
+
+        {/* Conteúdo do card */}
+        <div className="p-6 h-full flex flex-col justify-between relative z-10">
+          {/* Título - maior, alinhado à direita */}
+          <div className="ml-auto text-right">
+            <h3 
+              className="text-2xl font-bold mb-3 tracking-tight"
+              style={{
+                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                fontWeight: 700,
+                letterSpacing: '-0.01em',
+                lineHeight: '1.2',
+                color: 'rgba(255,255,255,0.95)' // Branco quase puro
+              }}
+            >
+              {step.title}
+            </h3>
+          </div>
+
+          {/* Descrição - alinhada à direita */}
+          <div className="ml-auto text-right">
+            <p 
+              className="text-sm leading-relaxed"
+              style={{
+                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                fontWeight: 400,
+                letterSpacing: '0.015em',
+                color: 'rgba(200,200,210,0.85)', // Cinza claro
+                maxWidth: '90%' // Garante alinhamento à direita
+              }}
+            >
+              {step.description}
+            </p>
+          </div>
+        </div>
+
+        {/* Efeito de brilho sutil - gradiente overlay premium para fundo preto */}
+        <div
+          className="absolute inset-0 pointer-events-none rounded-2xl"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(255,255,255,0.02) 100%)',
+            opacity: 0.4
+          }}
+        />
+      </motion.div>
     </motion.div>
   )
 }
