@@ -83,6 +83,10 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
     const videoElement = videoRef.current
     if (!videoElement) return
 
+    // Configurar para streaming progressivo - não carregar tudo de uma vez
+    videoElement.preload = 'metadata'
+    videoElement.load()
+
     const updateTime = () => setCurrentTime(videoElement.currentTime)
     const updateDuration = () => setDuration(videoElement.duration)
 
@@ -90,9 +94,14 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
     videoElement.addEventListener('loadedmetadata', updateDuration)
     videoElement.addEventListener('ended', () => setIsPlaying(false))
 
+    // Limpar ao desmontar
     return () => {
       videoElement.removeEventListener('timeupdate', updateTime)
       videoElement.removeEventListener('loadedmetadata', updateDuration)
+      // Pausar e resetar o vídeo ao desmontar para economizar banda
+      videoElement.pause()
+      videoElement.currentTime = 0
+      videoElement.load()
     }
   }, [])
 
@@ -102,10 +111,21 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
 
     if (isPlaying) {
       videoElement.pause()
+      setIsPlaying(false)
     } else {
-      videoElement.play()
+      // Só carregar vídeo quando usuário clicar em play
+      // Usar buffering progressivo - carrega conforme necessário
+      if (videoElement.readyState < 2) {
+        // Se ainda não carregou metadados, carregar primeiro
+        videoElement.load()
+        videoElement.addEventListener('loadeddata', () => {
+          videoElement.play().catch(err => console.error('Erro ao reproduzir vídeo:', err))
+        }, { once: true })
+      } else {
+        videoElement.play().catch(err => console.error('Erro ao reproduzir vídeo:', err))
+      }
+      setIsPlaying(true)
     }
-    setIsPlaying(!isPlaying)
   }
 
   const toggleMute = () => {
@@ -198,7 +218,25 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
   const handleDownload = async () => {
     if (video.videoUrl) {
       try {
-        const response = await fetch(video.videoUrl)
+        // Mostrar indicador de download - vídeo completo só baixa quando solicitado
+        const downloadButton = document.querySelector('[aria-label="Baixar vídeo"], [title="Baixar vídeo"]')
+        if (downloadButton) {
+          (downloadButton as HTMLElement).style.opacity = '0.5'
+          ;(downloadButton as HTMLElement).style.pointerEvents = 'none'
+        }
+
+        // Baixar o vídeo completo apenas quando usuário solicitar
+        const response = await fetch(video.videoUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'video/mp4',
+          },
+        })
+        
+        if (!response.ok) {
+          throw new Error('Erro ao baixar vídeo')
+        }
+
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -211,6 +249,12 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
         a.click()
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
+
+        // Restaurar botão
+        if (downloadButton) {
+          (downloadButton as HTMLElement).style.opacity = '1'
+          ;(downloadButton as HTMLElement).style.pointerEvents = 'auto'
+        }
       } catch (error) {
         console.error('Download failed:', error)
         // Fallback to opening in new tab
@@ -336,10 +380,12 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
                   poster={video.thumbnailUrl || video.sourceImageUrl}
                   className="w-full aspect-video object-contain"
                   onClick={togglePlay}
-                  preload="metadata"
+                  preload="none"
                   controls={false}
                   muted={isMuted}
                   playsInline
+                  disablePictureInPicture
+                  disableRemotePlayback
                 >
                   <source src={video.videoUrl} type="video/mp4" />
                   Seu navegador não suporta reprodução de vídeo.
