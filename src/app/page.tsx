@@ -1147,14 +1147,14 @@ function NavigationSteps() {
     {
       id: 2,
       title: 'Gere imagens',
-      description: 'Depois, vá em Gerar Imagem e escolha o estilo que quiser. Se quiser melhorar o resultado, use o botão de lupa no hover da imagem para aplicar upscale — aumentando a resolução e deixando sua criação ainda mais nítida e profissional.',
+      description: 'Depois, vá em Gerar Imagem e escolha o estilo que quiser. Para aprimorar o resultado, use o botão de lupa no hover da imagem e aplique upscale — aumentando a resolução e deixando sua criação ainda mais nítida..',
       action: 'Gerar Fotos',
       href: '/generate'
     },
     {
       id: 3,
       title: 'Edite suas criações',
-      description: 'Quer ajustar ou criar algo do zero? Acesse o Editor de Imagem, refine os detalhes ou libere sua criatividade. Gere fotos únicas — de pessoas fictícias, editoriais, vitrines de moda, postagens para redes sociais ou até experimentações virtuais de outfit. Tudo em um só lugar, com liberdade total para criar o que quiser.',
+      description: 'Quer ajustar algo ou criar do zero? Acesse o Editor de Imagem e explore. Gere fotos únicas — de pessoas fictícias, editoriais, vitrines de moda, postagens ou outfits virtuais — tudo em um só lugar, com liberdade total para criar.',
       action: 'Editar Fotos',
       href: '/editor'
     },
@@ -1189,7 +1189,7 @@ function NavigationSteps() {
     {
       id: 8,
       title: 'Navegação e compartilhamento',
-      description: 'Você pode acessar todas essas ferramentas através da navegação nas páginas do app ou diretamente pelos botões hover nos modais da galeria. Além disso, cada imagem possui um botão de compartilhar nas principais redes sociais — divulgue suas criações com apenas um clique!',
+      description: 'Acesse todas as ferramentas pelas páginas do app ou pelos botões hover da galeria. Cada imagem também tem um botão de compartilhamento — divulgue suas criações com um clique.',
       action: 'Ver Galeria',
       href: '/gallery'
     }
@@ -1225,7 +1225,7 @@ function NavigationSteps() {
   // Static initial state - show "Crie. Transforme. Impressione." with play button
   if (!isStarted) {
     return (
-      <div className="relative z-10 px-8 py-8 md:px-12 md:py-12 flex items-center justify-center">
+      <div className="relative z-10 px-8 py-8 md:px-12 md:py-12 flex items-center justify-center h-full">
         <div className="max-w-3xl mx-auto w-full text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1246,11 +1246,12 @@ function NavigationSteps() {
               Crie. Transforme. Impressione.
             </motion.h2>
 
-            {/* Play Button */}
+            {/* Play Button - Centered */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.2 }}
+              className="flex justify-center"
             >
               <Button
                 onClick={() => setIsStarted(true)}
@@ -1269,71 +1270,74 @@ function NavigationSteps() {
 
   // Active navigation state
   return (
-    <div className="relative z-10 px-8 py-8 md:px-12 md:py-12 flex items-center justify-center">
-      <div className="max-w-3xl mx-auto w-full text-center">
+    <div className="relative z-10 px-8 py-8 md:px-12 md:py-12 h-full flex flex-col">
+      <div className="max-w-3xl mx-auto w-full text-center flex-1 flex flex-col justify-between">
         {/* Step Content */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentStep}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.4 }}
-            className="space-y-4"
-          >
-            {/* Title */}
-            <motion.h2
-              className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-3 tracking-tight"
-              style={{
-                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
-                fontWeight: 700,
-                letterSpacing: '-0.02em',
-                textShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
-              }}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-            >
-              {currentStepData.title}
-            </motion.h2>
-
-            {/* Description */}
-            <motion.p
-              className="text-base md:text-lg text-white/80 mb-6 max-w-2xl mx-auto leading-relaxed"
-              style={{
-                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
-                textShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
-              }}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 }}
-            >
-              {currentStepData.description}
-            </motion.p>
-
-            {/* Action Button */}
+        <div className="flex-1 flex flex-col justify-center">
+          <AnimatePresence mode="wait">
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              key={currentStep}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.4 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4 }}
+              className="space-y-4"
             >
-              <Button
-                asChild
-                size="lg"
-                className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-6 py-4 text-base rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
-                onClick={() => router.push(currentStepData.href)}
+              {/* Title */}
+              <motion.h2
+                className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-3 tracking-tight"
+                style={{
+                  fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                  fontWeight: 700,
+                  letterSpacing: '-0.02em',
+                  textShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+                }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2 }}
               >
-                <Link href={currentStepData.href}>
-                  {currentStepData.action}
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Link>
-              </Button>
-            </motion.div>
-          </motion.div>
-        </AnimatePresence>
+                {currentStepData.title}
+              </motion.h2>
 
-        {/* Step Indicators - Replaces the number counter */}
-        <div className="flex items-center justify-center gap-4 mt-6">
+              {/* Description */}
+              <motion.p
+                className="text-base md:text-lg text-white/80 mb-6 max-w-2xl mx-auto leading-relaxed line-clamp-4"
+                style={{
+                  fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                  textShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
+                }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.3 }}
+              >
+                {currentStepData.description}
+              </motion.p>
+
+              {/* Action Button - Centered */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.4 }}
+                className="flex justify-center"
+              >
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-6 py-4 text-base rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+                  onClick={() => router.push(currentStepData.href)}
+                >
+                  <Link href={currentStepData.href}>
+                    {currentStepData.action}
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Link>
+                </Button>
+              </motion.div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Step Indicators - Fixed at bottom */}
+        <div className="flex items-center justify-center gap-4 mt-8 pt-4">
           <button
             onClick={() => setCurrentStep((prev) => (prev - 1 + steps.length) % steps.length)}
             className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
@@ -1526,8 +1530,8 @@ export default function HomePage() {
         </section>
       ) : (
         <>
-          <section className="relative px-6 py-6 bg-gradient-to-b from-gray-50 to-white">
-            <div className="max-w-4xl mx-auto">
+          <section className="relative py-6 bg-gradient-to-b from-gray-50 to-white">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-left">
                 Olá, {session.user?.name || 'Usuário'}!
               </h1>
@@ -1554,7 +1558,8 @@ export default function HomePage() {
                 }}
                 style={{
                   willChange: 'transform',
-                  minHeight: '55vh'
+                  height: '55vh',
+                  overflow: 'hidden'
                 }}
               >
                 {/* 3D Background Effect with Dark Theme Gradient */}
