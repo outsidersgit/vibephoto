@@ -1291,7 +1291,7 @@ export default function HomePage() {
               </h1>
 
               <p className="text-lg text-gray-600 text-left">
-                Continue criando fotos incríveis com IA.
+                O poder da IA nas suas mãos.
               </p>
             </div>
           </section>
@@ -1323,7 +1323,7 @@ export default function HomePage() {
                         fontWeight: 700,
                         letterSpacing: '-0.02em'
                       }}>
-                        Explore os detalhes.
+                        Crie. Transforme. Impressione.
                       </h2>
                     </div>
                   </div>
