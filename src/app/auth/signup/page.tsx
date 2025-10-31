@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -54,36 +54,57 @@ export default function SignUpPage() {
 
       if (response.ok) {
         // Sign in the user after successful signup
-        const result = await signIn('credentials', {
-          email: formData.email,
-          password: formData.password,
-          redirect: false
-        })
+        try {
+          const result = await signIn('credentials', {
+            email: formData.email,
+            password: formData.password,
+            redirect: false
+          })
 
-        if (result?.error) {
-          setError('Conta criada, mas falha no login. Tente fazer login manualmente.')
-        } else if (result?.ok) {
-          // Wait a bit for session to be updated
-          await new Promise(resolve => setTimeout(resolve, 100))
-          
-          // Fetch session to check role and subscriptionStatus
-          const session = await getSession()
-          const user = session?.user as any
-          const role = String(user?.role || 'USER').toUpperCase()
-          
-          // ADMIN always goes to /admin
-          if (role === 'ADMIN') {
-            window.location.href = '/admin'
+          if (result?.error) {
+            setError('Conta criada, mas falha no login. Tente fazer login manualmente.')
+            setIsLoading(false)
             return
           }
           
-          // New users always need to select a plan (subscriptionStatus is null)
-          router.push('/pricing?newuser=true')
+          if (result?.ok) {
+            // Wait a bit for session to be updated
+            await new Promise(resolve => setTimeout(resolve, 300))
+            
+            try {
+              // Fetch session to check role and subscriptionStatus
+              const session = await getSession()
+              const user = session?.user as any
+              const role = String(user?.role || 'USER').toUpperCase()
+              
+              // ADMIN always goes to /admin
+              if (role === 'ADMIN') {
+                window.location.href = '/admin'
+                return
+              }
+              
+              // New users always need to select a plan (subscriptionStatus is null)
+              // Use window.location for reliable redirect
+              window.location.href = '/pricing?newuser=true'
+            } catch (sessionError) {
+              console.error('Error fetching session:', sessionError)
+              // Fallback: redirect to pricing anyway (new users always need plan)
+              window.location.href = '/pricing?newuser=true'
+            }
+          } else {
+            // SignIn returned neither error nor ok - might be undefined
+            console.warn('SignIn result:', result)
+            setError('Conta criada, mas falha no login. Tente fazer login manualmente.')
+          }
+        } catch (signInError) {
+          console.error('Error during signIn after signup:', signInError)
+          setError('Conta criada, mas falha no login. Tente fazer login manualmente.')
         }
       } else {
         setError(data.error || 'Falha ao criar conta')
       }
     } catch (error) {
+      console.error('Signup error:', error)
       setError('Ocorreu um erro. Tente novamente.')
     } finally {
       setIsLoading(false)
