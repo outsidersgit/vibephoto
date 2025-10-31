@@ -246,7 +246,7 @@ export function AutoSyncGalleryInterface({
     }
   }
 
-  // ✅ Handler para atualizações em tempo real - invalida React Query cache
+  // ✅ Handler para atualizações em tempo real - atualiza dados sem invalidar cache completamente
   const handleGenerationStatusChange = useCallback((
     generationId: string,
     status: string,
@@ -254,8 +254,91 @@ export function AutoSyncGalleryInterface({
   ) => {
     console.log(`🔄 Real-time update: Generation ${generationId} -> ${status}`, data)
 
-    // Invalidar cache do React Query para forçar refetch
-    queryClient.invalidateQueries({ queryKey: ['gallery'] })
+    // Atualizar cache otimisticamente primeiro para evitar desaparecimento de imagens
+    queryClient.setQueriesData({ queryKey: ['gallery'] }, (old: any) => {
+      // Se não há dados antigos, não atualizar (evitar criar dados vazios)
+      if (!old) {
+        console.warn('⚠️ No old gallery data to update optimistically')
+        return old
+      }
+
+      // Normalizar estrutura de dados (pode vir como {generations: [...]} ou direto como array)
+      let currentGenerations = old.generations || old.data?.generations || (Array.isArray(old) ? old : [])
+      if (!Array.isArray(currentGenerations)) {
+        console.warn('⚠️ Gallery data structure unexpected:', Object.keys(old))
+        return old
+      }
+
+      // Atualizar geração existente ou adicionar nova
+      let updatedGenerations = [...currentGenerations]
+      const existingIndex = updatedGenerations.findIndex((g: any) => g.id === generationId)
+
+      if (existingIndex >= 0) {
+        // Atualizar geração existente
+        updatedGenerations[existingIndex] = {
+          ...updatedGenerations[existingIndex],
+          status,
+          imageUrls: data.imageUrls || updatedGenerations[existingIndex].imageUrls,
+          thumbnailUrls: data.thumbnailUrls || updatedGenerations[existingIndex].thumbnailUrls,
+          completedAt: status === 'COMPLETED' ? new Date() : updatedGenerations[existingIndex].completedAt,
+          processingTime: data.processingTime || updatedGenerations[existingIndex].processingTime,
+          errorMessage: data.errorMessage || updatedGenerations[existingIndex].errorMessage
+        }
+      } else if (status === 'COMPLETED' && data.imageUrls?.length > 0) {
+        // Adicionar nova geração completada no início (se ainda não estiver na lista)
+        updatedGenerations.unshift({
+          id: generationId,
+          status: 'COMPLETED',
+          imageUrls: data.imageUrls,
+          thumbnailUrls: data.thumbnailUrls || data.imageUrls,
+          completedAt: new Date(),
+          processingTime: data.processingTime,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          userId: data.userId,
+          prompt: data.prompt || '',
+          modelId: data.modelId || null
+        })
+      }
+
+      // Retornar estrutura mantendo a mesma forma dos dados originais
+      if (old.generations !== undefined) {
+        return {
+          ...old,
+          generations: updatedGenerations,
+          stats: old.stats ? {
+            ...old.stats,
+            totalGenerations: status === 'COMPLETED' 
+              ? Math.max(old.stats.totalGenerations || 0, updatedGenerations.filter((g: any) => g.status === 'COMPLETED').length)
+              : old.stats.totalGenerations || 0
+          } : old.stats
+        }
+      } else if (old.data) {
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            generations: updatedGenerations
+          }
+        }
+      } else {
+        // Se for array direto
+        return updatedGenerations
+      }
+    })
+
+    // Invalidar cache APENAS após atualização otimista (refetch em background sem limpar UI)
+    queryClient.invalidateQueries({ 
+      queryKey: ['gallery'],
+      refetchType: 'none' // Não refetch automaticamente, só marca como stale
+    })
+
+    // Fazer refetch em background após pequeno delay para manter dados atualizados
+    setTimeout(() => {
+      refetchGallery().catch(err => {
+        console.warn('Background gallery refetch failed:', err)
+      })
+    }, 1000)
 
     // Incrementa contador de updates pendentes
     setPendingUpdates(prev => prev + 1)
@@ -264,7 +347,7 @@ export function AutoSyncGalleryInterface({
     setTimeout(() => {
       setPendingUpdates(prev => Math.max(0, prev - 1))
     }, 3000)
-  }, [queryClient])
+  }, [queryClient, refetchGallery])
 
   // Handler para atualizações de upscale via WebSocket
   const handleUpscaleUpdate = useCallback((generationId: string, status: string, data: any) => {

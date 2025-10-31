@@ -59,8 +59,43 @@ export async function POST(request: NextRequest) {
       console.warn('⚠️ ASTRIA_WEBHOOK_SECRET not configured - webhook is INSECURE!')
     }
 
-    // Parse the webhook payload
-    const payload: AstriaWebhookPayload = await request.json()
+    // Parse the webhook payload - handle both JSON and form-data
+    let payload: AstriaWebhookPayload
+    const contentType = request.headers.get('content-type') || ''
+    
+    try {
+      if (contentType.includes('application/json')) {
+        payload = await request.json()
+      } else {
+        // Try to parse as JSON anyway (some webhooks don't set content-type correctly)
+        const text = await request.text()
+        if (!text || text.trim().length === 0) {
+          console.warn('⚠️ Astria webhook received empty body')
+          // Return success to avoid webhook retries
+          return NextResponse.json({ success: true, message: 'Empty payload ignored' })
+        }
+        payload = JSON.parse(text)
+      }
+    } catch (parseError) {
+      console.error('❌ Failed to parse Astria webhook payload:', parseError)
+      console.error('📋 Raw body (first 500 chars):', await request.text().then(t => t.substring(0, 500)))
+      // Return success to avoid webhook retries
+      return NextResponse.json({ success: true, message: 'Invalid payload format' })
+    }
+
+    // Validate payload has required fields
+    if (!payload.id && !payload.object && !payload.status) {
+      console.warn('⚠️ Astria webhook received incomplete payload:', {
+        hasId: !!payload.id,
+        hasObject: !!payload.object,
+        hasStatus: !!payload.status,
+        keys: Object.keys(payload),
+        rawPayload: JSON.stringify(payload).substring(0, 200)
+      })
+      // Return success to avoid webhook retries
+      return NextResponse.json({ success: true, message: 'Incomplete payload ignored' })
+    }
+
     console.log('📋 Astria webhook payload:', {
       id: payload.id,
       status: payload.status,
@@ -78,14 +113,24 @@ export async function POST(request: NextRequest) {
       await handlePromptWebhook(payload)
     } else {
       console.warn('⚠️ Unknown Astria webhook object type:', payload.object)
+      // Still try to process if we have an ID (might be a generation webhook without object field)
+      if (payload.id && payload.status) {
+        console.log('🔄 Attempting to process as prompt webhook (object field missing)')
+        await handlePromptWebhook(payload as AstriaWebhookPayload)
+      }
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('❌ Astria webhook error:', error)
+    console.error('❌ Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace'
+    })
+    // Return success to avoid webhook retries for unexpected errors
     return NextResponse.json(
-      { error: 'Webhook processing failed' },
-      { status: 500 }
+      { success: true, error: 'Webhook processing failed but acknowledged' },
+      { status: 200 }
     )
   }
 }
@@ -323,6 +368,28 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
     console.log(`✅ Astria prompt ${payload.id} updated to status: ${internalStatus}`)
     if (finalImageUrls !== imageUrls) {
       console.log(`✅ Database updated with ${finalImageUrls.length} permanent URLs`)
+    }
+
+    // Broadcast real-time status change to user (critical for redirection)
+    try {
+      const { broadcastGenerationStatusChange } = await import('@/lib/services/realtime-service')
+      await broadcastGenerationStatusChange(
+        updatedGeneration.id,
+        updatedGeneration.userId,
+        internalStatus === 'COMPLETED' ? 'succeeded' : internalStatus.toLowerCase(),
+        {
+          imageUrls: finalImageUrls,
+          thumbnailUrls: finalImageUrls, // Use same URLs for thumbnails if separate ones aren't available
+          processingTime: processingTime,
+          errorMessage: payload.error_message || undefined,
+          webhook: true,
+          timestamp: new Date().toISOString()
+        }
+      )
+      console.log(`📡 Broadcast sent for generation ${updatedGeneration.id}`)
+    } catch (broadcastError) {
+      console.error('❌ Failed to broadcast generation status change:', broadcastError)
+      // Don't fail the webhook for broadcast errors
     }
 
     return updatedGeneration

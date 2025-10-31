@@ -105,44 +105,86 @@ export function GenerationInterface({
             ...prevResults
           ])
           
-          // Verify generation is saved in DB before showing success message
-          const verifySaved = async () => {
+          // Verify generation is saved in DB AND available in gallery before showing success message
+          const verifySaved = async (attempt = 0) => {
+            const maxAttempts = 10 // Maximum 10 seconds wait
             try {
+              // First check: Verify it's in DB with imageUrls
               const checkResponse = await fetch(`/api/generations/${currentGeneration.id}`)
               if (checkResponse.ok) {
                 const genData = await checkResponse.json()
-                // Only redirect if status is COMPLETED and has imageUrls in DB
                 if (genData.generation?.status === 'COMPLETED' && genData.generation?.imageUrls?.length > 0) {
-                  // Show success toast
-                  addToast({
-                    type: 'success',
-                    title: '🎉 Geração completa!',
-                    description: `${data.imageUrls.length} imagem${data.imageUrls.length > 1 ? 's' : ''} criada${data.imageUrls.length > 1 ? 's' : ''} em ${Math.round((data.processingTime || 30000) / 1000)}s • Redirecionando para galeria...`,
-                    duration: 3000
-                  })
+                  // Second check: Verify it's available in gallery
+                  const galleryResponse = await fetch(`/api/gallery/data?tab=generated&limit=20`)
+                  if (galleryResponse.ok) {
+                    const galleryData = await galleryResponse.json()
+                    // Check if generation is in gallery results
+                    const foundInGallery = galleryData.generations?.some((g: any) => 
+                      g.id === currentGeneration.id && 
+                      g.status === 'COMPLETED' && 
+                      g.imageUrls?.length > 0
+                    )
+                    
+                    if (foundInGallery) {
+                      // Image is in gallery - show success message
+                      addToast({
+                        type: 'success',
+                        title: '🎉 Sua imagem está pronta!',
+                        description: `${data.imageUrls.length} imagem${data.imageUrls.length > 1 ? 's' : ''} disponível${data.imageUrls.length > 1 ? 'eis' : ''} na galeria • Redirecionando em instantes...`,
+                        duration: 4000
+                      })
 
-                  // Show success modal
-                  setSuccessImageUrl(data.imageUrls[0])
-                  setShowSuccessModal(true)
+                      // Show success modal
+                      setSuccessImageUrl(data.imageUrls[0])
+                      setShowSuccessModal(true)
 
-                  // Redirect to gallery after 2 seconds (reduced from 3s)
-                  setTimeout(() => {
-                    window.location.href = '/gallery'
-                  }, 2000)
-                } else {
+                      // Redirect to gallery after 2 seconds
+                      setTimeout(() => {
+                        window.location.href = '/gallery'
+                      }, 2000)
+                      return // Success - stop verification
+                    } else if (attempt < maxAttempts) {
+                      // Not in gallery yet, wait and retry
+                      console.log(`⏳ Image not in gallery yet, attempt ${attempt + 1}/${maxAttempts}`)
+                      setTimeout(() => verifySaved(attempt + 1), 1000)
+                      return
+                    }
+                  }
+                } else if (attempt < maxAttempts) {
                   // Still processing or not fully saved, wait a bit more
-                  setTimeout(verifySaved, 1000)
+                  setTimeout(() => verifySaved(attempt + 1), 1000)
+                  return
                 }
-              } else {
+              } else if (attempt < maxAttempts) {
                 // Retry verification
-                setTimeout(verifySaved, 1000)
+                setTimeout(() => verifySaved(attempt + 1), 1000)
+                return
               }
+              
+              // If we get here, verification failed after max attempts
+              console.warn('⚠️ Could not verify image is in gallery after max attempts')
+              // Still show message but with different wording
+              addToast({
+                type: 'success',
+                title: '🎉 Geração finalizada!',
+                description: 'Sua imagem está sendo processada e aparecerá na galeria em breve.',
+                duration: 4000
+              })
+              
             } catch (error) {
               console.error('Error verifying generation:', error)
-              // Fallback: redirect anyway after delay
-              setTimeout(() => {
-                window.location.href = '/gallery'
-              }, 3000)
+              if (attempt < maxAttempts) {
+                // Retry on error
+                setTimeout(() => verifySaved(attempt + 1), 1000)
+              } else {
+                // Final fallback after max attempts
+                addToast({
+                  type: 'info',
+                  title: '⏳ Geração em processamento',
+                  description: 'Sua imagem será disponibilizada na galeria em breve.',
+                  duration: 4000
+                })
+              }
             }
           }
 
