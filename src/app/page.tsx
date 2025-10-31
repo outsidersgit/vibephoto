@@ -217,13 +217,15 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
 
   // Posição Y inicial (abaixo da tela)
   // Para o primeiro card (index 0), começar mais próximo para evitar corte no viewport
-  const initialY = index === 0 ? 600 : 700
+  const initialY = index === 0 ? 550 : 700
   // Posição Y durante subida inicial (transição rápida)
   const midY = initialY * 0.5
   // Posição Y final (posição vertical sequencial)
-  // Adicionar padding no topo para evitar corte do primeiro card
-  const topPadding = index === 0 ? 24 : 0 // 24px de padding para o primeiro card
-  const finalY = (index * totalCardHeight) + topPadding
+  // Garantir espaçamento uniforme entre todos os cards
+  // Padding base no topo para evitar corte do primeiro card
+  const baseTopPadding = 40 // Padding base no topo
+  // Cada card começa após o anterior + espaçamento uniforme
+  const finalY = index * totalCardHeight + baseTopPadding
 
   // Animação progressiva melhorada com múltiplas etapas: 
   // - Começa abaixo (initialY)
@@ -585,7 +587,7 @@ const MarqueeCarousel = ({ items, hoveredIndex, onHoverChange, onImageClick }: M
     const animate = () => {
       if (!marqueeRef.current) return
       
-      translateXRef.current -= 1.0 // Velocidade de scroll (aumentada de 0.75 para 1.0)
+      translateXRef.current -= 1.25 // Velocidade de scroll (aumentada de 1.0 para 1.25)
       
       // Reset position when one set of items has scrolled completely
       // Calculate dynamically based on actual card width
@@ -1191,7 +1193,7 @@ export default function HomePage() {
             {/* Container com scroll progressivo - altura suficiente para animação completa */}
             {/* Altura 350vh permite scroll suave e pausas momentâneas em cada card com pausa extra após o terceiro */}
             <div ref={scrollContainerRef} className="h-[350vh] relative" style={{ willChange: 'transform' }}>
-              <div className="sticky top-0 h-screen flex items-center pt-6"> {/* Padding top para evitar corte do primeiro card */}
+              <div className="sticky top-0 h-screen flex items-center pt-12"> {/* Padding top aumentado para evitar corte do primeiro card */}
                 <div className="max-w-7xl mx-auto px-6 w-full">
                   <div className="grid grid-cols-2 gap-16 items-center">
                     {/* Left Side - Fixed Title */}
