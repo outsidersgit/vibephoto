@@ -183,20 +183,30 @@ export const authOptions: NextAuthOptions = {
     },
     async signIn({ user, account, profile }) {
       // Ensure OAuth accounts link to existing users by email (no duplicates)
+      // PrismaAdapter creates the User automatically if email doesn't exist
       try {
         if (account && account.provider !== 'credentials') {
           const email = user.email || (profile as any)?.email
           if (!email) return true
 
-          const existing = await prisma.user.findUnique({ 
+          // Wait a bit for PrismaAdapter to finish creating user if new
+          // Then fetch the actual user from DB with all fields
+          await new Promise(resolve => setTimeout(resolve, 100))
+
+          const dbUser = await prisma.user.findUnique({ 
             where: { email },
-            select: { id: true, subscriptionStatus: true }
+            select: { 
+              id: true, 
+              subscriptionStatus: true,
+              role: true 
+            }
           })
-          if (existing) {
-            // Force token to use existing user id
-            ;(user as any).id = existing.id
-            // Store subscriptionStatus for redirect logic
-            ;(user as any).subscriptionStatus = existing.subscriptionStatus
+
+          if (dbUser) {
+            // Force token to use actual DB user id (important for new users created by PrismaAdapter)
+            ;(user as any).id = dbUser.id
+            ;(user as any).subscriptionStatus = dbUser.subscriptionStatus
+            ;(user as any).role = dbUser.role
 
             // Ensure Account row exists/links to same user
             const hasAccount = await prisma.account.findFirst({
@@ -205,7 +215,7 @@ export const authOptions: NextAuthOptions = {
             if (!hasAccount) {
               await prisma.account.create({
                 data: {
-                  userId: existing.id,
+                  userId: dbUser.id,
                   provider: account.provider,
                   type: account.type,
                   providerAccountId: account.providerAccountId,
@@ -219,12 +229,15 @@ export const authOptions: NextAuthOptions = {
               })
             }
           } else {
-            // New user created via OAuth - subscriptionStatus will be null
+            // Edge case: user was just created but not yet in DB
+            // PrismaAdapter should have created it, but if not, mark as new
             ;(user as any).subscriptionStatus = null
+            ;(user as any).role = 'USER'
           }
         }
       } catch (e) {
         console.error('signIn linking error:', e)
+        // Allow signin to proceed even if linking fails
       }
       return true
     },

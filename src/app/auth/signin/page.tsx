@@ -33,9 +33,18 @@ export default function SignInPage() {
         setError('Email ou senha inválidos')
         setIsLoading(false)
       } else if (result?.ok) {
-        // Check subscription status and redirect accordingly
+        // Check role and subscription status and redirect accordingly
         const session = await getSession()
-        const subscriptionStatus = (session?.user as any)?.subscriptionStatus
+        const user = session?.user as any
+        const role = String(user?.role || 'USER').toUpperCase()
+        
+        // ADMIN always goes to /admin
+        if (role === 'ADMIN') {
+          window.location.href = '/admin'
+          return
+        }
+        
+        const subscriptionStatus = user?.subscriptionStatus
         if (subscriptionStatus !== 'ACTIVE') {
           window.location.href = '/pricing'
         } else {

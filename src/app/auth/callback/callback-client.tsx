@@ -19,9 +19,17 @@ export default function AuthCallbackClient() {
     }
 
     if (status === 'authenticated' && session?.user) {
-      const subscriptionStatus = (session.user as any)?.subscriptionStatus as string | null | undefined
+      const user = session.user as any
+      const role = String(user.role || 'USER').toUpperCase()
+      const subscriptionStatus = user.subscriptionStatus as string | null | undefined
       
-      // Always redirect new users (subscriptionStatus === null) to pricing
+      // ADMIN always goes to /admin regardless of subscriptionStatus
+      if (role === 'ADMIN') {
+        router.push('/admin')
+        return
+      }
+      
+      // Regular users: redirect to pricing if subscriptionStatus !== ACTIVE
       if (subscriptionStatus !== 'ACTIVE') {
         router.push('/pricing?newuser=true')
       } else {
