@@ -9,9 +9,56 @@ import { prisma } from '@/lib/prisma'
 import { verifyPassword } from '@/lib/db/users'
 import { Plan } from '@prisma/client'
 import { getSubscriptionInfo, isSubscriptionActive } from '@/lib/subscription'
+import type { Adapter, AdapterUser } from 'next-auth/adapters'
+
+// Custom adapter to map 'image' to 'avatar' field
+const customAdapter: Adapter = {
+  ...PrismaAdapter(prisma),
+  async createUser(user: Omit<AdapterUser, 'id'>) {
+    // Convert 'image' to 'avatar' for Prisma schema
+    const { image, ...restUser } = user
+    const userData: any = {
+      ...restUser,
+      ...(image && { avatar: image })
+    }
+    
+    const createdUser = await prisma.user.create({
+      data: userData
+    })
+    
+    return {
+      id: createdUser.id,
+      email: createdUser.email,
+      emailVerified: createdUser.emailVerified,
+      name: createdUser.name,
+      image: createdUser.avatar || null
+    } as AdapterUser
+  },
+  async updateUser(user: Partial<AdapterUser> & { id: string }) {
+    // Convert 'image' to 'avatar' for Prisma schema
+    const { image, id, ...restUser } = user
+    const updateData: any = {
+      ...restUser,
+      ...(image !== undefined && { avatar: image })
+    }
+    
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: updateData
+    })
+    
+    return {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      emailVerified: updatedUser.emailVerified,
+      name: updatedUser.name,
+      image: updatedUser.avatar || null
+    } as AdapterUser
+  }
+}
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter: customAdapter,
   providers: [
     CredentialsProvider({
       name: 'credentials',
