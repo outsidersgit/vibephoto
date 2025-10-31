@@ -85,11 +85,34 @@ export async function POST(request: NextRequest) {
 
     // Validate payload has required fields
     if (!payload.id && !payload.object && !payload.status) {
+      const keys = Object.keys(payload || {})
+      // Many Astria webhooks send transient events like { prompt: { id, text } }
+      // These are informational and shouldn't be treated as warnings
+      if (keys.includes('prompt')) {
+        // Optional: best-effort lookup by prompt.id just to silence retries
+        try {
+          const prompt: any = (payload as any).prompt
+          if (prompt?.id) {
+            const generation = await prisma.generation.findFirst({ where: { jobId: String(prompt.id) } })
+            // We intentionally do nothing – this is a heartbeat/echo event
+            if (generation) {
+              console.log(`ℹ️ Astria prompt heartbeat received for generation ${generation.id}`)
+            } else {
+              console.log(`ℹ️ Astria prompt heartbeat received (jobId: ${prompt.id})`)
+            }
+          }
+        } catch {
+          // Ignore lookup errors silently
+        }
+        return NextResponse.json({ success: true, message: 'Prompt-only event ignored' })
+      }
+
+      // Otherwise, log once and ignore
       console.warn('⚠️ Astria webhook received incomplete payload:', {
-        hasId: !!payload.id,
-        hasObject: !!payload.object,
-        hasStatus: !!payload.status,
-        keys: Object.keys(payload),
+        hasId: !!(payload as any)?.id,
+        hasObject: !!(payload as any)?.object,
+        hasStatus: !!(payload as any)?.status,
+        keys,
         rawPayload: JSON.stringify(payload).substring(0, 200)
       })
       // Return success to avoid webhook retries

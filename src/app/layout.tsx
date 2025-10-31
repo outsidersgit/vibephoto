@@ -17,6 +17,12 @@ export const metadata: Metadata = {
   description: 'Retratos que parecem arte',
   keywords: ['AI', 'photo generation', 'machine learning', 'fine-tuning', 'SaaS', 'VibePhoto'],
   authors: [{ name: 'VibePhoto Team' }],
+  // Evita 404 de /favicon.ico adicionando ícone explícito (PNG existente no /public)
+  icons: {
+    icon: '/examples/desert-adventure.png',
+    shortcut: '/examples/desert-adventure.png',
+    apple: '/examples/desert-adventure.png'
+  },
   openGraph: {
     title: 'VibePhoto',
     description: 'Retratos que parecem arte',
