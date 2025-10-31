@@ -235,7 +235,7 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
 
   // Scale: efeito mais pronunciado de crescimento
   const scale = useTransform(scrollYProgress,
-    [cardStart, transitionStart, pausePoint, cardEnd],
+    [cardStart, transitionStart, pauseEnd, cardEnd],
     [0.85, 0.98, 1, 1]
   )
 
