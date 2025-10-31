@@ -216,11 +216,14 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
   const finalStart = cardStart + (cardEnd - cardStart) * (isLastCard ? 0.82 : 0.85) // Último card finaliza mais devagar (aumentado de 0.75 para 0.82)
 
   // Posição Y inicial (abaixo da tela)
-  const initialY = 700
+  // Para o primeiro card (index 0), começar mais próximo para evitar corte no viewport
+  const initialY = index === 0 ? 600 : 700
   // Posição Y durante subida inicial (transição rápida)
   const midY = initialY * 0.5
   // Posição Y final (posição vertical sequencial)
-  const finalY = index * totalCardHeight
+  // Adicionar padding no topo para evitar corte do primeiro card
+  const topPadding = index === 0 ? 24 : 0 // 24px de padding para o primeiro card
+  const finalY = (index * totalCardHeight) + topPadding
 
   // Animação progressiva melhorada com múltiplas etapas: 
   // - Começa abaixo (initialY)
@@ -284,8 +287,8 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
       <motion.div 
         className="h-[180px] relative overflow-hidden rounded-2xl shadow-2xl"
         style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(250,250,252,0.98) 100%)',
-          border: '1px solid rgba(0,0,0,0.06)',
+          background: 'linear-gradient(135deg, rgba(245,245,250,0.98) 0%, rgba(240,240,245,0.98) 30%, rgba(235,235,240,0.98) 100%)',
+          border: '1px solid rgba(0,0,0,0.08)',
           backdropFilter: 'blur(20px)',
           willChange: 'transform',
           boxShadow: '0 20px 60px -15px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset'
@@ -296,26 +299,24 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
           transition: { duration: 0.3 }
         }}
       >
-        {/* Marca d'água - número sutil premium */}
+        {/* Marca d'água - número sutil premium com maior contraste */}
         <motion.div
-          className="absolute top-6 left-6 z-0"
+          className="absolute top-6 left-6 z-0 pointer-events-none"
           style={{
             opacity: useTransform(scrollYProgress,
               [cardStart, cardMidPoint, pauseEnd],
-              [0.06, 0.10, 0.08]
+              [0.12, 0.16, 0.14]
             )
           }}
         >
           <span 
-            className="text-[140px] font-extralight text-gray-900 leading-none"
+            className="text-[140px] font-extralight leading-none"
             style={{
               fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
               fontWeight: 100,
               letterSpacing: '-0.03em',
-              background: 'linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
+              color: 'rgba(150,150,160,0.6)', // Cinza médio com maior contraste
+              textShadow: '0 0 20px rgba(150,150,160,0.2)'
             }}
           >
             {step.id}
@@ -324,8 +325,8 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
 
         {/* Conteúdo do card */}
         <div className="p-8 h-full flex flex-col justify-between relative z-10">
-          {/* Título - maior, alinhado à esquerda */}
-          <div>
+          {/* Título - maior, alinhado à esquerda com margin para não sobrepor número */}
+          <div className="ml-[180px]"> {/* Margin-left para não sobrepor marca d'água */}
             <h3 
               className="text-2xl font-bold text-gray-900 mb-3 tracking-tight"
               style={{
@@ -1176,7 +1177,7 @@ export default function HomePage() {
             {/* Container com scroll progressivo - altura suficiente para animação completa */}
             {/* Altura 350vh permite scroll suave e pausas momentâneas em cada card com pausa extra após o terceiro */}
             <div ref={scrollContainerRef} className="h-[350vh] relative" style={{ willChange: 'transform' }}>
-              <div className="sticky top-0 h-screen flex items-center">
+              <div className="sticky top-0 h-screen flex items-center pt-6"> {/* Padding top para evitar corte do primeiro card */}
                 <div className="max-w-7xl mx-auto px-6 w-full">
                   <div className="grid grid-cols-2 gap-16 items-center">
                     {/* Left Side - Fixed Title */}
