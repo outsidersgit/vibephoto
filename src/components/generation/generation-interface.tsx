@@ -83,10 +83,15 @@ export function GenerationInterface({
   // Real-time updates for generation status
   useRealtimeUpdates({
     onGenerationStatusChange: (generationId, status, data) => {
-      console.log(`🔄 Real-time generation update: ${generationId} -> ${status}`)
+      console.log(`🔄 Real-time generation update: ${generationId} -> ${status}`, {
+        hasImageUrls: !!data.imageUrls,
+        imageUrlsLength: data.imageUrls?.length,
+        currentGenerationId: currentGeneration?.id
+      })
       
       // Update current generation if it matches
       if (currentGeneration?.id === generationId) {
+        console.log(`✅ Matched current generation: ${generationId}`)
         setCurrentGeneration((prev: any) => ({
           ...prev,
           status,
@@ -98,12 +103,7 @@ export function GenerationInterface({
 
         // If completed successfully, show success message and redirect
         if (status === 'COMPLETED' && data.imageUrls && data.imageUrls.length > 0) {
-          const completedGeneration = { ...currentGeneration, ...data, status }
-          
-          setGenerationResults(prevResults => [
-            completedGeneration,
-            ...prevResults
-          ])
+          console.log(`✅ Generation ${generationId} completed - showing success message and redirecting`)
           
           // Show success message immediately (webhook guarantees DB is updated)
           addToast({
@@ -119,6 +119,7 @@ export function GenerationInterface({
 
           // Redirect to gallery after 2 seconds
           setTimeout(() => {
+            console.log('🚀 Redirecting to gallery...')
             window.location.href = '/gallery'
           }, 2000)
         }

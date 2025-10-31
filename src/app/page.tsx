@@ -1190,7 +1190,7 @@ function NavigationSteps() {
     {
       id: 8,
       title: '', // Sem título - apenas adendo
-      description: 'Acesse todas as ferramentas pelas páginas do app ou pelos botões de ação nas minituras da galeria. Cada imagem também tem um botão de compartilhamento — divulgue suas criações com um clique. Vamos nessa?',
+      description: 'Acesse todas as ferramentas pelas páginas do app ou pelos botões de ação nas miniaturas da galeria. Cada imagem também tem um botão de compartilhamento — divulgue suas criações com um clique. Vamos nessa?',
       action: 'Começar',
       href: '/models/create'
     }
