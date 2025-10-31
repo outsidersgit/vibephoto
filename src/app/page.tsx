@@ -193,42 +193,39 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
   // Cada card sobe e "para" momentaneamente antes do próximo aparecer
   // Cards posicionados um abaixo do outro, sem sobreposição
 
-  const cardHeight = 160 // Altura de cada card (incluindo espaçamento)
+  const cardHeight = 160 // Altura de cada card
   const cardSpacing = 32 // Espaçamento entre cards
   const totalCardHeight = cardHeight + cardSpacing
 
   // Progresso de cada card baseado no scroll
-  // Cada card ocupa 1/3 do progresso total da seção
-  const cardStart = index / totalSteps // 0, 0.33, 0.66
-  const cardEnd = (index + 1) / totalSteps // 0.33, 0.66, 1.0
-  const cardMidPoint = (cardStart + cardEnd) / 2 // Ponto médio para pausar
+  // Cada card ocupa uma parte do progresso total da seção
+  // Card 0: 0-0.33, Card 1: 0.33-0.66, Card 2: 0.66-1.0
+  const cardStart = index / totalSteps
+  const cardEnd = (index + 1) / totalSteps
+  const cardMidPoint = cardStart + (cardEnd - cardStart) * 0.6 // 60% do progresso do card
 
-  // Posição Y inicial (fora da tela, abaixo)
-  const initialY = 400
+  // Posição Y inicial (abaixo da tela)
+  const initialY = 500
   // Posição Y final (posição vertical sequencial)
   const finalY = index * totalCardHeight
 
-  // Animação de entrada: card sobe de baixo para cima
-  // Pausa momentânea no ponto médio antes de finalizar a posição
-  // Criando zonas de "pausa" mais visíveis com múltiplos pontos de controle
-  const pauseStart = cardStart + (cardMidPoint - cardStart) * 0.7 // 70% do caminho até o meio
-  const pauseEnd = cardMidPoint + (cardEnd - cardMidPoint) * 0.3 // 30% após o meio
-  
+  // Animação progressiva: card sobe de baixo, pausa no meio, depois finaliza
+  // Criando uma zona de "pausa" clara no ponto médio
   const y = useTransform(scrollYProgress, 
-    [cardStart, pauseStart, cardMidPoint, pauseEnd, cardEnd],
-    [initialY, initialY * 0.5, finalY, finalY, finalY]
+    [cardStart, cardMidPoint - 0.05, cardMidPoint, cardMidPoint + 0.1, cardEnd],
+    [initialY, initialY * 0.3, finalY, finalY, finalY]
   )
 
-  // Opacity: aparece suavemente quando começa a subir
+  // Opacity: aparece gradualmente quando começa a subir
   const opacity = useTransform(scrollYProgress,
-    [cardStart, cardStart + 0.1, cardEnd],
+    [cardStart, cardStart + 0.15, cardEnd],
     [0, 1, 1]
   )
 
-  // Scale: começa pequeno e cresce suavemente
+  // Scale: efeito sutil de crescimento
   const scale = useTransform(scrollYProgress,
-    [cardStart, cardStart + 0.1, cardEnd],
-    [0.95, 1, 1]
+    [cardStart, cardStart + 0.15, cardEnd],
+    [0.9, 1, 1]
   )
 
   return (
@@ -237,9 +234,12 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
         y,
         opacity,
         scale,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
         willChange: 'transform'
       }}
-      className="absolute inset-x-0"
     >
       <div 
         className="h-[160px] bg-white/90 backdrop-blur-md border border-gray-200 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300"
@@ -262,10 +262,12 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
 }
 
 // Components for scroll stacking effect - Progressivo vertical
-const ScrollStackingCards = () => {
+const ScrollStackingCards = ({ sectionRef }: { sectionRef: React.RefObject<HTMLElement> }) => {
   const containerRef = useRef<HTMLDivElement>(null)
+  
+  // Usar a section pai para scroll tracking
   const { scrollYProgress } = useScroll({
-    target: containerRef,
+    target: sectionRef,
     offset: ["start end", "end start"]
   })
 
@@ -304,7 +306,7 @@ const ScrollStackingCards = () => {
   return (
     <div 
       ref={containerRef} 
-      className="relative"
+      className="relative w-full"
       style={{ 
         height: `${totalHeight}px`,
         willChange: 'transform'
@@ -879,6 +881,7 @@ export default function HomePage() {
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0)
   const [isCarouselPaused, setIsCarouselPaused] = useState(false)
   const [hoveredSlideIndex, setHoveredSlideIndex] = useState<number | null>(null)
+  const sectionRef = useRef<HTMLElement>(null)
   
   // Prevent hydration mismatch
   useEffect(() => {
@@ -1036,6 +1039,7 @@ export default function HomePage() {
       {/* How it Works Section - Scroll Stacking Progressivo */}
       {!session && (
         <section
+          ref={sectionRef}
           className="relative bg-white"
           style={{
             fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
@@ -1070,8 +1074,8 @@ export default function HomePage() {
                     </div>
 
                     {/* Right Side - Stacking Cards Progressivo */}
-                    <div className="relative flex items-center justify-center" style={{ minHeight: '600px' }}>
-                      <ScrollStackingCards />
+                    <div className="relative flex items-start justify-center" style={{ minHeight: '600px', height: '600px' }}>
+                      <ScrollStackingCards sectionRef={sectionRef} />
                     </div>
                   </div>
                 </div>
