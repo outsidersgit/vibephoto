@@ -254,7 +254,8 @@ export function GenerationInterface({
     }
   }
 
-  const creditsRemaining = user.creditsLimit - user.creditsUsed
+  // Formula: credits_available = (credits_limit - credits_used) + credits_balance
+  const creditsRemaining = (user.creditsLimit || 0) - (user.creditsUsed || 0) + ((user as any).creditsBalance || 0)
   const creditsNeeded = settings.variations * 10
   const canGenerate = prompt.trim() && canUseCredits && !isGenerating && creditsRemaining >= creditsNeeded
 

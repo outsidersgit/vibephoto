@@ -63,7 +63,7 @@ export default function SignUpPage() {
         if (result?.error) {
           setError('Conta criada, mas falha no login. Tente fazer login manualmente.')
         } else {
-          // New users need to select a plan before accessing features
+          // New users always need to select a plan (subscriptionStatus is null)
           router.push('/pricing?newuser=true')
         }
       } else {
@@ -78,8 +78,9 @@ export default function SignUpPage() {
 
   const handleOAuthSignIn = async (provider: string) => {
     setIsLoading(true)
-    // OAuth will handle redirect through NextAuth callback
-    await signIn(provider)
+    // OAuth will redirect to middleware which checks subscriptionStatus
+    // Middleware will redirect to /pricing if subscriptionStatus !== ACTIVE
+    await signIn(provider, { callbackUrl: '/' })
   }
 
   return (

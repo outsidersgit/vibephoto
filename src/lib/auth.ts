@@ -36,6 +36,7 @@ export const authOptions: NextAuthOptions = {
               plan: true,
               creditsUsed: true,
               creditsLimit: true,
+              creditsBalance: true,
               subscriptionStatus: true,
               subscriptionId: true,
               asaasCustomerId: true
@@ -121,6 +122,7 @@ export const authOptions: NextAuthOptions = {
                 plan: true,
                 creditsUsed: true,
                 creditsLimit: true,
+                creditsBalance: true,
                 asaasCustomerId: true,
                 subscriptionId: true,
                 subscriptionStatus: true

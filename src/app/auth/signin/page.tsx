@@ -33,10 +33,14 @@ export default function SignInPage() {
         setError('Email ou senha inválidos')
         setIsLoading(false)
       } else if (result?.ok) {
-        // Redirecionar direto para '/' (home) ao invés de '/dashboard'
-        // Dashboard redireciona para '/' de qualquer forma, então vamos direto
-        // Isso elimina 1 redirect intermediário e reduz FOUC
-        window.location.href = '/'
+        // Check subscription status and redirect accordingly
+        const session = await getSession()
+        const subscriptionStatus = (session?.user as any)?.subscriptionStatus
+        if (subscriptionStatus !== 'ACTIVE') {
+          window.location.href = '/pricing'
+        } else {
+          window.location.href = '/'
+        }
       }
     } catch (error) {
       console.error('Login error:', error)
@@ -47,7 +51,8 @@ export default function SignInPage() {
 
   const handleOAuthSignIn = async (provider: string) => {
     setIsLoading(true)
-    // OAuth redirect direto para '/' (elimina redirect intermediário)
+    // OAuth will redirect to middleware which checks subscriptionStatus
+    // Middleware will redirect to /pricing if subscriptionStatus !== ACTIVE
     await signIn(provider, { callbackUrl: '/' })
   }
 

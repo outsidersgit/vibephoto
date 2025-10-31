@@ -88,8 +88,9 @@ export async function middleware(request: NextRequest) {
             { status: statusCode }
           )
         } else {
-          // Redirect to billing if user had a subscription, pricing if never subscribed
-          const redirectUrl = subscriptionStatus ? '/billing' : '/pricing'
+          // Always redirect to pricing for new users (subscriptionStatus === null)
+          // Redirect to billing only if user had a subscription that is now inactive
+          const redirectUrl = subscriptionStatus === null ? '/pricing' : subscriptionStatus ? '/billing' : '/pricing'
           const url = new URL(redirectUrl, request.url)
 
           if (subscriptionStatus === 'OVERDUE') {

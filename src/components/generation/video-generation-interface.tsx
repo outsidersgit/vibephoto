@@ -95,7 +95,8 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
 
       // Check credits
       const requiredCredits = calculateVideoCredits(formData.duration, 'pro')
-      const remainingCredits = user.creditsLimit - user.creditsUsed
+      // Formula: credits_available = (credits_limit - credits_used) + credits_balance
+      const remainingCredits = (user.creditsLimit || 0) - (user.creditsUsed || 0) + ((user as any).creditsBalance || 0)
 
       if (requiredCredits > remainingCredits) {
         addToast({

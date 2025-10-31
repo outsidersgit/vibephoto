@@ -40,6 +40,7 @@ export default async function AdminUsersPage({ searchParams }: SearchParams) {
         subscriptionStatus: true,
         creditsUsed: true,
         creditsLimit: true,
+        creditsBalance: true,
         createdAt: true,
         role: true,
       }
@@ -99,7 +100,7 @@ export default async function AdminUsersPage({ searchParams }: SearchParams) {
                 <td className="px-3 py-2">{u.email}</td>
                 <td className="px-3 py-2">{u.plan || '-'}</td>
                 <td className="px-3 py-2">{u.subscriptionStatus || '-'}</td>
-                <td className="px-3 py-2">{(u.creditsLimit ?? 0) - (u.creditsUsed ?? 0)}</td>
+                <td className="px-3 py-2">{((u.creditsLimit ?? 0) - (u.creditsUsed ?? 0)) + (u.creditsBalance ?? 0)}</td>
                 <td className="px-3 py-2">{new Date(u.createdAt as any).toLocaleDateString()}</td>
                 <td className="px-3 py-2 whitespace-nowrap">
                   <div className="flex items-center gap-3">

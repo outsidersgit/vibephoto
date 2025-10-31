@@ -181,10 +181,13 @@ function BillingPageContent() {
     }
   }
 
-  const handleCheckoutSuccess = () => {
+  const handleCheckoutSuccess = async () => {
     setShowCheckoutModal(false)
     setPurchasing(null)
     setCheckoutUrl('')
+    // Auto-update session after billing mutations
+    await updateSession()
+    window.location.reload()
   }
 
   const handleCheckoutClose = () => {
@@ -237,7 +240,8 @@ function BillingPageContent() {
       if (data.success) {
         alert('✅ Assinatura cancelada com sucesso. Você continuará tendo acesso até o final do período atual.')
         setShowCancelModal(false)
-        // Refresh page to update subscription status
+        // Auto-update session after billing mutations
+        await updateSession()
         window.location.reload()
       } else {
         alert(`❌ Erro ao cancelar assinatura: ${data.error}`)
@@ -250,9 +254,12 @@ function BillingPageContent() {
     }
   }
 
-  const handleUpdateCardSuccess = () => {
+  const handleUpdateCardSuccess = async () => {
     alert('✅ Método de pagamento atualizado com sucesso!')
     setShowUpdateCardModal(false)
+    // Auto-update session after billing mutations
+    await updateSession()
+    window.location.reload()
   }
 
   const handleDeleteAccount = () => {
@@ -375,17 +382,6 @@ function BillingPageContent() {
                       Comprar créditos
                     </Button>
 
-                    {/* Botão temporário de debug para atualizar sessão */}
-                    {!(session?.user as any)?.subscriptionId && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-3 text-xs text-yellow-300 border-yellow-500/30 hover:bg-yellow-700/50 bg-transparent"
-                        onClick={handleRefreshSession}
-                      >
-                        🔄 Atualizar Sessão
-                      </Button>
-                    )}
 
                     <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
                       <DialogTrigger asChild>
