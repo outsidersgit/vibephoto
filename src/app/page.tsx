@@ -200,14 +200,20 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
   // Progresso de cada card baseado no scroll
   // Cada card ocupa uma parte igual do progresso total da seção
   // Card 0: 0-0.33, Card 1: 0.33-0.66, Card 2: 0.66-1.0
-  const cardStart = index / totalSteps
+  // Último card começa um pouco antes (0.60 ao invés de 0.66) para ter mais tempo
+  const isLastCard = index === totalSteps - 1
+  const cardStart = isLastCard ? (index / totalSteps) - 0.06 : index / totalSteps
   const cardEnd = (index + 1) / totalSteps
   
-  // Zona de transição: primeira metade do progresso é a subida, segunda metade é a pausa
-  const transitionStart = cardStart + (cardEnd - cardStart) * 0.25 // 25% do card - início da subida
-  const cardMidPoint = cardStart + (cardEnd - cardStart) * 0.5 // 50% do card - meio da animação (onde pausa)
-  const pauseEnd = cardStart + (cardEnd - cardStart) * 0.75 // 75% do card - fim da pausa
-  const finalStart = cardStart + (cardEnd - cardStart) * 0.85 // 85% do card - início da finalização
+  // Ajustar timing especialmente para o último card
+  // O último card precisa começar mais cedo e ter mais tempo
+  
+  // Para o último card: começa a subir mais cedo (15% ao invés de 25%)
+  // Para os outros: mantém 25%
+  const transitionStart = cardStart + (cardEnd - cardStart) * (isLastCard ? 0.15 : 0.25)
+  const cardMidPoint = cardStart + (cardEnd - cardStart) * (isLastCard ? 0.4 : 0.5) // Último card chega mais cedo
+  const pauseEnd = cardStart + (cardEnd - cardStart) * (isLastCard ? 0.65 : 0.75) // Último card pausa por mais tempo
+  const finalStart = cardStart + (cardEnd - cardStart) * (isLastCard ? 0.75 : 0.85) // Último card finaliza mais devagar
 
   // Posição Y inicial (abaixo da tela)
   const initialY = 700
@@ -218,25 +224,27 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
 
   // Animação progressiva melhorada com múltiplas etapas: 
   // - Começa abaixo (initialY)
-  // - Começa a subir aos 25% (transitionStart) até midY
-  // - Chega na posição final aos 50% (cardMidPoint) e PAUSA
-  // - Mantém posição final de 50% até 75% (pauseEnd)
-  // - Finaliza suavemente de 85% até 100%
+  // - Começa a subir (mais cedo para o último card)
+  // - Chega na posição final (mais cedo para o último card) e PAUSA
+  // - Mantém posição final durante a pausa
+  // - Finaliza suavemente (mais devagar para o último card)
   const y = useTransform(scrollYProgress, 
     [cardStart, transitionStart, cardMidPoint, pauseEnd, finalStart, cardEnd],
     [initialY, initialY * 0.7, finalY, finalY, finalY, finalY]
   )
 
   // Opacity: aparece gradualmente quando começa a subir
+  // Último card aparece mais rápido
   const opacity = useTransform(scrollYProgress,
-    [cardStart, transitionStart, cardEnd],
-    [0, 0.8, 1]
+    [cardStart, transitionStart, cardMidPoint, cardEnd],
+    [0, isLastCard ? 0.9 : 0.8, 1, 1]
   )
 
   // Scale: efeito mais pronunciado de crescimento
+  // Último card cresce mais rápido e mantém escala final por mais tempo
   const scale = useTransform(scrollYProgress,
-    [cardStart, transitionStart, pauseEnd, cardEnd],
-    [0.85, 0.98, 1, 1]
+    [cardStart, transitionStart, cardMidPoint, pauseEnd, cardEnd],
+    [0.85, isLastCard ? 0.99 : 0.98, 1, 1, 1]
   )
 
   return (
