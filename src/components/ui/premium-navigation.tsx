@@ -91,7 +91,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
       transition={{ duration: 0.6 }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4">
+        <div className="flex justify-between items-center py-4 lg:max-w-4xl lg:mx-auto lg:px-6">
           {/* Logo */}
           <motion.div
             whileHover={{ scale: 1.05 }}

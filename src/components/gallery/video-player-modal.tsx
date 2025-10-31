@@ -223,7 +223,7 @@ export function VideoPlayerModal({ mediaItem, onClose }: VideoPlayerModalProps) 
         
         // Tentar novamente após loadeddata
         const playOnLoadedData = () => {
-          video.play()
+      video.play()
             .then(() => {
               setIsPlaying(true)
               setIsLoading(false)

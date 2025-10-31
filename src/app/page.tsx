@@ -1147,21 +1147,21 @@ function NavigationSteps() {
     {
       id: 2,
       title: 'Gere imagens',
-      description: 'Depois, vá em Gerar imagem e escolha o estilo que quiser.',
+      description: 'Depois, vá em Gerar Imagem e escolha o estilo que quiser. Se quiser melhorar o resultado, use o botão de lupa no hover da imagem para aplicar upscale — aumentando a resolução e deixando sua criação ainda mais nítida e profissional.',
       action: 'Gerar Fotos',
       href: '/generate'
     },
     {
       id: 3,
       title: 'Edite suas criações',
-      description: 'Quer ajustar uma criação? Vá em Editor de Imagem e refine os detalhes.',
+      description: 'Quer ajustar ou criar algo do zero? Acesse o Editor de Imagem, refine os detalhes ou libere sua criatividade. Gere fotos únicas — de pessoas fictícias, editoriais, vitrines de moda, postagens para redes sociais ou até experimentações virtuais de outfit. Tudo em um só lugar, com liberdade total para criar o que quiser.',
       action: 'Editar Fotos',
       href: '/editor'
     },
     {
       id: 4,
       title: 'Gere vídeos realistas',
-      description: 'Experimente gerar vídeos realistas a partir das suas fotos.',
+      description: 'Experimente gerar vídeos realistas a partir das suas fotos ou através de um simples prompt.',
       action: 'Gerar Vídeos',
       href: '/generate?tab=video'
     },
@@ -1175,18 +1175,46 @@ function NavigationSteps() {
     {
       id: 6,
       title: 'Explore pacotes',
-      description: 'E se quiser mais estilos, explore nossos Pacotes de Fotos e Créditos.',
+      description: 'E se quiser mais estilos, explore nossos Pacotes de Fotos.',
       action: 'Ver Pacotes',
       href: '/packages'
+    },
+    {
+      id: 7,
+      title: 'Entenda os créditos',
+      description: 'Os créditos são diferentes dos planos de assinatura. Com seu plano ativo, você recebe créditos mensais para gerar imagens, vídeos e usar ferramentas. Você também pode comprar créditos extras quando precisar, sem precisar mudar de plano.',
+      action: 'Ver Créditos',
+      href: '/credits'
+    },
+    {
+      id: 8,
+      title: 'Navegação e compartilhamento',
+      description: 'Você pode acessar todas essas ferramentas através da navegação nas páginas do app ou diretamente pelos botões hover nos modais da galeria. Além disso, cada imagem possui um botão de compartilhar nas principais redes sociais — divulgue suas criações com apenas um clique!',
+      action: 'Ver Galeria',
+      href: '/gallery'
     }
   ]
 
   // Auto-advance steps every 5 seconds - only when started
+  // Run only once, then return to initial state
   useEffect(() => {
     if (!isStarted) return
 
     const interval = setInterval(() => {
-      setCurrentStep((prev) => (prev + 1) % steps.length)
+      setCurrentStep((prev) => {
+        const nextStep = prev + 1
+        // If we've reached the last step, stop auto-advance and return to initial state
+        if (nextStep >= steps.length) {
+          clearInterval(interval)
+          // Reset after a brief delay to show the last step
+          setTimeout(() => {
+            setIsStarted(false)
+            setCurrentStep(0)
+          }, 2000)
+          return prev
+        }
+        return nextStep
+      })
     }, 5000)
 
     return () => clearInterval(interval)
@@ -1207,7 +1235,7 @@ function NavigationSteps() {
           >
             {/* Main Title */}
             <motion.h2
-              className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight"
+              className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
                 fontWeight: 700,

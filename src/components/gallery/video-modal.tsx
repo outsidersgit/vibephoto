@@ -114,7 +114,7 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
     videoElement.addEventListener('progress', handleProgress)
     videoElement.addEventListener('loadstart', handleLoadStart)
     videoElement.addEventListener('ended', () => setIsPlaying(false))
-    
+
     // Não usar canplaythrough pois isso pode forçar carregamento completo
     // Usar canplay que indica que pode começar a tocar com dados mínimos
 
@@ -184,7 +184,7 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
         console.error('Erro ao iniciar reprodução:', err)
         // Se play() falhou, tentar novamente após carregar
         const playOnLoadedData = () => {
-          videoElement.play()
+      videoElement.play()
             .then(() => setIsPlaying(true))
             .catch(e => console.error('Erro ao reproduzir vídeo após loadeddata:', e))
           videoElement.removeEventListener('loadeddata', playOnLoadedData)

@@ -274,10 +274,10 @@ export function EnhancedGallery({
                             <img
                               src={displayThumbnails[index]}
                               alt="Video thumbnail"
-                              className="w-full h-full object-cover"
+                            className="w-full h-full object-cover"
                               loading="lazy"
-                              onClick={() => handleMediaClick(item.id)}
-                            />
+                            onClick={() => handleMediaClick(item.id)}
+                          />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gray-200">
                               <Film className="w-12 h-12 text-gray-400" />
