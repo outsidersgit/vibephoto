@@ -1283,17 +1283,164 @@ export default function HomePage() {
           </div>
         </section>
       ) : (
-        <section className="relative px-6 text-center py-24 bg-gradient-to-b from-gray-50 to-white">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Olá, {session.user?.name || 'Usuário'}!
-            </h1>
+        <>
+          <section className="relative px-6 text-center py-24 bg-gradient-to-b from-gray-50 to-white">
+            <div className="max-w-4xl mx-auto">
+              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+                Olá, {session.user?.name || 'Usuário'}!
+              </h1>
 
-            <p className="text-lg text-gray-600">
-              Continue criando fotos incríveis com IA.
-            </p>
-          </div>
-        </section>
+              <p className="text-lg text-gray-600">
+                Continue criando fotos incríveis com IA.
+              </p>
+            </div>
+          </section>
+
+          {/* Explore os detalhes - Premium Apple Style */}
+          <section className="relative px-6 py-20 bg-white">
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3 tracking-tight" style={{
+                  fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                  fontWeight: 700,
+                  letterSpacing: '-0.02em'
+                }}>
+                  Explore os detalhes.
+                </h2>
+              </div>
+
+              {/* Premium Card com Vídeo */}
+              <div className="max-w-4xl mx-auto">
+                <motion.div
+                  className="relative group overflow-hidden rounded-[32px] bg-gradient-to-br from-gray-50 via-white to-gray-50 border border-gray-200/60 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)]"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                  whileHover={{ 
+                    scale: 1.005,
+                    boxShadow: '0 25px 80px -15px rgba(0,0,0,0.12)',
+                    transition: { duration: 0.3 }
+                  }}
+                  style={{
+                    willChange: 'transform'
+                  }}
+                >
+                  {/* Video Preview/Thumbnail */}
+                  <div className="relative aspect-video bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+                    <Image
+                      src="/examples/tools/video-poster.jpg"
+                      alt="Tour guiado do VibePhoto"
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 800px"
+                      quality={95}
+                    />
+                    
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
+                    
+                    {/* Play Button - Premium Apple Style */}
+                    <motion.button
+                      className="absolute inset-0 flex items-center justify-center group/play"
+                      onClick={() => {
+                        // Aqui você pode abrir um modal de vídeo ou redirecionar
+                        window.open('/examples/tools/video-optimized.mp4', '_blank')
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <motion.div
+                        className="relative w-20 h-20 bg-white/95 backdrop-blur-xl rounded-full flex items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
+                        initial={{ scale: 0.95, opacity: 0.9 }}
+                        animate={{ 
+                          scale: 1,
+                          opacity: 1
+                        }}
+                        whileHover={{
+                          scale: 1.1,
+                          backgroundColor: 'rgba(255,255,255,1)',
+                          boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
+                          transition: { duration: 0.2 }
+                        }}
+                        transition={{ 
+                          type: "spring",
+                          stiffness: 300,
+                          damping: 20
+                        }}
+                      >
+                        {/* Inner Glow */}
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/60 to-white/30 blur-sm opacity-50 group-hover/play:opacity-75 transition-opacity" />
+                        
+                        {/* Play Icon */}
+                        <Play 
+                          className="w-8 h-8 text-gray-900 ml-1 relative z-10" 
+                          fill="currentColor"
+                          style={{
+                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+                          }}
+                        />
+                      </motion.div>
+                    </motion.button>
+
+                    {/* Subtle Animation - Pulse */}
+                    <motion.div
+                      className="absolute inset-0 rounded-full border-2 border-white/30"
+                      animate={{
+                        scale: [1, 1.15, 1],
+                        opacity: [0.5, 0, 0.5]
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                      style={{
+                        width: '80px',
+                        height: '80px',
+                        left: '50%',
+                        top: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        pointerEvents: 'none'
+                      }}
+                    />
+                  </div>
+
+                  {/* Content Below Video */}
+                  <div className="px-8 py-10 md:px-12 md:py-14">
+                    <div className="text-center">
+                      <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 tracking-tight" style={{
+                        fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                        fontWeight: 700,
+                        letterSpacing: '-0.01em',
+                        lineHeight: '1.2'
+                      }}>
+                        Tour guiado do VibePhoto
+                      </h3>
+                      
+                      <motion.button
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gray-900 text-white font-medium text-sm hover:bg-gray-800 transition-all duration-300 group/btn"
+                        onClick={() => {
+                          window.open('/examples/tools/video-optimized.mp4', '_blank')
+                        }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Play className="w-4 h-4" fill="currentColor" />
+                        <span>Assistir ao vídeo</span>
+                        <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
+                      </motion.button>
+                    </div>
+                  </div>
+
+                  {/* Premium Border Glow on Hover */}
+                  <div className="absolute inset-0 rounded-[32px] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <div className="absolute inset-0 rounded-[32px] bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-purple-500/10 blur-xl" />
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+          </section>
+        </>
       )}
 
       {/* How it Works Section - Scroll Stacking Progressivo */}
