@@ -49,9 +49,10 @@ export function VideoPlayerModal({ mediaItem, onClose }: VideoPlayerModalProps) 
   useEffect(() => {
     const video = videoRef.current
     if (video) {
-      // Configurar para streaming progressivo - NUNCA carregar tudo de uma vez
-      video.preload = 'none'
-      video.setAttribute('preload', 'none')
+      // Configurar para streaming progressivo
+      // Usar 'metadata' para carregar apenas metadados (duração) mas não o vídeo completo
+      video.preload = 'metadata'
+      video.setAttribute('preload', 'metadata')
     }
   }, [mediaItem.url])
 
@@ -117,9 +118,26 @@ export function VideoPlayerModal({ mediaItem, onClose }: VideoPlayerModalProps) 
       setCurrentTime(video.currentTime)
     }
 
-    const handlePlay = () => setIsPlaying(true)
-    const handlePause = () => setIsPlaying(false)
-    const handleEnded = () => setIsPlaying(false)
+    const handlePlay = () => {
+      setIsPlaying(true)
+      setIsLoading(false)
+    }
+    
+    const handlePause = () => {
+      setIsPlaying(false)
+    }
+    
+    const handleEnded = () => {
+      setIsPlaying(false)
+    }
+    
+    const handleCanPlay = () => {
+      setIsLoading(false)
+    }
+    
+    const handleWaiting = () => {
+      setIsLoading(true)
+    }
 
     const handleError = () => {
       setError('Error loading video')
@@ -144,6 +162,8 @@ export function VideoPlayerModal({ mediaItem, onClose }: VideoPlayerModalProps) 
     video.addEventListener('pause', handlePause)
     video.addEventListener('ended', handleEnded)
     video.addEventListener('error', handleError)
+    video.addEventListener('canplay', handleCanPlay)
+    video.addEventListener('waiting', handleWaiting)
 
     return () => {
       video.removeEventListener('loadedmetadata', handleLoadedMetadata)
@@ -152,6 +172,8 @@ export function VideoPlayerModal({ mediaItem, onClose }: VideoPlayerModalProps) 
       video.removeEventListener('pause', handlePause)
       video.removeEventListener('ended', handleEnded)
       video.removeEventListener('error', handleError)
+      video.removeEventListener('canplay', handleCanPlay)
+      video.removeEventListener('waiting', handleWaiting)
     }
   }, [mediaItem.url, mediaItem.id])
 
@@ -161,17 +183,61 @@ export function VideoPlayerModal({ mediaItem, onClose }: VideoPlayerModalProps) 
 
     if (isPlaying) {
       video.pause()
+      setIsPlaying(false)
     } else {
-      // Configurar para streaming progressivo antes de reproduzir
-      video.preload = 'none'
-      video.setAttribute('preload', 'none')
-      
       // Reproduzir - o navegador fará HTTP Range Requests automaticamente
       // Isso permite streaming progressivo (carrega apenas chunks necessários)
       try {
-        await video.play()
-      } catch (err) {
-        console.error('Erro ao reproduzir vídeo:', err)
+        // Se não tem dados suficientes, esperar canplay primeiro
+        if (video.readyState < 2) {
+          // Não tem dados suficientes, carregar primeiro
+          setIsLoading(true)
+          const playOnCanPlay = () => {
+            if (video.readyState >= 2) {
+              video.play()
+                .then(() => {
+                  setIsPlaying(true)
+                  setIsLoading(false)
+                })
+                .catch(e => {
+                  console.error('Erro ao reproduzir vídeo após canplay:', e)
+                  setIsLoading(false)
+                  setError('Erro ao reproduzir vídeo')
+                })
+            }
+            video.removeEventListener('canplay', playOnCanPlay)
+          }
+          
+          video.addEventListener('canplay', playOnCanPlay, { once: true })
+          video.load() // Inicia carregamento
+        } else {
+          // Já tem dados suficientes, reproduzir direto
+          await video.play()
+          setIsPlaying(true)
+          setIsLoading(false)
+        }
+      } catch (err: any) {
+        console.error('Erro ao iniciar reprodução:', err)
+        setIsLoading(false)
+        setError(err.message || 'Erro ao reproduzir vídeo')
+        
+        // Tentar novamente após loadeddata
+        const playOnLoadedData = () => {
+          video.play()
+            .then(() => {
+              setIsPlaying(true)
+              setIsLoading(false)
+              setError(null)
+            })
+            .catch(e => {
+              console.error('Erro ao reproduzir vídeo após loadeddata:', e)
+              setError('Erro ao reproduzir vídeo')
+            })
+          video.removeEventListener('loadeddata', playOnLoadedData)
+        }
+        
+        video.addEventListener('loadeddata', playOnLoadedData, { once: true })
+        video.load()
       }
     }
   }
@@ -396,16 +462,39 @@ export function VideoPlayerModal({ mediaItem, onClose }: VideoPlayerModalProps) 
           className="max-w-full max-h-full"
           onClick={togglePlayPause}
           poster={mediaItem.thumbnailUrl}
-          preload="none"
+          preload="metadata"
           controls={false}
           muted
           playsInline
           disablePictureInPicture
           disableRemotePlayback
+          onError={(e) => {
+            console.error('Erro no elemento de vídeo:', e)
+            setError('Erro ao carregar vídeo')
+            setIsLoading(false)
+          }}
         >
           <source src={mediaItem.url} type="video/mp4" />
           Seu navegador não suporta reprodução de vídeo.
         </video>
+        
+        {/* Fallback: se o vídeo não carregar, mostrar mensagem */}
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-900 text-white">
+            <div className="text-center p-4">
+              <p className="mb-2">{error}</p>
+              <Button onClick={() => {
+                setError(null)
+                setIsLoading(true)
+                if (videoRef.current) {
+                  videoRef.current.load()
+                }
+              }}>
+                Tentar novamente
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Play/Pause Overlay */}
         {!isLoading && showControls && (

@@ -84,13 +84,9 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
     if (!videoElement) return
 
     // Configurar para streaming progressivo - NUNCA carregar tudo de uma vez
-    videoElement.preload = 'none' // Importante: 'none' para não carregar nada até necessário
-    videoElement.setAttribute('preload', 'none')
-    
-    // Desabilitar carregamento automático - forçar streaming progressivo
-    if ('webkitPreservesPitch' in videoElement) {
-      (videoElement as any).webkitPreservesPitch = false
-    }
+    // Usar 'metadata' para carregar apenas metadados (duração) mas não o vídeo completo
+    videoElement.preload = 'metadata'
+    videoElement.setAttribute('preload', 'metadata')
 
     const updateTime = () => setCurrentTime(videoElement.currentTime)
     const updateDuration = () => {
@@ -156,24 +152,45 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
       try {
         // Tentar reproduzir - o navegador automaticamente fará range requests progressivos
         // Não carrega tudo de uma vez quando preload="none"
-        await videoElement.play()
-        setIsPlaying(true)
-      } catch (err: any) {
-        // Se play() falhou, pode ser porque precisa carregar metadados primeiro
-        // Mas mesmo assim, usar streaming progressivo
-        const playOnCanPlay = () => {
-          if (videoElement.readyState >= 2) { // HAVE_CURRENT_DATA
-            videoElement.play()
-              .then(() => setIsPlaying(true))
-              .catch(e => console.error('Erro ao reproduzir vídeo:', e))
+        
+        // Se não tem dados suficientes, esperar canplay primeiro
+        if (videoElement.readyState < 2) {
+          // Não tem dados suficientes, carregar primeiro
+          const playOnCanPlay = () => {
+            if (videoElement.readyState >= 2) {
+              videoElement.play()
+                .then(() => setIsPlaying(true))
+                .catch(e => {
+                  console.error('Erro ao reproduzir vídeo após canplay:', e)
+                  // Tentar novamente após loadeddata
+                  videoElement.addEventListener('loadeddata', () => {
+                    videoElement.play()
+                      .then(() => setIsPlaying(true))
+                      .catch(err => console.error('Erro ao reproduzir vídeo após loadeddata:', err))
+                  }, { once: true })
+                })
+            }
+            videoElement.removeEventListener('canplay', playOnCanPlay)
           }
-          videoElement.removeEventListener('canplay', playOnCanPlay)
+          
+          videoElement.addEventListener('canplay', playOnCanPlay, { once: true })
+          videoElement.load() // Inicia carregamento
+        } else {
+          // Já tem dados suficientes, reproduzir direto
+          await videoElement.play()
+          setIsPlaying(true)
+        }
+      } catch (err: any) {
+        console.error('Erro ao iniciar reprodução:', err)
+        // Se play() falhou, tentar novamente após carregar
+        const playOnLoadedData = () => {
+          videoElement.play()
+            .then(() => setIsPlaying(true))
+            .catch(e => console.error('Erro ao reproduzir vídeo após loadeddata:', e))
+          videoElement.removeEventListener('loadeddata', playOnLoadedData)
         }
         
-        videoElement.addEventListener('canplay', playOnCanPlay, { once: true })
-        
-        // Carregar apenas o necessário para começar (não tudo)
-        // Com preload="none", isso fará apenas uma request HEAD ou pequena range request
+        videoElement.addEventListener('loadeddata', playOnLoadedData, { once: true })
         videoElement.load()
       }
     }
@@ -431,16 +448,26 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
                   poster={video.thumbnailUrl || video.sourceImageUrl}
                   className="w-full aspect-video object-contain"
                   onClick={togglePlay}
-                  preload="none"
+                  preload="metadata"
                   controls={false}
                   muted={isMuted}
                   playsInline
                   disablePictureInPicture
                   disableRemotePlayback
+                  onError={(e) => {
+                    console.error('Erro no elemento de vídeo:', e)
+                  }}
                 >
                   <source src={video.videoUrl} type="video/mp4" />
                   Seu navegador não suporta reprodução de vídeo.
                 </video>
+                
+                {/* Fallback: se o vídeo não carregar, mostrar mensagem */}
+                {!video.videoUrl && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-900 text-white">
+                    <p className="text-center p-4">Vídeo não disponível</p>
+                  </div>
+                )}
 
                 {/* Video Controls */}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
