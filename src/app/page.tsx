@@ -1134,6 +1134,7 @@ const AIToolsShowcase = () => {
 function NavigationSteps() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
+  const [isStarted, setIsStarted] = useState(false)
 
   const steps = [
     {
@@ -1141,82 +1142,107 @@ function NavigationSteps() {
       title: 'Crie seu modelo',
       description: 'Crie seu modelo personalizado para poder gerar imagens únicas com IA.',
       action: 'Criar Modelo',
-      href: '/models/create',
-      icon: Bot
+      href: '/models/create'
     },
     {
       id: 2,
       title: 'Gere imagens',
       description: 'Depois, vá em Gerar imagem e escolha o estilo que quiser.',
       action: 'Gerar Fotos',
-      href: '/generate',
-      icon: ImageIcon
+      href: '/generate'
     },
     {
       id: 3,
       title: 'Edite suas criações',
       description: 'Quer ajustar uma criação? Vá em Editor de Imagem e refine os detalhes.',
       action: 'Editar Fotos',
-      href: '/editor',
-      icon: Edit3
+      href: '/editor'
     },
     {
       id: 4,
       title: 'Gere vídeos realistas',
       description: 'Experimente gerar vídeos realistas a partir das suas fotos.',
       action: 'Gerar Vídeos',
-      href: '/generate?tab=video',
-      icon: Video
+      href: '/generate?tab=video'
     },
     {
       id: 5,
       title: 'Veja suas criações',
       description: 'Acesse sua galeria e veja todas as suas criações em um só lugar.',
       action: 'Ver Galeria',
-      href: '/gallery',
-      icon: Camera
+      href: '/gallery'
     },
     {
       id: 6,
       title: 'Explore pacotes',
       description: 'E se quiser mais estilos, explore nossos Pacotes de Fotos e Créditos.',
       action: 'Ver Pacotes',
-      href: '/packages',
-      icon: Sparkles
+      href: '/packages'
     }
   ]
 
-  // Auto-advance steps every 5 seconds
+  // Auto-advance steps every 5 seconds - only when started
   useEffect(() => {
+    if (!isStarted) return
+
     const interval = setInterval(() => {
       setCurrentStep((prev) => (prev + 1) % steps.length)
     }, 5000)
 
     return () => clearInterval(interval)
-  }, [steps.length])
+  }, [isStarted, steps.length])
 
   const currentStepData = steps[currentStep]
-  const Icon = currentStepData.icon
 
+  // Static initial state - show "Crie. Transforme. Impressione." with play button
+  if (!isStarted) {
+    return (
+      <div className="relative z-10 px-8 py-8 md:px-12 md:py-12 flex items-center justify-center">
+        <div className="max-w-3xl mx-auto w-full text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="space-y-6"
+          >
+            {/* Main Title */}
+            <motion.h2
+              className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-4 tracking-tight"
+              style={{
+                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                textShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+              }}
+            >
+              Crie. Transforme. Impressione.
+            </motion.h2>
+
+            {/* Play Button */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <Button
+                onClick={() => setIsStarted(true)}
+                size="lg"
+                className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <Play className="w-5 h-5 mr-2" fill="currentColor" />
+                Explorar ferramentas
+              </Button>
+            </motion.div>
+          </motion.div>
+        </div>
+      </div>
+    )
+  }
+
+  // Active navigation state
   return (
     <div className="relative z-10 px-8 py-8 md:px-12 md:py-12 flex items-center justify-center">
       <div className="max-w-3xl mx-auto w-full text-center">
-        {/* Step Indicators */}
-        <div className="flex justify-center gap-2 mb-6">
-          {steps.map((step, index) => (
-            <button
-              key={step.id}
-              onClick={() => setCurrentStep(index)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                index === currentStep
-                  ? 'w-8 bg-white'
-                  : 'w-2 bg-white/40 hover:bg-white/60'
-              }`}
-              aria-label={`Ir para etapa ${step.id}`}
-            />
-          ))}
-        </div>
-
         {/* Step Content */}
         <AnimatePresence mode="wait">
           <motion.div
@@ -1227,18 +1253,6 @@ function NavigationSteps() {
             transition={{ duration: 0.4 }}
             className="space-y-4"
           >
-            {/* Icon */}
-            <motion.div
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-              className="flex justify-center mb-3"
-            >
-              <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-                <Icon className="w-8 h-8 text-white" />
-              </div>
-            </motion.div>
-
             {/* Title */}
             <motion.h2
               className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-3 tracking-tight"
@@ -1287,29 +1301,43 @@ function NavigationSteps() {
                 </Link>
               </Button>
             </motion.div>
-
-            {/* Navigation Arrows */}
-            <div className="flex items-center justify-center gap-4 mt-6">
-              <button
-                onClick={() => setCurrentStep((prev) => (prev - 1 + steps.length) % steps.length)}
-                className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
-                aria-label="Etapa anterior"
-              >
-                <ArrowRight className="w-5 h-5 text-white rotate-180" />
-              </button>
-              <span className="text-white/60 text-sm">
-                {currentStep + 1} / {steps.length}
-              </span>
-              <button
-                onClick={() => setCurrentStep((prev) => (prev + 1) % steps.length)}
-                className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
-                aria-label="Próxima etapa"
-              >
-                <ArrowRight className="w-5 h-5 text-white" />
-              </button>
-            </div>
           </motion.div>
         </AnimatePresence>
+
+        {/* Step Indicators - Replaces the number counter */}
+        <div className="flex items-center justify-center gap-4 mt-6">
+          <button
+            onClick={() => setCurrentStep((prev) => (prev - 1 + steps.length) % steps.length)}
+            className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
+            aria-label="Etapa anterior"
+          >
+            <ArrowRight className="w-5 h-5 text-white rotate-180" />
+          </button>
+          
+          {/* Step Indicators */}
+          <div className="flex justify-center gap-2">
+            {steps.map((step, index) => (
+              <button
+                key={step.id}
+                onClick={() => setCurrentStep(index)}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  index === currentStep
+                    ? 'w-8 bg-white'
+                    : 'w-2 bg-white/40 hover:bg-white/60'
+                }`}
+                aria-label={`Ir para etapa ${step.id}`}
+              />
+            ))}
+          </div>
+
+          <button
+            onClick={() => setCurrentStep((prev) => (prev + 1) % steps.length)}
+            className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
+            aria-label="Próxima etapa"
+          >
+            <ArrowRight className="w-5 h-5 text-white" />
+          </button>
+        </div>
       </div>
     </div>
   )
