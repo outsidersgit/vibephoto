@@ -1181,7 +1181,7 @@ function NavigationSteps() {
     },
     {
       id: 7,
-      title: 'Entenda os créditos',
+      title: 'Adquira mais créditos quando quiser',
       description: 'Os créditos são diferentes dos planos de assinatura. Com seu plano ativo, você recebe créditos mensais para gerar imagens, vídeos e usar ferramentas. Você também pode comprar créditos extras quando precisar, sem precisar mudar de plano.',
       action: 'Ver Créditos',
       href: '/credits'
