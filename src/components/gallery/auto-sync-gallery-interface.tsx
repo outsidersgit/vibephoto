@@ -132,19 +132,44 @@ export function AutoSyncGalleryInterface({
     page: parseInt(searchParams.get('page') || '1'),
   }
 
-  // Use React Query para dados da galeria
+  // Use React Query para dados da galeria - passar initialGenerations como placeholder
   const {
     data: galleryData,
     isLoading: isLoadingGallery,
     isRefetching,
     refetch: refetchGallery
-  } = useGalleryData(galleryFilters)
+  } = useGalleryData(galleryFilters, {
+    generations: initialGenerations,
+    editHistory: [],
+    videos: initialVideos,
+    stats: initialStats,
+    pagination
+  } as any)
 
-  // State derivado do React Query
-  const generations = galleryData?.generations || initialGenerations
-  const editHistory = galleryData?.editHistory || []
-  const videos = galleryData?.videos || initialVideos
-  const stats = galleryData?.stats || initialStats
+  // State local para manter gerações visíveis mesmo durante refetch
+  // Mescla dados do React Query com atualizações otimistas para evitar desaparecimento
+  const [localGenerations, setLocalGenerations] = useState<any[]>(initialGenerations)
+  const [localEditHistory, setLocalEditHistory] = useState<any[]>([])
+  const [localVideos, setLocalVideos] = useState<any[]>(initialVideos)
+  
+  // Atualizar estado local quando React Query retornar novos dados
+  useEffect(() => {
+    if (galleryData?.generations) {
+      setLocalGenerations(galleryData.generations)
+    }
+    if (galleryData?.editHistory) {
+      setLocalEditHistory(galleryData.editHistory)
+    }
+    if (galleryData?.videos) {
+      setLocalVideos(galleryData.videos)
+    }
+  }, [galleryData])
+  
+  // Usar estado local (que sempre tem dados) em vez de dados diretos do React Query
+  const generations = localGenerations
+  const editHistory = localEditHistory
+  const videos = localVideos
+  const stats = galleryData?.stats ?? initialStats
   const lastUpdate = galleryData ? new Date() : null
   const [pendingUpdates, setPendingUpdates] = useState(0)
 
@@ -246,7 +271,7 @@ export function AutoSyncGalleryInterface({
     }
   }
 
-  // ✅ Handler para atualizações em tempo real - atualiza dados sem invalidar cache completamente
+  // ✅ Handler para atualizações em tempo real - atualiza estado local PRIMEIRO
   const handleGenerationStatusChange = useCallback((
     generationId: string,
     status: string,
@@ -254,27 +279,53 @@ export function AutoSyncGalleryInterface({
   ) => {
     console.log(`🔄 Real-time update: Generation ${generationId} -> ${status}`, data)
 
-    // Atualizar cache otimisticamente primeiro para evitar desaparecimento de imagens
+    // ATUALIZAR ESTADO LOCAL PRIMEIRO - garante que imagens nunca desapareçam
+    setLocalGenerations((prev: any[]) => {
+      const existingIndex = prev.findIndex((g: any) => g.id === generationId)
+
+      if (existingIndex >= 0) {
+        // Atualizar geração existente
+        const updated = [...prev]
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          status,
+          imageUrls: data.imageUrls || updated[existingIndex].imageUrls,
+          thumbnailUrls: data.thumbnailUrls || updated[existingIndex].thumbnailUrls,
+          completedAt: status === 'COMPLETED' ? new Date() : updated[existingIndex].completedAt,
+          processingTime: data.processingTime || updated[existingIndex].processingTime,
+          errorMessage: data.errorMessage || updated[existingIndex].errorMessage
+        }
+        return updated
+      } else if (status === 'COMPLETED' && data.imageUrls?.length > 0) {
+        // Adicionar nova geração completada no início
+        return [{
+          id: generationId,
+          status: 'COMPLETED',
+          imageUrls: data.imageUrls,
+          thumbnailUrls: data.thumbnailUrls || data.imageUrls,
+          completedAt: new Date(),
+          processingTime: data.processingTime,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          userId: data.userId,
+          prompt: data.prompt || '',
+          modelId: data.modelId || null,
+          model: data.model || null
+        }, ...prev]
+      }
+      return prev
+    })
+
+    // Depois atualizar cache do React Query (opcional - para sincronização futura)
     queryClient.setQueriesData({ queryKey: ['gallery'] }, (old: any) => {
-      // Se não há dados antigos, não atualizar (evitar criar dados vazios)
-      if (!old) {
-        console.warn('⚠️ No old gallery data to update optimistically')
-        return old
-      }
-
-      // Normalizar estrutura de dados (pode vir como {generations: [...]} ou direto como array)
+      if (!old) return old
       let currentGenerations = old.generations || old.data?.generations || (Array.isArray(old) ? old : [])
-      if (!Array.isArray(currentGenerations)) {
-        console.warn('⚠️ Gallery data structure unexpected:', Object.keys(old))
-        return old
-      }
+      if (!Array.isArray(currentGenerations)) return old
 
-      // Atualizar geração existente ou adicionar nova
       let updatedGenerations = [...currentGenerations]
       const existingIndex = updatedGenerations.findIndex((g: any) => g.id === generationId)
 
       if (existingIndex >= 0) {
-        // Atualizar geração existente
         updatedGenerations[existingIndex] = {
           ...updatedGenerations[existingIndex],
           status,
@@ -285,7 +336,6 @@ export function AutoSyncGalleryInterface({
           errorMessage: data.errorMessage || updatedGenerations[existingIndex].errorMessage
         }
       } else if (status === 'COMPLETED' && data.imageUrls?.length > 0) {
-        // Adicionar nova geração completada no início (se ainda não estiver na lista)
         updatedGenerations.unshift({
           id: generationId,
           status: 'COMPLETED',
@@ -301,45 +351,15 @@ export function AutoSyncGalleryInterface({
         })
       }
 
-      // Retornar estrutura mantendo a mesma forma dos dados originais
       if (old.generations !== undefined) {
         return {
           ...old,
-          generations: updatedGenerations,
-          stats: old.stats ? {
-            ...old.stats,
-            totalGenerations: status === 'COMPLETED' 
-              ? Math.max(old.stats.totalGenerations || 0, updatedGenerations.filter((g: any) => g.status === 'COMPLETED').length)
-              : old.stats.totalGenerations || 0
-          } : old.stats
+          generations: updatedGenerations
         }
-      } else if (old.data) {
-        return {
-          ...old,
-          data: {
-            ...old.data,
-            generations: updatedGenerations
-          }
-        }
-      } else {
-        // Se for array direto
-        return updatedGenerations
       }
+      return old
     })
-
-    // Invalidar cache APENAS após atualização otimista (refetch em background sem limpar UI)
-    queryClient.invalidateQueries({ 
-      queryKey: ['gallery'],
-      refetchType: 'none' // Não refetch automaticamente, só marca como stale
-    })
-
-    // Fazer refetch em background após pequeno delay para manter dados atualizados
-    setTimeout(() => {
-      refetchGallery().catch(err => {
-        console.warn('Background gallery refetch failed:', err)
-      })
-    }, 1000)
-
+    
     // Incrementa contador de updates pendentes
     setPendingUpdates(prev => prev + 1)
 
@@ -347,7 +367,8 @@ export function AutoSyncGalleryInterface({
     setTimeout(() => {
       setPendingUpdates(prev => Math.max(0, prev - 1))
     }, 3000)
-  }, [queryClient, refetchGallery])
+    
+  }, [queryClient])
 
   // Handler para atualizações de upscale via WebSocket
   const handleUpscaleUpdate = useCallback((generationId: string, status: string, data: any) => {

@@ -31,7 +31,7 @@ export interface GalleryData {
  * Hook para buscar dados da galeria com React Query
  * Gerencia cache automático, revalidação e estados de loading/error
  */
-export function useGalleryData(filters: GalleryFilters) {
+export function useGalleryData(filters: GalleryFilters, placeholderData?: GalleryData) {
   return useQuery({
     queryKey: ['gallery', filters],
     queryFn: async (): Promise<GalleryData> => {
@@ -54,6 +54,8 @@ export function useGalleryData(filters: GalleryFilters) {
     },
     staleTime: 30 * 1000, // 30 segundos
     gcTime: 5 * 60 * 1000, // 5 minutos
+    placeholderData, // Mantém dados anteriores durante refetch (React Query v5)
+    // placeholderData mantém os dados enquanto carrega novos (evita desaparecimento)
   })
 }
 

@@ -601,14 +601,14 @@ export function GenerationInterface({
           </Card>
         )}
 
-        {/* Current Generation Status */}
-        {currentGeneration && (
+        {/* Current Generation Status - Only show when processing or when verified in gallery */}
+        {currentGeneration && (currentGeneration.status === 'PROCESSING' || currentGeneration.status === 'FAILED') && (
           <Card className="border-blue-200 bg-blue-50">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-medium text-blue-900 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                    {currentGeneration.status === 'PROCESSING' ? 'Gerando Fotos...' : 'Geração Completa!'}
+                    {currentGeneration.status === 'PROCESSING' ? 'Gerando Fotos...' : 'Geração Falhou'}
                   </h3>
                 </div>
                 <div className="flex items-center space-x-2">
