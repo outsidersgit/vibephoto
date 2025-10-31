@@ -1199,10 +1199,10 @@ function NavigationSteps() {
   const Icon = currentStepData.icon
 
   return (
-    <div className="relative z-10 px-8 py-16 md:px-16 md:py-24 flex items-center justify-center min-h-[75vh]">
+    <div className="relative z-10 px-8 py-8 md:px-12 md:py-12 flex items-center justify-center">
       <div className="max-w-3xl mx-auto w-full text-center">
         {/* Step Indicators */}
-        <div className="flex justify-center gap-2 mb-8">
+        <div className="flex justify-center gap-2 mb-6">
           {steps.map((step, index) => (
             <button
               key={step.id}
@@ -1225,23 +1225,23 @@ function NavigationSteps() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.4 }}
-            className="space-y-6"
+            className="space-y-4"
           >
             {/* Icon */}
             <motion.div
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
               transition={{ duration: 0.4, delay: 0.1 }}
-              className="flex justify-center mb-4"
+              className="flex justify-center mb-3"
             >
-              <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-                <Icon className="w-10 h-10 text-white" />
+              <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+                <Icon className="w-8 h-8 text-white" />
               </div>
             </motion.div>
 
             {/* Title */}
             <motion.h2
-              className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight"
+              className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-3 tracking-tight"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
                 fontWeight: 700,
@@ -1257,7 +1257,7 @@ function NavigationSteps() {
 
             {/* Description */}
             <motion.p
-              className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto leading-relaxed"
+              className="text-base md:text-lg text-white/80 mb-6 max-w-2xl mx-auto leading-relaxed"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
                 textShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
@@ -1278,18 +1278,18 @@ function NavigationSteps() {
               <Button
                 asChild
                 size="lg"
-                className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+                className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-6 py-4 text-base rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
                 onClick={() => router.push(currentStepData.href)}
               >
                 <Link href={currentStepData.href}>
                   {currentStepData.action}
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
               </Button>
             </motion.div>
 
             {/* Navigation Arrows */}
-            <div className="flex items-center justify-center gap-4 mt-8">
+            <div className="flex items-center justify-center gap-4 mt-6">
               <button
                 onClick={() => setCurrentStep((prev) => (prev - 1 + steps.length) % steps.length)}
                 className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
@@ -1470,7 +1470,7 @@ export default function HomePage() {
         </section>
       ) : (
         <>
-          <section className="relative px-6 py-12 bg-gradient-to-b from-gray-50 to-white">
+          <section className="relative px-6 py-6 bg-gradient-to-b from-gray-50 to-white">
             <div className="max-w-4xl mx-auto">
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-left">
                 Olá, {session.user?.name || 'Usuário'}!
@@ -1483,7 +1483,7 @@ export default function HomePage() {
           </section>
 
           {/* Explore os detalhes - Premium Apple Style */}
-          <section className="relative px-6 py-8 min-h-[85vh] flex items-center bg-white">
+          <section className="relative px-6 py-4 bg-white">
             <div className="w-full mx-auto">
               {/* Premium Card - Full Viewport */}
               <motion.div
@@ -1498,7 +1498,7 @@ export default function HomePage() {
                 }}
                 style={{
                   willChange: 'transform',
-                  minHeight: '75vh'
+                  minHeight: '55vh'
                 }}
               >
                 {/* 3D Background Effect with Dark Theme Gradient */}
@@ -1972,71 +1972,7 @@ export default function HomePage() {
         </section>
       )}
 
-      {session ? (
-        /* User Options Section - Interactive Pitch */
-        <section className="py-16 px-6 bg-gray-900" style={{ fontFamily: '-apple-system, "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif' }}>
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              {/* Modelo de IA */}
-              <Card className="group border border-gray-700 bg-gray-800 hover:shadow-xl hover:shadow-xl transition-all duration-300 hover:scale-105">
-                <CardContent className="p-6 text-center">
-                  <h3 className="text-sm font-semibold text-white mb-2">1️⃣ Modelo de IA</h3>
-                  <p className="text-xs text-gray-400 mb-3">
-                    Acesse a página <strong className="text-white">Modelos</strong> e clique em <strong className="text-white">Criar modelo</strong> para treinar sua IA personalizada.
-                  </p>
-                  <Button asChild variant="outline" size="sm" className="w-full border-gray-600 bg-transparent text-gray-300 hover:bg-gray-700 hover:text-white">
-                    <Link href="/models/create">Criar Modelo</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Imagem com IA */}
-              <Card className="group border border-gray-700 bg-gray-800 hover:shadow-xl hover:shadow-xl transition-all duration-300 hover:scale-105">
-                <CardContent className="p-6 text-center">
-                  <h3 className="text-sm font-semibold text-white mb-2">2️⃣ Imagem com IA</h3>
-                  <p className="text-xs text-gray-400 mb-3">
-                    Depois, vá em <strong className="text-white">Gerar imagem</strong> e escolha o estilo que quiser.
-                  </p>
-                  <Button asChild variant="outline" size="sm" className="w-full border-gray-600 bg-transparent text-gray-300 hover:bg-gray-700 hover:text-white">
-                    <Link href="/generate">Gerar Fotos</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Edição de Imagem com IA */}
-              <Card className="group border border-gray-700 bg-gray-800 hover:shadow-xl hover:shadow-xl transition-all duration-300 hover:scale-105">
-                <CardContent className="p-6 text-center">
-                  <h3 className="text-sm font-semibold text-white mb-2">3️⃣ Editor de Imagem</h3>
-                  <p className="text-xs text-gray-400 mb-3">
-                    Quer ajustar uma criação? Vá em <strong className="text-white">Editor de Imagem</strong> e refine os detalhes.
-                  </p>
-                  <Button asChild variant="outline" size="sm" className="w-full border-gray-600 bg-transparent text-gray-300 hover:bg-gray-700 hover:text-white">
-                    <Link href="/editor">Editar Fotos</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Vídeo com IA */}
-              <Card className="group border border-gray-700 bg-gray-800 hover:shadow-xl hover:shadow-xl transition-all duration-300 hover:scale-105">
-                <CardContent className="p-6 text-center">
-                  <h3 className="text-sm font-semibold text-white mb-2">4️⃣ Vídeo com IA</h3>
-                  <p className="text-xs text-gray-400 mb-3">
-                    Experimente gerar <strong className="text-white">vídeos realistas</strong> a partir das suas fotos.
-                  </p>
-                  <Button asChild variant="outline" size="sm" className="w-full border-gray-600 bg-transparent text-gray-300 hover:bg-gray-700 hover:text-white">
-                    <Link href="/generate?tab=video">Gerar Vídeos</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-400">
-                E se quiser mais estilos, explore nossos <Link href="/packages" className="text-blue-400 hover:text-blue-300 underline">Pacotes de Fotos e Créditos</Link>.
-              </p>
-            </div>
-          </div>
-        </section>
-      ) : (
+      {!session && (
         /* Email CTA for Non-Logged Users */
         <section className="py-16 px-6 bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
           <div className="max-w-4xl mx-auto text-center">
