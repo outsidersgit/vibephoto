@@ -182,63 +182,18 @@ export const authOptions: NextAuthOptions = {
       return session
     },
     async signIn({ user, account, profile }) {
-      // Ensure OAuth accounts link to existing users by email (no duplicates)
-      // PrismaAdapter creates the User automatically if email doesn't exist
-      try {
-        if (account && account.provider !== 'credentials') {
-          const email = user.email || (profile as any)?.email
-          if (!email) return true
-
-          // Wait a bit for PrismaAdapter to finish creating user if new
-          // Then fetch the actual user from DB with all fields
-          await new Promise(resolve => setTimeout(resolve, 100))
-
-          const dbUser = await prisma.user.findUnique({ 
-            where: { email },
-            select: { 
-              id: true, 
-              subscriptionStatus: true,
-              role: true 
-            }
-          })
-
-          if (dbUser) {
-            // Force token to use actual DB user id (important for new users created by PrismaAdapter)
-            ;(user as any).id = dbUser.id
-            ;(user as any).subscriptionStatus = dbUser.subscriptionStatus
-            ;(user as any).role = dbUser.role
-
-            // Ensure Account row exists/links to same user
-            const hasAccount = await prisma.account.findFirst({
-              where: { provider: account.provider, providerAccountId: account.providerAccountId }
-            })
-            if (!hasAccount) {
-              await prisma.account.create({
-                data: {
-                  userId: dbUser.id,
-                  provider: account.provider,
-                  type: account.type,
-                  providerAccountId: account.providerAccountId,
-                  access_token: (account as any).access_token || null,
-                  token_type: (account as any).token_type || null,
-                  expires_at: (account as any).expires_at || null,
-                  id_token: (account as any).id_token || null,
-                  refresh_token: (account as any).refresh_token || null,
-                  scope: (account as any).scope || null,
-                }
-              })
-            }
-          } else {
-            // Edge case: user was just created but not yet in DB
-            // PrismaAdapter should have created it, but if not, mark as new
-            ;(user as any).subscriptionStatus = null
-            ;(user as any).role = 'USER'
-          }
-        }
-      } catch (e) {
-        console.error('signIn linking error:', e)
-        // Allow signin to proceed even if linking fails
-      }
+      // PrismaAdapter handles user creation automatically
+      // Don't interfere with PrismaAdapter's process
+      // Just ensure we allow signin to proceed
+      
+      // For OAuth providers, PrismaAdapter will:
+      // 1. Create User if email doesn't exist
+      // 2. Create Account linking OAuth to User
+      // 3. Link existing User if email exists
+      
+      // We don't need to do anything here except allow signin
+      // The JWT callback will handle fetching user data from DB
+      
       return true
     },
     async redirect({ url, baseUrl }) {
