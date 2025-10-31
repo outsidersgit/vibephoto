@@ -96,7 +96,7 @@ export function GenerationInterface({
           errorMessage: data.errorMessage || prev.errorMessage
         }))
 
-        // If completed successfully, add to results and show modal
+        // If completed successfully, verify it's saved in DB before redirecting
         if (status === 'COMPLETED' && data.imageUrls && data.imageUrls.length > 0) {
           const completedGeneration = { ...currentGeneration, ...data, status }
           
@@ -105,25 +105,49 @@ export function GenerationInterface({
             ...prevResults
           ])
           
-          // Show success toast with action buttons
-          addToast({
-            type: 'success',
-            title: '🎉 Imagem gerada com sucesso!',
-            description: `${data.imageUrls.length} imagem${data.imageUrls.length > 1 ? 's' : ''} criada${data.imageUrls.length > 1 ? 's' : ''} em ${Math.round((data.processingTime || 30000) / 1000)}s • Redirecionando para galeria...`,
-            duration: 3000
-          })
+          // Verify generation is saved in DB before showing success message
+          const verifySaved = async () => {
+            try {
+              const checkResponse = await fetch(`/api/generations/${currentGeneration.id}`)
+              if (checkResponse.ok) {
+                const genData = await checkResponse.json()
+                // Only redirect if status is COMPLETED and has imageUrls in DB
+                if (genData.generation?.status === 'COMPLETED' && genData.generation?.imageUrls?.length > 0) {
+                  // Show success toast
+                  addToast({
+                    type: 'success',
+                    title: '🎉 Geração completa!',
+                    description: `${data.imageUrls.length} imagem${data.imageUrls.length > 1 ? 's' : ''} criada${data.imageUrls.length > 1 ? 's' : ''} em ${Math.round((data.processingTime || 30000) / 1000)}s • Redirecionando para galeria...`,
+                    duration: 3000
+                  })
 
-          // Show success modal
-          setSuccessImageUrl(data.imageUrls[0])
-          setShowSuccessModal(true)
-          console.log('🎉 Opening success modal for generated image')
+                  // Show success modal
+                  setSuccessImageUrl(data.imageUrls[0])
+                  setShowSuccessModal(true)
 
-          // Redirect to gallery after 3 seconds
-          console.log('⏳ Scheduling redirect to gallery in 3 seconds...')
-          setTimeout(() => {
-            console.log('🔄 Redirecting to gallery NOW!')
-            window.location.href = '/gallery'
-          }, 3000)
+                  // Redirect to gallery after 2 seconds (reduced from 3s)
+                  setTimeout(() => {
+                    window.location.href = '/gallery'
+                  }, 2000)
+                } else {
+                  // Still processing or not fully saved, wait a bit more
+                  setTimeout(verifySaved, 1000)
+                }
+              } else {
+                // Retry verification
+                setTimeout(verifySaved, 1000)
+              }
+            } catch (error) {
+              console.error('Error verifying generation:', error)
+              // Fallback: redirect anyway after delay
+              setTimeout(() => {
+                window.location.href = '/gallery'
+              }, 3000)
+            }
+          }
+
+          // Start verification
+          verifySaved()
         }
 
         // Show error message if failed

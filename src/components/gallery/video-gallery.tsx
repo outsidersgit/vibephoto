@@ -234,6 +234,8 @@ export function VideoGallery({
                           className="w-full h-full object-cover"
                           muted
                           poster={video.sourceImageUrl || undefined}
+                          preload="none"
+                          playsInline
                         />
                       )
                     ) : video.sourceImageUrl ? (

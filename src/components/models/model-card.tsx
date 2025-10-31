@@ -193,11 +193,16 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
           </div>
         </div>
 
-        {/* Progress Bar for Training */}
-        {showProgress && model.status === 'TRAINING' && (
+        {/* Progress Bar for Training - Show for TRAINING, PROCESSING, UPLOADING */}
+        {showProgress && ['TRAINING', 'PROCESSING', 'UPLOADING'].includes(model.status) && (
           <div className="mb-3">
             <div className="flex justify-between text-xs text-slate-400 mb-1.5">
-              <span>Progresso</span>
+              <span>
+                {model.status === 'TRAINING' ? 'Treinando' : 
+                 model.status === 'PROCESSING' ? 'Processando' : 
+                 'Carregando'}
+                {model.trainingMessage && ` • ${model.trainingMessage}`}
+              </span>
               <span className="font-medium">{model.progress || 0}%</span>
             </div>
             <div className="w-full bg-slate-700 rounded-full h-1.5 overflow-hidden">
@@ -206,6 +211,11 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
                 style={{ width: `${model.progress || 0}%` }}
               />
             </div>
+            {model.status === 'TRAINING' && (
+              <p className="text-xs text-slate-400 mt-1.5">
+                Tempo estimado: ~30 minutos
+              </p>
+            )}
           </div>
         )}
 

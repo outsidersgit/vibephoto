@@ -1374,15 +1374,21 @@ export default function HomePage() {
       )}
 
       {session ? (
-        /* User Options Section */
+        /* User Options Section - Interactive Pitch */
         <section className="py-16 px-6 bg-gray-900" style={{ fontFamily: '-apple-system, "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif' }}>
           <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-white mb-2">Transforme suas ideias em realidade</h2>
+              <p className="text-gray-400 text-sm">Comece criando um modelo personalizado e depois gere fotos incríveis</p>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {/* Modelo de IA */}
               <Card className="group border border-gray-700 bg-gray-800 hover:shadow-xl hover:shadow-xl transition-all duration-300 hover:scale-105">
                 <CardContent className="p-6 text-center">
-                  <h3 className="text-sm font-semibold text-white mb-2">Modelo de IA</h3>
-                  <p className="text-xs text-gray-400 mb-4">Treine um modelo personalizado com suas fotos</p>
+                  <h3 className="text-sm font-semibold text-white mb-2">1️⃣ Modelo de IA</h3>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Acesse a página <strong className="text-white">Modelos</strong> e clique em <strong className="text-white">Criar modelo</strong> para treinar sua IA personalizada.
+                  </p>
                   <Button asChild variant="outline" size="sm" className="w-full border-gray-600 bg-transparent text-gray-300 hover:bg-gray-700 hover:text-white">
                     <Link href="/models/create">Criar Modelo</Link>
                   </Button>
@@ -1392,21 +1398,12 @@ export default function HomePage() {
               {/* Imagem com IA */}
               <Card className="group border border-gray-700 bg-gray-800 hover:shadow-xl hover:shadow-xl transition-all duration-300 hover:scale-105">
                 <CardContent className="p-6 text-center">
-                  <h3 className="text-sm font-semibold text-white mb-2">Imagem com IA</h3>
-                  <p className="text-xs text-gray-400 mb-4">Gere fotos profissionais usando seus modelos</p>
+                  <h3 className="text-sm font-semibold text-white mb-2">2️⃣ Imagem com IA</h3>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Depois, vá em <strong className="text-white">Gerar imagem</strong> e escolha o estilo que quiser.
+                  </p>
                   <Button asChild variant="outline" size="sm" className="w-full border-gray-600 bg-transparent text-gray-300 hover:bg-gray-700 hover:text-white">
                     <Link href="/generate">Gerar Fotos</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Vídeo com IA */}
-              <Card className="group border border-gray-700 bg-gray-800 hover:shadow-xl hover:shadow-xl transition-all duration-300 hover:scale-105">
-                <CardContent className="p-6 text-center">
-                  <h3 className="text-sm font-semibold text-white mb-2">Vídeo com IA</h3>
-                  <p className="text-xs text-gray-400 mb-4">Gere vídeos a partir de texto ou imagens</p>
-                  <Button asChild variant="outline" size="sm" className="w-full border-gray-600 bg-transparent text-gray-300 hover:bg-gray-700 hover:text-white">
-                    <Link href="/generate?tab=video">Gerar Vídeos</Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -1414,13 +1411,33 @@ export default function HomePage() {
               {/* Edição de Imagem com IA */}
               <Card className="group border border-gray-700 bg-gray-800 hover:shadow-xl hover:shadow-xl transition-all duration-300 hover:scale-105">
                 <CardContent className="p-6 text-center">
-                  <h3 className="text-sm font-semibold text-white mb-2">Edição de Imagem</h3>
-                  <p className="text-xs text-gray-400 mb-4">Edite com texto: remova, adicione ou modifique elementos</p>
+                  <h3 className="text-sm font-semibold text-white mb-2">3️⃣ Editor de Imagem</h3>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Quer ajustar uma criação? Vá em <strong className="text-white">Editor de Imagem</strong> e refine os detalhes.
+                  </p>
                   <Button asChild variant="outline" size="sm" className="w-full border-gray-600 bg-transparent text-gray-300 hover:bg-gray-700 hover:text-white">
                     <Link href="/editor">Editar Fotos</Link>
                   </Button>
                 </CardContent>
               </Card>
+
+              {/* Vídeo com IA */}
+              <Card className="group border border-gray-700 bg-gray-800 hover:shadow-xl hover:shadow-xl transition-all duration-300 hover:scale-105">
+                <CardContent className="p-6 text-center">
+                  <h3 className="text-sm font-semibold text-white mb-2">4️⃣ Vídeo com IA</h3>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Experimente gerar <strong className="text-white">vídeos realistas</strong> a partir das suas fotos.
+                  </p>
+                  <Button asChild variant="outline" size="sm" className="w-full border-gray-600 bg-transparent text-gray-300 hover:bg-gray-700 hover:text-white">
+                    <Link href="/generate?tab=video">Gerar Vídeos</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-400">
+                E se quiser mais estilos, explore nossos <Link href="/packages" className="text-blue-400 hover:text-blue-300 underline">Pacotes de Fotos e Créditos</Link>.
+              </p>
             </div>
           </div>
         </section>

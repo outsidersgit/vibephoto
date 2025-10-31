@@ -98,6 +98,9 @@ export function RealtimeModelList({ initialModels, userId }: RealtimeModelListPr
             Modelos em Treinamento
             <span className="ml-2 text-sm font-medium text-gray-500">({modelsByStatus.training.length})</span>
           </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Acompanhe o progresso do treinamento em tempo real. Tempo estimado: ~30 minutos.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {modelsByStatus.training.map((model) => (
               <ModelCard
