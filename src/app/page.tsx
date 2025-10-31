@@ -585,7 +585,7 @@ const MarqueeCarousel = ({ items, hoveredIndex, onHoverChange, onImageClick }: M
     const animate = () => {
       if (!marqueeRef.current) return
       
-      translateXRef.current -= 0.75 // Velocidade de scroll (ajustável)
+      translateXRef.current -= 1.0 // Velocidade de scroll (aumentada de 0.75 para 1.0)
       
       // Reset position when one set of items has scrolled completely
       // Calculate dynamically based on actual card width
