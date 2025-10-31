@@ -19,9 +19,9 @@ export const metadata: Metadata = {
   authors: [{ name: 'VibePhoto Team' }],
   // Evita 404 de /favicon.ico adicionando ícone explícito (PNG existente no /public)
   icons: {
-    icon: '/examples/desert-adventure.png',
-    shortcut: '/examples/desert-adventure.png',
-    apple: '/examples/desert-adventure.png'
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg'
   },
   openGraph: {
     title: 'VibePhoto',
