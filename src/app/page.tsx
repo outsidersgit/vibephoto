@@ -1181,14 +1181,14 @@ function NavigationSteps() {
     },
     {
       id: 7,
-      title: 'Adquira mais créditos quando quiser',
-      description: 'Os créditos são diferentes dos planos de assinatura. Com seu plano ativo, você recebe créditos mensais para gerar imagens, vídeos e usar ferramentas. Você também pode comprar créditos extras quando precisar, sem precisar mudar de plano.',
+      title: 'Adquira mais créditos',
+      description: 'Os pacotes de créditos são compras avulsas. Com a assinatura, você recebe créditos mensais. Acabou? Você pode comprar créditos extras quando quiser, sem mudar de plano.',
       action: 'Ver Créditos',
       href: '/credits'
     },
     {
       id: 8,
-      title: 'Navegação e compartilhamento',
+      title: '', // Sem título - apenas adendo
       description: 'Acesse todas as ferramentas pelas páginas do app ou pelos botões hover da galeria. Cada imagem também tem um botão de compartilhamento — divulgue suas criações com um clique.',
       action: 'Ver Galeria',
       href: '/gallery'
@@ -1235,7 +1235,7 @@ function NavigationSteps() {
           >
             {/* Main Title */}
             <motion.h2
-              className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight"
+              className="text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-6 tracking-tight"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
                 fontWeight: 700,
@@ -1255,10 +1255,10 @@ function NavigationSteps() {
             >
               <Button
                 onClick={() => setIsStarted(true)}
-                size="lg"
-                className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+                size="default"
+                className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-6 py-4 text-base rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
               >
-                <Play className="w-5 h-5 mr-2" fill="currentColor" />
+                <Play className="w-4 h-4 mr-2" fill="currentColor" />
                 Explorar ferramentas
               </Button>
             </motion.div>
@@ -1283,21 +1283,23 @@ function NavigationSteps() {
               transition={{ duration: 0.4 }}
               className="space-y-4"
             >
-              {/* Title */}
-              <motion.h2
-                className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-3 tracking-tight"
-                style={{
-                  fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
-                  fontWeight: 700,
-                  letterSpacing: '-0.02em',
-                  textShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
-                }}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.2 }}
-              >
-                {currentStepData.title}
-              </motion.h2>
+              {/* Title - Only show if title exists */}
+              {currentStepData.title && (
+                <motion.h2
+                  className="text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-3 tracking-tight"
+                  style={{
+                    fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    textShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+                  }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.2 }}
+                >
+                  {currentStepData.title}
+                </motion.h2>
+              )}
 
               {/* Description */}
               <motion.p
@@ -1322,13 +1324,13 @@ function NavigationSteps() {
               >
                 <Button
                   asChild
-                  size="lg"
-                  className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-6 py-4 text-base rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+                  size="default"
+                  className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-5 py-3 text-sm rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
                   onClick={() => router.push(currentStepData.href)}
                 >
                   <Link href={currentStepData.href}>
                     {currentStepData.action}
-                    <ArrowRight className="w-4 h-4 ml-2" />
+                    <ArrowRight className="w-3.5 h-3.5 ml-2" />
                   </Link>
                 </Button>
               </motion.div>
