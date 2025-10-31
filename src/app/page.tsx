@@ -1135,6 +1135,7 @@ function NavigationSteps() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
   const [isStarted, setIsStarted] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
 
   const steps = [
     {
@@ -1182,23 +1183,23 @@ function NavigationSteps() {
     {
       id: 7,
       title: 'Adquira mais créditos',
-      description: 'Os pacotes de créditos são compras avulsas. Com a assinatura, você recebe créditos mensais. Acabou? Você pode comprar créditos extras quando quiser, sem mudar de plano.',
+      description: 'Os pacotes de créditos são compras avulsas. Com a assinatura, você recebe créditos mensais. Acabaram? Você pode comprar mais quando quiser, diretamente pelo ícone de créditos no topo ou na página créditos, sem precisar mudar de plano.',
       action: 'Ver Créditos',
       href: '/credits'
     },
     {
       id: 8,
       title: '', // Sem título - apenas adendo
-      description: 'Acesse todas as ferramentas pelas páginas do app ou pelos botões hover da galeria. Cada imagem também tem um botão de compartilhamento — divulgue suas criações com um clique.',
-      action: 'Ver Galeria',
-      href: '/gallery'
+      description: 'Acesse todas as ferramentas pelas páginas do app ou pelos botões hover da galeria. Cada imagem também tem um botão de compartilhamento — divulgue suas criações com um clique. Vamos nessa?',
+      action: 'Começar',
+      href: '/models/create'
     }
   ]
 
-  // Auto-advance steps every 5 seconds - only when started
+  // Auto-advance steps every 5 seconds - only when started and not paused
   // Run only once, then return to initial state
   useEffect(() => {
-    if (!isStarted) return
+    if (!isStarted || isPaused) return
 
     const interval = setInterval(() => {
       setCurrentStep((prev) => {
@@ -1218,7 +1219,7 @@ function NavigationSteps() {
     }, 5000)
 
     return () => clearInterval(interval)
-  }, [isStarted, steps.length])
+  }, [isStarted, isPaused, steps.length])
 
   const currentStepData = steps[currentStep]
 
@@ -1270,7 +1271,13 @@ function NavigationSteps() {
 
   // Active navigation state
   return (
-    <div className="relative z-10 px-8 py-8 md:px-12 md:py-12 h-full flex flex-col">
+    <div 
+      className="relative z-10 px-8 py-8 md:px-12 md:py-12 h-full flex flex-col"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onFocus={() => setIsPaused(true)}
+      onBlur={() => setIsPaused(false)}
+    >
       <div className="max-w-3xl mx-auto w-full text-center flex-1 flex flex-col justify-between">
         {/* Step Content */}
         <div className="flex-1 flex flex-col justify-center">
@@ -1330,7 +1337,6 @@ function NavigationSteps() {
                 >
                   <Link href={currentStepData.href}>
                     {currentStepData.action}
-                    <ArrowRight className="w-3.5 h-3.5 ml-2" />
                   </Link>
                 </Button>
               </motion.div>
