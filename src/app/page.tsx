@@ -287,25 +287,37 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
       <motion.div 
         className="h-[180px] relative overflow-hidden rounded-2xl shadow-2xl"
         style={{
-          background: 'linear-gradient(135deg, rgba(0,0,0,0.98) 0%, rgba(10,10,15,0.98) 30%, rgba(15,15,20,0.98) 100%)',
-          border: '1px solid rgba(255,255,255,0.1)',
+          background: 'linear-gradient(135deg, rgba(0,0,0,0.98) 0%, rgba(15,15,25,0.98) 25%, rgba(25,25,35,0.98) 50%, rgba(15,15,25,0.98) 75%, rgba(5,5,15,0.98) 100%)',
+          border: '1px solid rgba(255,255,255,0.15)',
           backdropFilter: 'blur(20px)',
           willChange: 'transform',
           boxShadow: '0 20px 60px -15px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1) inset'
         }}
         whileHover={{ 
           scale: 1.02,
-          boxShadow: '0 25px 80px -15px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.15) inset',
+          boxShadow: '0 25px 80px -15px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.2) inset',
           transition: { duration: 0.3 }
         }}
       >
-        {/* Marca d'água - número em cinza escuro */}
+        {/* Gradiente adicional para efeito premium */}
+        <motion.div
+          className="absolute inset-0 pointer-events-none rounded-2xl"
+          style={{
+            background: 'linear-gradient(135deg, rgba(40,40,50,0.3) 0%, transparent 40%, transparent 60%, rgba(10,10,20,0.4) 100%)',
+            opacity: useTransform(scrollYProgress,
+              [cardStart, cardMidPoint, pauseEnd],
+              [0.5, 0.7, 0.6]
+            )
+          }}
+        />
+
+        {/* Marca d'água - número com maior contraste */}
         <motion.div
           className="absolute top-6 left-6 z-0 pointer-events-none"
           style={{
             opacity: useTransform(scrollYProgress,
               [cardStart, cardMidPoint, pauseEnd],
-              [0.15, 0.20, 0.18]
+              [0.25, 0.35, 0.30]
             )
           }}
         >
@@ -315,8 +327,8 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
               fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
               fontWeight: 100,
               letterSpacing: '-0.03em',
-              color: 'rgba(80,80,90,0.8)', // Cinza escuro
-              textShadow: '0 0 30px rgba(80,80,90,0.3)'
+              color: 'rgba(120,120,135,0.9)', // Cinza médio com muito mais contraste
+              textShadow: '0 0 40px rgba(120,120,135,0.4), 0 0 80px rgba(120,120,135,0.2)'
             }}
           >
             {step.id}
@@ -344,12 +356,13 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
           {/* Descrição - alinhada à direita */}
           <div className="ml-auto text-right">
             <p 
-              className="text-sm line-clamp-2 leading-relaxed max-w-[85%]"
+              className="text-sm line-clamp-2 leading-relaxed"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
                 fontWeight: 400,
                 letterSpacing: '0.015em',
-                color: 'rgba(200,200,210,0.85)' // Cinza claro
+                color: 'rgba(200,200,210,0.85)', // Cinza claro
+                maxWidth: '90%' // Garante alinhamento à direita
               }}
             >
               {step.description}
