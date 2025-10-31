@@ -97,7 +97,8 @@ export function GenerationInterface({
         }))
 
         // If completed successfully, verify it's saved in DB before redirecting
-        if (status === 'COMPLETED' && data.imageUrls && data.imageUrls.length > 0) {
+        // Note: status can be 'COMPLETED' (DB enum) or 'succeeded' (webhook status)
+        if ((status === 'COMPLETED' || status === 'succeeded') && data.imageUrls && data.imageUrls.length > 0) {
           const completedGeneration = { ...currentGeneration, ...data, status }
           
           setGenerationResults(prevResults => [
