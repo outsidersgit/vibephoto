@@ -51,9 +51,8 @@ export default function SignInPage() {
 
   const handleOAuthSignIn = async (provider: string) => {
     setIsLoading(true)
-    // OAuth will redirect to middleware which checks subscriptionStatus
-    // Middleware will redirect to /pricing if subscriptionStatus !== ACTIVE
-    await signIn(provider, { callbackUrl: '/' })
+    // OAuth will redirect to /auth/callback which checks subscriptionStatus
+    await signIn(provider, { callbackUrl: '/auth/callback' })
   }
 
   return (

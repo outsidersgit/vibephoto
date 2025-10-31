@@ -84,13 +84,14 @@ export async function POST(req: NextRequest) {
 
     const from = process.env.SMTP_FROM || process.env.SMTP_USER
     const subject = isAdmin ? 'Seu acesso ao VibePhoto' : 'Redefinição de senha - VibePhoto'
+    const signInUrl = `${process.env.NEXTAUTH_URL || 'https://vibephoto.app'}/auth/signin`
     const html = isAdmin
       ? `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333; border-bottom: 2px solid #667EEA; padding-bottom: 10px;">Bem-vindo ao VibePhoto</h2>
         <p>Olá! Seu acesso ao VibePhoto foi criado para o e-mail <b>${email}</b>. Você pode entrar de duas formas:</p>
         <ol style="margin: 12px 0 16px 18px; color:#333;">
-          <li style="margin:6px 0;"><b>Login com Google (recomendado):</b> use o mesmo e-mail (${email}).</li>
+          <li style="margin:6px 0;"><b>Login com Google (recomendado):</b> use o mesmo e-mail (${email}). <a href="${signInUrl}" style="color:#6d28d9;text-decoration:underline">Acesse aqui</a>.</li>
           <li style="margin:6px 0;"><b>Definir uma senha:</b> clique no botão abaixo em até <b>30 minutos</b> para criar sua senha. Depois, você pode usar e-mail/senha normalmente.</li>
         </ol>
         <p style="margin: 20px 0;">
@@ -117,7 +118,7 @@ export async function POST(req: NextRequest) {
       </div>
       `
     const text = isAdmin
-      ? `Olá! Seu acesso ao VibePhoto foi criado. Você pode entrar com Google usando ${email} ou definir sua senha (expira em 30 min): ${url}`
+      ? `Olá! Seu acesso ao VibePhoto foi criado. Você pode entrar com Google usando ${email} (${signInUrl}) ou definir sua senha (expira em 30 min): ${url}`
       : `Redefinição de senha do VibePhoto (expira em 30 min): ${url}`
 
     const info = await transporter.sendMail({

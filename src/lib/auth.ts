@@ -93,7 +93,7 @@ export const authOptions: NextAuthOptions = {
         // @ts-ignore
         token.subscriptionId = (user as any).subscriptionId || null
         // @ts-ignore
-        token.subscriptionStatus = (user as any).subscriptionStatus || null
+        token.subscriptionStatus = (user as any).subscriptionStatus || (account?.provider !== 'credentials' ? null : undefined)
         // @ts-ignore - Load subscription state from user
         token.hasActiveSubscription = (user as any).hasActiveSubscription || false
         // @ts-ignore - Load development mode from user
@@ -103,7 +103,8 @@ export const authOptions: NextAuthOptions = {
         console.log('🔐 JWT Callback - User Login:', {
           plan: token.plan,
           subscriptionStatus: token.subscriptionStatus,
-          subscriptionId: token.subscriptionId
+          subscriptionId: token.subscriptionId,
+          provider: account?.provider
         })
       }
 
@@ -187,10 +188,15 @@ export const authOptions: NextAuthOptions = {
           const email = user.email || (profile as any)?.email
           if (!email) return true
 
-          const existing = await prisma.user.findUnique({ where: { email } })
+          const existing = await prisma.user.findUnique({ 
+            where: { email },
+            select: { id: true, subscriptionStatus: true }
+          })
           if (existing) {
             // Force token to use existing user id
             ;(user as any).id = existing.id
+            // Store subscriptionStatus for redirect logic
+            ;(user as any).subscriptionStatus = existing.subscriptionStatus
 
             // Ensure Account row exists/links to same user
             const hasAccount = await prisma.account.findFirst({
@@ -212,12 +218,37 @@ export const authOptions: NextAuthOptions = {
                 }
               })
             }
+          } else {
+            // New user created via OAuth - subscriptionStatus will be null
+            ;(user as any).subscriptionStatus = null
           }
         }
       } catch (e) {
         console.error('signIn linking error:', e)
       }
       return true
+    },
+    async redirect({ url, baseUrl }) {
+      // Custom redirect logic for OAuth only
+      // Credentials provider uses redirect: false and handles redirect client-side
+      // OAuth providers go through this callback after authentication
+      
+      // If already going to callback, allow it
+      if (url.includes('/auth/callback')) {
+        if (url.startsWith('/')) return `${baseUrl}${url}`
+        return url
+      }
+      
+      // For OAuth, redirect to callback which checks subscriptionStatus
+      // Extract callbackUrl from url if present
+      try {
+        const urlObj = new URL(url, baseUrl)
+        const callbackUrl = urlObj.searchParams.get('callbackUrl') || urlObj.pathname || '/'
+        return `${baseUrl}/auth/callback?callbackUrl=${encodeURIComponent(callbackUrl)}`
+      } catch {
+        // Fallback: if url parsing fails, redirect to callback with home
+        return `${baseUrl}/auth/callback?callbackUrl=${encodeURIComponent('/')}`
+      }
     }
   },
   session: {
