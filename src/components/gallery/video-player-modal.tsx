@@ -47,6 +47,15 @@ export function VideoPlayerModal({ mediaItem, onClose }: VideoPlayerModalProps) 
   const controlsTimeoutRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
+    const video = videoRef.current
+    if (video) {
+      // Configurar para streaming progressivo - NUNCA carregar tudo de uma vez
+      video.preload = 'none'
+      video.setAttribute('preload', 'none')
+    }
+  }, [mediaItem.url])
+
+  useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       switch (e.key) {
         case 'Escape':
@@ -146,14 +155,24 @@ export function VideoPlayerModal({ mediaItem, onClose }: VideoPlayerModalProps) 
     }
   }, [mediaItem.url, mediaItem.id])
 
-  const togglePlayPause = () => {
+  const togglePlayPause = async () => {
     const video = videoRef.current
     if (!video) return
 
     if (isPlaying) {
       video.pause()
     } else {
-      video.play()
+      // Configurar para streaming progressivo antes de reproduzir
+      video.preload = 'none'
+      video.setAttribute('preload', 'none')
+      
+      // Reproduzir - o navegador fará HTTP Range Requests automaticamente
+      // Isso permite streaming progressivo (carrega apenas chunks necessários)
+      try {
+        await video.play()
+      } catch (err) {
+        console.error('Erro ao reproduzir vídeo:', err)
+      }
     }
   }
 
@@ -377,10 +396,12 @@ export function VideoPlayerModal({ mediaItem, onClose }: VideoPlayerModalProps) 
           className="max-w-full max-h-full"
           onClick={togglePlayPause}
           poster={mediaItem.thumbnailUrl}
-          preload="metadata"
+          preload="none"
           controls={false}
           muted
           playsInline
+          disablePictureInPicture
+          disableRemotePlayback
         >
           <source src={mediaItem.url} type="video/mp4" />
           Seu navegador não suporta reprodução de vídeo.

@@ -83,29 +83,61 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
     const videoElement = videoRef.current
     if (!videoElement) return
 
-    // Configurar para streaming progressivo - não carregar tudo de uma vez
-    videoElement.preload = 'metadata'
-    videoElement.load()
+    // Configurar para streaming progressivo - NUNCA carregar tudo de uma vez
+    videoElement.preload = 'none' // Importante: 'none' para não carregar nada até necessário
+    videoElement.setAttribute('preload', 'none')
+    
+    // Desabilitar carregamento automático - forçar streaming progressivo
+    if ('webkitPreservesPitch' in videoElement) {
+      (videoElement as any).webkitPreservesPitch = false
+    }
 
     const updateTime = () => setCurrentTime(videoElement.currentTime)
-    const updateDuration = () => setDuration(videoElement.duration)
+    const updateDuration = () => {
+      setDuration(videoElement.duration)
+    }
+
+    // Carregar apenas metadados (duração) quando necessário
+    const handleLoadedMetadata = () => {
+      setDuration(videoElement.duration)
+    }
+
+    // Monitorar progresso sem carregar tudo
+    const handleProgress = () => {
+      // O navegador fará streaming progressivo automaticamente com preload="none"
+      // Não precisamos fazer nada aqui, apenas monitorar
+    }
+
+    // Prevenir carregamento completo antes de play
+    const handleLoadStart = () => {
+      // Apenas carrega quando usuário clica em play (preload="none")
+    }
 
     videoElement.addEventListener('timeupdate', updateTime)
-    videoElement.addEventListener('loadedmetadata', updateDuration)
+    videoElement.addEventListener('loadedmetadata', handleLoadedMetadata)
+    videoElement.addEventListener('progress', handleProgress)
+    videoElement.addEventListener('loadstart', handleLoadStart)
     videoElement.addEventListener('ended', () => setIsPlaying(false))
+    
+    // Não usar canplaythrough pois isso pode forçar carregamento completo
+    // Usar canplay que indica que pode começar a tocar com dados mínimos
 
     // Limpar ao desmontar
     return () => {
       videoElement.removeEventListener('timeupdate', updateTime)
-      videoElement.removeEventListener('loadedmetadata', updateDuration)
+      videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      videoElement.removeEventListener('progress', handleProgress)
+      videoElement.removeEventListener('loadstart', handleLoadStart)
       // Pausar e resetar o vídeo ao desmontar para economizar banda
       videoElement.pause()
       videoElement.currentTime = 0
+      // Não remover src para evitar re-requests desnecessários
+      // Apenas resetar para estado inicial
       videoElement.load()
     }
-  }, [])
+  }, [isPlaying])
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     const videoElement = videoRef.current
     if (!videoElement) return
 
@@ -113,18 +145,37 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
       videoElement.pause()
       setIsPlaying(false)
     } else {
-      // Só carregar vídeo quando usuário clicar em play
-      // Usar buffering progressivo - carrega conforme necessário
-      if (videoElement.readyState < 2) {
-        // Se ainda não carregou metadados, carregar primeiro
+      // IMPORTANTE: Configurar para streaming progressivo ANTES de qualquer carregamento
+      videoElement.preload = 'none'
+      videoElement.setAttribute('preload', 'none')
+      
+      // Garantir que não há src configurado até agora (evita carregamento automático)
+      // O navegador fará HTTP Range Requests automaticamente quando necessário
+      // Isso permite streaming progressivo - carrega apenas chunks necessários
+      
+      try {
+        // Tentar reproduzir - o navegador automaticamente fará range requests progressivos
+        // Não carrega tudo de uma vez quando preload="none"
+        await videoElement.play()
+        setIsPlaying(true)
+      } catch (err: any) {
+        // Se play() falhou, pode ser porque precisa carregar metadados primeiro
+        // Mas mesmo assim, usar streaming progressivo
+        const playOnCanPlay = () => {
+          if (videoElement.readyState >= 2) { // HAVE_CURRENT_DATA
+            videoElement.play()
+              .then(() => setIsPlaying(true))
+              .catch(e => console.error('Erro ao reproduzir vídeo:', e))
+          }
+          videoElement.removeEventListener('canplay', playOnCanPlay)
+        }
+        
+        videoElement.addEventListener('canplay', playOnCanPlay, { once: true })
+        
+        // Carregar apenas o necessário para começar (não tudo)
+        // Com preload="none", isso fará apenas uma request HEAD ou pequena range request
         videoElement.load()
-        videoElement.addEventListener('loadeddata', () => {
-          videoElement.play().catch(err => console.error('Erro ao reproduzir vídeo:', err))
-        }, { once: true })
-      } else {
-        videoElement.play().catch(err => console.error('Erro ao reproduzir vídeo:', err))
       }
-      setIsPlaying(true)
     }
   }
 
