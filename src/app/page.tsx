@@ -189,46 +189,47 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
   scrollYProgress: any
   totalSteps: number
 }) => {
-  // Nova abordagem: empilhamento físico tipo Black Forest Labs
-  // Todos os cards ficam visíveis, empilhados verticalmente
-  // Apenas animamos a entrada sequencial
+  // Efeito de stacking progressivo vertical
+  // Cada card sobe e "para" momentaneamente antes do próximo aparecer
+  // Cards posicionados um abaixo do outro, sem sobreposição
 
-  const cardHeight = 130 // Altura de cada card empilhado (aumentada para melhor visualização)
+  const cardHeight = 160 // Altura de cada card (incluindo espaçamento)
+  const cardSpacing = 32 // Espaçamento entre cards
+  const totalCardHeight = cardHeight + cardSpacing
 
-  // LÓGICA SEQUENCIAL: Cada card depende do anterior, distribuição equilibrada
-  let baseDelay: number, animationEnd: number
+  // Progresso de cada card baseado no scroll
+  // Cada card ocupa 1/3 do progresso total da seção
+  const cardStart = index / totalSteps // 0, 0.33, 0.66
+  const cardEnd = (index + 1) / totalSteps // 0.33, 0.66, 1.0
+  const cardMidPoint = (cardStart + cardEnd) / 2 // Ponto médio para pausar
 
-  if (index === 0) {
-    // Card 1: SEMPRE visível quando seção entra (fixo, sem animação)
-    baseDelay = 0
-    animationEnd = 0
-  } else if (index === 1) {
-    // Card 2: Sobe no meio do scroll
-    baseDelay = 0.25
-    animationEnd = 0.45
-  } else {
-    // Card 3: Sobe logo após o Card 2, completa mais cedo
-    baseDelay = 0.3
-    animationEnd = 0.5
-  }
+  // Posição Y inicial (fora da tela, abaixo)
+  const initialY = 400
+  // Posição Y final (posição vertical sequencial)
+  const finalY = index * totalCardHeight
 
-  // Posição final FIXA para cada card - Card 1 mais baixo na seção
-  const finalY = index * cardHeight + 50 // +50px para baixar todos os cards
+  // Animação de entrada: card sobe de baixo para cima
+  // Pausa momentânea no ponto médio antes de finalizar a posição
+  // Criando zonas de "pausa" mais visíveis com múltiplos pontos de controle
+  const pauseStart = cardStart + (cardMidPoint - cardStart) * 0.7 // 70% do caminho até o meio
+  const pauseEnd = cardMidPoint + (cardEnd - cardMidPoint) * 0.3 // 30% após o meio
+  
+  const y = useTransform(scrollYProgress, 
+    [cardStart, pauseStart, cardMidPoint, pauseEnd, cardEnd],
+    [initialY, initialY * 0.5, finalY, finalY, finalY]
+  )
 
-  // Y position - Card 1 sempre na posição, outros animam suavemente
-  const y = index === 0
-    ? finalY
-    : useTransform(scrollYProgress, [baseDelay, animationEnd, 1], [400, finalY, finalY])
+  // Opacity: aparece suavemente quando começa a subir
+  const opacity = useTransform(scrollYProgress,
+    [cardStart, cardStart + 0.1, cardEnd],
+    [0, 1, 1]
+  )
 
-  // Opacity - Card 1 sempre visível, outros aparecem suavemente
-  const opacity = index === 0
-    ? 1
-    : useTransform(scrollYProgress, [baseDelay, animationEnd, 1], [0, 1, 1])
-
-  // Scale - Card 1 sempre normal, outros crescem suavemente
-  const scale = index === 0
-    ? 1
-    : useTransform(scrollYProgress, [baseDelay, animationEnd, 1], [0.9, 1, 1])
+  // Scale: começa pequeno e cresce suavemente
+  const scale = useTransform(scrollYProgress,
+    [cardStart, cardStart + 0.1, cardEnd],
+    [0.95, 1, 1]
+  )
 
   return (
     <motion.div
@@ -236,12 +237,14 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
         y,
         opacity,
         scale,
-        zIndex: index + 1, // Card 1: z=1, Card 2: z=2, Card 3: z=3 (por cima)
-        willChange: 'transform, opacity'
+        willChange: 'transform'
       }}
-      className="absolute inset-x-0 top-0"
+      className="absolute inset-x-0"
     >
-      <div className="h-[120px] bg-gray-200 border border-gray-300 rounded-xl shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 transform-gpu hover:rotate-1 hover:scale-[1.02] backdrop-blur-sm">
+      <div 
+        className="h-[160px] bg-white/90 backdrop-blur-md border border-gray-200 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300"
+        style={{ willChange: 'transform' }}
+      >
         <div className="p-6 h-full flex items-center">
           <div className="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center mr-5 flex-shrink-0 shadow-inner">
             <span className="text-white font-light text-sm opacity-70">{step.id}</span>
@@ -258,7 +261,7 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
   )
 }
 
-// Components for scroll stacking effect
+// Components for scroll stacking effect - Progressivo vertical
 const ScrollStackingCards = () => {
   const containerRef = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({
@@ -293,8 +296,20 @@ const ScrollStackingCards = () => {
     }
   ]
 
+  // Altura total dos cards (incluindo espaçamento)
+  const cardHeight = 160
+  const cardSpacing = 32
+  const totalHeight = steps.length * (cardHeight + cardSpacing)
+
   return (
-    <div ref={containerRef} className="relative h-full">
+    <div 
+      ref={containerRef} 
+      className="relative"
+      style={{ 
+        height: `${totalHeight}px`,
+        willChange: 'transform'
+      }}
+    >
       {steps.map((step, index) => (
         <ScrollStackingCard
           key={step.id}
@@ -1018,20 +1033,20 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* How it Works Section - Scroll Stacking */}
+      {/* How it Works Section - Scroll Stacking Progressivo */}
       {!session && (
         <section
           className="relative bg-white"
           style={{
-            fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
-            scrollSnapType: 'y mandatory'
+            fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
           }}
         >
           {/* Desktop Layout */}
           <div className="hidden lg:block">
-            {/* Container with scroll snapping */}
-            <div className="h-[250vh] relative">
-              <div className="sticky top-0 h-screen flex items-center" style={{ scrollSnapAlign: 'start' }}>
+            {/* Container com scroll progressivo - altura suficiente para animação completa */}
+            {/* Altura 300vh permite scroll suave e pausas momentâneas em cada card */}
+            <div className="h-[300vh] relative" style={{ willChange: 'transform' }}>
+              <div className="sticky top-0 h-screen flex items-center">
                 <div className="max-w-7xl mx-auto px-6 w-full">
                   <div className="grid grid-cols-2 gap-16 items-center">
                     {/* Left Side - Fixed Title */}
@@ -1054,8 +1069,8 @@ export default function HomePage() {
                       </motion.p>
                     </div>
 
-                    {/* Right Side - Stacking Cards */}
-                    <div className="relative h-[400px]">
+                    {/* Right Side - Stacking Cards Progressivo */}
+                    <div className="relative flex items-center justify-center" style={{ minHeight: '600px' }}>
                       <ScrollStackingCards />
                     </div>
                   </div>
