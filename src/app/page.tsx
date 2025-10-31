@@ -8,8 +8,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useEffect, useState, useRef } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 // Framer Motion imports
-import { motion, useScroll, useTransform, useInView } from 'framer-motion'
+import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion'
 
 interface CreditPackage {
   id: 'ESSENCIAL' | 'AVANÇADO' | 'PRO' | 'ENTERPRISE'
@@ -1129,6 +1130,191 @@ const AIToolsShowcase = () => {
   )
 }
 
+// Navigation Steps Component for Premium Card
+function NavigationSteps() {
+  const router = useRouter()
+  const [currentStep, setCurrentStep] = useState(0)
+
+  const steps = [
+    {
+      id: 1,
+      title: 'Crie seu modelo',
+      description: 'Crie seu modelo personalizado para poder gerar imagens únicas com IA.',
+      action: 'Criar Modelo',
+      href: '/models/create',
+      icon: Bot
+    },
+    {
+      id: 2,
+      title: 'Gere imagens',
+      description: 'Depois, vá em Gerar imagem e escolha o estilo que quiser.',
+      action: 'Gerar Fotos',
+      href: '/generate',
+      icon: ImageIcon
+    },
+    {
+      id: 3,
+      title: 'Edite suas criações',
+      description: 'Quer ajustar uma criação? Vá em Editor de Imagem e refine os detalhes.',
+      action: 'Editar Fotos',
+      href: '/editor',
+      icon: Edit3
+    },
+    {
+      id: 4,
+      title: 'Gere vídeos realistas',
+      description: 'Experimente gerar vídeos realistas a partir das suas fotos.',
+      action: 'Gerar Vídeos',
+      href: '/generate?tab=video',
+      icon: Video
+    },
+    {
+      id: 5,
+      title: 'Veja suas criações',
+      description: 'Acesse sua galeria e veja todas as suas criações em um só lugar.',
+      action: 'Ver Galeria',
+      href: '/gallery',
+      icon: Camera
+    },
+    {
+      id: 6,
+      title: 'Explore pacotes',
+      description: 'E se quiser mais estilos, explore nossos Pacotes de Fotos e Créditos.',
+      action: 'Ver Pacotes',
+      href: '/packages',
+      icon: Sparkles
+    }
+  ]
+
+  // Auto-advance steps every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentStep((prev) => (prev + 1) % steps.length)
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [steps.length])
+
+  const currentStepData = steps[currentStep]
+  const Icon = currentStepData.icon
+
+  return (
+    <div className="relative z-10 px-8 py-16 md:px-16 md:py-24 flex items-center justify-center min-h-[75vh]">
+      <div className="max-w-3xl mx-auto w-full text-center">
+        {/* Step Indicators */}
+        <div className="flex justify-center gap-2 mb-8">
+          {steps.map((step, index) => (
+            <button
+              key={step.id}
+              onClick={() => setCurrentStep(index)}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                index === currentStep
+                  ? 'w-8 bg-white'
+                  : 'w-2 bg-white/40 hover:bg-white/60'
+              }`}
+              aria-label={`Ir para etapa ${step.id}`}
+            />
+          ))}
+        </div>
+
+        {/* Step Content */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.4 }}
+            className="space-y-6"
+          >
+            {/* Icon */}
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className="flex justify-center mb-4"
+            >
+              <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+                <Icon className="w-10 h-10 text-white" />
+              </div>
+            </motion.div>
+
+            {/* Title */}
+            <motion.h2
+              className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight"
+              style={{
+                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                textShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+              }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+            >
+              {currentStepData.title}
+            </motion.h2>
+
+            {/* Description */}
+            <motion.p
+              className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto leading-relaxed"
+              style={{
+                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                textShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'
+              }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+            >
+              {currentStepData.description}
+            </motion.p>
+
+            {/* Action Button */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.4 }}
+            >
+              <Button
+                asChild
+                size="lg"
+                className="bg-white text-gray-900 hover:bg-gray-100 font-semibold px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+                onClick={() => router.push(currentStepData.href)}
+              >
+                <Link href={currentStepData.href}>
+                  {currentStepData.action}
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Link>
+              </Button>
+            </motion.div>
+
+            {/* Navigation Arrows */}
+            <div className="flex items-center justify-center gap-4 mt-8">
+              <button
+                onClick={() => setCurrentStep((prev) => (prev - 1 + steps.length) % steps.length)}
+                className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
+                aria-label="Etapa anterior"
+              >
+                <ArrowRight className="w-5 h-5 text-white rotate-180" />
+              </button>
+              <span className="text-white/60 text-sm">
+                {currentStep + 1} / {steps.length}
+              </span>
+              <button
+                onClick={() => setCurrentStep((prev) => (prev + 1) % steps.length)}
+                className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
+                aria-label="Próxima etapa"
+              >
+                <ArrowRight className="w-5 h-5 text-white" />
+              </button>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
+  )
+}
+
 export default function HomePage() {
   const { data: session, status } = useSession()
   const [mounted, setMounted] = useState(false)
@@ -1286,7 +1472,7 @@ export default function HomePage() {
         <>
           <section className="relative px-6 py-12 bg-gradient-to-b from-gray-50 to-white">
             <div className="max-w-4xl mx-auto">
-              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 text-left">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-left">
                 Olá, {session.user?.name || 'Usuário'}!
               </h1>
 
@@ -1297,43 +1483,100 @@ export default function HomePage() {
           </section>
 
           {/* Explore os detalhes - Premium Apple Style */}
-          <section className="relative px-6 py-20 bg-white">
-            <div className="max-w-6xl mx-auto">
-              {/* Premium Card */}
-              <div className="max-w-4xl mx-auto">
+          <section className="relative px-6 py-8 min-h-[85vh] flex items-center bg-white">
+            <div className="w-full mx-auto">
+              {/* Premium Card - Full Viewport */}
+              <motion.div
+                className="relative group overflow-hidden rounded-[40px] border border-gray-200/60 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)]"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                whileHover={{ 
+                  scale: 1.005,
+                  boxShadow: '0 25px 80px -15px rgba(0,0,0,0.12)',
+                  transition: { duration: 0.3 }
+                }}
+                style={{
+                  willChange: 'transform',
+                  minHeight: '75vh'
+                }}
+              >
+                {/* 3D Background Effect with Dark Theme Gradient */}
                 <motion.div
-                  className="relative group overflow-hidden rounded-[32px] bg-gradient-to-br from-gray-50 via-white to-gray-50 border border-gray-200/60 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)]"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                  whileHover={{ 
-                    scale: 1.005,
-                    boxShadow: '0 25px 80px -15px rgba(0,0,0,0.12)',
-                    transition: { duration: 0.3 }
-                  }}
+                  className="absolute inset-0 rounded-[40px]"
                   style={{
-                    willChange: 'transform'
+                    background: 'linear-gradient(135deg, #1A1A2E 0%, #3A3A5E 50%, #60A5FA 100%)',
                   }}
-                >
-                  {/* Content */}
-                  <div className="px-8 py-10 md:px-12 md:py-14">
-                    <div className="text-center">
-                      <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3 tracking-tight" style={{
-                        fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
-                        fontWeight: 700,
-                        letterSpacing: '-0.02em'
-                      }}>
-                        Crie. Transforme. Impressione.
-                      </h2>
-                    </div>
-                  </div>
+                  animate={{
+                    background: [
+                      'linear-gradient(135deg, #1A1A2E 0%, #3A3A5E 50%, #60A5FA 100%)',
+                      'linear-gradient(225deg, #3A3A5E 0%, #60A5FA 50%, #1A1A2E 100%)',
+                      'linear-gradient(315deg, #60A5FA 0%, #1A1A2E 50%, #3A3A5E 100%)',
+                      'linear-gradient(45deg, #1A1A2E 0%, #60A5FA 50%, #3A3A5E 100%)',
+                      'linear-gradient(135deg, #1A1A2E 0%, #3A3A5E 50%, #60A5FA 100%)',
+                    ],
+                  }}
+                  transition={{
+                    duration: 20,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
 
-                  {/* Premium Border Glow on Hover */}
-                  <div className="absolute inset-0 rounded-[32px] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <div className="absolute inset-0 rounded-[32px] bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-purple-500/10 blur-xl" />
-                  </div>
-                </motion.div>
-              </div>
+                {/* 3D Rotating Gradient Overlay */}
+                <motion.div
+                  className="absolute inset-0 rounded-[40px] opacity-60"
+                  style={{
+                    background: 'radial-gradient(circle at 30% 30%, rgba(96, 165, 250, 0.4) 0%, transparent 70%)',
+                  }}
+                  animate={{
+                    background: [
+                      'radial-gradient(circle at 30% 30%, rgba(96, 165, 250, 0.4) 0%, transparent 70%)',
+                      'radial-gradient(circle at 70% 70%, rgba(58, 58, 94, 0.4) 0%, transparent 70%)',
+                      'radial-gradient(circle at 50% 50%, rgba(26, 26, 46, 0.4) 0%, transparent 70%)',
+                      'radial-gradient(circle at 20% 80%, rgba(96, 165, 250, 0.4) 0%, transparent 70%)',
+                      'radial-gradient(circle at 30% 30%, rgba(96, 165, 250, 0.4) 0%, transparent 70%)',
+                    ],
+                    rotate: [0, 360],
+                  }}
+                  transition={{
+                    duration: 25,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+
+                {/* Additional 3D Depth Layer */}
+                <motion.div
+                  className="absolute inset-0 rounded-[40px] opacity-40"
+                  style={{
+                    background: 'linear-gradient(45deg, rgba(96, 165, 250, 0.2) 0%, rgba(58, 58, 94, 0.2) 50%, rgba(26, 26, 46, 0.2) 100%)',
+                    transformStyle: 'preserve-3d',
+                  }}
+                  animate={{
+                    transform: [
+                      'perspective(1000px) rotateX(0deg) rotateY(0deg)',
+                      'perspective(1000px) rotateX(5deg) rotateY(5deg)',
+                      'perspective(1000px) rotateX(0deg) rotateY(10deg)',
+                      'perspective(1000px) rotateX(-5deg) rotateY(5deg)',
+                      'perspective(1000px) rotateX(0deg) rotateY(0deg)',
+                    ],
+                  }}
+                  transition={{
+                    duration: 15,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+
+                {/* Content - Navigation Steps */}
+                <NavigationSteps />
+
+                {/* Premium Border Glow on Hover */}
+                <div className="absolute inset-0 rounded-[40px] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <div className="absolute inset-0 rounded-[40px] bg-gradient-to-r from-purple-500/20 via-blue-500/20 to-purple-500/20 blur-xl" />
+                </div>
+              </motion.div>
             </div>
           </section>
         </>
@@ -1733,10 +1976,6 @@ export default function HomePage() {
         /* User Options Section - Interactive Pitch */
         <section className="py-16 px-6 bg-gray-900" style={{ fontFamily: '-apple-system, "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif' }}>
           <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-white mb-2">Transforme suas ideias em realidade</h2>
-              <p className="text-gray-400 text-sm">Comece criando um modelo personalizado e depois gere fotos incríveis</p>
-            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {/* Modelo de IA */}
               <Card className="group border border-gray-700 bg-gray-800 hover:shadow-xl hover:shadow-xl transition-all duration-300 hover:scale-105">
