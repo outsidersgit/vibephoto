@@ -430,7 +430,7 @@ const MarqueeCarousel = ({ items, hoveredIndex, onHoverChange, onImageClick }: M
     const animate = () => {
       if (!marqueeRef.current) return
       
-      translateXRef.current -= 0.5 // Velocidade de scroll (ajustável)
+      translateXRef.current -= 0.75 // Velocidade de scroll (ajustável)
       
       // Reset position when one set of items has scrolled completely
       // Calculate dynamically based on actual card width
@@ -1530,13 +1530,6 @@ export default function HomePage() {
               className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />
-            
-            <div className="absolute bottom-4 left-4 right-4 text-center">
-              <div className="bg-black bg-opacity-50 backdrop-blur-sm rounded-lg p-3">
-                <h3 className="text-white text-lg font-medium">{selectedImage.title}</h3>
-                <p className="text-gray-200 text-sm mt-1">Clique fora da imagem para fechar</p>
-              </div>
-            </div>
           </div>
         </div>
       )}
