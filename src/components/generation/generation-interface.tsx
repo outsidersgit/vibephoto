@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 import { useToast } from '@/hooks/use-toast'
 import { useImageGeneration, useManualSync } from '@/hooks/useImageGeneration'
@@ -528,6 +529,11 @@ export function GenerationInterface({
                     }
                   </p>
                 )}
+
+                {/* Info message after generation */}
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 Após gerar, acesse a <Link href="/gallery" className="text-purple-400 hover:text-purple-300 underline">galeria</Link> para visualizar suas imagens
+                </p>
               </div>
             </CardContent>
           </Card>

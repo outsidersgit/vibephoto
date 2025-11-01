@@ -245,6 +245,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={4}
+                maxLength={2500}
                 className="resize-none text-sm bg-[#2C3E50] border-[#4A5F7A] text-white placeholder:text-gray-400 focus:border-[#5DADE2] rounded-xl font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               />
             </CardContent>

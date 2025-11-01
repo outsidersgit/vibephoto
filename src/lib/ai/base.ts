@@ -185,8 +185,8 @@ export function validatePrompt(prompt: string): { isValid: boolean; error?: stri
     return { isValid: false, error: 'Prompt cannot be empty' }
   }
   
-  if (prompt.length > 1000) {
-    return { isValid: false, error: 'Prompt is too long (max 1000 characters)' }
+  if (prompt.length > 2500) {
+    return { isValid: false, error: 'Prompt is too long (max 2500 characters)' }
   }
   
   // Check for potentially harmful content

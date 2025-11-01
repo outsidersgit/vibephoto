@@ -20,7 +20,7 @@ export const VIDEO_CONFIG = {
     durations: [5, 10] as const,
     aspectRatios: ['16:9', '9:16', '1:1'] as const,
     qualities: ['standard', 'pro'] as const,
-    maxPromptLength: 1500,
+    maxPromptLength: 2500,
     maxNegativePromptLength: 200
   },
 

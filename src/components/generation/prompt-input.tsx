@@ -145,7 +145,7 @@ export function PromptInput({
           </label>
           <div className="flex items-center space-x-2">
             <Badge variant="secondary" className="text-xs bg-gray-700 text-gray-300 border-slate-600">
-              {prompt.length}/1500
+              {prompt.length}/2500
             </Badge>
             {prompt && (
               <>
@@ -182,7 +182,7 @@ export function PromptInput({
           disabled={isGenerating}
           className="w-full px-3 py-3 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 resize-none text-white placeholder-slate-400"
           rows={3}
-          maxLength={1500}
+          maxLength={2500}
           placeholder="Descreva a foto que deseja criar... ex: 'foto profissional com roupa social, sorrindo, iluminação natural, alta qualidade'"
         />
         <div className="mt-2 text-xs text-gray-400">Seja específico para melhores resultados. Exemplos: iluminação, ambiente, lente, estilo.</div>

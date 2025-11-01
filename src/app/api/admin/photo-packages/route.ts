@@ -14,7 +14,7 @@ async function ensureAdmin() {
 export async function GET() {
   const ok = await ensureAdmin()
   if (!ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  const packages = await prisma.photoPackage.findMany({ orderBy: { sortOrder: 'asc' } })
+  const packages = await prisma.photoPackage.findMany({ orderBy: { createdAt: 'desc' } })
   return NextResponse.json({ packages })
 }
 
@@ -27,13 +27,14 @@ export async function POST(request: NextRequest) {
     description: z.string().nullable().optional(),
     category: z.string().nullable().optional(),
     price: z.number().nullable().optional(),
-    promptCount: z.number().int().nullable().optional(),
     isActive: z.boolean().default(true),
-    sortOrder: z.number().int().default(0),
-    tags: z.array(z.string()).default([]),
-    features: z.array(z.string()).default([]),
-    previewImages: z.array(z.string()).default([]),
-    prompts: z.array(z.string()).default([])
+    isPremium: z.boolean().default(false),
+    prompts: z.array(z.object({
+      text: z.string().min(1),
+      style: z.string().optional(),
+      description: z.string().optional()
+    })).default([]),
+    previewUrls: z.array(z.string()).default([])
   })
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
@@ -53,13 +54,14 @@ export async function PUT(request: NextRequest) {
     description: z.string().nullable().optional(),
     category: z.string().nullable().optional(),
     price: z.number().nullable().optional(),
-    promptCount: z.number().int().nullable().optional(),
     isActive: z.boolean().optional(),
-    sortOrder: z.number().int().optional(),
-    tags: z.array(z.string()).optional(),
-    features: z.array(z.string()).optional(),
-    previewImages: z.array(z.string()).optional(),
-    prompts: z.array(z.string()).optional()
+    isPremium: z.boolean().optional(),
+    prompts: z.array(z.object({
+      text: z.string().min(1),
+      style: z.string().optional(),
+      description: z.string().optional()
+    })).optional(),
+    previewUrls: z.array(z.string()).optional()
   })
   const parsed = schema.safeParse(body)
   if (!parsed.success) {

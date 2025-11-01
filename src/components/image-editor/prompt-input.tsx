@@ -54,6 +54,7 @@ export function PromptInput({
           placeholder={placeholder}
           disabled={disabled}
           rows={3}
+          maxLength={2500}
           className={`
             block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg 
             placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 
@@ -78,10 +79,10 @@ export function PromptInput({
 
       {/* Character Count */}
       <div className="flex justify-between items-center text-sm text-gray-500">
-        <span>{value.length}/1000 characters</span>
-        {value.length > 900 && (
+        <span>{value.length}/2500 characters</span>
+        {value.length > 2250 && (
           <span className="text-orange-500 font-medium">
-            {1000 - value.length} characters remaining
+            {2500 - value.length} characters remaining
           </span>
         )}
       </div>
@@ -123,9 +124,9 @@ export function PromptInput({
       )}
 
       {/* Validation Messages */}
-      {value.length > 1000 && (
+      {value.length > 2500 && (
         <p className="text-sm text-red-600">
-          Prompt is too long. Please keep it under 1000 characters.
+          Prompt is too long. Please keep it under 2500 characters.
         </p>
       )}
       

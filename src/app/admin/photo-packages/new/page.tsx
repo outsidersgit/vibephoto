@@ -4,6 +4,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+interface Prompt {
+  text: string
+  style?: string
+  description?: string
+}
+
 export default function NewPhotoPackagePage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -14,7 +20,8 @@ export default function NewPhotoPackagePage() {
     category: 'PROFESSIONAL' as const,
     price: '',
     isActive: true,
-    isPremium: false
+    isPremium: false,
+    prompts: [] as Prompt[]
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,7 +42,7 @@ export default function NewPhotoPackagePage() {
           price: price,
           isActive: formData.isActive,
           isPremium: formData.isPremium,
-          prompts: [],
+          prompts: formData.prompts,
           previewUrls: []
         })
       })
@@ -50,6 +57,26 @@ export default function NewPhotoPackagePage() {
       setError(err.message || 'Erro ao criar pacote')
       setIsLoading(false)
     }
+  }
+
+  const addPrompt = () => {
+    setFormData({
+      ...formData,
+      prompts: [...formData.prompts, { text: '', style: 'photographic' }]
+    })
+  }
+
+  const removePrompt = (index: number) => {
+    setFormData({
+      ...formData,
+      prompts: formData.prompts.filter((_, i) => i !== index)
+    })
+  }
+
+  const updatePrompt = (index: number, field: keyof Prompt, value: string) => {
+    const updated = [...formData.prompts]
+    updated[index] = { ...updated[index], [field]: value }
+    setFormData({ ...formData, prompts: updated })
   }
 
   return (
@@ -151,6 +178,66 @@ export default function NewPhotoPackagePage() {
             />
             <span className="text-sm text-gray-700">Premium</span>
           </label>
+        </div>
+
+        {/* Prompts Section */}
+        <div className="border-t pt-4 mt-4">
+          <div className="flex items-center justify-between mb-3">
+            <label className="block text-sm font-medium text-gray-700">
+              Prompts de Geração
+            </label>
+            <button
+              type="button"
+              onClick={addPrompt}
+              className="text-sm bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700"
+            >
+              + Adicionar Prompt
+            </button>
+          </div>
+          
+          {formData.prompts.length === 0 ? (
+            <p className="text-sm text-gray-500 italic">Nenhum prompt cadastrado</p>
+          ) : (
+            <div className="space-y-3">
+              {formData.prompts.map((prompt, index) => (
+                <div key={index} className="border border-gray-200 rounded-md p-3 bg-gray-50">
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-700">Prompt {index + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => removePrompt(index)}
+                      className="text-sm text-red-600 hover:text-red-700"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <textarea
+                      value={prompt.text}
+                      onChange={(e) => updatePrompt(index, 'text', e.target.value)}
+                      placeholder="Descreva a imagem que será gerada..."
+                      rows={3}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      required
+                    />
+                    
+                    <select
+                      value={prompt.style || 'photographic'}
+                      onChange={(e) => updatePrompt(index, 'style', e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    >
+                      <option value="photographic">Photographic</option>
+                      <option value="cinematic">Cinematic</option>
+                      <option value="artistic">Artistic</option>
+                      <option value="portrait">Portrait</option>
+                      <option value="landscape">Landscape</option>
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 pt-4">

@@ -202,6 +202,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                         value={formData.prompt}
                         onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
                         rows={5}
+                        maxLength={VIDEO_CONFIG.options.maxPromptLength}
                         className="resize-none text-sm bg-[#2C3E50] border-[#4A5F7A] text-white placeholder:text-gray-400 focus:border-[#5DADE2] rounded-xl"
                       />
                     </div>
@@ -269,6 +270,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                         value={formData.prompt}
                         onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
                         rows={4}
+                        maxLength={VIDEO_CONFIG.options.maxPromptLength}
                         className="resize-none text-sm bg-[#2C3E50] border-[#4A5F7A] text-white placeholder:text-gray-400 focus:border-[#5DADE2] rounded-xl"
                       />
                     </div>
