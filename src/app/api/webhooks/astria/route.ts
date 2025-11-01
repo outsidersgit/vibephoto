@@ -279,9 +279,10 @@ async function handleTuneWebhook(payload: AstriaWebhookPayload) {
 async function handlePromptWebhook(payload: AstriaWebhookPayload) {
   try {
     // Find the corresponding generation in our database
+    // Astria sends ID as number, but we store it as string in jobId
     const generation = await prisma.generation.findFirst({
       where: {
-        jobId: payload.id
+        jobId: String(payload.id)
       }
     })
 

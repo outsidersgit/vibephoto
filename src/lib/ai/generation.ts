@@ -31,6 +31,16 @@ export async function generateImage(params: SimpleGenerationParams, generationId
     style = 'photographic'
   } = params
 
+  // Get the generation to retrieve userId
+  const generation = await prisma.generation.findUnique({
+    where: { id: generationId },
+    select: { userId: true }
+  })
+
+  if (!generation) {
+    throw new Error('Generation not found')
+  }
+
   // Get the model
   const model = await prisma.aIModel.findFirst({
     where: { id: modelId }
@@ -73,7 +83,7 @@ export async function generateImage(params: SimpleGenerationParams, generationId
       output_format: 'png',
       output_quality: 95
     },
-    webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/generation`
+    webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/astria?type=prompt&id=${generationId}&userId=${generation.userId}&secret=${process.env.ASTRIA_WEBHOOK_SECRET}`
   }
 
   console.log(`🚀 Starting package generation for model ${model.name}...`)
