@@ -325,7 +325,7 @@ export async function POST(request: NextRequest) {
       await tx.generation.update({
         where: { id: generation.id },
         data: {
-          jobId: generationResponse.id,
+          jobId: String(generationResponse.id),
           aiProvider: actualProvider, // Use actual provider, not hybrid
           estimatedCompletionTime: generationResponse.estimatedTime ?
             new Date(Date.now() + generationResponse.estimatedTime * 1000) : null,

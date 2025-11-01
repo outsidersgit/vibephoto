@@ -93,7 +93,7 @@ export async function generateImage(params: SimpleGenerationParams, generationId
   await prisma.generation.update({
     where: { id: generationId },
     data: {
-      jobId: generationResponse.id,
+      jobId: String(generationResponse.id),
       status: 'PROCESSING'
     }
   })

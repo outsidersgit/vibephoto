@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
     await prisma.generation.update({
       where: { id: generation.id },
       data: {
-        jobId: generationResponse.id,
+        jobId: String(generationResponse.id),
         aiProvider: actualProvider, // Use actual provider, not hybrid
         status: generationResponse.status === 'starting' ? 'PROCESSING' : generationResponse.status,
         metadata: {
