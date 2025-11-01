@@ -4,6 +4,7 @@ import { getModelsByUserId } from '@/lib/db/models'
 import { getVideoGenerationsByUserId, getVideoGenerationStats } from '@/lib/db/videos'
 import { AutoSyncGalleryInterface } from '@/components/gallery/auto-sync-gallery-interface'
 import { prisma } from '@/lib/db'
+import Script from 'next/script'
 
 interface GalleryPageProps {
   searchParams: Promise<{
@@ -198,8 +199,57 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-      {/* Header */}
+    <>
+      {/* CRITICAL: Script inline que verifica autenticação ANTES do React hidratar */}
+      {/* Isso previne erros quando a página é restaurada do bfcache */}
+      <Script
+        id="auth-redirect-script"
+        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function() {
+              const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/editor', '/profile', '/settings', '/credits', '/packages'];
+              const currentPath = window.location.pathname;
+              const isProtected = protectedPaths.some(path => currentPath.startsWith(path));
+              
+              if (!isProtected) return;
+              
+              function hasNextAuthSession() {
+                const cookies = document.cookie.split(';');
+                return cookies.some(cookie => {
+                  const cookieName = cookie.trim().split('=')[0];
+                  return cookieName.includes('next-auth') || 
+                         cookieName.includes('__Secure-next-auth') || 
+                         cookieName.includes('__Host-next-auth');
+                });
+              }
+              
+              if (!hasNextAuthSession()) {
+                console.log('🚫 [AuthRedirectScript] Sem sessão detectada - redirecionando para login');
+                const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent(currentPath);
+                window.location.replace(redirectUrl);
+                return;
+              }
+              
+              window.addEventListener('pageshow', function(event) {
+                if (event.persisted) {
+                  console.log('🔄 [AuthRedirectScript] Página restaurada do bfcache - verificando sessão...');
+                  setTimeout(function() {
+                    if (!hasNextAuthSession()) {
+                      console.log('🚫 [AuthRedirectScript] Sem sessão após bfcache - redirecionando');
+                      const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent(currentPath);
+                      window.location.replace(redirectUrl);
+                    }
+                  }, 100);
+                }
+              });
+            })();
+          `,
+        }}
+      />
+      
+      <div className="min-h-screen bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+        {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-8">
@@ -266,5 +316,6 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
         />
       </div>
     </div>
+    </>
   )
 }
