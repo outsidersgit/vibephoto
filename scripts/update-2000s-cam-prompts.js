@@ -1,5 +1,13 @@
 const { PrismaClient } = require('@prisma/client')
-const prisma = new PrismaClient()
+const path = require('path')
+
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL
+    }
+  }
+})
 
 async function update2000sCamPrompts() {
   try {
@@ -58,10 +66,10 @@ async function update2000sCamPrompts() {
     console.log('✅ Pacote atualizado com sucesso!')
     console.log(`📊 ID: ${updated.id}`)
     console.log(`📦 Nome: ${updated.name}`)
-    console.log(`🎯 Prompts cadastrados: ${(updated.prompts as any[]).length}`)
+    console.log(`🎯 Prompts cadastrados: ${updated.prompts.length}`)
     
     // Print each prompt
-    (updated.prompts as any[]).forEach((p, i) => {
+    updated.prompts.forEach((p, i) => {
       console.log(`\n   Prompt ${i + 1}:`)
       console.log(`   - Texto: ${p.text.substring(0, 100)}...`)
       console.log(`   - Estilo: ${p.style || 'photographic'}`)
