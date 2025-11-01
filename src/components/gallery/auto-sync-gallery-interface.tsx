@@ -118,9 +118,24 @@ export function AutoSyncGalleryInterface({
   const isAuthorized = useAuthGuard()
   const { data: session, status } = useSession()
   
+  // CRITICAL: Redirecionar se não autorizado (usando useEffect para não violar regras dos hooks)
+  useEffect(() => {
+    if (isAuthorized === false || status === 'unauthenticated') {
+      console.log('🚫 [Gallery] Acesso não autorizado - redirecionando para login')
+      const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent('/gallery')
+      try {
+        window.location.replace(redirectUrl)
+      } catch (error) {
+        console.error('❌ [Gallery] Erro ao redirecionar:', error)
+        // Fallback se replace falhar
+        window.location.href = redirectUrl
+      }
+    }
+  }, [isAuthorized, status])
+  
   // CRITICAL: Se não autorizado, bloquear renderização ANTES de usar estados iniciais
+  // Isso previne erros de renderização quando a página é restaurada do bfcache sem autenticação
   if (isAuthorized === false || status === 'unauthenticated') {
-    console.log('🚫 [Gallery] Acesso não autorizado - bloqueando renderização')
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
