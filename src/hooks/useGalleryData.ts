@@ -52,10 +52,25 @@ export function useGalleryData(filters: GalleryFilters, placeholderData?: Galler
 
       return response.json()
     },
-    staleTime: 30 * 1000, // 30 segundos
-    gcTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 30 * 1000, // 30 segundos - dados são considerados frescos
+    gcTime: 5 * 60 * 1000, // 5 minutos - mantém em cache
     placeholderData, // Mantém dados anteriores durante refetch (React Query v5)
-    // placeholderData mantém os dados enquanto carrega novos (evita desaparecimento)
+    // CRITICAL: Atualização automática quando há gerações processando
+    refetchInterval: (data) => {
+      // Verificar se há gerações processando na resposta anterior
+      const hasProcessingGenerations = data?.generations?.some((g: any) => 
+        g.status === 'PROCESSING' || g.status === 'PENDING'
+      )
+      // Se há processamento, refetch a cada 10 segundos
+      // Se não, desabilitar polling (SSE vai cuidar das atualizações)
+      return hasProcessingGenerations ? 10000 : false
+    },
+    // CRITICAL: Refetch quando janela ganha foco (usuário volta à aba)
+    refetchOnWindowFocus: true,
+    // CRITICAL: Refetch quando reconectar à internet
+    refetchOnReconnect: true,
+    // Não refetch automaticamente ao montar se já temos dados frescos
+    refetchOnMount: 'always', // Mas refetch sempre ao montar para garantir sincronização
   })
 }
 

@@ -115,8 +115,47 @@ export function AutoSyncGalleryInterface({
   user
 }: AutoSyncGalleryInterfaceProps) {
   // CRITICAL: Proteção contra botão voltar (bfcache) após logout
-  const isAuthorized = useAuthGuard()
   const { data: session, status } = useSession()
+  const isAuthorized = useAuthGuard()
+  
+  // CRITICAL: Verificação IMEDIATA antes de qualquer hook ou estado
+  // Prevenir erro React #300 ao bloquear renderização completamente
+  if (typeof window !== 'undefined') {
+    // Verificar cookies diretamente (sem depender de NextAuth que pode estar em estado inconsistente)
+    const hasSessionCookie = () => {
+      try {
+        const cookies = document.cookie.split(';')
+        return cookies.some(cookie => {
+          const cookieName = cookie.trim().split('=')[0]
+          return cookieName.includes('next-auth') || 
+                 cookieName.includes('__Secure-next-auth') || 
+                 cookieName.includes('__Host-next-auth')
+        })
+      } catch (e) {
+        return false
+      }
+    }
+    
+    // CRITICAL: Se não há cookie de sessão, redirecionar IMEDIATAMENTE
+    if (!hasSessionCookie() && (status === 'unauthenticated' || isAuthorized === false)) {
+      // Bloquear qualquer renderização adicional
+      const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent('/gallery')
+      try {
+        window.location.replace(redirectUrl)
+      } catch (error) {
+        window.location.href = redirectUrl
+      }
+      // Retornar componente mínimo para evitar erro React
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Redirecionando para login...</p>
+          </div>
+        </div>
+      )
+    }
+  }
   
   // CRITICAL: Redirecionar se não autorizado (usando useEffect para não violar regras dos hooks)
   useEffect(() => {
@@ -127,7 +166,6 @@ export function AutoSyncGalleryInterface({
         window.location.replace(redirectUrl)
       } catch (error) {
         console.error('❌ [Gallery] Erro ao redirecionar:', error)
-        // Fallback se replace falhar
         window.location.href = redirectUrl
       }
     }

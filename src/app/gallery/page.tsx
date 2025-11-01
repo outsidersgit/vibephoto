@@ -208,6 +208,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
         dangerouslySetInnerHTML={{
           __html: `
             (function() {
+              // CRITICAL: Executar IMEDIATAMENTE, sem aguardar nada
               const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/editor', '/profile', '/settings', '/credits', '/packages'];
               const currentPath = window.location.pathname;
               const isProtected = protectedPaths.some(path => currentPath.startsWith(path));
@@ -225,6 +226,16 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
                   });
                 } catch (e) {
                   return false;
+                }
+              }
+              
+              // CRITICAL: Bloquear renderização do React se não há sessão
+              // Prevenir erros React #300 ao bloquear hidratação
+              if (typeof window !== 'undefined' && window.__NEXT_DATA__) {
+                const originalApp = window.__NEXT_DATA__;
+                if (!hasNextAuthSession()) {
+                  // Bloquear hidratação do React
+                  console.log('🚫 [AuthRedirectScript] Bloqueando hidratação do React - sem sessão');
                 }
               }
               
@@ -262,55 +273,85 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
                 return originalFetch.apply(this, args);
               };
               
-              // CRITICAL: Verificar IMEDIATAMENTE ao carregar
+              // CRITICAL: Verificar IMEDIATAMENTE ao carregar (ANTES de tudo)
               function checkAndRedirect() {
                 if (!hasNextAuthSession()) {
-                  console.log('🚫 [AuthRedirectScript] Sem sessão detectada - redirecionando para login');
+                  console.log('🚫 [AuthRedirectScript] Sem sessão detectada - redirecionando IMEDIATAMENTE para login');
                   const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent(currentPath);
+                  // CRITICAL: Usar replace em vez de href para não adicionar ao history
                   try {
+                    // Interromper qualquer execução futura
+                    window.stop && window.stop();
                     window.location.replace(redirectUrl);
                   } catch (e) {
-                    window.location.href = redirectUrl;
+                    // Fallback se replace falhar
+                    try {
+                      window.location.href = redirectUrl;
+                    } catch (e2) {
+                      // Último recurso: recarregar para login
+                      window.location = redirectUrl;
+                    }
                   }
                   return true;
                 }
                 return false;
               }
               
-              // Verificar imediatamente
-              if (checkAndRedirect()) return;
+              // CRITICAL: Verificar IMEDIATAMENTE (executar antes de React)
+              if (checkAndRedirect()) {
+                // Parar execução se redirecionou
+                return;
+              }
               
               // CRITICAL: Verificar também quando página é restaurada do bfcache (botão voltar)
               window.addEventListener('pageshow', function(event) {
                 if (event.persisted) {
                   console.log('🔄 [AuthRedirectScript] Página restaurada do bfcache - verificando sessão IMEDIATAMENTE...');
-                  // Verificar imediatamente, sem delay
-                  if (checkAndRedirect()) return;
+                  // Verificar IMEDIATAMENTE, sem delay
+                  if (checkAndRedirect()) {
+                    event.preventDefault && event.preventDefault();
+                    event.stopPropagation && event.stopPropagation();
+                    return;
+                  }
                   
-                  // Verificar novamente após pequeno delay (caso cookies não estejam prontos ainda)
+                  // Verificar novamente após delay mínimo (caso cookies não estejam prontos)
                   setTimeout(function() {
                     if (checkAndRedirect()) return;
-                  }, 50);
+                  }, 10);
                 }
-              }, true); // Use capture phase para executar antes de outros listeners
+              }, true); // CRITICAL: capture phase para executar ANTES de React
               
               // CRITICAL: Verificar também no evento popstate (botão voltar/avançar)
               window.addEventListener('popstate', function(event) {
                 console.log('🔄 [AuthRedirectScript] popstate detectado - verificando sessão...');
+                // Verificar IMEDIATAMENTE sem delay
+                if (checkAndRedirect()) {
+                  event.preventDefault && event.preventDefault();
+                  event.stopPropagation && event.stopPropagation();
+                  return;
+                }
+                // Verificar novamente após delay mínimo
                 setTimeout(function() {
                   checkAndRedirect();
-                }, 50);
-              }, true);
+                }, 10);
+              }, true); // CRITICAL: capture phase
               
-              // CRITICAL: Verificar antes de React hidratar (se possível)
+              // CRITICAL: Verificar ANTES de React hidratar
               if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', function() {
-                  checkAndRedirect();
-                });
+                  if (checkAndRedirect()) return;
+                }, true); // capture phase
               } else {
-                // DOM já carregou, verificar agora
-                checkAndRedirect();
+                // DOM já carregou, verificar AGORA
+                if (checkAndRedirect()) return;
               }
+              
+              // CRITICAL: Verificar também no load (última chance antes do React)
+              window.addEventListener('load', function() {
+                if (!hasNextAuthSession()) {
+                  checkAndRedirect();
+                }
+              }, true);
             })();
           `,
         }}
@@ -354,34 +395,43 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <AutoSyncGalleryInterface
-          initialGenerations={generationsData.generations}
-          initialVideos={videosData.videos}
-          pagination={{
-            page,
-            limit,
-            total: generationsData.totalCount,
-            pages: Math.ceil(generationsData.totalCount / limit)
-          }}
-          videoPagination={{
-            page,
-            limit,
-            total: videosData.totalCount,
-            pages: Math.ceil(videosData.totalCount / limit)
-          }}
-          models={models}
-          stats={stats}
-          videoStats={videoStats}
-          filters={{
-            model: modelFilter,
-            search: searchQuery,
-            sort: sortBy,
-            view: viewMode,
-            page,
-            tab: activeTab
-          }}
-          user={session.user}
-        />
+        {session?.user ? (
+          <AutoSyncGalleryInterface
+            initialGenerations={generationsData.generations}
+            initialVideos={videosData.videos}
+            pagination={{
+              page,
+              limit,
+              total: generationsData.totalCount,
+              pages: Math.ceil(generationsData.totalCount / limit)
+            }}
+            videoPagination={{
+              page,
+              limit,
+              total: videosData.totalCount,
+              pages: Math.ceil(videosData.totalCount / limit)
+            }}
+            models={models}
+            stats={stats}
+            videoStats={videoStats}
+            filters={{
+              model: modelFilter,
+              search: searchQuery,
+              sort: sortBy,
+              view: viewMode,
+              page,
+              tab: activeTab
+            }}
+            user={session.user}
+          />
+        ) : (
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Verificando autenticação...</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
     </>
