@@ -128,13 +128,26 @@ export function useLogout() {
       
       console.log(`  ➡️ Redirecionando para ${redirectUrl}...`)
       
-      // Aguardar um pequeno delay para garantir que os logs sejam visíveis
-      await new Promise(resolve => setTimeout(resolve, 100))
+      // IMPORTANTE: Aguardar tempo suficiente para garantir que TODOS os logs sejam visíveis
+      // e persistem no console mesmo após redirecionamento
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Forçar flush dos logs antes de redirecionar
+      console.log('✅ Logout completo realizado com sucesso - redirecionando...')
+      console.log('%c════════════════════════════════════════', 'color: #10b981; font-weight: bold;')
+      console.log('%c✓ TODOS OS CACHES FORAM LIMPOS', 'color: #10b981; font-weight: bold; font-size: 14px')
+      console.log('%c✓ localStorage limpo', 'color: #10b981')
+      console.log('%c✓ sessionStorage limpo', 'color: #10b981')
+      console.log('%c✓ Cookies removidos', 'color: #10b981')
+      console.log('%c✓ React Query cache limpo', 'color: #10b981')
+      console.log('%c✓ History state limpo', 'color: #10b981')
+      console.log('%c════════════════════════════════════════', 'color: #10b981; font-weight: bold;')
+
+      // Aguardar mais um pouco para garantir que logs foram renderizados
+      await new Promise(resolve => setTimeout(resolve, 200))
 
       // Redirecionar manualmente após limpeza completa
       window.location.href = redirectUrl
-
-      console.log('✅ Logout completo realizado com sucesso - redirecionando...')
     } catch (error) {
       console.error('❌ Erro durante logout:', error)
       

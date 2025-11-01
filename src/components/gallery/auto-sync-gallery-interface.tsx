@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import dynamic from 'next/dynamic'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 import { useToast } from '@/hooks/use-toast'
@@ -114,8 +115,22 @@ export function AutoSyncGalleryInterface({
   user
 }: AutoSyncGalleryInterfaceProps) {
   // CRITICAL: Proteção contra botão voltar (bfcache) após logout
-  useAuthGuard()
+  const isAuthorized = useAuthGuard()
+  const { data: session, status } = useSession()
   
+  // CRITICAL: Se não autorizado, bloquear renderização ANTES de usar estados iniciais
+  if (isAuthorized === false || status === 'unauthenticated') {
+    console.log('🚫 [Gallery] Acesso não autorizado - bloqueando renderização')
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecionando para login...</p>
+        </div>
+      </div>
+    )
+  }
+
   const router = useRouter()
   const searchParams = useSearchParams()
   const { addToast } = useToast()
@@ -136,25 +151,39 @@ export function AutoSyncGalleryInterface({
     page: parseInt(searchParams.get('page') || '1'),
   }
 
-  // Use React Query para dados da galeria - passar initialGenerations como placeholder
+  // CRITICAL: Só usar initialGenerations se autorizado e tem sessão
+  const safeInitialGenerations = (isAuthorized === true && session) ? initialGenerations : []
+  const safeInitialVideos = (isAuthorized === true && session) ? initialVideos : []
+
+  // Use React Query para dados da galeria - passar safeInitialGenerations como placeholder
   const {
     data: galleryData,
     isLoading: isLoadingGallery,
     isRefetching,
     refetch: refetchGallery
   } = useGalleryData(galleryFilters, {
-    generations: initialGenerations,
+    generations: safeInitialGenerations,
     editHistory: [],
-    videos: initialVideos,
+    videos: safeInitialVideos,
     stats: initialStats,
     pagination
   } as any)
 
   // State local para manter gerações visíveis mesmo durante refetch
-  // Mescla dados do React Query com atualizações otimistas para evitar desaparecimento
-  const [localGenerations, setLocalGenerations] = useState<any[]>(initialGenerations)
+  // CRITICAL: Inicializar vazio se não autorizado
+  const [localGenerations, setLocalGenerations] = useState<any[]>(safeInitialGenerations)
   const [localEditHistory, setLocalEditHistory] = useState<any[]>([])
-  const [localVideos, setLocalVideos] = useState<any[]>(initialVideos)
+  const [localVideos, setLocalVideos] = useState<any[]>(safeInitialVideos)
+  
+  // CRITICAL: Limpar dados locais se sessão for perdida
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      console.log('🚫 [Gallery] Sessão perdida - limpando dados locais')
+      setLocalGenerations([])
+      setLocalEditHistory([])
+      setLocalVideos([])
+    }
+  }, [status])
   
   // Atualizar estado local quando React Query retornar novos dados
   useEffect(() => {

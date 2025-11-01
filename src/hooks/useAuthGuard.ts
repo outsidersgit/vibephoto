@@ -2,54 +2,76 @@
 
 import { useSession } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 /**
  * Hook para proteger páginas contra acesso via bfcache (botão voltar) após logout
  * Verifica sessão quando a página é restaurada do cache do navegador
+ * @returns {boolean} - Retorna false se a página deve ser bloqueada (não autenticado)
  */
 export function useAuthGuard() {
   const { data: session, status } = useSession()
   const pathname = usePathname()
   const hasCheckedRef = useRef(false)
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
 
   // Lista de rotas protegidas que requerem autenticação
   const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/editor', '/profile', '/settings', '/credits', '/packages']
   
   const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path))
 
+  // Verificação SÍNCRONA imediata para bloquear renderização
   useEffect(() => {
     if (!isProtectedPath) {
-      return // Não verificar em rotas públicas
+      setIsAuthorized(true)
+      return
     }
 
-    // Verificar sessão quando a página é carregada ou restaurada do bfcache
-    const checkAuth = () => {
-      // Aguardar um pouco para garantir que a sessão foi carregada
-      setTimeout(() => {
-        // Se não está autenticado, redirecionar
-        if (status === 'unauthenticated' || (!session && status !== 'loading')) {
-          console.log('🚫 Acesso não autorizado detectado via bfcache - redirecionando para login')
-          // Usar window.location.replace para evitar adicionar ao history (evita botão voltar)
-          const callbackUrl = encodeURIComponent(pathname)
-          window.location.replace(`/auth/signin?callbackUrl=${callbackUrl}`)
-        }
-      }, 200)
+    // Verificação IMEDIATA sem delay - se não está autenticado, bloquear
+    if (status === 'unauthenticated') {
+      console.log('🚫 [useAuthGuard] Sessão não autenticada - bloqueando renderização')
+      setIsAuthorized(false)
+      // Redirecionar imediatamente
+      const callbackUrl = encodeURIComponent(pathname)
+      window.location.replace(`/auth/signin?callbackUrl=${callbackUrl}`)
+      return
     }
 
-    // Verificar imediatamente
-    if (!hasCheckedRef.current) {
-      checkAuth()
-      hasCheckedRef.current = true
+    // Se está carregando, aguardar
+    if (status === 'loading') {
+      setIsAuthorized(null) // null = loading
+      return
     }
 
-    // Verificar quando a página é restaurada do bfcache (evento pageshow)
+    // Se tem sessão, autorizar
+    if (session) {
+      setIsAuthorized(true)
+    } else {
+      setIsAuthorized(false)
+      const callbackUrl = encodeURIComponent(pathname)
+      window.location.replace(`/auth/signin?callbackUrl=${callbackUrl}`)
+    }
+  }, [session, status, pathname, isProtectedPath])
+
+  // Verificar quando a página é restaurada do bfcache (evento pageshow)
+  useEffect(() => {
+    if (!isProtectedPath) {
+      return
+    }
+
     const handlePageShow = (event: PageTransitionEvent) => {
       // event.persisted = true significa que a página foi restaurada do bfcache
       if (event.persisted) {
-        console.log('🔄 Página restaurada do bfcache - verificando autenticação...')
+        console.log('🔄 [useAuthGuard] Página restaurada do bfcache - verificando autenticação...')
         hasCheckedRef.current = false
-        checkAuth()
+        
+        // Verificar imediatamente e bloquear se não autenticado
+        if (status === 'unauthenticated' || !session) {
+          console.log('🚫 [useAuthGuard] Não autenticado após bfcache - bloqueando e redirecionando')
+          setIsAuthorized(false)
+          const callbackUrl = encodeURIComponent(pathname)
+          window.location.replace(`/auth/signin?callbackUrl=${callbackUrl}`)
+        }
       }
     }
 
@@ -60,18 +82,7 @@ export function useAuthGuard() {
     }
   }, [session, status, pathname, isProtectedPath])
 
-  // Verificar também quando a sessão muda (logout em outra aba, por exemplo)
-  useEffect(() => {
-    if (!isProtectedPath) {
-      return
-    }
-
-    // Se status mudou para unauthenticated, redirecionar imediatamente
-    if (status === 'unauthenticated') {
-      console.log('🚫 Sessão não autenticada detectada - redirecionando para login')
-      const callbackUrl = encodeURIComponent(pathname)
-      window.location.replace(`/auth/signin?callbackUrl=${callbackUrl}`)
-    }
-  }, [status, pathname, isProtectedPath])
+  // Retornar autorização para componentes usarem
+  return isAuthorized !== false // true ou null (loading) permite renderização, false bloqueia
 }
 
