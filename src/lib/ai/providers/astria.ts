@@ -377,10 +377,8 @@ export class AstriaProvider extends AIProvider {
       // text (required) - Descrição da imagem
       formData.append('prompt[text]', finalPrompt)
       
-      // negative_prompt (optional)
-      if (request.negativePrompt) {
-        formData.append('prompt[negative_prompt]', request.negativePrompt)
-      }
+      // NOTA: negative_prompt NÃO é suportado em modelos Flux da Astria
+      // Removido conforme erro 422: "negative_prompt not supported on Flux"
       
       // num_images (optional) - Range: 1-8
       const numImages = Math.min(Math.max(1, request.params.num_outputs || 1), 8)

@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowRight, ArrowDown, Sparkles, Users, Zap, Shield, Plus, ImageIcon, TrendingUp, Crown, CreditCard, Upload, Bot, Wand2, Camera, Star, User, X, Calendar, Check, Video, ArrowUp, Edit3, Play, Pause } from 'lucide-react'
+import { ArrowDown, Sparkles, Users, Zap, Shield, Plus, ImageIcon, TrendingUp, Crown, CreditCard, Upload, Bot, Wand2, Camera, Star, User, X, Calendar, Check, Video, ArrowUp, Edit3, Play, Pause } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useEffect, useState, useRef } from 'react'
@@ -1346,14 +1346,6 @@ function NavigationSteps() {
 
         {/* Step Indicators - Fixed at bottom */}
         <div className="flex items-center justify-center gap-4 mt-8 pt-4">
-          <button
-            onClick={() => setCurrentStep((prev) => (prev - 1 + steps.length) % steps.length)}
-            className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
-            aria-label="Etapa anterior"
-          >
-            <ArrowRight className="w-5 h-5 text-white rotate-180" />
-          </button>
-          
           {/* Step Indicators */}
           <div className="flex justify-center gap-2">
             {steps.map((step, index) => (
@@ -1369,14 +1361,6 @@ function NavigationSteps() {
               />
             ))}
           </div>
-
-          <button
-            onClick={() => setCurrentStep((prev) => (prev + 1) % steps.length)}
-            className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all duration-300"
-            aria-label="Próxima etapa"
-          >
-            <ArrowRight className="w-5 h-5 text-white" />
-          </button>
         </div>
       </div>
     </div>

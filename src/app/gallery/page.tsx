@@ -72,7 +72,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
             userPackage: {
               include: {
                 package: {
-                  select: { id: true, name: true, slug: true }
+                  select: { id: true, name: true }
                 }
               }
             }

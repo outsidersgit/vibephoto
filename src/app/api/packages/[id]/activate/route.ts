@@ -132,7 +132,7 @@ export async function POST(
         userId,
         userPackage.id,
         requiredCredits,
-        { packageName: packageMetadata.name }
+        { packageName: photoPackage.name }
       )
       console.log('✅ Credit transaction recorded for package activation')
     } catch (error) {
