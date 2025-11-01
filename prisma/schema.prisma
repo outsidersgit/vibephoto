@@ -396,7 +396,6 @@ model UserPackage {
   package     PhotoPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
   generations Generation[] // All generations created for this package
 
-  @@unique([userId, packageId]) // Each user can only activate a package once
   @@index([userId])
   @@index([status])
   @@index([activatedAt])

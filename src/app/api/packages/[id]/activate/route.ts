@@ -84,23 +84,6 @@ export async function POST(
       return NextResponse.json({ error: 'Package is not active' }, { status: 400 })
     }
 
-    // Check if user already activated this package
-    const existingUserPackage = await prisma.userPackage.findUnique({
-      where: {
-        userId_packageId: {
-          userId,
-          packageId
-        }
-      }
-    })
-
-    if (existingUserPackage) {
-      return NextResponse.json({
-        error: 'Package already activated',
-        userPackage: existingUserPackage
-      }, { status: 400 })
-    }
-
     // Validate user has enough credits
     const canUse = await canUserUseCredits(userId, requiredCredits)
 
