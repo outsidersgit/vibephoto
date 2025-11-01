@@ -55,7 +55,7 @@ export function useAuthGuard() {
     if (status === 'unauthenticated') {
       console.log('🚫 [useAuthGuard] Sessão não autenticada - redirecionando imediatamente')
       setIsAuthorized(false)
-      redirectToLogin.current(pathname)
+      redirectToLogin(pathname)
       return
     }
 
@@ -71,7 +71,7 @@ export function useAuthGuard() {
     } else {
       // Sem sessão após loading - redirecionar
       setIsAuthorized(false)
-      redirectToLogin.current(pathname)
+      redirectToLogin(pathname)
     }
   }, [session, status, pathname, isProtectedPath])
 
@@ -89,7 +89,7 @@ export function useAuthGuard() {
       // Se não há sessão na memória, pode ser bfcache
       if (!session && status !== 'loading') {
         console.log('🔄 [useAuthGuard] Verificação inicial - possível bfcache detectado')
-        redirectToLogin.current(pathname)
+        redirectToLogin(pathname)
       }
     }
   }, [])
@@ -116,7 +116,7 @@ export function useAuthGuard() {
           if (status === 'unauthenticated' || (!session && status !== 'loading')) {
             console.log('🚫 [useAuthGuard] Não autenticado após bfcache - redirecionando imediatamente')
             setIsAuthorized(false)
-            redirectToLogin.current(pathname)
+            redirectToLogin(pathname)
           } else if (session) {
             console.log('✅ [useAuthGuard] Sessão válida após bfcache')
             setIsAuthorized(true)
@@ -127,10 +127,24 @@ export function useAuthGuard() {
       }
     }
 
-    window.addEventListener('pageshow', handlePageShow)
+    // CRITICAL: Usar capture phase para executar ANTES de outros listeners
+    window.addEventListener('pageshow', handlePageShow, true)
+    
+    // CRITICAL: Também verificar no popstate (botão voltar/avançar)
+    const handlePopState = () => {
+      console.log('🔄 [useAuthGuard] popstate detectado - verificando autenticação...')
+      if (status === 'unauthenticated' || !session) {
+        console.log('🚫 [useAuthGuard] Não autenticado após popstate - redirecionando')
+        setIsAuthorized(false)
+        redirectToLogin(pathname)
+      }
+    }
+    
+    window.addEventListener('popstate', handlePopState, true)
 
     return () => {
-      window.removeEventListener('pageshow', handlePageShow)
+      window.removeEventListener('pageshow', handlePageShow, true)
+      window.removeEventListener('popstate', handlePopState, true)
     }
   }, [session, status, pathname, isProtectedPath])
 

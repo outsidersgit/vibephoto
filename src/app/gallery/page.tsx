@@ -215,34 +215,68 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
               if (!isProtected) return;
               
               function hasNextAuthSession() {
-                const cookies = document.cookie.split(';');
-                return cookies.some(cookie => {
-                  const cookieName = cookie.trim().split('=')[0];
-                  return cookieName.includes('next-auth') || 
-                         cookieName.includes('__Secure-next-auth') || 
-                         cookieName.includes('__Host-next-auth');
-                });
+                try {
+                  const cookies = document.cookie.split(';');
+                  return cookies.some(cookie => {
+                    const cookieName = cookie.trim().split('=')[0];
+                    return cookieName.includes('next-auth') || 
+                           cookieName.includes('__Secure-next-auth') || 
+                           cookieName.includes('__Host-next-auth');
+                  });
+                } catch (e) {
+                  return false;
+                }
               }
               
-              if (!hasNextAuthSession()) {
-                console.log('🚫 [AuthRedirectScript] Sem sessão detectada - redirecionando para login');
-                const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent(currentPath);
-                window.location.replace(redirectUrl);
-                return;
+              // CRITICAL: Verificar IMEDIATAMENTE ao carregar
+              function checkAndRedirect() {
+                if (!hasNextAuthSession()) {
+                  console.log('🚫 [AuthRedirectScript] Sem sessão detectada - redirecionando para login');
+                  const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent(currentPath);
+                  try {
+                    window.location.replace(redirectUrl);
+                  } catch (e) {
+                    window.location.href = redirectUrl;
+                  }
+                  return true;
+                }
+                return false;
               }
               
+              // Verificar imediatamente
+              if (checkAndRedirect()) return;
+              
+              // CRITICAL: Verificar também quando página é restaurada do bfcache (botão voltar)
               window.addEventListener('pageshow', function(event) {
                 if (event.persisted) {
-                  console.log('🔄 [AuthRedirectScript] Página restaurada do bfcache - verificando sessão...');
+                  console.log('🔄 [AuthRedirectScript] Página restaurada do bfcache - verificando sessão IMEDIATAMENTE...');
+                  // Verificar imediatamente, sem delay
+                  if (checkAndRedirect()) return;
+                  
+                  // Verificar novamente após pequeno delay (caso cookies não estejam prontos ainda)
                   setTimeout(function() {
-                    if (!hasNextAuthSession()) {
-                      console.log('🚫 [AuthRedirectScript] Sem sessão após bfcache - redirecionando');
-                      const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent(currentPath);
-                      window.location.replace(redirectUrl);
-                    }
-                  }, 100);
+                    if (checkAndRedirect()) return;
+                  }, 50);
                 }
-              });
+              }, true); // Use capture phase para executar antes de outros listeners
+              
+              // CRITICAL: Verificar também no evento popstate (botão voltar/avançar)
+              window.addEventListener('popstate', function(event) {
+                console.log('🔄 [AuthRedirectScript] popstate detectado - verificando sessão...');
+                setTimeout(function() {
+                  checkAndRedirect();
+                }, 50);
+              }, true);
+              
+              // CRITICAL: Verificar antes de React hidratar (se possível)
+              if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                  checkAndRedirect();
+                });
+              } else {
+                // DOM já carregou, verificar agora
+                checkAndRedirect();
+              }
             })();
           `,
         }}
