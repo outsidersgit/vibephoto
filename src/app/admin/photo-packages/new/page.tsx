@@ -32,6 +32,9 @@ export default function NewPhotoPackagePage() {
     try {
       const price = formData.price ? parseFloat(formData.price) : null
       
+      // Filtrar prompts vazios antes de enviar
+      const validPrompts = formData.prompts.filter(p => p.text.trim().length > 0)
+      
       const response = await fetch('/api/admin/photo-packages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,7 +45,7 @@ export default function NewPhotoPackagePage() {
           price: price,
           isActive: formData.isActive,
           isPremium: formData.isPremium,
-          prompts: formData.prompts,
+          prompts: validPrompts,
           previewUrls: []
         })
       })
@@ -219,7 +222,6 @@ export default function NewPhotoPackagePage() {
                       placeholder="Descreva a imagem que será gerada..."
                       rows={3}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                      required
                     />
                     
                     <select

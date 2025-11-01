@@ -48,6 +48,8 @@ export async function PUT(request: NextRequest) {
   const ok = await ensureAdmin()
   if (!ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const body = await request.json()
+  console.log('📦 [ADMIN_PHOTO_PACKAGES] PUT request body:', JSON.stringify(body, null, 2))
+  
   const schema = z.object({
     id: z.string().min(1),
     name: z.string().min(1).optional(),
@@ -65,10 +67,15 @@ export async function PUT(request: NextRequest) {
   })
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
+    console.error('❌ [ADMIN_PHOTO_PACKAGES] Validation failed:', parsed.error.issues)
     return NextResponse.json({ error: 'Invalid payload', issues: parsed.error.issues }, { status: 400 })
   }
   const { id, ...rest } = parsed.data
+  console.log(`📝 [ADMIN_PHOTO_PACKAGES] Updating package ${id} with data:`, JSON.stringify(rest, null, 2))
+  
   const updated = await prisma.photoPackage.update({ where: { id }, data: rest as any })
+  console.log('✅ [ADMIN_PHOTO_PACKAGES] Package updated successfully')
+  
   return NextResponse.json({ pkg: updated })
 }
 

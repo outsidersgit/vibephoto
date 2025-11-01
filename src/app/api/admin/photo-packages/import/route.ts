@@ -43,12 +43,12 @@ export async function POST(req: NextRequest) {
     if (existing) {
       await prisma.photoPackage.update({
         where: { id },
-        data: { name, description, category, prompts, previewUrls, isPremium, price: price ?? undefined, isActive: true }
+        data: { name, description, category, prompts, previewUrls, isPremium, price, isActive: true }
       })
       results.push({ id, status: 'updated' })
     } else {
       await prisma.photoPackage.create({
-        data: { id, name, description, category, prompts, previewUrls, isPremium, price: price ?? undefined, isActive: true }
+        data: { id, name, description, category, prompts, previewUrls, isPremium, price, isActive: true }
       })
       results.push({ id, status: 'created' })
     }

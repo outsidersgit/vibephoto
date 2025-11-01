@@ -70,28 +70,38 @@ export default function EditPhotoPackagePage() {
     try {
       const price = formData.price ? parseFloat(formData.price) : null
       
+      // Filtrar prompts vazios antes de enviar
+      const validPrompts = formData.prompts.filter(p => p.text.trim().length > 0)
+      
+      const payload = {
+        id,
+        name: formData.name,
+        description: formData.description || null,
+        category: formData.category,
+        price: price,
+        isActive: formData.isActive,
+        isPremium: formData.isPremium,
+        prompts: validPrompts
+      }
+      
+      console.log('📤 [EDIT_PAGE] Sending PUT request:', JSON.stringify(payload, null, 2))
+      
       const response = await fetch('/api/admin/photo-packages', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          name: formData.name,
-          description: formData.description || null,
-          category: formData.category,
-          price: price,
-          isActive: formData.isActive,
-          isPremium: formData.isPremium,
-          prompts: formData.prompts
-        })
+        body: JSON.stringify(payload)
       })
 
       if (!response.ok) {
         const data = await response.json()
+        console.error('❌ [EDIT_PAGE] Request failed:', data)
         throw new Error(data.error || 'Erro ao atualizar pacote')
       }
 
+      console.log('✅ [EDIT_PAGE] Package updated successfully')
       router.push('/admin/photo-packages')
     } catch (err: any) {
+      console.error('❌ [EDIT_PAGE] Error:', err)
       setError(err.message || 'Erro ao atualizar pacote')
       setIsSaving(false)
     }
@@ -273,7 +283,6 @@ export default function EditPhotoPackagePage() {
                       placeholder="Descreva a imagem que será gerada..."
                       rows={3}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                      required
                     />
                     
                     <select
