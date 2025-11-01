@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -44,6 +45,7 @@ interface CreditPackagesInterfaceProps {
 }
 
 export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) {
+  const { data: session, status } = useSession()
   const [packages, setPackages] = useState<CreditPackage[]>([])
   const [balance, setBalance] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -64,15 +66,39 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
   }, [])
 
   useEffect(() => {
-    loadPackagesAndBalance()
-  }, [])
+    // CRITICAL: Verificar se há sessão antes de fazer fetch
+    if (status !== 'loading' && session?.user && user?.id) {
+      loadPackagesAndBalance()
+    } else if (status !== 'loading' && !session?.user) {
+      // Não autenticado - parar loading sem fazer fetch
+      setLoading(false)
+    }
+  }, [status, session, user?.id])
 
   const loadPackagesAndBalance = async () => {
+    // CRITICAL: Verificar novamente antes de fazer fetch
+    if (!session?.user || !user?.id) {
+      setLoading(false)
+      return
+    }
+    
     try {
       const [packagesRes, balanceRes] = await Promise.all([
         fetch('/api/credit-packages'),
         fetch('/api/credits/balance')
       ])
+
+      // CRITICAL: Verificar se response é 401 e ignorar (usuário não autenticado)
+      if (balanceRes.status === 401) {
+        console.log('🚫 [CreditPackagesInterface] Não autenticado - ignorando fetch de balance')
+        // Ainda tentar carregar packages (podem ser públicos)
+        const packagesData = await packagesRes.json()
+        if (packagesData.success) {
+          setPackages(packagesData.packages)
+        }
+        setLoading(false)
+        return
+      }
 
       const packagesData = await packagesRes.json()
       const balanceData = await balanceRes.json()
@@ -85,6 +111,11 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
         setBalance(balanceData.balance)
       }
     } catch (error) {
+      // CRITICAL: Não logar erros 401 como erros (são esperados após logout)
+      if (error instanceof Error && error.message.includes('401')) {
+        console.log('🚫 [CreditPackagesInterface] Não autenticado - ignorando erro')
+        return
+      }
       console.error('Error loading data:', error)
     } finally {
       setLoading(false)

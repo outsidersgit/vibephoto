@@ -4,6 +4,7 @@
  */
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useSession } from 'next-auth/react'
 
 interface CreditBalance {
   subscriptionCredits: number
@@ -29,8 +30,11 @@ interface CreditPackage {
 
 /**
  * Hook para buscar saldo de créditos com cache otimizado
+ * CRITICAL: Não faz fetch se usuário não está autenticado
  */
 export function useCreditBalance() {
+  const { data: session, status } = useSession()
+  
   return useQuery<CreditBalance>({
     queryKey: ['credits', 'balance'],
     queryFn: async () => {
@@ -41,6 +45,8 @@ export function useCreditBalance() {
       const data = await response.json()
       return data.balance
     },
+    // CRITICAL: Desabilitar query se não há sessão para evitar 401s
+    enabled: status !== 'loading' && !!session?.user,
     // Cache agressivo: dados mudam pouco, modal deve ser instantâneo
     staleTime: 60 * 1000, // 1 minuto - considera dados frescos
     gcTime: 5 * 60 * 1000, // 5 minutos - mantém em cache
@@ -51,8 +57,11 @@ export function useCreditBalance() {
 
 /**
  * Hook para buscar pacotes de créditos disponíveis
+ * CRITICAL: Não faz fetch se usuário não está autenticado
  */
 export function useCreditPackages() {
+  const { data: session, status } = useSession()
+  
   return useQuery<CreditPackage[]>({
     queryKey: ['credits', 'packages'],
     queryFn: async () => {
@@ -63,6 +72,8 @@ export function useCreditPackages() {
       const data = await response.json()
       return data.packages || []
     },
+    // CRITICAL: Desabilitar query se não há sessão para evitar 401s
+    enabled: status !== 'loading' && !!session?.user,
     // Pacotes mudam raramente
     staleTime: 5 * 60 * 1000, // 5 minutos
     gcTime: 30 * 60 * 1000, // 30 minutos

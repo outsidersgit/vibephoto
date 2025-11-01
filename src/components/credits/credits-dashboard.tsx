@@ -71,13 +71,32 @@ export function CreditsDashboard({ user }: CreditsDashboardProps) {
   }>>([])
 
   useEffect(() => {
-    loadDashboardData()
+    // CRITICAL: Verificar se há user antes de fazer fetch
+    if (user?.id) {
+      loadDashboardData()
+    }
   }, [user.id])
 
   const loadDashboardData = async () => {
+    // CRITICAL: Verificar novamente antes de fazer fetch
+    if (!user?.id) {
+      return
+    }
+    
     setLoading(true)
     try {
       const response = await fetch('/api/credits/balance')
+      
+      // CRITICAL: Verificar se response é 401 e ignorar (usuário não autenticado)
+      if (response.status === 401) {
+        console.log('🚫 [CreditsDashboard] Não autenticado - ignorando fetch')
+        return
+      }
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch credit balance')
+      }
+      
       const data = await response.json()
       
       if (data.success) {
@@ -98,6 +117,11 @@ export function CreditsDashboard({ user }: CreditsDashboardProps) {
         generateNotifications(stats)
       }
     } catch (error) {
+      // CRITICAL: Não logar erros 401 como erros (são esperados após logout)
+      if (error instanceof Error && error.message.includes('401')) {
+        console.log('🚫 [CreditsDashboard] Não autenticado - ignorando erro')
+        return
+      }
       console.error('Error loading dashboard data:', error)
     } finally {
       setLoading(false)

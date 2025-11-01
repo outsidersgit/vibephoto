@@ -228,6 +228,40 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
                 }
               }
               
+              // CRITICAL: Interceptar fetch para prevenir chamadas 401
+              const originalFetch = window.fetch;
+              window.fetch = function(...args) {
+                try {
+                  let url = '';
+                  if (typeof args[0] === 'string') {
+                    url = args[0];
+                  } else if (args[0] instanceof Request) {
+                    url = args[0].url;
+                  } else if (args[0] && typeof args[0] === 'object' && args[0].url) {
+                    url = args[0].url;
+                  }
+                  
+                  const isApiCall = url && (url.startsWith('/api/') || url.includes('/api/'));
+                  const isProtectedApi = isApiCall && (
+                    url.includes('/api/credits/balance') || 
+                    url.includes('/api/gallery/') || 
+                    url.includes('/api/models/') ||
+                    url.includes('/api/generate/')
+                  );
+                  
+                  // Se não há sessão e é uma API protegida, cancelar fetch
+                  if (isProtectedApi && !hasNextAuthSession()) {
+                    console.log('🚫 [AuthRedirectScript] Bloqueando chamada de API sem sessão:', url);
+                    return Promise.reject(new Error('Unauthorized - session expired'));
+                  }
+                } catch (e) {
+                  // Se erro ao interceptar, permitir fetch original
+                  console.warn('⚠️ [AuthRedirectScript] Erro ao interceptar fetch:', e);
+                }
+                
+                return originalFetch.apply(this, args);
+              };
+              
               // CRITICAL: Verificar IMEDIATAMENTE ao carregar
               function checkAndRedirect() {
                 if (!hasNextAuthSession()) {

@@ -10,23 +10,23 @@
 ## 🔐 **1. Fluxo de Assinatura e Pagamentos Recorrentes**
 
 ### **1.1 Assinar um plano**
-- [✅] ✅ Botão do plano leva corretamente ao checkout
-- [✅] ✅ Checkout mostra valor, recorrência e descrição corretos
-- [✅] ✅ Dados do usuário (nome/e-mail) são carregados automaticamente
+- [✅] Botão do plano leva corretamente ao checkout
+- [✅] Checkout mostra valor, recorrência e descrição corretos
+- [✅] Dados do usuário (nome/e-mail) são carregados automaticamente
 - [❌] Pagamento com cartão de crédito válido confirma sem erro
 - [❌] Plano é ativado imediatamente após pagamento
 - [❌] Créditos iniciais ou limites aparecem na conta
 - [❌] Mensagem ou e-mail de confirmação recebido
 
 ### **1.2 Fazer upgrade de plano**
-- [✅] ✅ Botão "Fazer upgrade" visível e funcional
-- [✅] ✅ Checkout mostra valor proporcional ou atualizado
+- [✅] Botão "Fazer upgrade" visível e funcional
+- [✅] Checkout mostra valor proporcional ou atualizado
 - [❌] Após pagamento, limites e créditos são atualizados
 - [❌] Plano antigo substituído corretamente
 - [❌] Interface exibe status do novo plano sem delay
 
 ### **1.3 Fazer downgrade de plano**
-- [✅] ✅ Botão "Fazer downgrade" acessível
+- [✅] Botão "Fazer downgrade" acessível
 - [❌] Aviso sobre perda de benefícios exibido corretamente
 - [❌] Novo plano aplicado sem cobrança indevida
 - [❌] Data de renovação ajustada corretamente
@@ -44,8 +44,8 @@
 ## 💰 **2. Compra de Créditos (Pacotes Avulsos)**
 
 ### **2.1 Compra via Pix**
-- [✅] ✅ Selecionar pacote redireciona para checkout Pix
-- [❌] QR Code e Copia e Cola funcionam
+- [✅] Selecionar pacote redireciona para checkout Pix
+- [✅] QR Code e Copia e Cola funcionam
 - [❌] Créditos aparecem automaticamente após pagamento
 - [❌] Status do pagamento atualizado corretamente
 - [❌] Nenhum bug visual no retorno do checkout
@@ -66,10 +66,10 @@
 ## 🧾 **3. Gestão de Pagamentos e Conta**
 
 ### **3.1 Alterar cartão de crédito da assinatura**
-- [❌] Botão "Alterar forma de pagamento" disponível
-- [❌] Novo cartão salvo e reconhecido
-- [❌] Próxima cobrança usa o novo cartão
-- [❌] Nenhum erro de validação
+- [✅] Botão "Alterar forma de pagamento" disponível
+- [✅] Novo cartão salvo e reconhecido
+- [✅] Próxima cobrança usa o novo cartão
+- [✅] Nenhum erro de validação
 
 ### **3.2 Excluir conta**
 - [❌] Botão "Excluir conta" acessível
@@ -91,12 +91,12 @@
 - [❌] URLs das imagens salvas corretamente
 
 ### **4.2 Gerar imagem com modelo**
-- [❌] Seleção de modelo e prompt funcional
-- [❌] Créditos descontados corretamente
+- [✅] Seleção de modelo e prompt funcional
+- [✅] Créditos descontados corretamente
 - [❌] Barra de progresso exibe andamento real
-- [❌] Imagem gerada aparece sem erro
-- [❌] Botões de download, favoritar e compartilhar funcionam
-- [❌] Histórico mantém a imagem após reload
+- [✅] Imagem gerada aparece sem erro
+- [✅] Botões de download, favoritar e compartilhar funcionam
+- [✅] Histórico mantém a imagem após reload
 
 ### **4.3 Gerar vídeo**
 - [❌] Fluxo "Gerar vídeo" acessível
@@ -126,17 +126,17 @@
 ## 👤 **5. Experiência e Sessão do Usuário**
 
 ### **5.1 Dashboard**
-- [✅] ✅ Créditos exibidos corretamente
-- [✅] ✅ Atualização em tempo real após ações
-- [✅] ✅ Dados do plano atual corretos
-- [✅] ✅ Navegação entre abas fluida
-- [✅] ✅ Sem "piscar" entre telas
+- [✅] Créditos exibidos corretamente
+- [✅] Atualização em tempo real após ações
+- [✅] Dados do plano atual corretos
+- [✅] Navegação entre abas fluida
+- [✅] Sem "piscar" entre telas
 
 ### **5.2 Login e Sessão**
-- [✅] ✅ Login tradicional funcional
-- [✅] ✅ Login social funcional (Google, etc.)
-- [❌] **Sessão persiste após reload** ⚠️ (Reprovado)
-- [❌] Logout limpa cache corretamente
+- [✅] Login tradicional funcional
+- [✅] Login social funcional (Google, etc.)
+- [✅] Sessão persiste após reload** 
+- [✅] Logout limpa cache corretamente
 - [❌] Redirecionamentos após login funcionam
 
 ---
