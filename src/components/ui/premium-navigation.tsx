@@ -29,18 +29,23 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showPackageSelector, setShowPackageSelector] = useState(false)
   const queryClient = useQueryClient()
-  const { data: session, update: updateSession } = useSession()
+  const { data: session, status, update: updateSession } = useSession()
   const { logout } = useLogout()
   
   // Performance: Usar React Query para cache de créditos (Sprint 2 - Navegação Rápida)
+  // CRITICAL: Só buscar créditos se há sessão válida
   const { data: balance } = useCreditBalance()
-  const creditsBalance = balance?.totalCredits || null
+  const creditsBalance = (status === 'authenticated' && session?.user) ? (balance?.totalCredits || null) : null
 
   // CRITICAL: Listener SSE para invalidar queries quando créditos são atualizados
+  // CRITICAL: Handler deve forçar refetch imediato para atualizar badge
   useRealtimeUpdates({
-    onCreditsUpdate: () => {
-      console.log('🔄 [PremiumNavigation] Créditos atualizados via SSE - invalidando queries')
+    onCreditsUpdate: (creditsUsed, creditsLimit, action) => {
+      console.log('🔄 [PremiumNavigation] Créditos atualizados via SSE - invalidando queries e forçando refetch', { creditsUsed, creditsLimit, action })
+      // CRITICAL: Invalidar queries e forçar refetch imediato
       queryClient.invalidateQueries({ queryKey: ['credits'] })
+      // CRITICAL: Refetch imediato para atualizar badge sem esperar
+      queryClient.refetchQueries({ queryKey: ['credits', 'balance'] })
       updateSession()
     },
     onUserUpdate: (updatedFields) => {
@@ -149,7 +154,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center space-x-4">
-            {session ? (
+            {session && status === 'authenticated' ? (
               <div className="flex items-center space-x-3">
                 {hasActiveAccess() && (
                   <motion.div
@@ -338,9 +343,9 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                 </motion.div>
               ))}
 
-              {/* Mobile Actions */}
-              <div className="pt-4 border-t border-slate-200 space-y-3">
-                {session ? (
+                {/* Mobile Actions */}
+                <div className="pt-4 border-t border-slate-200 space-y-3">
+                  {session && status === 'authenticated' ? (
                   <>
                     <div className="px-4 py-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
                       <p className="font-semibold text-slate-900">{session.user?.name}</p>

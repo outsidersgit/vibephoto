@@ -54,12 +54,14 @@ export async function POST(
   })
 
   // CRITICAL: Broadcast evento SSE para atualização em tempo real
+  // CRITICAL: Incluir creditsBalance no broadcast para atualizar badge
   if (updatedUser) {
     await broadcastCreditsUpdate(
       id,
       updatedUser.creditsUsed,
       updatedUser.creditsLimit,
-      delta >= 0 ? 'ADMIN_BONUS' : 'ADMIN_ADJUSTMENT'
+      delta >= 0 ? 'ADMIN_BONUS' : 'ADMIN_ADJUSTMENT',
+      updatedUser.creditsBalance // CRITICAL: Incluir creditsBalance no broadcast
     ).catch((error) => {
       // Não falhar a requisição se broadcast falhar
       console.error('❌ [Admin Credits] Erro ao broadcast créditos:', error)

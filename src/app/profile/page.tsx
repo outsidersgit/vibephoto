@@ -16,92 +16,19 @@ import { useAuthGuard } from '@/hooks/useAuthGuard'
 
 
 export default function ProfilePage() {
-  // CRITICAL: Verificação IMEDIATA de cookies ANTES de qualquer hook (igual /gallery)
-  // Prevenir renderização de conteúdo após logout via bfcache
-  if (typeof window !== 'undefined') {
-    const hasSessionCookie = () => {
-      try {
-        const cookies = document.cookie.split(';')
-        return cookies.some(cookie => {
-          const cookieName = cookie.trim().split('=')[0]
-          return cookieName.includes('next-auth') || 
-                 cookieName.includes('__Secure-next-auth') || 
-                 cookieName.includes('__Host-next-auth')
-        })
-      } catch (e) {
-        return false
-      }
-    }
-    
-    if (!hasSessionCookie()) {
-      const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent('/profile')
-      try {
-        window.location.replace(redirectUrl)
-      } catch (error) {
-        window.location.href = redirectUrl
-      }
-      return (
-        <>
-          <ProtectedPageScript />
-          <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Redirecionando para login...</p>
-            </div>
-          </div>
-        </>
-      )
-    }
-  }
-  
   const { data: session, status, update } = useSession()
   
   // CRITICAL: Verificar autenticação ANTES de renderizar conteúdo
   const isAuthorized = useAuthGuard()
   
-  // CRITICAL: Bloquear renderização se não autorizado
-  if (isAuthorized === false || status === 'unauthenticated') {
-    return (
-      <>
-        <ProtectedPageScript />
-        <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Redirecionando para login...</p>
-          </div>
-        </div>
-      </>
-    )
+  // CRITICAL: Bloquear renderização completamente se não autorizado
+  if (isAuthorized === false || status === 'unauthenticated' || !session?.user) {
+    return null // Retornar null para não renderizar nada (o script vai redirecionar)
   }
   
   // CRITICAL: Bloquear renderização durante verificação de autenticação
   if (isAuthorized === null || status === 'loading') {
-    return (
-      <>
-        <ProtectedPageScript />
-        <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Verificando autenticação...</p>
-          </div>
-        </div>
-      </>
-    )
-  }
-  
-  // Verificação adicional de sessão (redundante mas seguro)
-  if (!session?.user) {
-    return (
-      <>
-        <ProtectedPageScript />
-        <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Redirecionando para login...</p>
-          </div>
-        </div>
-      </>
-    )
+    return null // Retornar null para não renderizar nada durante loading
   }
 
   // Estados do formulário

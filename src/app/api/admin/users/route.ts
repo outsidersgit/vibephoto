@@ -125,12 +125,14 @@ export async function PUT(request: NextRequest) {
   // CRITICAL: Broadcast evento SSE para atualização em tempo real
   if (updatedUser) {
     // Se mudou algo relacionado a créditos, broadcast credits_updated
+    // CRITICAL: Incluir creditsBalance no broadcast
     if (updateData.plan || updateData.subscriptionStatus) {
       await broadcastCreditsUpdate(
         id,
         updatedUser.creditsUsed,
         updatedUser.creditsLimit,
-        'ADMIN_UPDATE'
+        'ADMIN_UPDATE',
+        updatedUser.creditsBalance // CRITICAL: Incluir creditsBalance
       ).catch((error) => {
         console.error('❌ [Admin Users] Erro ao broadcast créditos:', error)
       })

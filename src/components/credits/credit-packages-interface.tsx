@@ -45,42 +45,17 @@ interface CreditPackagesInterfaceProps {
 }
 
 export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) {
-  // CRITICAL: Verificação IMEDIATA de cookies ANTES de qualquer hook (igual /gallery)
-  // Prevenir renderização de conteúdo após logout via bfcache
-  if (typeof window !== 'undefined') {
-    const hasSessionCookie = () => {
-      try {
-        const cookies = document.cookie.split(';')
-        return cookies.some(cookie => {
-          const cookieName = cookie.trim().split('=')[0]
-          return cookieName.includes('next-auth') || 
-                 cookieName.includes('__Secure-next-auth') || 
-                 cookieName.includes('__Host-next-auth')
-        })
-      } catch (e) {
-        return false
-      }
-    }
-    
-    if (!hasSessionCookie()) {
-      const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent('/credits')
-      try {
-        window.location.replace(redirectUrl)
-      } catch (error) {
-        window.location.href = redirectUrl
-      }
-      return (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Redirecionando para login...</p>
-          </div>
-        </div>
-      )
-    }
+  const { data: session, status } = useSession()
+  
+  // CRITICAL: Verificar autenticação antes de renderizar
+  if (status === 'unauthenticated' || !session?.user) {
+    return null // Retornar null para não renderizar nada (o script vai redirecionar)
   }
   
-  const { data: session, status } = useSession()
+  // CRITICAL: Bloquear durante verificação
+  if (status === 'loading') {
+    return null
+  }
   const [packages, setPackages] = useState<CreditPackage[]>([])
   const [balance, setBalance] = useState<any>(null)
   const [loading, setLoading] = useState(true)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -24,7 +25,19 @@ interface VideoGenerationInterfaceProps {
 }
 
 export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }: VideoGenerationInterfaceProps) {
+  const { data: session, status } = useSession()
   const { addToast } = useToast()
+  
+  // CRITICAL: Bloquear renderização se não autenticado
+  if (status === 'unauthenticated' || !session?.user) {
+    return null
+  }
+  
+  // CRITICAL: Bloquear durante verificação
+  if (status === 'loading') {
+    return null
+  }
+  
   const [activeMode, setActiveMode] = useState<'text-to-video' | 'image-to-video'>('text-to-video')
   const [formData, setFormData] = useState<VideoGenerationRequest>({
     prompt: '',

@@ -151,41 +151,6 @@ const faqItems = [
 
 
 function PricingPageContent() {
-  // CRITICAL: Verificação IMEDIATA de cookies ANTES de qualquer hook (igual /gallery)
-  // Prevenir renderização de conteúdo após logout via bfcache
-  if (typeof window !== 'undefined') {
-    const hasSessionCookie = () => {
-      try {
-        const cookies = document.cookie.split(';')
-        return cookies.some(cookie => {
-          const cookieName = cookie.trim().split('=')[0]
-          return cookieName.includes('next-auth') || 
-                 cookieName.includes('__Secure-next-auth') || 
-                 cookieName.includes('__Host-next-auth')
-        })
-      } catch (e) {
-        return false
-      }
-    }
-    
-    if (!hasSessionCookie()) {
-      const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent('/pricing')
-      try {
-        window.location.replace(redirectUrl)
-      } catch (error) {
-        window.location.href = redirectUrl
-      }
-      return (
-        <div className="min-h-screen bg-white flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Redirecionando para login...</p>
-          </div>
-        </div>
-      )
-    }
-  }
-  
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -201,28 +166,14 @@ function PricingPageContent() {
   // CRITICAL: Verificar autenticação ANTES de renderizar conteúdo
   const isAuthorized = useAuthGuard()
   
-  // CRITICAL: Bloquear renderização se não autorizado (pricing requer autenticação)
-  if (isAuthorized === false || status === 'unauthenticated') {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirecionando para login...</p>
-        </div>
-      </div>
-    )
+  // CRITICAL: Bloquear renderização completamente se não autorizado (pricing requer autenticação)
+  if (isAuthorized === false || status === 'unauthenticated' || !session?.user) {
+    return null // Retornar null para não renderizar nada (o script vai redirecionar)
   }
   
   // CRITICAL: Bloquear renderização durante verificação de autenticação
   if (isAuthorized === null || status === 'loading') {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verificando autenticação...</p>
-        </div>
-      </div>
-    )
+    return null // Retornar null para não renderizar nada durante loading
   }
 
   // Prevent hydration mismatch

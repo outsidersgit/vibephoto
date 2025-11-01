@@ -16,7 +16,7 @@ export interface UseRealtimeUpdatesOptions {
   onGenerationStatusChange?: (generationId: string, status: string, data: any) => void
   onTrainingProgress?: (modelId: string, progress: number, message?: string) => void
   onGenerationProgress?: (generationId: string, progress: number, message?: string) => void
-  onCreditsUpdate?: (creditsUsed: number, creditsLimit: number, action?: string) => void
+  onCreditsUpdate?: (creditsUsed: number, creditsLimit: number, action?: string, creditsBalance?: number) => void // CRITICAL: Incluir creditsBalance
   onUserUpdate?: (updatedFields: { plan?: string; subscriptionStatus?: string; creditsLimit?: number; creditsUsed?: number; creditsBalance?: number; [key: string]: any }) => void
   onNotification?: (title: string, message: string, type: string) => void
   onConnect?: () => void
@@ -188,10 +188,12 @@ export function useRealtimeUpdates(options: UseRealtimeUpdatesOptions = {}) {
             break
 
           case 'credits_updated':
+            // CRITICAL: Handler recebe creditsUsed, creditsLimit, action e creditsBalance (opcional)
             optionsRef.current.onCreditsUpdate?.(
               eventData.data.creditsUsed,
               eventData.data.creditsLimit,
-              eventData.data.action
+              eventData.data.action,
+              eventData.data.creditsBalance // CRITICAL: Incluir creditsBalance no handler
             )
             break
 

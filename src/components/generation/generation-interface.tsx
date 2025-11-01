@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 import { useToast } from '@/hooks/use-toast'
@@ -59,7 +60,19 @@ export function GenerationInterface({
   user,
   canUseCredits
 }: GenerationInterfaceProps) {
+  const { data: session, status } = useSession()
   const router = useRouter()
+  
+  // CRITICAL: Bloquear renderização se não autenticado
+  if (status === 'unauthenticated' || !session?.user) {
+    return null
+  }
+  
+  // CRITICAL: Bloquear durante verificação
+  if (status === 'loading') {
+    return null
+  }
+  
   const [selectedModel, setSelectedModel] = useState(selectedModelId)
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState('')

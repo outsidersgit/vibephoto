@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -26,7 +27,19 @@ interface ImageEditorInterfaceProps {
 type Operation = 'edit' | 'add' | 'remove' | 'style' | 'blend'
 
 export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEditorInterfaceProps) {
+  const { data: session, status } = useSession()
   const { addToast } = useToast()
+  
+  // CRITICAL: Bloquear renderização se não autenticado
+  if (status === 'unauthenticated' || !session?.user) {
+    return null
+  }
+  
+  // CRITICAL: Bloquear durante verificação
+  if (status === 'loading') {
+    return null
+  }
+  
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [operation] = useState<Operation>('edit')

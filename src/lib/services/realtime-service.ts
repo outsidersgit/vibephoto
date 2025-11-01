@@ -141,12 +141,14 @@ export async function broadcastGenerationProgress(
 
 /**
  * Broadcast credits update to user
+ * CRITICAL: Incluir creditsBalance para atualização em tempo real do badge
  */
 export async function broadcastCreditsUpdate(
   userId: string,
   creditsUsed: number,
   creditsLimit: number,
-  action?: string
+  action?: string,
+  creditsBalance?: number
 ) {
   const broadcast = await getBroadcastFunction()
   if (!broadcast) {
@@ -160,6 +162,7 @@ export async function broadcastCreditsUpdate(
     data: {
       creditsUsed,
       creditsLimit,
+      creditsBalance, // CRITICAL: Incluir creditsBalance no evento SSE
       action,
       timestamp: new Date().toISOString()
     }
