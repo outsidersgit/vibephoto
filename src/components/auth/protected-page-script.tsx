@@ -84,38 +84,41 @@ export function ProtectedPageScript() {
             
             // CRITICAL: Verificar IMEDIATAMENTE ao carregar (ANTES de tudo)
             // PERFORMANCE: Função otimizada para mobile e desktop
+            // CRITICAL: Só redirecionar se realmente não há sessão (aguardar um pouco para NextAuth processar)
             function checkAndRedirect() {
+              // CRITICAL: Aguardar um pequeno delay para NextAuth processar cookies
+              // Se o NextAuth ainda está carregando, não redirecionar imediatamente
+              // A página server-side já verificou autenticação, então deve haver sessão
               if (!hasNextAuthSession()) {
-                console.log('🚫 [AuthRedirectScript] Sem sessão detectada - redirecionando IMEDIATAMENTE para login');
-                const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent(currentPath);
-                // CRITICAL: Usar replace em vez de href para não adicionar ao history
-                // MOBILE COMPATIBLE: Funciona em iOS Safari, Android Chrome, etc.
-                try {
-                  // PERFORMANCE: Interromper apenas se suportado (evita erro em alguns browsers)
-                  if (typeof window.stop === 'function') {
-                    window.stop();
+                // CRITICAL: Dar um pequeno delay para garantir que NextAuth processou
+                // Só redirecionar se realmente não há sessão após delay
+                setTimeout(function() {
+                  if (!hasNextAuthSession()) {
+                    console.log('🚫 [AuthRedirectScript] Sem sessão detectada após delay - redirecionando para login');
+                    const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent(currentPath);
+                    // CRITICAL: Usar replace em vez de href para não adicionar ao history
+                    // MOBILE COMPATIBLE: Funciona em iOS Safari, Android Chrome, etc.
+                    try {
+                      window.location.replace(redirectUrl);
+                    } catch (e) {
+                      // Fallback para browsers que não suportam replace
+                      try {
+                        window.location.href = redirectUrl;
+                      } catch (e2) {
+                        // Último recurso: compatível com todos os browsers
+                        window.location = redirectUrl;
+                      }
+                    }
                   }
-                  // MOBILE: replace funciona em todos os mobile browsers modernos
-                  window.location.replace(redirectUrl);
-                } catch (e) {
-                  // Fallback para browsers que não suportam replace
-                  try {
-                    window.location.href = redirectUrl;
-                  } catch (e2) {
-                    // Último recurso: compatível com todos os browsers
-                    window.location = redirectUrl;
-                  }
-                }
-                return true;
+                }, 100); // Pequeno delay para NextAuth processar
+                return false; // Não redirecionar imediatamente
               }
               return false;
             }
             
-            // CRITICAL: Verificar IMEDIATAMENTE (executar antes de React)
-            if (checkAndRedirect()) {
-              // Parar execução se redirecionou
-              return;
-            }
+            // CRITICAL: NÃO verificar imediatamente - aguardar NextAuth processar
+            // A página server-side já garantiu autenticação
+            // Verificar apenas para bfcache e popstate
             
             // CRITICAL: Verificar também quando página é restaurada do bfcache (botão voltar)
             // MOBILE COMPATIBLE: pageshow funciona em iOS Safari e Android Chrome
@@ -163,22 +166,10 @@ export function ProtectedPageScript() {
               }, 10);
             }, true); // CRITICAL: capture phase
             
-            // CRITICAL: Verificar ANTES de React hidratar
-            if (document.readyState === 'loading') {
-              document.addEventListener('DOMContentLoaded', function() {
-                if (checkAndRedirect()) return;
-              }, true); // capture phase
-            } else {
-              // DOM já carregou, verificar AGORA
-              if (checkAndRedirect()) return;
-            }
-            
-            // CRITICAL: Verificar também no load (última chance antes do React)
-            window.addEventListener('load', function() {
-              if (!hasNextAuthSession()) {
-                checkAndRedirect();
-              }
-            }, true);
+            // CRITICAL: NÃO verificar no DOMContentLoaded ou load inicial
+            // A página server-side já verificou autenticação
+            // Só verificar em casos de bfcache (páginas restauradas)
+            // O checkAndRedirect já tem delay interno para aguardar NextAuth
           })();
         `,
       }}

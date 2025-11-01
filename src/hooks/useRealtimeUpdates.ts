@@ -245,16 +245,9 @@ export function useRealtimeUpdates(options: UseRealtimeUpdatesOptions = {}) {
   }, [])
 
   // Connect when session is available
-  // CRITICAL: Só conectar se há sessão válida e não está em página de auth
   useEffect(() => {
     if (session?.user && (session.user as any)?.id) {
-      // CRITICAL: Verificar se está em página de auth antes de conectar
-      const isAuthPage = typeof window !== 'undefined' && window.location.pathname?.startsWith('/auth')
-      if (!isAuthPage) {
-        connect()
-      } else {
-        disconnect()
-      }
+      connect()
     } else {
       disconnect()
     }
