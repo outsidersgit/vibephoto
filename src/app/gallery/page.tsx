@@ -4,6 +4,7 @@ import { getModelsByUserId } from '@/lib/db/models'
 import { getVideoGenerationsByUserId, getVideoGenerationStats } from '@/lib/db/videos'
 import { AutoSyncGalleryInterface } from '@/components/gallery/auto-sync-gallery-interface'
 import { prisma } from '@/lib/db'
+import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 
 interface GalleryPageProps {
   searchParams: Promise<{
