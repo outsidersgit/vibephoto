@@ -46,7 +46,19 @@ export async function downloadAndStoreImages(
   context: string = 'generated' // Deprecated parameter, maintained for backward compatibility
 ): Promise<DownloadResult> {
   try {
-    const storage = getStorageProvider()
+    // 🔑 CRITICAL: Check if storage provider is properly initialized
+    let storage: StorageProvider
+    try {
+      storage = getStorageProvider()
+      console.log(`📥 [STORAGE_SIMPLE] Storage provider initialized: ${STORAGE_CONFIG.provider}`)
+    } catch (providerError) {
+      console.error('❌ [STORAGE_SIMPLE] Failed to initialize storage provider:', providerError)
+      return {
+        success: false,
+        error: `Storage provider initialization failed: ${providerError instanceof Error ? providerError.message : 'Unknown error'}`
+      }
+    }
+    
     const permanentUrls: string[] = []
     const thumbnailUrls: string[] = []
 

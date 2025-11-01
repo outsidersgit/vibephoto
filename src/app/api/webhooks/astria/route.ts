@@ -7,7 +7,8 @@ interface AstriaWebhookPayload {
   id: string
   status: 'queued' | 'training' | 'trained' | 'generating' | 'generated' | 'failed' | 'cancelled'
   object: 'tune' | 'prompt'
-  images?: Array<{
+  // Astria pode retornar images como array de strings OU array de objetos
+  images?: Array<string | {
     url: string
     nsfw: boolean
     seed?: number

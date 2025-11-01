@@ -35,6 +35,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: '*.astria.ai',
       },
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
+      },
     ],
     // Otimizações mobile: reduzir tamanhos para economizar banda (fix Lighthouse mobile)
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
