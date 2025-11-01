@@ -14,11 +14,61 @@ import { ModelCreationStep3FullBody } from '@/components/models/creation/step-3-
 import { ModelCreationStep4 } from '@/components/models/creation/step-4-review'
 import { SubscriptionGate } from '@/components/subscription/subscription-gate'
 import { useToast } from '@/hooks/use-toast'
+import { ProtectedPageScript } from '@/components/auth/protected-page-script'
+import { useAuthGuard } from '@/hooks/useAuthGuard'
 
 export default function CreateModelPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const { addToast } = useToast()
+  
+  // CRITICAL: Verificar autenticação ANTES de renderizar conteúdo
+  const isAuthorized = useAuthGuard()
+  
+  // CRITICAL: Bloquear renderização se não autorizado
+  if (isAuthorized === false || status === 'unauthenticated') {
+    return (
+      <>
+        <ProtectedPageScript />
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Redirecionando para login...</p>
+          </div>
+        </div>
+      </>
+    )
+  }
+  
+  // CRITICAL: Bloquear renderização durante verificação de autenticação
+  if (isAuthorized === null || status === 'loading') {
+    return (
+      <>
+        <ProtectedPageScript />
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Verificando autenticação...</p>
+          </div>
+        </div>
+      </>
+    )
+  }
+  
+  // Verificação adicional de sessão (redundante mas seguro)
+  if (!session?.user) {
+    return (
+      <>
+        <ProtectedPageScript />
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Redirecionando para login...</p>
+          </div>
+        </div>
+      </>
+    )
+  }
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [modelCostInfo, setModelCostInfo] = useState<any>(null)

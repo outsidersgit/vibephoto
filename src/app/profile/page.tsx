@@ -12,10 +12,59 @@ import {
 import { useState, useEffect } from 'react'
 import { AccountDeletionModal } from '@/components/settings/account-deletion-modal'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
+import { useAuthGuard } from '@/hooks/useAuthGuard'
 
 
 export default function ProfilePage() {
   const { data: session, status, update } = useSession()
+  
+  // CRITICAL: Verificar autenticação ANTES de renderizar conteúdo
+  const isAuthorized = useAuthGuard()
+  
+  // CRITICAL: Bloquear renderização se não autorizado
+  if (isAuthorized === false || status === 'unauthenticated') {
+    return (
+      <>
+        <ProtectedPageScript />
+        <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Redirecionando para login...</p>
+          </div>
+        </div>
+      </>
+    )
+  }
+  
+  // CRITICAL: Bloquear renderização durante verificação de autenticação
+  if (isAuthorized === null || status === 'loading') {
+    return (
+      <>
+        <ProtectedPageScript />
+        <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Verificando autenticação...</p>
+          </div>
+        </div>
+      </>
+    )
+  }
+  
+  // Verificação adicional de sessão (redundante mas seguro)
+  if (!session?.user) {
+    return (
+      <>
+        <ProtectedPageScript />
+        <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Redirecionando para login...</p>
+          </div>
+        </div>
+      </>
+    )
+  }
 
   // Estados do formulário
   const [formData, setFormData] = useState({

@@ -18,7 +18,7 @@ export function ProtectedPageScript() {
         __html: `
           (function() {
             // CRITICAL: Executar IMEDIATAMENTE, sem aguardar nada
-            const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/editor', '/profile', '/account', '/credits', '/packages'];
+            const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/editor', '/profile', '/account', '/credits', '/packages', '/pricing'];
             const currentPath = window.location.pathname;
             const isProtected = protectedPaths.some(path => currentPath.startsWith(path));
             

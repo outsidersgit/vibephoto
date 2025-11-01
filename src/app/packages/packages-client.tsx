@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { PackageGrid } from '@/components/packages/package-grid'
 import { PackageModal } from '@/components/packages/package-modal'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,8 +22,50 @@ import {
 } from 'lucide-react'
 import { EnhancedPhotoPackage } from '@/types'
 import { usePackages } from '@/hooks/usePackages'
+import { useAuthGuard } from '@/hooks/useAuthGuard'
 
 export function PackagesPageClient() {
+  const { data: session, status } = useSession()
+  
+  // CRITICAL: Verificar autenticação ANTES de renderizar conteúdo
+  const isAuthorized = useAuthGuard()
+  
+  // CRITICAL: Bloquear renderização se não autorizado
+  if (isAuthorized === false || status === 'unauthenticated') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecionando para login...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  // CRITICAL: Bloquear renderização durante verificação de autenticação
+  if (isAuthorized === null || status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando autenticação...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  // Verificação adicional de sessão (redundante mas seguro)
+  if (!session?.user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecionando para login...</p>
+        </div>
+      </div>
+    )
+  }
+  
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedPackage, setSelectedPackage] = useState<any>(null)

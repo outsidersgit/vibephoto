@@ -10,6 +10,7 @@ import { Check, Crown, ArrowRight, AlertCircle, Calendar, Zap, ChevronLeft, Chev
 import Link from 'next/link'
 import { PLANS, calculateAnnualSavings, type Plan } from '@/config/pricing'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
+import { useAuthGuard } from '@/hooks/useAuthGuard'
 
 // Usar configuração centralizada de pricing
 const plans: Plan[] = PLANS
@@ -161,6 +162,33 @@ function PricingPageContent() {
   
   const isRequired = searchParams.get('required') === 'true'
   const isNewUser = searchParams.get('newuser') === 'true'
+
+  // CRITICAL: Verificar autenticação ANTES de renderizar conteúdo
+  const isAuthorized = useAuthGuard()
+  
+  // CRITICAL: Bloquear renderização se não autorizado (pricing requer autenticação)
+  if (isAuthorized === false || status === 'unauthenticated') {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecionando para login...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  // CRITICAL: Bloquear renderização durante verificação de autenticação
+  if (isAuthorized === null || status === 'loading') {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando autenticação...</p>
+        </div>
+      </div>
+    )
+  }
 
   // Prevent hydration mismatch
   useEffect(() => {

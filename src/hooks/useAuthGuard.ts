@@ -17,7 +17,7 @@ export function useAuthGuard() {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null)
 
   // Lista de rotas protegidas que requerem autenticação
-  const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/editor', '/profile', '/settings', '/credits', '/packages']
+  const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/editor', '/profile', '/settings', '/credits', '/packages', '/pricing']
   
   const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path))
 

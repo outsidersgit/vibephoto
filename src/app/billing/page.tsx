@@ -31,6 +31,7 @@ import { PLANS, CREDIT_PACKAGES, type Plan, type CreditPackage } from '@/config/
 import { CheckoutModal } from '@/components/checkout/checkout-modal'
 import { UpdateCardModal } from '@/components/payments/update-card-modal'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
+import { useAuthGuard } from '@/hooks/useAuthGuard'
 
 // Usar configuração centralizada de pricing
 const plans: Plan[] = PLANS
@@ -40,6 +41,33 @@ function BillingPageContent() {
   const { data: session, status, update: updateSession } = useSession()
   const searchParams = useSearchParams()
   const tabFromUrl = searchParams?.get('tab')
+  
+  // CRITICAL: Verificar autenticação ANTES de renderizar conteúdo
+  const isAuthorized = useAuthGuard()
+  
+  // CRITICAL: Bloquear renderização se não autorizado
+  if (isAuthorized === false || status === 'unauthenticated') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecionando para login...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  // CRITICAL: Bloquear renderização durante verificação de autenticação
+  if (isAuthorized === null || status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando autenticação...</p>
+        </div>
+      </div>
+    )
+  }
 
   const [activeTab, setActiveTab] = useState('overview')
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
@@ -109,28 +137,14 @@ function BillingPageContent() {
     subscriptionEndsAt: calculateNextRenewal()
   }
 
-  if (status === 'loading') {
+  // Verificação adicional de sessão (redundante mas seguro)
+  if (!session?.user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#667EEA] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando assinatura...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecionando para login...</p>
         </div>
-      </div>
-    )
-  }
-
-  if (!session) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center">Acesso Restrito</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-gray-600">Você precisa estar logado para acessar sua assinatura.</p>
-          </CardContent>
-        </Card>
       </div>
     )
   }
