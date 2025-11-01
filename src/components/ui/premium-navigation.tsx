@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, Sparkles, User, Settings, LogOut, CreditCard, Camera, ImageIcon, Users, Package, Crown, History, UserCircle, MessageSquare, Coins, Plus, Receipt, List } from 'lucide-react'
@@ -28,19 +29,57 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showPackageSelector, setShowPackageSelector] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const pathname = usePathname()
   const queryClient = useQueryClient()
   const { data: session, status, update: updateSession } = useSession()
   const { logout } = useLogout()
   
+  // CRITICAL: Aguardar montagem para evitar problemas de hidratação (React #300)
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+  
+  // CRITICAL: Detectar se está em página de autenticação
+  const isAuthPage = typeof pathname === 'string' && pathname.startsWith('/auth')
+  
+  // CRITICAL: Verificar se deve mostrar elementos de usuário logado
+  // Não mostrar se:
+  // 1. Não está montado (antes da hidratação) OU
+  // 2. Está em página de auth OU
+  // 3. Status está carregando OU
+  // 4. Status não é authenticated OU
+  // 5. Não há sessão válida OU
+  // 6. Não há pathname ainda (antes da hidratação)
+  const shouldShowUserElements = isMounted &&
+                                  !isAuthPage && 
+                                  status !== 'loading' && 
+                                  status === 'authenticated' && 
+                                  !!session?.user &&
+                                  typeof pathname === 'string'
+  
   // Performance: Usar React Query para cache de créditos (Sprint 2 - Navegação Rápida)
-  // CRITICAL: Só buscar créditos se há sessão válida
+  // CRITICAL: Só buscar créditos se há sessão válida E não está em página de auth E está montado
   const { data: balance } = useCreditBalance()
-  const creditsBalance = (status === 'authenticated' && session?.user) ? (balance?.totalCredits || null) : null
+  const creditsBalance = shouldShowUserElements ? (balance?.totalCredits || null) : null
 
   // CRITICAL: Listener SSE para invalidar queries quando créditos são atualizados
   // CRITICAL: Handler deve forçar refetch imediato para atualizar badge
+  // CRITICAL: Só conectar SSE se usuário está logado e não está em página de auth
   useRealtimeUpdates({
     onCreditsUpdate: (creditsUsed, creditsLimit, action) => {
+      // CRITICAL: Verificar novamente se deve processar (dentro do handler para evitar stale closure)
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : ''
+      const currentIsAuthPage = currentPath.startsWith('/auth')
+      const currentShouldProcess = !currentIsAuthPage && 
+                                    status === 'authenticated' && 
+                                    !!session?.user
+      
+      if (!currentShouldProcess) {
+        console.log('🚫 [PremiumNavigation] Ignorando atualização de créditos - não autenticado ou em página de auth')
+        return
+      }
+      
       console.log('🔄 [PremiumNavigation] Créditos atualizados via SSE - invalidando queries e forçando refetch', { creditsUsed, creditsLimit, action })
       // CRITICAL: Invalidar queries e forçar refetch imediato
       queryClient.invalidateQueries({ queryKey: ['credits'] })
@@ -49,6 +88,18 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
       updateSession()
     },
     onUserUpdate: (updatedFields) => {
+      // CRITICAL: Verificar novamente se deve processar (dentro do handler para evitar stale closure)
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : ''
+      const currentIsAuthPage = currentPath.startsWith('/auth')
+      const currentShouldProcess = !currentIsAuthPage && 
+                                    status === 'authenticated' && 
+                                    !!session?.user
+      
+      if (!currentShouldProcess) {
+        console.log('🚫 [PremiumNavigation] Ignorando atualização de usuário - não autenticado ou em página de auth')
+        return
+      }
+      
       // CRITICAL: Admin atualizou usuário (plano, status, etc.) - atualizar sessão e invalidar queries
       console.log('🔄 [PremiumNavigation] Usuário atualizado via admin - atualizando sessão e queries', updatedFields)
       queryClient.invalidateQueries({ queryKey: ['credits'] })
@@ -99,7 +150,8 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const navigationItems = hasActiveAccess() ? [
+  // CRITICAL: Navigation items só aparecem se usuário está logado E não está em página de auth
+  const navigationItems = (shouldShowUserElements && hasActiveAccess()) ? [
     { name: 'Modelos', href: '/models', icon: <Users className="w-4 h-4" /> },
     { name: 'Gerar', href: '/generate', icon: <Camera className="w-4 h-4" /> },
     { name: 'Galeria', href: '/gallery', icon: <ImageIcon className="w-4 h-4" /> },
@@ -154,7 +206,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center space-x-4">
-            {session && status === 'authenticated' ? (
+            {shouldShowUserElements ? (
               <div className="flex items-center space-x-3">
                 {hasActiveAccess() && (
                   <motion.div
@@ -345,7 +397,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
 
                 {/* Mobile Actions */}
                 <div className="pt-4 border-t border-slate-200 space-y-3">
-                  {session && status === 'authenticated' ? (
+                  {shouldShowUserElements ? (
                   <>
                     <div className="px-4 py-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
                       <p className="font-semibold text-slate-900">{session.user?.name}</p>
