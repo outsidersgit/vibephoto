@@ -12,6 +12,7 @@ export const EVENT_TYPES = {
   TRAINING_PROGRESS: 'training_progress',
   GENERATION_PROGRESS: 'generation_progress',
   CREDITS_UPDATED: 'credits_updated',
+  USER_UPDATED: 'user_updated', // Admin updates: plan, subscription, etc.
   NOTIFICATION: 'notification'
 } as const
 
@@ -159,6 +160,39 @@ export async function broadcastCreditsUpdate(
     data: {
       creditsUsed,
       creditsLimit,
+      action,
+      timestamp: new Date().toISOString()
+    }
+  })
+}
+
+/**
+ * Broadcast user update (plan, subscription status, etc.) to user
+ * Used when admin makes changes that affect user's account
+ */
+export async function broadcastUserUpdate(
+  userId: string,
+  updatedFields: {
+    plan?: string
+    subscriptionStatus?: string
+    creditsLimit?: number
+    creditsUsed?: number
+    creditsBalance?: number
+    [key: string]: any
+  },
+  action?: string
+) {
+  const broadcast = await getBroadcastFunction()
+  if (!broadcast) {
+    console.log('📡 No broadcast function available, skipping event')
+    return
+  }
+
+  return broadcast({
+    type: EVENT_TYPES.USER_UPDATED,
+    userId,
+    data: {
+      ...updatedFields,
       action,
       timestamp: new Date().toISOString()
     }

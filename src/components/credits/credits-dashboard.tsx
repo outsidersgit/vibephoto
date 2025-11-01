@@ -64,7 +64,7 @@ interface QuickAction {
 }
 
 export function CreditsDashboard({ user }: CreditsDashboardProps) {
-  const { data: session } = useSession()
+  const { data: session, update: updateSession } = useSession()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('overview')
   const [notifications, setNotifications] = useState<Array<{
@@ -97,6 +97,14 @@ export function CreditsDashboard({ user }: CreditsDashboardProps) {
     onCreditsUpdate: () => {
       console.log('🔄 [CreditsDashboard] Créditos atualizados via SSE - invalidando queries')
       queryClient.invalidateQueries({ queryKey: ['credits'] })
+      updateSession() // CRITICAL: Atualizar sessão para refletir mudanças de créditos
+    },
+    onUserUpdate: (updatedFields) => {
+      // CRITICAL: Admin atualizou usuário - atualizar sessão e invalidar queries
+      console.log('🔄 [CreditsDashboard] Usuário atualizado via admin - atualizando sessão e queries', updatedFields)
+      queryClient.invalidateQueries({ queryKey: ['credits'] })
+      queryClient.invalidateQueries({ queryKey: ['user'] })
+      updateSession()
     },
   })
 

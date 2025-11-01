@@ -17,6 +17,7 @@ export interface UseRealtimeUpdatesOptions {
   onTrainingProgress?: (modelId: string, progress: number, message?: string) => void
   onGenerationProgress?: (generationId: string, progress: number, message?: string) => void
   onCreditsUpdate?: (creditsUsed: number, creditsLimit: number, action?: string) => void
+  onUserUpdate?: (updatedFields: { plan?: string; subscriptionStatus?: string; creditsLimit?: number; creditsUsed?: number; creditsBalance?: number; [key: string]: any }) => void
   onNotification?: (title: string, message: string, type: string) => void
   onConnect?: () => void
   onDisconnect?: () => void
@@ -192,6 +193,16 @@ export function useRealtimeUpdates(options: UseRealtimeUpdatesOptions = {}) {
               eventData.data.creditsLimit,
               eventData.data.action
             )
+            break
+
+          case 'user_updated':
+            // CRITICAL: Admin updated user - invalidate user queries and update session
+            if (optionsRef.current.onUserUpdate) {
+              optionsRef.current.onUserUpdate(eventData.data)
+            } else {
+              // Fallback: invalidate queries if handler not provided
+              console.log('🔄 [useRealtimeUpdates] User updated via admin - consider implementing onUserUpdate handler')
+            }
             break
 
           case 'notification':

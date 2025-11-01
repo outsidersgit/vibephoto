@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -11,6 +13,7 @@ import {
 } from 'lucide-react'
 import { PackageConfigModal } from './package-config-modal'
 import { useCreditBalance, useCreditPackages, useInvalidateCredits } from '@/hooks/useCredits'
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 
 interface Package {
   id: string
@@ -42,9 +45,27 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
   const [showConfigModal, setShowConfigModal] = useState(false)
 
   // Performance: Usar React Query para cache instantâneo (Sprint 1)
+  const queryClient = useQueryClient()
+  const { update: updateSession } = useSession()
   const { data: balance, isLoading: loadingCredits } = useCreditBalance()
   const { data: creditPackages = [] } = useCreditPackages()
   const { invalidateBalance } = useInvalidateCredits()
+  
+  // CRITICAL: Listener SSE para invalidar queries quando créditos são atualizados via admin
+  useRealtimeUpdates({
+    onCreditsUpdate: () => {
+      console.log('🔄 [PackageModal] Créditos atualizados via SSE - invalidando queries')
+      queryClient.invalidateQueries({ queryKey: ['credits'] })
+      updateSession() // Update session to reflect credit changes
+    },
+    onUserUpdate: (updatedFields) => {
+      // CRITICAL: Admin atualizou usuário - atualizar sessão e invalidar queries
+      console.log('🔄 [PackageModal] Usuário atualizado via admin - atualizando sessão e queries', updatedFields)
+      queryClient.invalidateQueries({ queryKey: ['credits'] })
+      queryClient.invalidateQueries({ queryKey: ['user'] })
+      updateSession()
+    },
+  })
   
   const userCredits = balance?.totalCredits || 0
 

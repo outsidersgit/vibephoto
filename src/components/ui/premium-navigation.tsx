@@ -43,6 +43,13 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
       queryClient.invalidateQueries({ queryKey: ['credits'] })
       updateSession()
     },
+    onUserUpdate: (updatedFields) => {
+      // CRITICAL: Admin atualizou usuário (plano, status, etc.) - atualizar sessão e invalidar queries
+      console.log('🔄 [PremiumNavigation] Usuário atualizado via admin - atualizando sessão e queries', updatedFields)
+      queryClient.invalidateQueries({ queryKey: ['credits'] })
+      queryClient.invalidateQueries({ queryKey: ['user'] })
+      updateSession() // CRITICAL: Atualizar sessão para refletir mudanças de plano/status
+    },
   })
 
   // Helper: Check if user has active subscription access

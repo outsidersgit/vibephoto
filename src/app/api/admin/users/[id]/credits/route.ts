@@ -4,6 +4,7 @@ import { revalidateTag } from 'next/cache'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { z } from 'zod'
+import { broadcastCreditsUpdate } from '@/lib/services/realtime-service'
 
 export async function POST(
   request: NextRequest,
@@ -41,6 +42,29 @@ export async function POST(
       } as any
     })
   ])
+
+  // CRITICAL: Buscar dados atualizados do usuário para broadcast
+  const updatedUser = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      creditsUsed: true,
+      creditsLimit: true,
+      creditsBalance: true
+    }
+  })
+
+  // CRITICAL: Broadcast evento SSE para atualização em tempo real
+  if (updatedUser) {
+    await broadcastCreditsUpdate(
+      id,
+      updatedUser.creditsUsed,
+      updatedUser.creditsLimit,
+      delta >= 0 ? 'ADMIN_BONUS' : 'ADMIN_ADJUSTMENT'
+    ).catch((error) => {
+      // Não falhar a requisição se broadcast falhar
+      console.error('❌ [Admin Credits] Erro ao broadcast créditos:', error)
+    })
+  }
 
   // Invalida cache do saldo de créditos exibido no app
   try { revalidateTag(`user-${id}-credits`) } catch {}
