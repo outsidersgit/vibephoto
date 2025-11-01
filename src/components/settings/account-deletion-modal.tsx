@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { signOut } from 'next-auth/react'
+import { useLogout } from '@/hooks/useLogout'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
@@ -16,6 +16,7 @@ interface AccountDeletionModalProps {
 export function AccountDeletionModal({ isOpen, onClose, hasActiveSubscription }: AccountDeletionModalProps) {
   const router = useRouter()
   const { addToast } = useToast()
+  const { logout } = useLogout()
   const [isDeleting, setIsDeleting] = useState(false)
   const [showFinalConfirmation, setShowFinalConfirmation] = useState(false)
 
@@ -54,9 +55,9 @@ export function AccountDeletionModal({ isOpen, onClose, hasActiveSubscription }:
         duration: 8000
       })
 
-      // Wait a moment for user to read the message, then sign out
+      // Wait a moment for user to read the message, then logout (clears all cache)
       setTimeout(() => {
-        signOut({ callbackUrl: '/' })
+        logout('/')
       }, 2000)
 
     } catch (error) {

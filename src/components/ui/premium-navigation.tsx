@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, Sparkles, User, Settings, LogOut, CreditCard, Camera, ImageIcon, Users, Package, Crown, History, UserCircle, MessageSquare, Coins, Plus, Receipt, List } from 'lucide-react'
 import Link from 'next/link'
-import { useSession, signOut } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
+import { useLogout } from '@/hooks/useLogout'
 import { VibePhotoLogo } from '@/components/ui/vibephoto-logo'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -26,6 +27,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showPackageSelector, setShowPackageSelector] = useState(false)
   const { data: session } = useSession()
+  const { logout } = useLogout()
   
   // Performance: Usar React Query para cache de créditos (Sprint 2 - Navegação Rápida)
   const { data: balance } = useCreditBalance()
@@ -234,7 +236,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                         </div>
                       )}
                       <button
-                        onClick={() => signOut()}
+                        onClick={() => logout()}
                         className="w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-red-900/20 transition-colors text-left"
                         style={{fontFamily: '"-apple-system", "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif'}}
                       >
@@ -375,7 +377,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                     <button
                       onClick={() => {
                         setIsMobileMenuOpen(false)
-                        signOut()
+                        logout()
                       }}
                       className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-red-50 transition-colors text-left mt-3"
                     >

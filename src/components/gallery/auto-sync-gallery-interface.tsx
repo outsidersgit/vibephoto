@@ -7,6 +7,7 @@ import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 import { useToast } from '@/hooks/use-toast'
 import { useGalleryData, useDeleteGeneration, useDeleteEditHistory, useBulkDeleteVideos } from '@/hooks/useGalleryData'
 import { useQueryClient } from '@tanstack/react-query'
+import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -112,6 +113,9 @@ export function AutoSyncGalleryInterface({
   filters,
   user
 }: AutoSyncGalleryInterfaceProps) {
+  // CRITICAL: Proteção contra botão voltar (bfcache) após logout
+  useAuthGuard()
+  
   const router = useRouter()
   const searchParams = useSearchParams()
   const { addToast } = useToast()

@@ -108,11 +108,21 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // Add basic security headers
+    // Add basic security headers and cache control
     const response = NextResponse.next()
     response.headers.set('X-Frame-Options', 'DENY')
     response.headers.set('X-Content-Type-Options', 'nosniff')
     response.headers.set('Referrer-Policy', 'origin-when-cross-origin')
+    
+    // CRITICAL: Prevent caching of protected pages to avoid bfcache issues after logout
+    // This ensures the browser doesn't serve cached content when user presses "back" button
+    if (isProtectedPath && !isApiRoute) {
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+      response.headers.set('Pragma', 'no-cache')
+      response.headers.set('Expires', '0')
+      // Prevent page from being stored in bfcache
+      response.headers.set('X-Accel-Buffering', 'no')
+    }
     
     return response
   } catch (error) {
