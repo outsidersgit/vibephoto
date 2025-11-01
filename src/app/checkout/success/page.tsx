@@ -3,16 +3,24 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { CheckCircle, Sparkles, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function CheckoutSuccessPage() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { data: session, update: updateSession } = useSession()
   const [countdown, setCountdown] = useState(5)
 
   useEffect(() => {
+    // CRITICAL: Invalidar todas as queries relacionadas a créditos e assinatura
+    console.log('🔄 [CheckoutSuccess] Invalidando queries após checkout success')
+    queryClient.invalidateQueries({ queryKey: ['credits'] })
+    queryClient.invalidateQueries({ queryKey: ['subscription'] })
+    queryClient.invalidateQueries({ queryKey: ['user'] })
+    
     // Atualizar sessão para refletir nova assinatura
     updateSession()
 

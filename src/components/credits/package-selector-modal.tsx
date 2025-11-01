@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -25,6 +27,8 @@ export function PackageSelectorModal({
   onClose,
   onSuccess
 }: PackageSelectorModalProps) {
+  const queryClient = useQueryClient()
+  const { update: updateSession } = useSession()
   const [step, setStep] = useState<Step>('select-package')
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null)
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null)
@@ -84,6 +88,14 @@ export function PackageSelectorModal({
   }
 
   const handleCheckoutSuccess = () => {
+    // CRITICAL: Invalidar todas as queries relacionadas a créditos após compra
+    console.log('🔄 [PackageSelectorModal] Invalidando queries após compra de créditos')
+    queryClient.invalidateQueries({ queryKey: ['credits'] })
+    queryClient.invalidateQueries({ queryKey: ['user'] })
+    
+    // Atualizar sessão para refletir mudanças
+    updateSession()
+    
     onSuccess()
     handleClose()
   }

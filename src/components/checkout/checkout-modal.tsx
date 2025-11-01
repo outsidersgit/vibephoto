@@ -20,6 +20,8 @@ export function CheckoutModal({
   checkoutUrl,
   onSuccess
 }: CheckoutModalProps) {
+  const queryClient = useQueryClient()
+  const { update: updateSession } = useSession()
   const [checkoutWindow, setCheckoutWindow] = useState<Window | null>(null)
   const [status, setStatus] = useState<'waiting' | 'opened' | 'completed'>('waiting')
 
@@ -66,6 +68,16 @@ export function CheckoutModal({
       if (event.data.type === 'CHECKOUT_SUCCESS') {
         console.log('✅ Checkout completed successfully')
         setStatus('completed')
+        
+        // CRITICAL: Invalidar todas as queries relacionadas a créditos e assinatura
+        console.log('🔄 [CheckoutModal] Invalidando queries após checkout success')
+        queryClient.invalidateQueries({ queryKey: ['credits'] })
+        queryClient.invalidateQueries({ queryKey: ['subscription'] })
+        queryClient.invalidateQueries({ queryKey: ['user'] })
+        
+        // Atualizar sessão para refletir mudanças
+        updateSession()
+        
         onSuccess?.()
         checkoutWindow?.close()
         onClose()

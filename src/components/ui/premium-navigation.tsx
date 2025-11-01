@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, Sparkles, User, Settings, LogOut, CreditCard, Camera, ImageIcon, Users, Package, Crown, History, UserCircle, MessageSquare, Coins, Plus, Receipt, List } from 'lucide-react'
 import Link from 'next/link'
@@ -17,6 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
 import { useCreditBalance } from '@/hooks/useCredits'
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 
 interface PremiumNavigationProps {
   className?: string
@@ -26,12 +28,22 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showPackageSelector, setShowPackageSelector] = useState(false)
-  const { data: session } = useSession()
+  const queryClient = useQueryClient()
+  const { data: session, update: updateSession } = useSession()
   const { logout } = useLogout()
   
   // Performance: Usar React Query para cache de créditos (Sprint 2 - Navegação Rápida)
   const { data: balance } = useCreditBalance()
   const creditsBalance = balance?.totalCredits || null
+
+  // CRITICAL: Listener SSE para invalidar queries quando créditos são atualizados
+  useRealtimeUpdates({
+    onCreditsUpdate: () => {
+      console.log('🔄 [PremiumNavigation] Créditos atualizados via SSE - invalidando queries')
+      queryClient.invalidateQueries({ queryKey: ['credits'] })
+      updateSession()
+    },
+  })
 
   // Helper: Check if user has active subscription access
   const hasActiveAccess = () => {
@@ -56,9 +68,14 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
     setShowPackageSelector(true)
   }
 
-  const handlePurchaseSuccess = async () => {
-    // React Query invalida cache automaticamente
-    // Não precisa mais de fetchCredits manual
+  const handlePurchaseSuccess = () => {
+    // CRITICAL: Invalidar queries após compra bem-sucedida
+    console.log('🔄 [PremiumNavigation] Invalidando queries após compra')
+    queryClient.invalidateQueries({ queryKey: ['credits'] })
+    queryClient.invalidateQueries({ queryKey: ['user'] })
+    
+    // Atualizar sessão para refletir mudanças
+    updateSession()
   }
 
   useEffect(() => {

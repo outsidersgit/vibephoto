@@ -1,10 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
+import { useCreditBalance } from '@/hooks/useCredits'
 import { 
   Wallet,
   BarChart3,
@@ -60,8 +64,8 @@ interface QuickAction {
 }
 
 export function CreditsDashboard({ user }: CreditsDashboardProps) {
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { data: session } = useSession()
+  const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('overview')
   const [notifications, setNotifications] = useState<Array<{
     id: string
@@ -70,63 +74,38 @@ export function CreditsDashboard({ user }: CreditsDashboardProps) {
     action?: () => void
   }>>([])
 
-  useEffect(() => {
-    // CRITICAL: Verificar se há user antes de fazer fetch
-    if (user?.id) {
-      loadDashboardData()
-    }
-  }, [user.id])
+  // Use React Query para buscar balance de créditos
+  const { data: balance, isLoading: loading } = useCreditBalance()
 
-  const loadDashboardData = async () => {
-    // CRITICAL: Verificar novamente antes de fazer fetch
-    if (!user?.id) {
-      return
+  // Converter balance para dashboardStats
+  const dashboardStats: DashboardStats | null = balance ? {
+    totalCredits: balance.totalCredits,
+    usedCredits: balance.usedCredits,
+    availableCredits: balance.availableCredits,
+    subscriptionCredits: balance.subscriptionCredits,
+    purchasedCredits: balance.purchasedCredits,
+    creditLimit: balance.creditLimit,
+    nextReset: balance.nextReset,
+    efficiency: balance.creditLimit > 0 
+      ? Math.round((balance.usedCredits / balance.creditLimit) * 100) 
+      : 0,
+    monthlyTrend: 15 // Mock - seria calculado baseado no histórico
+  } : null
+
+  // CRITICAL: Listener SSE para invalidar queries quando créditos são atualizados
+  useRealtimeUpdates({
+    onCreditsUpdate: () => {
+      console.log('🔄 [CreditsDashboard] Créditos atualizados via SSE - invalidando queries')
+      queryClient.invalidateQueries({ queryKey: ['credits'] })
+    },
+  })
+
+  // Gerar notificações quando stats mudarem
+  useEffect(() => {
+    if (dashboardStats) {
+      generateNotifications(dashboardStats)
     }
-    
-    setLoading(true)
-    try {
-      const response = await fetch('/api/credits/balance')
-      
-      // CRITICAL: Verificar se response é 401 e ignorar (usuário não autenticado)
-      if (response.status === 401) {
-        console.log('🚫 [CreditsDashboard] Não autenticado - ignorando fetch')
-        return
-      }
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch credit balance')
-      }
-      
-      const data = await response.json()
-      
-      if (data.success) {
-        const balance = data.balance
-        const stats: DashboardStats = {
-          totalCredits: balance.totalCredits,
-          usedCredits: balance.usedCredits,
-          availableCredits: balance.availableCredits,
-          subscriptionCredits: balance.subscriptionCredits,
-          purchasedCredits: balance.purchasedCredits,
-          creditLimit: balance.creditLimit,
-          nextReset: balance.nextReset,
-          efficiency: Math.round((balance.usedCredits / balance.creditLimit) * 100),
-          monthlyTrend: 15 // Mock - seria calculado baseado no histórico
-        }
-        
-        setDashboardStats(stats)
-        generateNotifications(stats)
-      }
-    } catch (error) {
-      // CRITICAL: Não logar erros 401 como erros (são esperados após logout)
-      if (error instanceof Error && error.message.includes('401')) {
-        console.log('🚫 [CreditsDashboard] Não autenticado - ignorando erro')
-        return
-      }
-      console.error('Error loading dashboard data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [dashboardStats])
 
   const generateNotifications = (stats: DashboardStats) => {
     const newNotifications = []

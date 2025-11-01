@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -15,6 +17,7 @@ import {
   HardDrive,
   Zap
 } from 'lucide-react'
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 
 interface CreditUsage {
   today: number
@@ -43,10 +46,8 @@ interface CreditsOverviewProps {
 }
 
 export function CreditsOverview({ userPlan }: CreditsOverviewProps) {
-  const [usage, setUsage] = useState<CreditUsage | null>(null)
-  const [storage, setStorage] = useState<StorageUsage | null>(null)
-  const [transactions, setTransactions] = useState<CreditTransaction[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: session } = useSession()
+  const queryClient = useQueryClient()
 
   const planLimits = {
     FREE: { daily: 10, monthly: 100, storage: 1024 * 1024 * 1024 }, // 1GB
@@ -56,38 +57,58 @@ export function CreditsOverview({ userPlan }: CreditsOverviewProps) {
 
   const currentLimits = planLimits[userPlan]
 
-  useEffect(() => {
-    fetchCreditData()
-  }, [])
+  // Use React Query para dados de créditos com atualização em tempo real
+  const { data: usage, isLoading: loadingUsage } = useQuery<CreditUsage>({
+    queryKey: ['credits', 'usage'],
+    queryFn: async () => {
+      const response = await fetch('/api/credits?action=usage')
+      if (!response.ok) throw new Error('Failed to fetch usage')
+      const data = await response.json()
+      return data.data
+    },
+    enabled: !!session?.user,
+    staleTime: 30 * 1000, // 30 segundos
+    refetchInterval: 60 * 1000, // Refetch a cada 1 minuto
+    refetchOnWindowFocus: true,
+  })
 
-  const fetchCreditData = async () => {
-    try {
-      const [usageRes, storageRes, transactionsRes] = await Promise.all([
-        fetch('/api/credits?action=usage'),
-        fetch('/api/credits?action=storage'),
-        fetch('/api/credits?action=transactions&limit=5')
-      ])
+  const { data: storage, isLoading: loadingStorage } = useQuery<StorageUsage>({
+    queryKey: ['credits', 'storage'],
+    queryFn: async () => {
+      const response = await fetch('/api/credits?action=storage')
+      if (!response.ok) throw new Error('Failed to fetch storage')
+      const data = await response.json()
+      return data.data
+    },
+    enabled: !!session?.user,
+    staleTime: 60 * 1000, // 1 minuto
+    refetchInterval: 5 * 60 * 1000, // Refetch a cada 5 minutos
+    refetchOnWindowFocus: true,
+  })
 
-      if (usageRes.ok) {
-        const usageData = await usageRes.json()
-        setUsage(usageData.data)
-      }
+  const { data: transactions = [], isLoading: loadingTransactions } = useQuery<CreditTransaction[]>({
+    queryKey: ['credits', 'transactions'],
+    queryFn: async () => {
+      const response = await fetch('/api/credits?action=transactions&limit=5')
+      if (!response.ok) throw new Error('Failed to fetch transactions')
+      const data = await response.json()
+      return data.data.transactions || []
+    },
+    enabled: !!session?.user,
+    staleTime: 30 * 1000, // 30 segundos
+    refetchInterval: 60 * 1000, // Refetch a cada 1 minuto
+    refetchOnWindowFocus: true,
+  })
 
-      if (storageRes.ok) {
-        const storageData = await storageRes.json()
-        setStorage(storageData.data)
-      }
+  const loading = loadingUsage || loadingStorage || loadingTransactions
 
-      if (transactionsRes.ok) {
-        const transactionsData = await transactionsRes.json()
-        setTransactions(transactionsData.data.transactions)
-      }
-    } catch (error) {
-      console.error('Failed to fetch credit data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // CRITICAL: Listener SSE para invalidar queries quando créditos são atualizados
+  useRealtimeUpdates({
+    onCreditsUpdate: () => {
+      console.log('🔄 [CreditsOverview] Créditos atualizados via SSE - invalidando queries')
+      queryClient.invalidateQueries({ queryKey: ['credits'] })
+    },
+  })
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 B'
