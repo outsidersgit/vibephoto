@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { ModelCard } from '@/components/models/model-card'
 import { ModelStats } from '@/components/models/model-stats'
 import { RealtimeModelList } from '@/components/models/realtime-model-list'
+import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 
 export default async function ModelsPage() {
   const session = await requireAuth()
@@ -26,8 +27,10 @@ export default async function ModelsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-      {/* Header */}
+    <>
+      <ProtectedPageScript />
+      <div className="min-h-screen bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+        {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
@@ -79,5 +82,6 @@ export default async function ModelsPage() {
         )}
       </div>
     </div>
+    </>
   )
 }

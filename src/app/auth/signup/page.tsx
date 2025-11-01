@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { signIn, getSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,6 +19,8 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get('redirectTo') || '/pricing'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -84,12 +86,18 @@ export default function SignUpPage() {
               }
               
               // New users always need to select a plan (subscriptionStatus is null)
-              // Use window.location for reliable redirect
-              window.location.href = '/pricing?newuser=true'
+              // Use redirectTo if provided, otherwise default to pricing
+              const finalRedirect = redirectTo === '/pricing' 
+                ? '/pricing?newuser=true' 
+                : redirectTo
+              window.location.href = finalRedirect
             } catch (sessionError) {
               console.error('Error fetching session:', sessionError)
               // Fallback: redirect to pricing anyway (new users always need plan)
-              window.location.href = '/pricing?newuser=true'
+              const finalRedirect = redirectTo === '/pricing' 
+                ? '/pricing?newuser=true' 
+                : redirectTo
+              window.location.href = finalRedirect
             }
           } else {
             // SignIn returned neither error nor ok - might be undefined

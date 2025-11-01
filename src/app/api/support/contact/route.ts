@@ -7,24 +7,33 @@ import nodemailer from 'nodemailer'
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
+    
     // Parse multipart form data
     const formData = await request.formData()
     const account = formData.get('account') as string
+    const email = formData.get('email') as string
     const subject = formData.get('subject') as string
     const problemType = formData.get('problemType') as string
     const description = formData.get('description') as string
+    
+    // Se não estiver autenticado, email e account são obrigatórios
+    if (!session?.user) {
+      if (!email) {
+        return NextResponse.json({ error: 'Email é obrigatório para usuários não autenticados' }, { status: 400 })
+      }
+      if (!account) {
+        return NextResponse.json({ error: 'Nome é obrigatório para usuários não autenticados' }, { status: 400 })
+      }
+    }
 
     // Handle file attachments
     const attachments = formData.getAll('attachments') as File[]
     const attachmentDetails: Array<{filename: string, content: Buffer, contentType: string, size: number}> = []
 
     // Validação dos campos obrigatórios
-    if (!account || !subject || !problemType || !description) {
-      return NextResponse.json({ error: 'Todos os campos são obrigatórios' }, { status: 400 })
+    // account é obrigatório apenas se não estiver autenticado (já validado acima)
+    if (!subject || !problemType || !description) {
+      return NextResponse.json({ error: 'Assunto, tipo de problema e descrição são obrigatórios' }, { status: 400 })
     }
 
     if (description.length < 20) {
@@ -95,11 +104,15 @@ export async function POST(request: NextRequest) {
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
               <td style="padding: 8px 0; font-weight: bold; color: #555;">Conta:</td>
-              <td style="padding: 8px 0;">${account}</td>
+              <td style="padding: 8px 0;">${account || session?.user?.name || session?.user?.email || 'Não informado'}</td>
             </tr>
             <tr>
               <td style="padding: 8px 0; font-weight: bold; color: #555;">Email:</td>
-              <td style="padding: 8px 0;">${session.user.email}</td>
+              <td style="padding: 8px 0;">${session?.user?.email || email || account || 'Não informado'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; font-weight: bold; color: #555;">Status:</td>
+              <td style="padding: 8px 0;">${session?.user ? 'Usuário autenticado' : 'Usuário não autenticado'}</td>
             </tr>
             <tr>
               <td style="padding: 8px 0; font-weight: bold; color: #555;">Assunto:</td>
@@ -123,8 +136,8 @@ export async function POST(request: NextRequest) {
 
         <div style="margin: 20px 0; padding: 15px; background-color: #e3f2fd; border-radius: 8px;">
           <p style="margin: 0; color: #666; font-size: 14px;">
-            <strong>ID do usuário:</strong> ${session.user.id}<br>
-            <strong>Nome:</strong> ${session.user.name || 'Não informado'}<br>
+            <strong>ID do usuário:</strong> ${session?.user?.id || 'Não autenticado'}<br>
+            <strong>Nome:</strong> ${session?.user?.name || account || 'Não informado'}<br>
             <strong>Data:</strong> ${new Date().toLocaleString('pt-BR')}
           </p>
         </div>
@@ -136,8 +149,8 @@ export async function POST(request: NextRequest) {
     const emailText = `
       Nova mensagem de suporte
 
-      Conta: ${account}
-      Email: ${session.user.email}
+      Conta: ${account || session?.user?.name || session?.user?.email || 'Não informado'}
+      Email: ${session?.user?.email || email || account || 'Não informado'}
       Assunto: ${subject}
       Tipo de problema: ${problemType}
 
@@ -145,8 +158,9 @@ export async function POST(request: NextRequest) {
       ${description}${attachmentsText}
 
       ---
-      ID do usuário: ${session.user.id}
-      Nome: ${session.user.name || 'Não informado'}
+      ID do usuário: ${session?.user?.id || 'Não autenticado'}
+      Nome: ${session?.user?.name || account || 'Não informado'}
+      Status: ${session?.user ? 'Usuário autenticado' : 'Usuário não autenticado'}
       Data: ${new Date().toLocaleString('pt-BR')}
     `
 
@@ -157,7 +171,7 @@ export async function POST(request: NextRequest) {
       subject: `[Suporte] ${subject}`,
       text: emailText,
       html: emailHtml,
-      replyTo: session.user.email,
+      replyTo: session?.user?.email || email || account || undefined,
     }
 
     // Add attachments if any (using buffer instead of file path for serverless)

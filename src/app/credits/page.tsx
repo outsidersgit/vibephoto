@@ -1,5 +1,6 @@
 import { requireActiveSubscription } from '@/lib/subscription'
 import { CreditPackagesInterface } from '@/components/credits/credit-packages-interface'
+import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 
 export const metadata = {
   title: 'Pacotes de Créditos - VibePhoto',
@@ -10,7 +11,9 @@ export default async function CreditsPage() {
   const session = await requireActiveSubscription()
   
   return (
-    <div className="min-h-screen bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+    <>
+      <ProtectedPageScript />
+      <div className="min-h-screen bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -26,5 +29,6 @@ export default async function CreditsPage() {
         <CreditPackagesInterface user={session.user} />
       </div>
     </div>
+    </>
   )
 }

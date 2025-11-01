@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { AccountDeletionModal } from '@/components/settings/account-deletion-modal'
+import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 
 
 export default function ProfilePage() {
@@ -158,8 +159,10 @@ export default function ProfilePage() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-      {/* Header */}
+    <>
+      <ProtectedPageScript />
+      <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+        {/* Header */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div>
@@ -292,5 +295,6 @@ export default function ProfilePage() {
         hasActiveSubscription={hasActiveSubscription}
       />
     </div>
+    </>
   )
 }

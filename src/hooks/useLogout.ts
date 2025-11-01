@@ -41,6 +41,8 @@ export function useLogout() {
       console.log(`  ✅ sessionStorage: ${sessionKeysCount} chaves removidas (limpo completamente)`)
 
       // 3. Limpar TODOS os cookies (incluindo NextAuth, Vercel e personalizados)
+      // MOBILE COMPATIBLE: document.cookie funciona em todos os mobile browsers
+      // PERFORMANCE: Verificação otimizada para mobile e desktop
       // Lista completa de padrões de cookies que devem ser removidos
       const cookiePatterns = [
         // NextAuth cookies

@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
         error: 'Complete seu cadastro antes de comprar créditos',
         message: 'Você precisa completar seu perfil com CPF/CNPJ e dados de endereço antes de realizar compras.',
         action: 'COMPLETE_PROFILE',
-        redirectTo: '/settings/account'
+        redirectTo: '/profile'
       }, { status: 400 })
     }
 

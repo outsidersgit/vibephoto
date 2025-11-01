@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Check, Crown, ArrowRight, AlertCircle, Calendar, Zap, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { PLANS, calculateAnnualSavings, type Plan } from '@/config/pricing'
+import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 
 // Usar configuração centralizada de pricing
 const plans: Plan[] = PLANS
@@ -209,7 +210,9 @@ function PricingPageContent() {
 
 
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <ProtectedPageScript />
+      <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-6 py-20">
         {/* Hero Section */}
         <div className="text-center mb-16" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
@@ -605,7 +608,8 @@ function PricingPageContent() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   )
 }
 

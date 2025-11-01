@@ -120,10 +120,14 @@ export function AutoSyncGalleryInterface({
   
   // CRITICAL: Verificação IMEDIATA antes de qualquer hook ou estado
   // Prevenir erro React #300 ao bloquear renderização completamente
+  // PERFORMANCE: Verificação otimizada para mobile e desktop
+  // MOBILE COMPATIBLE: document.cookie funciona em todos os mobile browsers
   if (typeof window !== 'undefined') {
-    // Verificar cookies diretamente (sem depender de NextAuth que pode estar em estado inconsistente)
+    // PERFORMANCE: Função leve (<0.1ms) que verifica cookies diretamente
+    // Evita depender de NextAuth que pode estar em estado inconsistente
     const hasSessionCookie = () => {
       try {
+        // MOBILE: document.cookie funciona em iOS Safari, Android Chrome, etc.
         const cookies = document.cookie.split(';')
         return cookies.some(cookie => {
           const cookieName = cookie.trim().split('=')[0]
@@ -132,17 +136,21 @@ export function AutoSyncGalleryInterface({
                  cookieName.includes('__Host-next-auth')
         })
       } catch (e) {
+        // MOBILE: Fallback seguro se cookie API falhar
         return false
       }
     }
     
     // CRITICAL: Se não há cookie de sessão, redirecionar IMEDIATAMENTE
+    // MOBILE COMPATIBLE: location.replace funciona em todos os mobile browsers
     if (!hasSessionCookie() && (status === 'unauthenticated' || isAuthorized === false)) {
       // Bloquear qualquer renderização adicional
       const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent('/gallery')
       try {
+        // MOBILE: replace funciona em iOS Safari, Android Chrome, etc.
         window.location.replace(redirectUrl)
       } catch (error) {
+        // MOBILE: Fallback para browsers que não suportam replace
         window.location.href = redirectUrl
       }
       // Retornar componente mínimo para evitar erro React

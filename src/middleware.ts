@@ -14,9 +14,7 @@ export async function middleware(request: NextRequest) {
     pathname === '/favicon.ico' ||
     pathname === '/' ||
     pathname.startsWith('/auth') ||
-    pathname.startsWith('/pricing') ||
-    pathname.startsWith('/legal') ||
-    pathname.startsWith('/support')
+    pathname.startsWith('/legal')
   ) {
     return NextResponse.next()
   }
@@ -32,7 +30,7 @@ export async function middleware(request: NextRequest) {
     const isApiRoute = pathname.startsWith('/api/')
     
     // Protect dashboard and other authenticated routes
-    const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery']
+    const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/account', '/profile', '/pricing']
     const protectedApiPaths = ['/api/generations', '/api/models', '/api/gallery', '/api/media', '/api/upscale', '/api/video']
     
     const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path))
@@ -46,10 +44,18 @@ export async function middleware(request: NextRequest) {
           { status: 401 }
         )
       } else {
-        // Redirect to sign in for web routes
-        const signInUrl = new URL('/auth/signin', request.url)
-        signInUrl.searchParams.set('callbackUrl', request.url)
-        return NextResponse.redirect(signInUrl)
+        // Redirect to signup for web routes (best practice: capture leads)
+        // If accessing pricing specifically, redirect to signup to create account
+        // Otherwise, redirect to signin
+        if (pathname.startsWith('/pricing')) {
+          const signUpUrl = new URL('/auth/signup', request.url)
+          signUpUrl.searchParams.set('redirectTo', '/pricing')
+          return NextResponse.redirect(signUpUrl)
+        } else {
+          const signInUrl = new URL('/auth/signin', request.url)
+          signInUrl.searchParams.set('callbackUrl', request.url)
+          return NextResponse.redirect(signInUrl)
+        }
       }
     }
 

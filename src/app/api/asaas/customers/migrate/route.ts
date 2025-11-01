@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
           cpfCnpj: !user.cpfCnpj
         },
         action: 'COMPLETE_PROFILE',
-        redirectTo: '/settings/account'
+        redirectTo: '/profile'
       }, { status: 400 })
     }
 

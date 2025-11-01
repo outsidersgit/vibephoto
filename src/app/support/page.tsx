@@ -9,15 +9,15 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CheckCircle, AlertCircle, Send, Loader2, Paperclip, X } from 'lucide-react'
-
 export default function SupportPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 
   const [formData, setFormData] = useState({
     account: '',
+    email: '',
     subject: '',
     problemType: '',
     description: ''
@@ -36,8 +36,15 @@ export default function SupportPage() {
 
       // Add form fields
       Object.entries(formData).forEach(([key, value]) => {
-        formDataToSend.append(key, value)
+        if (value) { // Only append non-empty values
+          formDataToSend.append(key, value)
+        }
       })
+      
+      // If user is authenticated, ensure email is sent even if not in formData
+      if (session?.user?.email && !formData.email) {
+        formDataToSend.append('email', session.user.email)
+      }
 
       // Add files
       attachedFiles.forEach((file) => {
@@ -55,7 +62,8 @@ export default function SupportPage() {
         setSubmitStatus('success')
         // Reset form
         setFormData({
-          account: '',
+          account: session?.user?.name || session?.user?.email || '',
+          email: session?.user?.email || '',
           subject: '',
           problemType: '',
           description: ''
@@ -113,6 +121,17 @@ export default function SupportPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
   }
 
+  // Preencher dados do formulário com informações da sessão se disponível
+  useEffect(() => {
+    if (session?.user) {
+      setFormData(prev => ({
+        ...prev,
+        account: session.user.name || session.user.email || '',
+        email: session.user.email || ''
+      }))
+    }
+  }, [session])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
       {/* Header */}
@@ -141,33 +160,52 @@ export default function SupportPage() {
               {/* Conta */}
               <div className="space-y-2">
                 <Label htmlFor="account" className="text-sm font-medium text-white">
-                  Conta
+                  Nome {!session?.user && <span className="text-red-400">*</span>}
                 </Label>
-                <Select
-                  value={formData.account}
-                  onValueChange={(value) => handleInputChange('account', value)}
-                >
-                  <SelectTrigger className="w-full bg-slate-700 border-slate-600 text-white">
-                    <SelectValue placeholder="Selecione uma opção" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-700 border-slate-600">
-                    <SelectItem value="tiagomennabe" className="text-white hover:bg-slate-600">{session?.user?.name || 'tiagomennabe'}</SelectItem>
-                  </SelectContent>
-                </Select>
+                {session?.user ? (
+                  <Input
+                    id="account"
+                    value={formData.account || session.user.name || session.user.email || ''}
+                    onChange={(e) => handleInputChange('account', e.target.value)}
+                    placeholder="Seu nome"
+                    className="bg-slate-700 border-slate-600 text-white"
+                  />
+                ) : (
+                  <Input
+                    id="account"
+                    value={formData.account}
+                    onChange={(e) => handleInputChange('account', e.target.value)}
+                    placeholder="Seu nome"
+                    required
+                    className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                  />
+                )}
               </div>
 
               {/* Endereço de e-mail */}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium text-white">
-                  Endereço de e-mail
+                  Endereço de e-mail {!session?.user && <span className="text-red-400">*</span>}
                 </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={session?.user?.email || ''}
-                  disabled
-                  className="bg-slate-700 border-slate-600 text-slate-400"
-                />
+                {session?.user ? (
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email || session.user.email || ''}
+                    disabled
+                    className="bg-slate-700 border-slate-600 text-slate-400"
+                  />
+                ) : (
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    placeholder="seu.email@exemplo.com"
+                    required
+                    className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                  />
+                )}
               </div>
 
               {/* Assunto */}

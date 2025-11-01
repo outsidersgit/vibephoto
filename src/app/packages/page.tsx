@@ -1,5 +1,6 @@
 import { requireActiveSubscription } from '@/lib/subscription'
 import { PackagesPageClient } from './packages-client'
+import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 
 // ISR: Revalidar a cada 30 minutos (Fase 2 - Otimização de Performance)
 export const revalidate = 1800
@@ -8,7 +9,9 @@ export default async function PackagesPage() {
   const session = await requireActiveSubscription()
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+    <>
+      <ProtectedPageScript />
+      <div className="min-h-screen bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -27,5 +30,6 @@ export default async function PackagesPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }

@@ -119,7 +119,7 @@ export default function AsaasSetupPage() {
                 {error.includes('incompletos') && (
                   <Button
                     variant="outline"
-                    onClick={() => window.location.href = '/settings/account'}
+                    onClick={() => window.location.href = '/profile'}
                     className="mt-2"
                   >
                     Completar Cadastro

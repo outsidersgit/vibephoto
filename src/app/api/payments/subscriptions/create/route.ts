@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         error: 'Complete seu cadastro antes de assinar um plano',
         message: 'Você precisa completar seu perfil com CPF/CNPJ e dados de endereço antes de assinar.',
         action: 'COMPLETE_PROFILE',
-        redirectTo: '/settings/account'
+        redirectTo: '/profile'
       }, { status: 400 })
     }
 
