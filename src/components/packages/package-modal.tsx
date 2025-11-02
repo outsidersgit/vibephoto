@@ -45,6 +45,17 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
   const [showConfigModal, setShowConfigModal] = useState(false)
   const [showAllPreviews, setShowAllPreviews] = useState(false)
 
+  // Debug: verificar preview images
+  React.useEffect(() => {
+    if (pkg.previewImages) {
+      console.log('📦 [PackageModal] Preview images:', {
+        count: pkg.previewImages.length,
+        hasMoreThan4: pkg.previewImages.length > 4,
+        images: pkg.previewImages
+      })
+    }
+  }, [pkg.previewImages])
+
   // Performance: Usar React Query para cache instantâneo (Sprint 1)
   const queryClient = useQueryClient()
   const { update: updateSession } = useSession()
@@ -169,49 +180,60 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
 
         <div className="p-6">
               {/* Preview Images */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {pkg.previewImages.slice(0, 4).map((image, index) => (
-                  <div key={index} className="aspect-square bg-gray-900 rounded-lg overflow-hidden group cursor-pointer border border-gray-700">
-                    <img
-                      src={image}
-                      alt={`Preview ${index + 1}`}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                        e.currentTarget.nextElementSibling?.classList.remove('hidden')
-                      }}
-                    />
-                    <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center relative hidden">
-                      <span className="text-3xl opacity-50 text-gray-400">🖼️</span>
-                      
-                      {/* Hover overlay */}
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 text-gray-900 hover:bg-white"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          Ver
-                        </Button>
+              {pkg.previewImages && pkg.previewImages.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {pkg.previewImages.slice(0, 4).map((image, index) => (
+                      <div key={index} className="aspect-square bg-gray-900 rounded-lg overflow-hidden group cursor-pointer border border-gray-700">
+                        <img
+                          src={image}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                            e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                          }}
+                        />
+                        <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center relative hidden">
+                          <span className="text-3xl opacity-50 text-gray-400">🖼️</span>
+                          
+                          {/* Hover overlay */}
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 text-gray-900 hover:bg-white"
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              Ver
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
 
-              {/* Ver Todas Button */}
-              {pkg.previewImages.length > 4 && (
-                <div className="mt-3 flex justify-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowAllPreviews(true)}
-                    className="bg-gray-700/50 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    Ver todas ({pkg.previewImages.length} imagens)
-                  </Button>
+                  {/* Ver Todas Button - aparece quando há mais de 4 imagens */}
+                  {Array.isArray(pkg.previewImages) && pkg.previewImages.length > 4 && (
+                    <div className="mt-4 flex justify-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          console.log('🔍 Ver todas clicado. Total de imagens:', pkg.previewImages.length)
+                          setShowAllPreviews(true)
+                        }}
+                        className="bg-gray-700/50 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        Ver todas ({pkg.previewImages.length} imagens)
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <p>Nenhuma imagem de preview disponível</p>
                 </div>
               )}
 
