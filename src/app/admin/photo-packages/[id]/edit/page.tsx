@@ -38,6 +38,7 @@ export default function EditPhotoPackagePage() {
   useEffect(() => {
     async function loadPackage() {
       try {
+        setIsLoading(true)
         const response = await fetch(`/api/admin/photo-packages`)
         if (!response.ok) throw new Error('Erro ao carregar pacotes')
         
@@ -60,8 +61,19 @@ export default function EditPhotoPackagePage() {
         })
 
         // Carregar preview URLs existentes
-        const existingUrls = (pkg.previewUrls || []) as string[]
+        const existingUrls = Array.isArray(pkg.previewUrls) ? pkg.previewUrls : []
+        console.log('📦 [EDIT_PAGE] Loading package preview URLs:', {
+          packageId: id,
+          rawPreviewUrls: pkg.previewUrls,
+          previewUrls: existingUrls,
+          count: existingUrls.length,
+          urls: existingUrls
+        })
         setExistingPreviewUrls(existingUrls)
+        
+        // Reset preview images e novas URLs ao recarregar
+        setPreviewImages([])
+        setNewPreviewUrls([])
         
         // Criar previews para imagens existentes
         setPreviewPreviews(existingUrls.map((url, idx) => ({
@@ -100,6 +112,14 @@ export default function EditPhotoPackagePage() {
       
       // Combinar URLs existentes (após remoções) com novas URLs
       const finalPreviewUrls = [...existingPreviewUrls, ...uploadedPreviewUrls]
+      console.log('📋 [EDIT_PAGE] Final preview URLs to save:', {
+        existingCount: existingPreviewUrls.length,
+        newCount: uploadedPreviewUrls.length,
+        total: finalPreviewUrls.length,
+        existing: existingPreviewUrls,
+        new: uploadedPreviewUrls,
+        final: finalPreviewUrls
+      })
       
       const payload = {
         id,
@@ -127,8 +147,44 @@ export default function EditPhotoPackagePage() {
         throw new Error(data.error || 'Erro ao atualizar pacote')
       }
 
-      console.log('✅ [EDIT_PAGE] Package updated successfully')
-      router.push('/admin/photo-packages')
+      const responseData = await response.json()
+      console.log('✅ [EDIT_PAGE] Package updated successfully:', {
+        savedPackage: responseData.pkg,
+        savedPreviewUrls: responseData.pkg?.previewUrls,
+        savedPreviewCount: responseData.pkg?.previewUrls?.length || 0
+      })
+      
+      // Recarregar dados do pacote após salvar para garantir sincronização
+      // Reset estados para recarregar dados do banco
+      setPreviewImages([])
+      setNewPreviewUrls([])
+      
+      // Recarregar dados do pacote para refletir mudanças
+      const reloadResponse = await fetch(`/api/admin/photo-packages`)
+      if (reloadResponse.ok) {
+        const reloadData = await reloadResponse.json()
+        const reloadedPkg = reloadData.packages?.find((p: any) => p.id === id)
+        if (reloadedPkg) {
+          const reloadedUrls = Array.isArray(reloadedPkg.previewUrls) ? reloadedPkg.previewUrls : []
+          setExistingPreviewUrls(reloadedUrls)
+          setPreviewPreviews(reloadedUrls.map((url: string, idx: number) => ({
+            url,
+            index: idx,
+            isExisting: true
+          })))
+          console.log('🔄 [EDIT_PAGE] Package data reloaded:', {
+            previewUrls: reloadedUrls,
+            count: reloadedUrls.length
+          })
+        }
+      }
+      
+      // Mostrar mensagem de sucesso e manter na página
+      setIsSaving(false)
+      alert('Pacote atualizado com sucesso!')
+      
+      // Opcional: redirecionar após alguns segundos ou manter na página
+      // router.push('/admin/photo-packages')
     } catch (err: any) {
       console.error('❌ [EDIT_PAGE] Error:', err)
       setError(err.message || 'Erro ao atualizar pacote')
@@ -244,6 +300,10 @@ export default function EditPhotoPackagePage() {
 
       // 3) Retornar URLs públicas
       const urls = uploads.map(u => u.publicUrl)
+      console.log('📤 [EDIT_PAGE] Uploaded preview images URLs:', {
+        count: urls.length,
+        urls: urls
+      })
       setNewPreviewUrls(urls)
       return urls
 
@@ -382,23 +442,45 @@ export default function EditPhotoPackagePage() {
           </p>
           
           {/* Preview Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             {previewPreviews.map((preview, index) => (
               <div key={index} className="relative aspect-square border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50">
                 <img
                   src={preview.url}
                   alt={`Preview ${index + 1}`}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error('❌ [EDIT_PAGE] Failed to load preview image:', {
+                      url: preview.url,
+                      index: index,
+                      isExisting: preview.isExisting
+                    })
+                    // Exibir placeholder quando imagem não carrega
+                    e.currentTarget.style.display = 'none'
+                    const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder')
+                    if (placeholder) {
+                      (placeholder as HTMLElement).classList.remove('hidden')
+                    }
+                  }}
+                  onLoad={() => {
+                    console.log('✅ [EDIT_PAGE] Preview image loaded successfully:', {
+                      url: preview.url,
+                      index: index
+                    })
+                  }}
                 />
+                <div className="hidden image-placeholder w-full h-full bg-gray-200 flex items-center justify-center">
+                  <span className="text-xs text-gray-400">Imagem não disponível</span>
+                </div>
                 <button
                   type="button"
                   onClick={() => removePreviewImage(preview.index, preview.isExisting)}
-                  className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
+                  className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 hover:bg-red-700 z-10"
                 >
                   <X className="w-3 h-3" />
                 </button>
                 {preview.isExisting && (
-                  <span className="absolute bottom-1 left-1 bg-blue-600 text-white text-xs px-2 py-0.5 rounded">
+                  <span className="absolute bottom-1 left-1 bg-blue-600 text-white text-xs px-2 py-0.5 rounded z-10">
                     Existente
                   </span>
                 )}

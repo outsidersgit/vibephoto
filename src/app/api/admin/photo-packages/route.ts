@@ -73,8 +73,23 @@ export async function PUT(request: NextRequest) {
   const { id, ...rest } = parsed.data
   console.log(`📝 [ADMIN_PHOTO_PACKAGES] Updating package ${id} with data:`, JSON.stringify(rest, null, 2))
   
+  // Log específico para previewUrls
+  if (rest.previewUrls) {
+    console.log('🖼️ [ADMIN_PHOTO_PACKAGES] Preview URLs to save:', {
+      count: Array.isArray(rest.previewUrls) ? rest.previewUrls.length : 0,
+      urls: rest.previewUrls
+    })
+  }
+  
   const updated = await prisma.photoPackage.update({ where: { id }, data: rest as any })
-  console.log('✅ [ADMIN_PHOTO_PACKAGES] Package updated successfully')
+  
+  // Verificar se previewUrls foram salvas corretamente
+  const savedPreviewUrls = updated.previewUrls as string[] | null
+  console.log('✅ [ADMIN_PHOTO_PACKAGES] Package updated successfully:', {
+    packageId: updated.id,
+    savedPreviewUrls: savedPreviewUrls,
+    savedPreviewCount: Array.isArray(savedPreviewUrls) ? savedPreviewUrls.length : 0
+  })
   
   return NextResponse.json({ pkg: updated })
 }
