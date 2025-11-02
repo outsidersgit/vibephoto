@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -41,6 +42,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid payload', issues: parsed.error.issues }, { status: 400 })
   }
   const created = await prisma.photoPackage.create({ data: parsed.data as any })
+  
+  // Invalidar cache para que usuários vejam o novo pacote imediatamente
+  revalidateTag('packages')
+  
   return NextResponse.json({ pkg: created })
 }
 
@@ -91,6 +96,10 @@ export async function PUT(request: NextRequest) {
     savedPreviewCount: Array.isArray(savedPreviewUrls) ? savedPreviewUrls.length : 0
   })
   
+  // Invalidar cache para que usuários vejam as mudanças imediatamente
+  revalidateTag('packages')
+  console.log('🔄 [ADMIN_PHOTO_PACKAGES] Cache invalidated for packages')
+  
   return NextResponse.json({ pkg: updated })
 }
 
@@ -99,6 +108,10 @@ export async function DELETE(request: NextRequest) {
   if (!ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const { id } = await request.json()
   await prisma.photoPackage.delete({ where: { id } })
+  
+  // Invalidar cache para que usuários vejam que o pacote foi removido imediatamente
+  revalidateTag('packages')
+  
   return NextResponse.json({ ok: true })
 }
 
