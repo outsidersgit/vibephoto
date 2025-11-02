@@ -32,16 +32,29 @@ export async function POST(req: NextRequest) {
 
       // Importante: assinar apenas o que o cliente realmente enviará no PUT
       // Se assinarmos cabeçalhos extras aqui, o navegador também precisa enviá-los, senão dá 403
+      // Para package-previews, precisamos de acesso público, então incluímos ACL no comando
       const command = new PutObjectCommand({
         Bucket: bucket,
         Key: key,
-        ContentType: contentType
+        ContentType: contentType,
+        // Para package-previews, tornar o objeto público para que possa ser acessado via URL
+        ...(prefix === 'package-previews' ? { ACL: 'public-read' } : {})
       })
 
       const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 900 })
       const publicUrl = cloudFrontUrl
         ? `${cloudFrontUrl}/${key}`
         : `https://${bucket}.s3.${region}.amazonaws.com/${key}`
+
+      // Log para debug (especialmente para package-previews)
+      if (prefix === 'package-previews') {
+        console.log('📦 [PRESIGN] Generated presigned URL for package preview:', {
+          key,
+          publicUrl,
+          hasACL: !!(command.input as any).ACL,
+          acl: (command.input as any).ACL
+        })
+      }
 
       return { uploadUrl, key, publicUrl, contentType }
     }))

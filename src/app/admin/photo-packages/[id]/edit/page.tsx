@@ -67,7 +67,13 @@ export default function EditPhotoPackagePage() {
           rawPreviewUrls: pkg.previewUrls,
           previewUrls: existingUrls,
           count: existingUrls.length,
-          urls: existingUrls
+          urls: existingUrls,
+          urlTypes: existingUrls.map((url: string) => ({
+            url,
+            isS3: url.startsWith('https://') && url.includes('s3'),
+            isLocal: url.startsWith('/'),
+            isValid: typeof url === 'string' && url.length > 0
+          }))
         })
         setExistingPreviewUrls(existingUrls)
         
@@ -76,11 +82,16 @@ export default function EditPhotoPackagePage() {
         setNewPreviewUrls([])
         
         // Criar previews para imagens existentes
-        setPreviewPreviews(existingUrls.map((url, idx) => ({
+        const previews = existingUrls.map((url, idx) => ({
           url,
           index: idx,
           isExisting: true
-        })))
+        }))
+        console.log('🖼️ [EDIT_PAGE] Setting preview previews:', {
+          count: previews.length,
+          previews: previews.map(p => ({ url: p.url, index: p.index, isExisting: p.isExisting }))
+        })
+        setPreviewPreviews(previews)
       } catch (err: any) {
         setError(err.message || 'Erro ao carregar pacote')
       } finally {
@@ -160,23 +171,40 @@ export default function EditPhotoPackagePage() {
       setNewPreviewUrls([])
       
       // Recarregar dados do pacote para refletir mudanças
+      console.log('🔄 [EDIT_PAGE] Reloading package data after save...')
       const reloadResponse = await fetch(`/api/admin/photo-packages`)
       if (reloadResponse.ok) {
         const reloadData = await reloadResponse.json()
         const reloadedPkg = reloadData.packages?.find((p: any) => p.id === id)
         if (reloadedPkg) {
           const reloadedUrls = Array.isArray(reloadedPkg.previewUrls) ? reloadedPkg.previewUrls : []
+          console.log('🔄 [EDIT_PAGE] Reloaded package preview URLs:', {
+            packageId: id,
+            previewUrls: reloadedUrls,
+            count: reloadedUrls.length,
+            urlTypes: reloadedUrls.map((url: string) => ({
+              url,
+              isS3: url.startsWith('https://') && url.includes('s3'),
+              isLocal: url.startsWith('/'),
+              isValid: typeof url === 'string' && url.length > 0
+            }))
+          })
           setExistingPreviewUrls(reloadedUrls)
-          setPreviewPreviews(reloadedUrls.map((url: string, idx: number) => ({
+          const newPreviews = reloadedUrls.map((url: string, idx: number) => ({
             url,
             index: idx,
             isExisting: true
-          })))
-          console.log('🔄 [EDIT_PAGE] Package data reloaded:', {
-            previewUrls: reloadedUrls,
-            count: reloadedUrls.length
+          }))
+          console.log('🖼️ [EDIT_PAGE] Setting reloaded preview previews:', {
+            count: newPreviews.length,
+            previews: newPreviews.map(p => ({ url: p.url, index: p.index, isExisting: p.isExisting }))
           })
+          setPreviewPreviews(newPreviews)
+        } else {
+          console.error('❌ [EDIT_PAGE] Package not found after reload:', id)
         }
+      } else {
+        console.error('❌ [EDIT_PAGE] Failed to reload package data:', reloadResponse.status, reloadResponse.statusText)
       }
       
       // Mostrar mensagem de sucesso e manter na página
@@ -444,32 +472,42 @@ export default function EditPhotoPackagePage() {
           {/* Preview Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             {previewPreviews.map((preview, index) => (
-              <div key={index} className="relative aspect-square border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50">
+              <div key={`${preview.url}-${index}`} className="relative aspect-square border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50">
                 <img
                   src={preview.url}
                   alt={`Preview ${index + 1}`}
                   className="w-full h-full object-cover"
+                  crossOrigin="anonymous"
                   onError={(e) => {
                     console.error('❌ [EDIT_PAGE] Failed to load preview image:', {
                       url: preview.url,
                       index: index,
-                      isExisting: preview.isExisting
+                      isExisting: preview.isExisting,
+                      error: e
                     })
                     // Exibir placeholder quando imagem não carrega
-                    e.currentTarget.style.display = 'none'
-                    const placeholder = e.currentTarget.parentElement?.querySelector('.image-placeholder')
-                    if (placeholder) {
-                      (placeholder as HTMLElement).classList.remove('hidden')
+                    const imgElement = e.currentTarget
+                    imgElement.style.display = 'none'
+                    const parentDiv = imgElement.parentElement
+                    if (parentDiv) {
+                      const placeholder = parentDiv.querySelector('.image-placeholder') as HTMLElement
+                      if (placeholder) {
+                        placeholder.classList.remove('hidden')
+                        console.log('🖼️ [EDIT_PAGE] Showing placeholder for failed image:', preview.url)
+                      } else {
+                        console.error('⚠️ [EDIT_PAGE] Placeholder element not found for:', preview.url)
+                      }
                     }
                   }}
                   onLoad={() => {
                     console.log('✅ [EDIT_PAGE] Preview image loaded successfully:', {
                       url: preview.url,
-                      index: index
+                      index: index,
+                      isExisting: preview.isExisting
                     })
                   }}
                 />
-                <div className="hidden image-placeholder w-full h-full bg-gray-200 flex items-center justify-center">
+                <div className="hidden image-placeholder w-full h-full bg-gray-200 flex items-center justify-center absolute inset-0">
                   <span className="text-xs text-gray-400">Imagem não disponível</span>
                 </div>
                 <button
