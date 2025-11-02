@@ -38,6 +38,8 @@ const plans: Plan[] = PLANS
 const creditPackages: CreditPackage[] = CREDIT_PACKAGES
 
 function BillingPageContent() {
+  // CRITICAL: Todos os hooks DEVEM ser chamados ANTES de qualquer early return
+  // Violar esta regra causa erro React #300/#310
   const { data: session, status, update: updateSession } = useSession()
   const searchParams = useSearchParams()
   const tabFromUrl = searchParams?.get('tab')
@@ -45,16 +47,6 @@ function BillingPageContent() {
   // CRITICAL: Verificar autenticação ANTES de renderizar conteúdo
   const isAuthorized = useAuthGuard()
   
-  // CRITICAL: Bloquear renderização completamente se não autorizado
-  if (isAuthorized === false || status === 'unauthenticated' || !session?.user) {
-    return null // Retornar null para não renderizar nada (o script vai redirecionar)
-  }
-  
-  // CRITICAL: Bloquear renderização durante verificação de autenticação
-  if (isAuthorized === null || status === 'loading') {
-    return null // Retornar null para não renderizar nada durante loading
-  }
-
   const [activeTab, setActiveTab] = useState('overview')
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
   const [showCancelModal, setShowCancelModal] = useState(false)
@@ -122,14 +114,28 @@ function BillingPageContent() {
     subscriptionStatus: 'ACTIVE',
     subscriptionEndsAt: calculateNextRenewal()
   }
-
-  // Verificação adicional de sessão (redundante mas seguro)
-  if (!session?.user) {
+  
+  // CRITICAL: AGORA sim podemos fazer early returns após TODOS os hooks
+  // Durante loading, mostrar loading state (não bloquear)
+  // A página server-side já garantiu que há sessão válida
+  if (status === 'loading' || isAuthorized === null) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirecionando para login...</p>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  // CRITICAL: Se não autenticado após loading, aguardar (página server-side já verificou)
+  if (status === 'unauthenticated' || !session?.user || isAuthorized === false) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando autenticação...</p>
         </div>
       </div>
     )

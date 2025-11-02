@@ -25,20 +25,12 @@ import { usePackages } from '@/hooks/usePackages'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 
 export function PackagesPageClient() {
+  // CRITICAL: Todos os hooks DEVEM ser chamados ANTES de qualquer early return
+  // Violar esta regra causa erro React #300/#310
   const { data: session, status } = useSession()
   
   // CRITICAL: Verificar autenticação ANTES de renderizar conteúdo
   const isAuthorized = useAuthGuard()
-  
-  // CRITICAL: Bloquear renderização completamente se não autorizado
-  if (isAuthorized === false || status === 'unauthenticated' || !session?.user) {
-    return null // Retornar null para não renderizar nada (o script vai redirecionar)
-  }
-  
-  // CRITICAL: Bloquear renderização durante verificação de autenticação
-  if (isAuthorized === null || status === 'loading') {
-    return null // Retornar null para não renderizar nada durante loading
-  }
   
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -51,6 +43,32 @@ export function PackagesPageClient() {
   // Performance: React Query com cache (Sprint 3 - Mobile Performance)
   const { data: packages = [], isLoading: loading, error: queryError } = usePackages()
   const error = queryError ? 'Erro ao carregar pacotes' : ''
+  
+  // CRITICAL: AGORA sim podemos fazer early returns após TODOS os hooks
+  // Durante loading, mostrar loading state (não bloquear)
+  // A página server-side já garantiu que há sessão válida
+  if (status === 'loading' || isAuthorized === null) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-white">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  // CRITICAL: Se não autenticado após loading, aguardar (página server-side já verificou)
+  if (status === 'unauthenticated' || !session?.user || isAuthorized === false) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-white">Verificando autenticação...</p>
+        </div>
+      </div>
+    )
+  }
 
 
   const categories = [
@@ -81,17 +99,6 @@ export function PackagesPageClient() {
     premiumPackages: packages.filter(p => p.isPremium).length,
     totalGenerations: packages.reduce((sum, p) => sum + (p.downloadCount || p.uses || 0), 0),
     averageRating: packages.length > 0 ? (packages.reduce((sum, p) => sum + (p.rating || 0), 0) / packages.length).toFixed(1) : '0'
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600">Carregando pacotes...</p>
-        </div>
-      </div>
-    )
   }
 
   if (error && packages.length === 0) {

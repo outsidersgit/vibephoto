@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -45,17 +45,10 @@ interface CreditPackagesInterfaceProps {
 }
 
 export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) {
+  // CRITICAL: Todos os hooks DEVEM ser chamados ANTES de qualquer early return
+  // Violar esta regra causa erro React #300/#310
   const { data: session, status } = useSession()
   
-  // CRITICAL: Verificar autenticação antes de renderizar
-  if (status === 'unauthenticated' || !session?.user) {
-    return null // Retornar null para não renderizar nada (o script vai redirecionar)
-  }
-  
-  // CRITICAL: Bloquear durante verificação
-  if (status === 'loading') {
-    return null
-  }
   const [packages, setPackages] = useState<CreditPackage[]>([])
   const [balance, setBalance] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -67,25 +60,7 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
   const [checkoutUrl, setCheckoutUrl] = useState<string>('')
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
 
-  // Pré-selecionar o pacote "Popular" ao carregar
-  useEffect(() => {
-    const popularPackage = CREDIT_PACKAGES.find(pkg => pkg.popular)
-    if (popularPackage) {
-      setSelectedPackageId(popularPackage.id)
-    }
-  }, [])
-
-  useEffect(() => {
-    // CRITICAL: Verificar se há sessão antes de fazer fetch
-    if (status !== 'loading' && session?.user && user?.id) {
-      loadPackagesAndBalance()
-    } else if (status !== 'loading' && !session?.user) {
-      // Não autenticado - parar loading sem fazer fetch
-      setLoading(false)
-    }
-  }, [status, session, user?.id])
-
-  const loadPackagesAndBalance = async () => {
+  const loadPackagesAndBalance = useCallback(async () => {
     // CRITICAL: Verificar novamente antes de fazer fetch
     if (!session?.user || !user?.id) {
       setLoading(false)
@@ -130,6 +105,50 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
     } finally {
       setLoading(false)
     }
+  }, [session?.user, user?.id])
+
+  // Pré-selecionar o pacote "Popular" ao carregar
+  useEffect(() => {
+    const popularPackage = CREDIT_PACKAGES.find(pkg => pkg.popular)
+    if (popularPackage) {
+      setSelectedPackageId(popularPackage.id)
+    }
+  }, [])
+
+  useEffect(() => {
+    // CRITICAL: Verificar se há sessão antes de fazer fetch
+    if (status !== 'loading' && session?.user && user?.id) {
+      loadPackagesAndBalance()
+    } else if (status !== 'loading' && !session?.user) {
+      // Não autenticado - parar loading sem fazer fetch
+      setLoading(false)
+    }
+  }, [status, session, user?.id, loadPackagesAndBalance])
+  
+  // CRITICAL: AGORA sim podemos fazer early returns após TODOS os hooks
+  // Durante loading, mostrar loading state (não bloquear)
+  // A página server-side já garantiu que há sessão válida
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  // CRITICAL: Se não autenticado após loading, aguardar (página server-side já verificou)
+  if (status === 'unauthenticated' || !session?.user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando autenticação...</p>
+        </div>
+      </div>
+    )
   }
 
   const handleSelectPackage = (packageId: string) => {
@@ -199,15 +218,6 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
   }
 
   const selectedPackage = CREDIT_PACKAGES.find(pkg => pkg.id === selectedPackageId)
-
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-      </div>
-    )
-  }
 
   // Use official credit packages from pricing config
   const creditPackages = CREDIT_PACKAGES
