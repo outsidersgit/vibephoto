@@ -24,7 +24,11 @@ export async function POST(req: NextRequest) {
       const safeName = typeof f?.name === 'string' ? f.name.replace(/[^A-Za-z0-9._-]/g, '_') : `file_${i}`
       const category = typeof f?.category === 'string' ? f.category : 'misc'
       const contentType = typeof f?.type === 'string' ? f.type : 'application/octet-stream'
-      const key = `${prefix}/${userId}/${category}/${Date.now()}_${i}_${safeName}`
+      
+      // Construir key baseado no prefix customizado ou padrão
+      const key = prefix === 'package-previews'
+        ? `${prefix}/${Date.now()}_${i}_${safeName}`
+        : `${prefix}/${userId}/${category}/${Date.now()}_${i}_${safeName}`
 
       // Importante: assinar apenas o que o cliente realmente enviará no PUT
       // Se assinarmos cabeçalhos extras aqui, o navegador também precisa enviá-los, senão dá 403

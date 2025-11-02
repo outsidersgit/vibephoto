@@ -9,38 +9,35 @@ export async function GET() {
     // Pacotes são estáticos no filesystem, mudam raramente
     const getCachedPackages = unstable_cache(
       async () => {
-        // 1) Tentar buscar do banco (fonte de verdade)
-        try {
-          const dbPackages = await prisma.photoPackage.findMany({
-            where: { isActive: true },
-            orderBy: { sortOrder: 'asc' }
-          })
-          if (dbPackages && dbPackages.length > 0) {
-            return dbPackages.map((p: any) => ({
-              id: p.id,
-              name: p.name,
-              category: p.category || 'PREMIUM',
-              description: p.description || '',
-              promptCount: Array.isArray(p.prompts) ? p.prompts.length : (p.promptCount || 0),
-              previewImages: p.previewImages || [],
-              price: p.price || 200,
-              isPremium: p.isPremium ?? true,
-              estimatedTime: p.estimatedTime || '5-8 min',
-              popularity: p.popularity || 0,
-              rating: p.rating || 5,
-              uses: p.uses || 0,
-              tags: p.tags || [],
-              features: p.features || [],
-              userStatus: { activated: false, status: null }
-            }))
-          }
-        } catch (err) {
-          console.warn('⚠️ Failed to read photo packages from DB, will fallback to filesystem:', err)
+        // Buscar do banco (fonte de verdade)
+        const dbPackages = await prisma.photoPackage.findMany({
+          where: { isActive: true },
+          orderBy: { createdAt: 'desc' } // Ordenar por data de criação se não houver sortOrder
+        })
+
+        if (dbPackages && dbPackages.length > 0) {
+          return dbPackages.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            category: p.category || 'PREMIUM',
+            description: p.description || '',
+            promptCount: Array.isArray(p.prompts) ? p.prompts.length : 0,
+            previewImages: p.previewUrls || [], // ✅ Campo correto do banco: previewUrls
+            price: p.price || 200,
+            isPremium: p.isPremium ?? true,
+            estimatedTime: p.estimatedTime || '5-8 min',
+            popularity: p.popularity || 0,
+            rating: p.rating || 5,
+            uses: p.uses || 0,
+            tags: p.tags || [],
+            features: p.features || [],
+            userStatus: { activated: false, status: null }
+          }))
         }
 
-        // 2) Fallback: escanear diretório (compatibilidade)
-        const fsPackages = scanPackagesDirectory()
-        return fsPackages
+        // Se não houver pacotes no banco, retornar array vazio (filesystem foi removido)
+        console.warn('⚠️ No packages found in database')
+        return []
       },
       ['packages-directory-scan'],
       {

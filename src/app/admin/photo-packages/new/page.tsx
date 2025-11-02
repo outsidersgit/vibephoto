@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { X, Upload, Image as ImageIcon } from 'lucide-react'
 
 interface Prompt {
   text: string
@@ -12,8 +14,13 @@ interface Prompt {
 
 export default function NewPhotoPackagePage() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [isLoading, setIsLoading] = useState(false)
+  const [uploadingPreviews, setUploadingPreviews] = useState(false)
   const [error, setError] = useState('')
+  const [previewImages, setPreviewImages] = useState<File[]>([])
+  const [previewUrls, setPreviewUrls] = useState<string[]>([])
+  const [previewPreviews, setPreviewPreviews] = useState<{ url: string; index: number }[]>([])
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -24,12 +31,109 @@ export default function NewPhotoPackagePage() {
     prompts: [] as Prompt[]
   })
 
+  const handlePreviewImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const validFiles = files.filter(f => f.type.startsWith('image/'))
+    
+    if (previewImages.length + validFiles.length > 4) {
+      setError('Máximo de 4 imagens de preview permitidas')
+      return
+    }
+    
+    setPreviewImages([...previewImages, ...validFiles.slice(0, 4 - previewImages.length)])
+    
+    // Criar previews para exibição
+    validFiles.slice(0, 4 - previewImages.length).forEach((file, idx) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const url = e.target?.result as string
+        setPreviewPreviews(prev => [...prev, { url, index: previewImages.length + idx }])
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const removePreviewImage = (index: number) => {
+    setPreviewImages(previewImages.filter((_, i) => i !== index))
+    setPreviewPreviews(previewPreviews.filter(p => p.index !== index).map(p => ({
+      ...p,
+      index: p.index > index ? p.index - 1 : p.index
+    })))
+    setPreviewUrls(previewUrls.filter((_, i) => i !== index))
+  }
+
+  const uploadPreviewImages = async (): Promise<string[]> => {
+    if (previewImages.length === 0) {
+      return []
+    }
+
+    setUploadingPreviews(true)
+
+    try {
+      // 1) Presign request
+      const presignRes = await fetch('/api/uploads/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: session?.user?.id || 'admin',
+          files: previewImages.map((file) => ({
+            name: file.name,
+            type: file.type,
+            category: 'preview'
+          })),
+          prefix: 'package-previews'
+        })
+      })
+
+      if (!presignRes.ok) {
+        const err = await presignRes.json().catch(() => ({}))
+        throw new Error(err?.error || 'Falha ao pré-assinar uploads')
+      }
+
+      const presignData = await presignRes.json()
+      const uploads = presignData.uploads as Array<{ uploadUrl: string; publicUrl: string; key: string; contentType: string }>
+
+      if (!uploads || uploads.length !== previewImages.length) {
+        throw new Error('Resposta de presign inválida')
+      }
+
+      // 2) Upload direto para S3 (PUT)
+      await Promise.all(uploads.map((u, idx) => {
+        const file = previewImages[idx]
+        return fetch(u.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type || 'application/octet-stream' },
+          body: file
+        }).then(res => {
+          if (!res.ok) throw new Error(`Falha ao subir arquivo: ${file.name}`)
+        })
+      }))
+
+      // 3) Retornar URLs públicas
+      const urls = uploads.map(u => u.publicUrl)
+      setPreviewUrls(urls)
+      return urls
+
+    } catch (error) {
+      console.error('Erro ao fazer upload de preview images:', error)
+      throw error
+    } finally {
+      setUploadingPreviews(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
 
     try {
+      // Upload preview images primeiro (se houver)
+      let uploadedPreviewUrls: string[] = []
+      if (previewImages.length > 0) {
+        uploadedPreviewUrls = await uploadPreviewImages()
+      }
+
       const price = formData.price ? parseFloat(formData.price) : null
       
       // Filtrar prompts vazios antes de enviar
@@ -46,7 +150,7 @@ export default function NewPhotoPackagePage() {
           isActive: formData.isActive,
           isPremium: formData.isPremium,
           prompts: validPrompts,
-          previewUrls: []
+          previewUrls: uploadedPreviewUrls
         })
       })
 
@@ -183,6 +287,72 @@ export default function NewPhotoPackagePage() {
           </label>
         </div>
 
+        {/* Preview Images Section */}
+        <div className="border-t pt-4 mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Imagens de Preview (máximo 4)
+          </label>
+          <p className="text-xs text-gray-500 mb-3">
+            Selecione até 4 imagens que serão exibidas como preview do pacote
+          </p>
+          
+          {/* Preview Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            {previewPreviews.map((preview, index) => (
+              <div key={index} className="relative aspect-square border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50">
+                <img
+                  src={preview.url}
+                  alt={`Preview ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removePreviewImage(index)}
+                  className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+            
+            {/* Add Image Slot */}
+            {previewImages.length < 4 && (
+              <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-colors">
+                <Upload className="w-6 h-6 text-gray-400 mb-2" />
+                <span className="text-xs text-gray-500 text-center px-2">Adicionar Imagem</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png"
+                  multiple
+                  onChange={handlePreviewImageChange}
+                  className="hidden"
+                />
+              </label>
+            )}
+          </div>
+
+          {/* File Input Alternative */}
+          {previewImages.length === 0 && (
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-600 mb-2">
+                Nenhuma imagem selecionada
+              </p>
+              <label className="inline-block bg-purple-600 text-white px-4 py-2 rounded-md text-sm hover:bg-purple-700 cursor-pointer">
+                <Upload className="w-4 h-4 inline mr-2" />
+                Selecionar Imagens
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png"
+                  multiple
+                  onChange={handlePreviewImageChange}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          )}
+        </div>
+
         {/* Prompts Section */}
         <div className="border-t pt-4 mt-4">
           <div className="flex items-center justify-between mb-3">
@@ -245,10 +415,10 @@ export default function NewPhotoPackagePage() {
         <div className="flex gap-2 pt-4">
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || uploadingPreviews}
             className="rounded-md bg-purple-600 text-white px-4 py-2 text-sm hover:bg-purple-700 disabled:opacity-50"
           >
-            {isLoading ? 'Criando...' : 'Criar Pacote'}
+            {uploadingPreviews ? 'Fazendo upload...' : isLoading ? 'Criando...' : 'Criar Pacote'}
           </button>
           <Link
             href="/admin/photo-packages"
