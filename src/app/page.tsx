@@ -1490,7 +1490,7 @@ export default function HomePage() {
               </h1>
 
               <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-8 sm:mb-10 max-w-2xl mx-auto leading-relaxed font-light">
-                Com IA, você cria imagens únicas, sofisticadas e feitas sob medida.
+                Crie fotos profissionais, ensaios fotográficos e imagens únicas de Você mesmo com IA.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center w-full sm:w-auto px-4 sm:px-0">

@@ -132,11 +132,11 @@ export async function POST(request: NextRequest) {
       resolution
     })
 
-    // OPÇÃO A: 20 gerações × 1 output cada = 20 fotos únicas
-    // Cada prompt do pacote gera 1 foto para máxima variedade
+    // Cada prompt do pacote gera 1 foto (variations: 1)
+    // Total de fotos = número de prompts do pacote
     const generations = []
 
-    for (let promptIndex = 0; promptIndex < Math.min(packagePrompts.length, 20); promptIndex++) {
+    for (let promptIndex = 0; promptIndex < packagePrompts.length; promptIndex++) {
       const promptData = packagePrompts[promptIndex]
 
       // Inject token and className into prompt
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
         generations.push(generation)
 
         // Start generation asynchronously (don't await to allow parallel processing)
-        console.log(`🎨 Starting generation ${promptIndex + 1}/20 for prompt: "${fullPrompt.substring(0, 100)}..."`)
+        console.log(`🎨 Starting generation ${promptIndex + 1}/${packagePrompts.length} for prompt: "${fullPrompt.substring(0, 100)}..."`)
         generateImage({
           modelId: aiModel.id,
           prompt: fullPrompt,
@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
       message: `Started generation of ${generations.length} prompts with 1 output each (${generations.length} total images)`,
       userPackageId,
       generationsCreated: generations.length,
-      totalImagesExpected: generations.length,
+      totalImagesExpected: userPackage.totalImages, // Use totalImages from UserPackage
       generations: generations.map(g => ({
         id: g.id,
         promptIndex: g.packagePromptIndex,

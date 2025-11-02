@@ -84,6 +84,17 @@ export async function POST(
       return NextResponse.json({ error: 'Package is not active' }, { status: 400 })
     }
 
+    // Calculate total images from package prompts
+    const packagePrompts = photoPackage.prompts as Array<{ text: string; style?: string; description?: string }> | null
+    const totalImages = Array.isArray(packagePrompts) ? packagePrompts.length : 0
+
+    // Validate package has at least one prompt
+    if (totalImages === 0) {
+      return NextResponse.json({
+        error: 'Package has no prompts configured. Cannot activate package without prompts.'
+      }, { status: 400 })
+    }
+
     // Validate user has enough credits
     const canUse = await canUserUseCredits(userId, requiredCredits)
 
@@ -99,7 +110,7 @@ export async function POST(
         userId,
         packageId,
         status: 'ACTIVE',
-        totalImages: 20,
+        totalImages: totalImages, // Calculated from prompts.length
         generatedImages: 0,
         failedImages: 0
       },

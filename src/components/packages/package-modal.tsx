@@ -205,7 +205,9 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
               <div className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg border border-gray-600">
                 <div className="flex-1">
                   <div className="text-lg font-bold text-white">{pkg.price} créditos</div>
-                  <div className="text-xs text-gray-400">{pkg.features?.[0] || '20 fotos geradas'}</div>
+                  <div className="text-xs text-gray-400">
+                {pkg.promptCount || pkg.prompts?.length || 0} {((pkg.promptCount || pkg.prompts?.length || 0) === 1) ? 'foto gerada' : 'fotos geradas'}
+              </div>
                   <div className="text-xs text-blue-300 mt-1">Seus créditos: {userCredits}</div>
                 </div>
                 <Button
@@ -243,7 +245,9 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
                       <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
                       <div>
                         <p className="text-sm font-medium text-blue-200">Ativando pacote...</p>
-                        <p className="text-xs text-blue-300">Iniciando geração automática de 20 imagens</p>
+                        <p className="text-xs text-blue-300">
+                          Iniciando geração automática de {pkg.promptCount || pkg.prompts?.length || 0} imagens
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -346,6 +350,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
           packageId={pkg.id}
           packageName={pkg.name}
           packagePrice={pkg.price}
+          totalImages={pkg.promptCount || pkg.prompts?.length || 0}
           onClose={() => setShowConfigModal(false)}
           onConfirm={handleActivatePackage}
         />

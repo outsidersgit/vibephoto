@@ -19,6 +19,7 @@ interface PackageConfigModalProps {
   packageId: string
   packageName: string
   packagePrice: number
+  totalImages?: number // Number of images in the package
   onClose: () => void
   onConfirm: (modelId: string, aspectRatio: string) => void
 }
@@ -34,6 +35,7 @@ export function PackageConfigModal({
   packageId,
   packageName,
   packagePrice,
+  totalImages = 20, // Default to 20 for backward compatibility
   onClose,
   onConfirm
 }: PackageConfigModalProps) {
@@ -144,7 +146,7 @@ export function PackageConfigModal({
                 Selecione o Modelo
               </label>
               <p className="text-xs text-slate-400 mb-3">
-                Escolha qual modelo será usado nas 20 fotos do pacote
+                Escolha qual modelo será usado nas {totalImages} fotos do pacote
               </p>
 
               <div className="space-y-2">
@@ -223,7 +225,7 @@ export function PackageConfigModal({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Imagens:</span>
-                  <span className="text-white font-medium">20 fotos</span>
+                  <span className="text-white font-medium">{totalImages} {totalImages === 1 ? 'foto' : 'fotos'}</span>
                 </div>
                 <div className="flex justify-between pt-1.5 mt-1.5 border-t border-slate-700">
                   <span className="text-slate-300 font-medium">Custo Total:</span>
@@ -250,7 +252,7 @@ export function PackageConfigModal({
                 onClick={handleConfirm}
                 disabled={!selectedModel}
               >
-                Confirmar e Gerar 20 Fotos
+                Confirmar e Gerar {totalImages} {totalImages === 1 ? 'Foto' : 'Fotos'}
               </Button>
             </div>
           </div>

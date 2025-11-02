@@ -25,7 +25,7 @@ const packageMetadata: Record<string, Omit<PackageData, 'id' | 'previewImages'>>
     name: 'Quiet Luxury',
     category: 'PREMIUM',
     description: 'Luxo discreto que prioriza qualidade, design atemporal e minimalismo',
-    promptCount: 20,
+    promptCount: 0, // Will be calculated from prompts.length
     price: 400,
     isPremium: true,
     estimatedTime: '3-4 minutos',
@@ -473,9 +473,15 @@ export function scanPackagesDirectory(): PackageData[] {
       }
 
       if (previewImages.length > 0) {
+        // Calculate promptCount dynamically from prompts array
+        const promptCount = metadata.prompts && Array.isArray(metadata.prompts) 
+          ? metadata.prompts.length 
+          : (metadata.promptCount || 0)
+        
         packages.push({
           id: packageId,
           ...metadata,
+          promptCount, // Use calculated value
           previewImages
         })
       } else {

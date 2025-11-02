@@ -378,13 +378,13 @@ model UserPackage {
   status    PackageStatus @default(ACTIVE)
 
   // Progress tracking
-  totalImages      Int @default(20) // 5 prompts × 4 variations
+  totalImages      Int // Number of images to generate (calculated from package.prompts.length)
   generatedImages  Int @default(0)  // Count of completed generations
   failedImages     Int @default(0)  // Count of failed generations
 
   // Metadata
   activatedAt DateTime  @default(now()) // When user activated the package
-  completedAt DateTime? // When all 20 images were generated
+  completedAt DateTime? // When all images were generated
   errorMessage String?  // Error details if status is FAILED
 
   // Timestamps

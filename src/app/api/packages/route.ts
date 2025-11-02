@@ -21,7 +21,7 @@ export async function GET() {
               name: p.name,
               category: p.category || 'PREMIUM',
               description: p.description || '',
-              promptCount: Array.isArray(p.prompts) ? p.prompts.length : (p.promptCount || 20),
+              promptCount: Array.isArray(p.prompts) ? p.prompts.length : (p.promptCount || 0),
               previewImages: p.previewImages || [],
               price: p.price || 200,
               isPremium: p.isPremium ?? true,
