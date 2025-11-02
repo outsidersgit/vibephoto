@@ -292,7 +292,7 @@ export async function createSubscriptionCheckout(
     },
     autoRedirect: true, // Redireciona automaticamente após pagamento
     callback: {
-      successUrl: `${CALLBACK_BASE}/`, // Redireciona para área logada
+      successUrl: `${CALLBACK_BASE}/checkout/subscription-success`, // Página dedicada de sucesso para assinaturas
       cancelUrl: `${CALLBACK_BASE}/pricing?required=true`, // Volta para escolha de plano
       expiredUrl: `${CALLBACK_BASE}/pricing?required=true` // Volta para escolha de plano
     }
