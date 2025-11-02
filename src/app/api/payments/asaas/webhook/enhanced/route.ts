@@ -263,55 +263,115 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
       return { success: false, error: 'User not found', retryable: false }
     }
 
-    // Create payment record
-    await prisma.payment.create({
-      data: {
-        asaasPaymentId: payment.id,
-        userId: user.id,
-        type: payment.subscription ? 'SUBSCRIPTION' : 'CREDIT_PURCHASE',
-        status: 'CONFIRMED',
-        billingType: payment.billingType as any,
-        value: payment.value,
-        description: `Payment confirmed - ${payment.billingType}`,
-        dueDate: new Date(payment.dueDate),
-        confirmedDate: new Date(),
-        subscriptionId: payment.subscription,
-        externalReference: payment.externalReference
-      }
-    })
-
     // Update user subscription status if it's a subscription payment
     if (payment.subscription) {
-      // Buscar informações do subscription e payment para obter plan e billingCycle
-      let subscriptionInfo: any = null
-      let plan: 'STARTER' | 'PREMIUM' | 'GOLD' | undefined = user.plan as any
+      // CRÍTICO: Buscar Payment ORIGINAL criado no checkout (tem planType e billingCycle)
+      // Buscar por subscriptionId primeiro, depois por userId + type + status PENDING
+      let originalPayment = null
+      let plan: 'STARTER' | 'PREMIUM' | 'GOLD' | undefined = undefined
       let billingCycle: 'MONTHLY' | 'YEARLY' | undefined = undefined
       let currentPeriodEnd: Date | undefined = undefined
 
-      // Primeiro, tentar buscar billingCycle e planType do Payment no banco de dados
-      // (já que foram salvos quando o checkout foi criado)
       try {
-        const savedPayment = await prisma.payment.findUnique({
-          where: { asaasPaymentId: payment.id },
+        // CRÍTICO: Payment criado no checkout NÃO tem subscriptionId ainda
+        // Buscar Payment original usando userId + type + status PENDING + asaasCheckoutId (tem, mas não tem asaasPaymentId)
+        originalPayment = await prisma.payment.findFirst({
+          where: {
+            userId: user.id,
+            type: 'SUBSCRIPTION',
+            status: 'PENDING', // Payment criado no checkout está como PENDING
+            asaasCheckoutId: { not: null }, // Payment do checkout tem asaasCheckoutId
+            asaasPaymentId: null // Mas ainda não tem asaasPaymentId (será preenchido pelo webhook)
+          },
+          orderBy: { createdAt: 'desc' }, // Pegar o mais recente
           select: {
+            id: true,
             billingCycle: true,
-            planType: true
+            planType: true,
+            asaasCheckoutId: true,
+            subscriptionId: true
           }
         })
 
-        if (savedPayment) {
-          if (savedPayment.billingCycle === 'MONTHLY' || savedPayment.billingCycle === 'YEARLY') {
-            billingCycle = savedPayment.billingCycle
+        if (originalPayment) {
+          console.log('✅ [WEBHOOK] Payment original encontrado:', {
+            paymentId: originalPayment.id,
+            planType: originalPayment.planType,
+            billingCycle: originalPayment.billingCycle,
+            checkoutId: originalPayment.asaasCheckoutId
+          })
+
+          if (originalPayment.billingCycle === 'MONTHLY' || originalPayment.billingCycle === 'YEARLY') {
+            billingCycle = originalPayment.billingCycle
           }
-          if (savedPayment.planType && !plan) {
-            plan = savedPayment.planType as any
+          if (originalPayment.planType) {
+            plan = originalPayment.planType as any
+          }
+        } else {
+          console.warn('⚠️ [WEBHOOK] Payment original não encontrado pelo subscriptionId, tentando buscar pelo asaasPaymentId')
+          
+          // Fallback: tentar buscar pelo asaasPaymentId (pode ser que já tenha sido atualizado)
+          const existingPayment = await prisma.payment.findUnique({
+            where: { asaasPaymentId: payment.id },
+            select: {
+              billingCycle: true,
+              planType: true
+            }
+          })
+
+          if (existingPayment) {
+            if (existingPayment.billingCycle === 'MONTHLY' || existingPayment.billingCycle === 'YEARLY') {
+              billingCycle = existingPayment.billingCycle
+            }
+            if (existingPayment.planType) {
+              plan = existingPayment.planType as any
+            }
           }
         }
       } catch (error: any) {
-        console.error('Error fetching payment info from DB:', error)
+        console.error('❌ [WEBHOOK] Error fetching payment info from DB:', error)
       }
 
-      // Depois, tentar buscar informações do subscription no Asaas
+      // Se ainda não encontrou plan, tentar buscar de Payments recentes do usuário
+      if (!plan) {
+        try {
+          // Buscar Payment mais recente com planType (pode ser o checkout que ainda não foi confirmado)
+          const recentPayment = await prisma.payment.findFirst({
+            where: {
+              userId: user.id,
+              type: 'SUBSCRIPTION',
+              planType: { not: null }
+            },
+            orderBy: { createdAt: 'desc' },
+            select: {
+              planType: true,
+              billingCycle: true
+            }
+          })
+
+          if (recentPayment?.planType) {
+            plan = recentPayment.planType as any
+            if (!billingCycle && recentPayment.billingCycle) {
+              billingCycle = recentPayment.billingCycle as any
+            }
+            console.log('✅ [WEBHOOK] Plan encontrado em Payment recente:', plan)
+          } else {
+            // Último fallback: usar do usuário (pode ser undefined se for novo assinante)
+            plan = user.plan as any
+            console.warn('⚠️ [WEBHOOK] Usando plan do usuário como fallback:', plan)
+            if (!plan) {
+              console.error('❌ [WEBHOOK] CRÍTICO: plan não encontrado em nenhum lugar!')
+            }
+          }
+        } catch (error: any) {
+          console.error('❌ [WEBHOOK] Erro ao buscar plan em Payments recentes:', error)
+          // Fallback final: usar do usuário
+          plan = user.plan as any
+        }
+      }
+
+      // Buscar informações do subscription no Asaas
+      let subscriptionInfo: any = null
       try {
         subscriptionInfo = await asaas.getSubscription(payment.subscription)
         
@@ -330,8 +390,28 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
           }
         }
       } catch (error: any) {
-        console.error('Error fetching subscription info from Asaas:', error)
-        // Continuar com informações já obtidas do Payment ou usuário
+        console.error('❌ [WEBHOOK] Error fetching subscription info from Asaas:', error)
+      }
+
+      // Log crítico antes de atualizar
+      console.log('🔑 [WEBHOOK] Dados para updateSubscriptionStatus:', {
+        userId: user.id,
+        status: 'ACTIVE',
+        plan,
+        billingCycle,
+        hasPlan: !!plan,
+        hasBillingCycle: !!billingCycle
+      })
+
+      // CRÍTICO: Se não tiver plan, não pode atualizar créditos
+      if (!plan) {
+        console.error('❌ [WEBHOOK] CRÍTICO: plan é undefined! Não será possível atualizar créditos.')
+        console.error('❌ [WEBHOOK] Payment data:', {
+          paymentId: payment.id,
+          subscriptionId: payment.subscription,
+          customer: payment.customer,
+          originalPaymentFound: !!originalPayment
+        })
       }
 
       // Usar updateSubscriptionStatus que já possui toda a lógica correta
@@ -344,27 +424,81 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
         billingCycle
       )
 
-      // Atualizar Payment com planType e billingCycle se disponíveis
-      if (plan || billingCycle) {
+      // Atualizar Payment original ou criar novo se não existir
+      if (originalPayment && originalPayment.id) {
+        // Atualizar Payment original com asaasPaymentId e subscriptionId
         try {
           await prisma.payment.update({
-            where: { asaasPaymentId: payment.id },
+            where: { id: originalPayment.id },
             data: {
+              asaasPaymentId: payment.id,
+              subscriptionId: payment.subscription,
+              status: 'CONFIRMED',
+              confirmedDate: new Date(),
               ...(plan && { planType: plan }),
               ...(billingCycle && { billingCycle: billingCycle })
             }
           })
+          console.log('✅ [WEBHOOK] Payment original atualizado com asaasPaymentId e subscriptionId')
         } catch (error: any) {
-          console.error('Error updating payment with planType/billingCycle:', error)
-          // Não é crítico, continuar
+          console.error('❌ [WEBHOOK] Erro ao atualizar Payment original:', error)
+          // Se der erro, tentar criar novo como fallback
+          try {
+            await prisma.payment.create({
+              data: {
+                asaasPaymentId: payment.id,
+                userId: user.id,
+                type: 'SUBSCRIPTION',
+                status: 'CONFIRMED',
+                billingType: payment.billingType as any,
+                value: payment.value,
+                description: `Payment confirmed - ${payment.billingType}`,
+                dueDate: new Date(payment.dueDate),
+                confirmedDate: new Date(),
+                subscriptionId: payment.subscription,
+                externalReference: payment.externalReference,
+                planType: plan || undefined,
+                billingCycle: billingCycle || undefined
+              }
+            })
+            console.log('✅ [WEBHOOK] Novo Payment criado como fallback')
+          } catch (createError: any) {
+            console.error('❌ [WEBHOOK] Erro ao criar Payment fallback:', createError)
+          }
+        }
+      } else {
+        // Não encontrou Payment original, criar novo
+        try {
+          await prisma.payment.create({
+            data: {
+              asaasPaymentId: payment.id,
+              userId: user.id,
+              type: 'SUBSCRIPTION',
+              status: 'CONFIRMED',
+              billingType: payment.billingType as any,
+              value: payment.value,
+              description: `Payment confirmed - ${payment.billingType}`,
+              dueDate: new Date(payment.dueDate),
+              confirmedDate: new Date(),
+              subscriptionId: payment.subscription,
+              externalReference: payment.externalReference,
+              planType: plan || undefined,
+              billingCycle: billingCycle || undefined
+            }
+          })
+          console.log('✅ [WEBHOOK] Novo Payment criado (original não encontrado)')
+        } catch (error: any) {
+          // Pode dar erro de unique constraint se já existe, não é crítico
+          console.warn('⚠️ [WEBHOOK] Erro ao criar Payment (pode já existir):', error.message)
         }
       }
 
-      console.log('Subscription activated via updateSubscriptionStatus:', {
+      console.log('✅ [WEBHOOK] Subscription activated via updateSubscriptionStatus:', {
         userId: user.id,
         plan,
         billingCycle,
-        currentPeriodEnd
+        currentPeriodEnd,
+        creditsWillBeSet: !!plan
       })
     } else {
       // Handle credit purchase - extract credits from external reference or description

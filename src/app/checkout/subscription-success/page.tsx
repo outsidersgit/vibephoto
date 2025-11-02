@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle, Sparkles, Loader2, ArrowRight, ImageIcon, Wand2, Package, X, ChevronRight, ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { getCreditsLimitForPlan } from '@/lib/constants/plans'
 import Link from 'next/link'
 
 interface OnboardingStep {
@@ -59,29 +60,79 @@ export default function SubscriptionSuccessPage() {
   ]
 
   useEffect(() => {
-    // CRITICAL: Invalidar todas as queries relacionadas a créditos e assinatura
-    console.log('🔄 [SubscriptionSuccess] Invalidando queries após checkout success')
-    queryClient.invalidateQueries({ queryKey: ['credits'] })
-    queryClient.invalidateQueries({ queryKey: ['subscription'] })
-    queryClient.invalidateQueries({ queryKey: ['user'] })
-    
-    // Atualizar sessão para refletir nova assinatura
-    updateSession().then(() => {
-      // Buscar informações do plano após sessão atualizada
-      const user = session?.user as any
-      if (user?.plan) {
-        const planName = user.plan === 'STARTER' ? 'Starter' : user.plan === 'PREMIUM' ? 'Premium' : 'Gold'
-        const credits = user.plan === 'STARTER' ? 500 : user.plan === 'PREMIUM' ? 1200 : 2500
-        const cycle = user.billingCycle === 'YEARLY' ? 'Anual' : 'Mensal'
+    async function loadUserData() {
+      try {
+        // CRITICAL: Invalidar todas as queries relacionadas a créditos e assinatura
+        console.log('🔄 [SubscriptionSuccess] Invalidando queries após checkout success')
+        queryClient.invalidateQueries({ queryKey: ['credits'] })
+        queryClient.invalidateQueries({ queryKey: ['subscription'] })
+        queryClient.invalidateQueries({ queryKey: ['user'] })
         
-        setPlanInfo({
-          name: planName,
-          credits: credits,
-          cycle: cycle
-        })
+        // Atualizar sessão para refletir nova assinatura
+        await updateSession()
+        
+        // Aguardar um pouco para garantir que a sessão foi atualizada
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // Buscar dados atualizados da sessão (após updateSession)
+        // Atualizar sessão novamente para pegar os dados mais recentes
+        const updatedSession = await updateSession()
+        
+        // Extrair dados do usuário da sessão atualizada
+        const user = updatedSession?.user || session?.user as any
+        
+        if (user?.plan) {
+          // Usar getCreditsLimitForPlan ao invés de valores hardcoded
+          const baseCredits = getCreditsLimitForPlan(user.plan)
+          
+          // Multiplicar por 12 se for YEARLY
+          const credits = user.billingCycle === 'YEARLY' ? baseCredits * 12 : baseCredits
+          
+          const planName = user.plan === 'STARTER' ? 'Starter' : user.plan === 'PREMIUM' ? 'Premium' : 'Gold'
+          const cycle = user.billingCycle === 'YEARLY' ? 'Anual' : 'Mensal'
+          
+          setPlanInfo({
+            name: planName,
+            credits: credits,
+            cycle: cycle
+          })
+          
+          console.log('✅ [SubscriptionSuccess] Plan info carregado:', {
+            plan: user.plan,
+            billingCycle: user.billingCycle,
+            credits,
+            cycle
+          })
+        } else {
+          console.warn('⚠️ [SubscriptionSuccess] Plan não encontrado na sessão. Aguardando atualização do webhook...')
+          // Se não tiver plan ainda, pode ser que o webhook ainda não processou
+          // Tentar novamente após alguns segundos
+          setTimeout(async () => {
+            const retrySession = await updateSession()
+            const retryUser = retrySession?.user || session?.user as any
+            if (retryUser?.plan) {
+              const baseCredits = getCreditsLimitForPlan(retryUser.plan)
+              const credits = retryUser.billingCycle === 'YEARLY' ? baseCredits * 12 : baseCredits
+              const planName = retryUser.plan === 'STARTER' ? 'Starter' : retryUser.plan === 'PREMIUM' ? 'Premium' : 'Gold'
+              const cycle = retryUser.billingCycle === 'YEARLY' ? 'Anual' : 'Mensal'
+              
+              setPlanInfo({
+                name: planName,
+                credits: credits,
+                cycle: cycle
+              })
+            }
+          }, 3000) // Aguardar 3 segundos para webhook processar
+        }
+        
+        setLoading(false)
+      } catch (error: any) {
+        console.error('❌ [SubscriptionSuccess] Erro ao carregar dados:', error)
+        setLoading(false)
       }
-      setLoading(false)
-    })
+    }
+
+    loadUserData()
 
     // Verificar se deve mostrar onboarding (novos assinantes)
     // Mostrar onboarding apenas na primeira vez que acessa após pagamento
@@ -90,7 +141,7 @@ export default function SubscriptionSuccessPage() {
       // Pequeno delay para melhorar UX
       setTimeout(() => setShowOnboarding(true), 1500)
     }
-  }, [router, updateSession, queryClient, session])
+  }, [router, updateSession, queryClient])
 
   const handleSkipOnboarding = () => {
     localStorage.setItem('hasSeenSubscriptionOnboarding', 'true')
