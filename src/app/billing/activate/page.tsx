@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { CreditCard, Smartphone, FileText, Building2, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
-import { PLANS, calculateAnnualSavings, getPlanById, type Plan } from '@/config/pricing'
+import { type Plan } from '@/config/pricing'
 import { useToast } from '@/hooks/use-toast'
 
 function ActivatePageContent() {
@@ -24,6 +24,8 @@ function ActivatePageContent() {
   const [step, setStep] = useState(planFromUrl ? 1 : 0)
   const [loading, setLoading] = useState(false)
   const [loadingCEP, setLoadingCEP] = useState(false)
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [loadingPlans, setLoadingPlans] = useState(true)
   const [customerData, setCustomerData] = useState({
     name: '',
     email: '',
@@ -133,9 +135,9 @@ function ActivatePageContent() {
     }
   }
 
-  // Usar configuração centralizada de pricing
+  // Usar planos do banco de dados
   const planDetails: Record<string, Plan> = Object.fromEntries(
-    PLANS.map(plan => [plan.id, plan])
+    plans.map(plan => [plan.id, plan])
   )
 
   const currentPlan = planDetails[selectedPlan as keyof typeof planDetails]
@@ -220,8 +222,38 @@ function ActivatePageContent() {
     }
   }
 
-  if (!session) {
-    return <div>Loading...</div>
+  if (!session || loadingPlans) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (plans.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Nenhum plano disponível no momento.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!currentPlan) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Plano selecionado não encontrado.</p>
+          <Link href="/pricing">
+            <Button className="mt-4">Voltar para planos</Button>
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (

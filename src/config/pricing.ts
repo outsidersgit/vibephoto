@@ -1,7 +1,11 @@
 /**
  * Configuração centralizada de preços e pacotes
- * FONTE OFICIAL DE VERDADE para todos os valores no sistema
+ * DEPRECATED: Agora os planos vêm do banco de dados
+ * Mantido para compatibilidade - usar getAllSubscriptionPlans() do banco
  */
+
+import { getAllSubscriptionPlans, getSubscriptionPlanById } from '@/lib/db/subscription-plans'
+import { Plan } from '@prisma/client'
 
 export interface Plan {
   id: 'STARTER' | 'PREMIUM' | 'GOLD'
@@ -28,10 +32,11 @@ export interface CreditPackage {
 }
 
 /**
- * PLANOS DE ASSINATURA - Valores Oficiais
- * Última atualização: 2025-10-01
+ * PLANOS DE ASSINATURA - Agora vêm do banco de dados
+ * Esta constante é mantida apenas como fallback temporário
+ * DEPRECATED: Use getAllSubscriptionPlans() do banco
  */
-export const PLANS: Plan[] = [
+const PLANS_FALLBACK: Plan[] = [
   {
     id: 'STARTER',
     name: 'Starter',
@@ -89,6 +94,39 @@ export const PLANS: Plan[] = [
 ]
 
 /**
+ * Buscar planos do banco de dados ou usar fallback
+ */
+export async function getPlans(): Promise<Plan[]> {
+  try {
+    const dbPlans = await getAllSubscriptionPlans()
+    if (dbPlans && dbPlans.length > 0) {
+      return dbPlans.map(plan => ({
+        id: plan.planId,
+        name: plan.name,
+        monthlyPrice: plan.monthlyPrice,
+        annualPrice: plan.annualPrice,
+        monthlyEquivalent: plan.monthlyEquivalent,
+        description: plan.description,
+        features: plan.features,
+        popular: plan.popular,
+        credits: plan.credits,
+        models: plan.models,
+        color: plan.color as 'blue' | 'purple' | 'yellow' | undefined
+      }))
+    }
+  } catch (error) {
+    console.warn('⚠️ [PRICING] Erro ao buscar planos do banco, usando fallback:', error)
+  }
+  return PLANS_FALLBACK
+}
+
+/**
+ * DEPRECATED: Use getPlans() ao invés desta constante
+ * Mantida para compatibilidade com código existente
+ */
+export const PLANS: Plan[] = PLANS_FALLBACK
+
+/**
  * PACOTES DE CRÉDITOS AVULSOS - Valores Oficiais
  * Validade: 1 ano
  */
@@ -129,10 +167,30 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
 ]
 
 /**
- * Helper: Encontrar plano por ID
+ * Helper: Encontrar plano por ID (busca do banco primeiro)
  */
-export function getPlanById(planId: 'STARTER' | 'PREMIUM' | 'GOLD'): Plan | undefined {
-  return PLANS.find(p => p.id === planId)
+export async function getPlanById(planId: 'STARTER' | 'PREMIUM' | 'GOLD'): Promise<Plan | undefined> {
+  try {
+    const dbPlan = await getSubscriptionPlanById(planId)
+    if (dbPlan) {
+      return {
+        id: dbPlan.planId,
+        name: dbPlan.name,
+        monthlyPrice: dbPlan.monthlyPrice,
+        annualPrice: dbPlan.annualPrice,
+        monthlyEquivalent: dbPlan.monthlyEquivalent,
+        description: dbPlan.description,
+        features: dbPlan.features,
+        popular: dbPlan.popular,
+        credits: dbPlan.credits,
+        models: dbPlan.models,
+        color: dbPlan.color as 'blue' | 'purple' | 'yellow' | undefined
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ [PRICING] Erro ao buscar plano do banco, usando fallback:', error)
+  }
+  return PLANS_FALLBACK.find(p => p.id === planId)
 }
 
 /**

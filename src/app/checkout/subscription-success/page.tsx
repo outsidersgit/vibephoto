@@ -83,7 +83,7 @@ export default function SubscriptionSuccessPage() {
         
         if (user?.plan) {
           // Usar getCreditsLimitForPlan ao invés de valores hardcoded
-          const baseCredits = getCreditsLimitForPlan(user.plan)
+          const baseCredits = await getCreditsLimitForPlan(user.plan)
           
           // Multiplicar por 12 se for YEARLY
           const credits = user.billingCycle === 'YEARLY' ? baseCredits * 12 : baseCredits
@@ -111,7 +111,7 @@ export default function SubscriptionSuccessPage() {
             const retrySession = await updateSession()
             const retryUser = retrySession?.user || session?.user as any
             if (retryUser?.plan) {
-              const baseCredits = getCreditsLimitForPlan(retryUser.plan)
+              const baseCredits = await getCreditsLimitForPlan(retryUser.plan)
               const credits = retryUser.billingCycle === 'YEARLY' ? baseCredits * 12 : baseCredits
               const planName = retryUser.plan === 'STARTER' ? 'Starter' : retryUser.plan === 'PREMIUM' ? 'Premium' : 'Gold'
               const cycle = retryUser.billingCycle === 'YEARLY' ? 'Anual' : 'Mensal'

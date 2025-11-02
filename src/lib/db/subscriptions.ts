@@ -13,7 +13,7 @@ export async function createSubscription(data: {
   cancelAtPeriodEnd?: boolean
   billingCycle?: 'MONTHLY' | 'YEARLY'
 }) {
-  const creditsLimit = getCreditsLimitForPlan(data.plan)
+  const creditsLimit = await getCreditsLimitForPlan(data.plan)
   const now = new Date()
 
   // IMPORTANTE: Créditos só são disponibilizados se status = ACTIVE (pagamento confirmado)
@@ -63,7 +63,7 @@ export async function updateSubscriptionStatus(
 
   // If subscription is activated, set credits limit and reset usage
   if (status === 'ACTIVE' && plan) {
-    const creditsLimit = getCreditsLimitForPlan(plan)
+    const creditsLimit = await getCreditsLimitForPlan(plan)
     const now = new Date()
 
     // Busca dados atuais do usuário
@@ -241,7 +241,7 @@ export async function renewMonthlyCredits() {
 
     // Renova se passaram pelo menos 28 dias E já passou o dia do mês
     if (daysSinceLastRenewal >= 28 && currentDay >= dayOfMonth) {
-      const creditsLimit = getCreditsLimitForPlan(user.plan!)
+      const creditsLimit = await getCreditsLimitForPlan(user.plan!)
 
       await prisma.user.update({
         where: { id: user.id },

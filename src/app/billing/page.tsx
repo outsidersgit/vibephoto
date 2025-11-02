@@ -27,14 +27,12 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { PLANS, CREDIT_PACKAGES, type Plan, type CreditPackage } from '@/config/pricing'
+import { CREDIT_PACKAGES, type Plan, type CreditPackage } from '@/config/pricing'
 import { CheckoutModal } from '@/components/checkout/checkout-modal'
 import { UpdateCardModal } from '@/components/payments/update-card-modal'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 
-// Usar configuração centralizada de pricing
-const plans: Plan[] = PLANS
 const creditPackages: CreditPackage[] = CREDIT_PACKAGES
 
 function BillingPageContent() {
@@ -48,6 +46,27 @@ function BillingPageContent() {
   const isAuthorized = useAuthGuard()
   
   const [activeTab, setActiveTab] = useState('overview')
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [loadingPlans, setLoadingPlans] = useState(true)
+
+  // Buscar planos do banco de dados
+  useEffect(() => {
+    async function fetchPlans() {
+      try {
+        const response = await fetch('/api/subscription-plans')
+        if (response.ok) {
+          const data = await response.json()
+          setPlans(data.plans || [])
+        }
+      } catch (error) {
+        console.error('Erro ao buscar planos:', error)
+      } finally {
+        setLoadingPlans(false)
+      }
+    }
+    
+    fetchPlans()
+  }, [])
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [showSubscriptionDetails, setShowSubscriptionDetails] = useState(false)

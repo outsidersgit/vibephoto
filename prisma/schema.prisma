@@ -129,6 +129,38 @@ enum Plan {
   GOLD
 }
 
+model SubscriptionPlan {
+  id                String   @id @default(cuid())
+  planId            Plan     @unique // STARTER, PREMIUM, or GOLD
+  
+  // Basic info
+  name              String
+  description       String   @db.Text
+  isActive          Boolean  @default(true)
+  popular           Boolean  @default(false)
+  color             String?  // 'blue', 'purple', 'yellow'
+  
+  // Pricing
+  monthlyPrice      Float
+  annualPrice       Float
+  monthlyEquivalent Float    // Preço equivalente mensal para planos anuais
+  
+  // Limits and features
+  credits           Int      // Créditos mensais
+  models            Int      // Modelos incluídos
+  resolution        String   // Ex: "1024x1024"
+  features          Json[]   // Array de strings com features
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  deletedAt         DateTime? // Soft delete
+  
+  @@map("subscription_plans")
+  @@index([planId])
+  @@index([isActive])
+}
+
 enum MediaType {
   IMAGE
   VIDEO

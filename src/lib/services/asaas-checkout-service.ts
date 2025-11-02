@@ -224,8 +224,8 @@ export async function createSubscriptionCheckout(
   cycle: 'MONTHLY' | 'YEARLY',
   userId: string
 ): Promise<{ checkoutId: string; checkoutUrl: string }> {
-  // Buscar plano
-  const plan = getPlanById(planId)
+  // Buscar plano do banco de dados
+  const plan = await getPlanById(planId)
   if (!plan) {
     throw new Error('Plano não encontrado')
   }

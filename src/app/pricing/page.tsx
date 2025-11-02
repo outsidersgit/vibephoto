@@ -8,12 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Check, Crown, ArrowRight, AlertCircle, Calendar, Zap, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
-import { PLANS, calculateAnnualSavings, type Plan } from '@/config/pricing'
+import { type Plan } from '@/config/pricing'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
-
-// Usar configuração centralizada de pricing
-const plans: Plan[] = PLANS
 
 // Exemplos de uso da IA - Carrossel
 const aiExamples = [
@@ -161,9 +158,35 @@ function PricingPageContent() {
   const [mounted, setMounted] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const carouselRef = useRef<HTMLDivElement>(null)
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [loadingPlans, setLoadingPlans] = useState(true)
   
   const isRequired = searchParams.get('required') === 'true'
   const isNewUser = searchParams.get('newuser') === 'true'
+
+  // Buscar planos do banco de dados
+  useEffect(() => {
+    async function fetchPlans() {
+      try {
+        const response = await fetch('/api/subscription-plans')
+        if (response.ok) {
+          const data = await response.json()
+          setPlans(data.plans || [])
+        } else {
+          console.error('Erro ao buscar planos')
+          // Fallback vazio - página não renderiza planos
+          setPlans([])
+        }
+      } catch (error) {
+        console.error('Erro ao buscar planos:', error)
+        setPlans([])
+      } finally {
+        setLoadingPlans(false)
+      }
+    }
+    
+    fetchPlans()
+  }, [])
 
   // CRITICAL: Verificar autenticação ANTES de renderizar conteúdo
   const isAuthorized = useAuthGuard()
@@ -187,7 +210,7 @@ function PricingPageContent() {
   // CRITICAL: AGORA sim podemos fazer early returns após TODOS os hooks
   // Durante loading, mostrar loading state (não bloquear)
   // A página server-side já garantiu que há sessão válida
-  if (status === 'loading' || isAuthorized === null || !mounted) {
+  if (status === 'loading' || isAuthorized === null || !mounted || loadingPlans) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -276,8 +299,13 @@ function PricingPageContent() {
         </div>
 
         {/* Plans Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto mb-8" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-          {plans.map((plan) => {
+        {plans.length === 0 ? (
+          <div className="text-center py-12 text-gray-600">
+            Nenhum plano disponível no momento.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto mb-8" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+            {plans.map((plan) => {
             const isSelected = selectedPlan === plan.id
             return (
             <Card
@@ -369,7 +397,8 @@ function PricingPageContent() {
             </Card>
             )
           })}
-        </div>
+          </div>
+        )}
 
         {/* Subscription Cancellation Notice */}
         <div className="flex items-center justify-center mb-20">

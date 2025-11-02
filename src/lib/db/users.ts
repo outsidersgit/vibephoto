@@ -14,7 +14,7 @@ export async function createUser(data: {
   
   // Créditos só são disponibilizados quando há plano ativo
   // Novos usuários sem plano recebem 0 créditos
-  const creditsLimit = data.plan ? getCreditsLimitForPlan(data.plan) : 0
+  const creditsLimit = data.plan ? await getCreditsLimitForPlan(data.plan) : 0
   
   return prisma.user.create({
     data: {
@@ -59,11 +59,12 @@ export async function getUserById(id: string) {
 }
 
 export async function updateUserPlan(userId: string, plan: Plan) {
+  const creditsLimit = await getCreditsLimitForPlan(plan)
   return prisma.user.update({
     where: { id: userId },
     data: {
       plan,
-      creditsLimit: getCreditsLimitForPlan(plan),
+      creditsLimit,
       creditsUsed: 0 // Reset credits when upgrading
     }
   })
