@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { asaas, handleAsaasError } from '@/lib/payments/asaas'
+import { updateSubscriptionStatus } from '@/lib/db/subscriptions'
 import crypto from 'crypto'
 
 interface AsaasWebhookPayload {
@@ -281,19 +282,89 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
 
     // Update user subscription status if it's a subscription payment
     if (payment.subscription) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          subscriptionStatus: 'ACTIVE',
-          subscriptionEndsAt: null // Clear any previous end date
-        }
-      })
+      // Buscar informações do subscription e payment para obter plan e billingCycle
+      let subscriptionInfo: any = null
+      let plan: 'STARTER' | 'PREMIUM' | 'GOLD' | undefined = user.plan as any
+      let billingCycle: 'MONTHLY' | 'YEARLY' | undefined = undefined
+      let currentPeriodEnd: Date | undefined = undefined
 
-      // Update credits limit based on plan
-      const creditsLimit = getPlanCreditsLimit(user.plan as any)
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { creditsLimit }
+      // Primeiro, tentar buscar billingCycle e planType do Payment no banco de dados
+      // (já que foram salvos quando o checkout foi criado)
+      try {
+        const savedPayment = await prisma.payment.findUnique({
+          where: { asaasPaymentId: payment.id },
+          select: {
+            billingCycle: true,
+            planType: true
+          }
+        })
+
+        if (savedPayment) {
+          if (savedPayment.billingCycle === 'MONTHLY' || savedPayment.billingCycle === 'YEARLY') {
+            billingCycle = savedPayment.billingCycle
+          }
+          if (savedPayment.planType && !plan) {
+            plan = savedPayment.planType as any
+          }
+        }
+      } catch (error: any) {
+        console.error('Error fetching payment info from DB:', error)
+      }
+
+      // Depois, tentar buscar informações do subscription no Asaas
+      try {
+        subscriptionInfo = await asaas.getSubscription(payment.subscription)
+        
+        if (subscriptionInfo) {
+          // Extrair billingCycle do subscription se não tiver do Payment
+          if (!billingCycle) {
+            const cycle = subscriptionInfo.cycle
+            if (cycle === 'MONTHLY' || cycle === 'YEARLY') {
+              billingCycle = cycle
+            }
+          }
+
+          // Extrair data de fim do período atual se disponível
+          if (subscriptionInfo.endDate) {
+            currentPeriodEnd = new Date(subscriptionInfo.endDate)
+          }
+        }
+      } catch (error: any) {
+        console.error('Error fetching subscription info from Asaas:', error)
+        // Continuar com informações já obtidas do Payment ou usuário
+      }
+
+      // Usar updateSubscriptionStatus que já possui toda a lógica correta
+      // (YEARLY * 12 créditos, reset de créditos, data de expiração, etc.)
+      await updateSubscriptionStatus(
+        user.id,
+        'ACTIVE',
+        currentPeriodEnd,
+        plan,
+        billingCycle
+      )
+
+      // Atualizar Payment com planType e billingCycle se disponíveis
+      if (plan || billingCycle) {
+        try {
+          await prisma.payment.update({
+            where: { asaasPaymentId: payment.id },
+            data: {
+              ...(plan && { planType: plan }),
+              ...(billingCycle && { billingCycle: billingCycle })
+            }
+          })
+        } catch (error: any) {
+          console.error('Error updating payment with planType/billingCycle:', error)
+          // Não é crítico, continuar
+        }
+      }
+
+      console.log('Subscription activated via updateSubscriptionStatus:', {
+        userId: user.id,
+        plan,
+        billingCycle,
+        currentPeriodEnd
       })
     } else {
       // Handle credit purchase - extract credits from external reference or description

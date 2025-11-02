@@ -258,8 +258,20 @@ export async function createSubscriptionCheckout(
   // Calcular valor baseado no ciclo
   const value = cycle === 'YEARLY' ? plan.annualPrice : plan.monthlyPrice
 
-  // Data de cobrança IMEDIATA (hoje) - primeira cobrança acontece assim que checkout for pago
-  const nextDueDate = new Date()
+  // Data de cobrança IMEDIATA (hoje no fuso horário do Brasil)
+  // Usar fuso horário do Brasil (America/Sao_Paulo, UTC-3) para evitar problemas com UTC
+  // que pode fazer a data mudar de dia dependendo do horário do servidor
+  const now = new Date()
+  // Formatar data no fuso horário do Brasil
+  // toLocaleString com timeZone retorna a data no fuso especificado
+  const brazilDateStr = now.toLocaleDateString('en-CA', { 
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+  // Formato já é YYYY-MM-DD (en-CA usa esse formato)
+  const nextDueDate = brazilDateStr
 
   // Preparar dados do checkout
   const checkoutData: any = {
@@ -276,7 +288,7 @@ export async function createSubscriptionCheckout(
     ],
     subscription: {
       cycle,
-      nextDueDate: nextDueDate.toISOString().split('T')[0] // Cobrança imediata no dia do pagamento
+      nextDueDate // Data de hoje no fuso horário do Brasil (YYYY-MM-DD)
     },
     autoRedirect: true, // Redireciona automaticamente após pagamento
     callback: {
