@@ -27,10 +27,21 @@ interface ImageEditorInterfaceProps {
 type Operation = 'edit' | 'add' | 'remove' | 'style' | 'blend'
 
 export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEditorInterfaceProps) {
+  // CRITICAL: Todos os hooks DEVEM ser chamados ANTES de qualquer early return
+  // Violar esta regra causa erro React #310 (can't set state on unmounted component)
   const { data: session, status } = useSession()
   const { addToast } = useToast()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [operation] = useState<Operation>('edit')
+  const [prompt, setPrompt] = useState('')
+  const [images, setImages] = useState<string[]>(preloadedImageUrl ? [preloadedImageUrl] : [])
+  const [result, setResult] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   
-  // CRITICAL: Durante loading, mostrar loading state (não bloquear)
+  // CRITICAL: AGORA sim podemos fazer early returns após todos os hooks
+  // Durante loading, mostrar loading state (não bloquear)
   // A página server-side já garantiu que há sessão válida
   if (status === 'loading') {
     return (
@@ -57,15 +68,6 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       </div>
     )
   }
-  
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const [operation] = useState<Operation>('edit')
-  const [prompt, setPrompt] = useState('')
-  const [images, setImages] = useState<string[]>(preloadedImageUrl ? [preloadedImageUrl] : [])
-  const [result, setResult] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files

@@ -25,10 +25,37 @@ interface VideoGenerationInterfaceProps {
 }
 
 export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }: VideoGenerationInterfaceProps) {
+  // CRITICAL: Todos os hooks DEVEM ser chamados ANTES de qualquer early return
+  // Violar esta regra causa erro React #310 (can't set state on unmounted component)
   const { data: session, status } = useSession()
   const { addToast } = useToast()
   
-  // CRITICAL: Durante loading, mostrar loading state (não bloquear)
+  const [activeMode, setActiveMode] = useState<'text-to-video' | 'image-to-video'>('text-to-video')
+  const [formData, setFormData] = useState<VideoGenerationRequest>({
+    prompt: '',
+    negativePrompt: VIDEO_CONFIG.defaults.negativePrompt,
+    duration: VIDEO_CONFIG.defaults.duration as 5 | 10,
+    aspectRatio: VIDEO_CONFIG.defaults.aspectRatio as '16:9' | '9:16' | '1:1',
+    quality: 'pro' as 'standard' | 'pro'
+  })
+
+  const [selectedTemplate, setSelectedTemplate] = useState<VideoTemplate | null>(null)
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null)
+  const [errors, setErrors] = useState<string[]>([])
+
+  // Pre-load source image if provided via URL parameter
+  useEffect(() => {
+    if (sourceImageUrl) {
+      setUploadedImage(sourceImageUrl)
+      setActiveMode('image-to-video')
+      setFormData(prev => ({ ...prev, sourceImageUrl }))
+    }
+  }, [sourceImageUrl])
+  
+  // CRITICAL: AGORA sim podemos fazer early returns após todos os hooks
+  // Durante loading, mostrar loading state (não bloquear)
   // A página server-side já garantiu que há sessão válida
   if (status === 'loading') {
     return (
@@ -55,30 +82,6 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
       </div>
     )
   }
-  
-  const [activeMode, setActiveMode] = useState<'text-to-video' | 'image-to-video'>('text-to-video')
-  const [formData, setFormData] = useState<VideoGenerationRequest>({
-    prompt: '',
-    negativePrompt: VIDEO_CONFIG.defaults.negativePrompt,
-    duration: VIDEO_CONFIG.defaults.duration as 5 | 10,
-    aspectRatio: VIDEO_CONFIG.defaults.aspectRatio as '16:9' | '9:16' | '1:1',
-    quality: 'pro' as 'standard' | 'pro'
-  })
-
-  const [selectedTemplate, setSelectedTemplate] = useState<VideoTemplate | null>(null)
-  const [showAdvanced, setShowAdvanced] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null)
-  const [errors, setErrors] = useState<string[]>([])
-
-  // Pre-load source image if provided via URL parameter
-  useEffect(() => {
-    if (sourceImageUrl) {
-      setUploadedImage(sourceImageUrl)
-      setActiveMode('image-to-video')
-      setFormData(prev => ({ ...prev, sourceImageUrl }))
-    }
-  }, [sourceImageUrl])
 
   const handleTemplateSelect = (template: VideoTemplate) => {
     const templateData = VIDEO_CONFIG.promptTemplates[template]

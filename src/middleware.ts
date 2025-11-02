@@ -94,9 +94,10 @@ export async function middleware(request: NextRequest) {
             { status: statusCode }
           )
         } else {
-          // Always redirect to pricing for new users (subscriptionStatus === null)
-          // Redirect to billing only if user had a subscription that is now inactive
-          const redirectUrl = subscriptionStatus === null ? '/pricing' : subscriptionStatus ? '/billing' : '/pricing'
+          // CRITICAL: Redirect logic fixed
+          // For new users (subscriptionStatus === null) -> /pricing
+          // For users with inactive subscriptions (OVERDUE, EXPIRED, CANCELLED) -> /billing
+          const redirectUrl = subscriptionStatus === null ? '/pricing' : '/billing'
           const url = new URL(redirectUrl, request.url)
 
           if (subscriptionStatus === 'OVERDUE') {
@@ -105,7 +106,7 @@ export async function middleware(request: NextRequest) {
             url.searchParams.set('expired', 'true')
           } else if (subscriptionStatus === 'CANCELLED') {
             url.searchParams.set('cancelled', 'true')
-          } else {
+          } else if (subscriptionStatus === null) {
             url.searchParams.set('required', 'true')
           }
 
