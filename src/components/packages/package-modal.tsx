@@ -43,6 +43,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
   const [errorMessage, setErrorMessage] = useState('')
   const [showCreditsPurchase, setShowCreditsPurchase] = useState(false)
   const [showConfigModal, setShowConfigModal] = useState(false)
+  const [showAllPreviews, setShowAllPreviews] = useState(false)
 
   // Performance: Usar React Query para cache instantâneo (Sprint 1)
   const queryClient = useQueryClient()
@@ -169,7 +170,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
         <div className="p-6">
               {/* Preview Images */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {pkg.previewImages.map((image, index) => (
+                {pkg.previewImages.slice(0, 4).map((image, index) => (
                   <div key={index} className="aspect-square bg-gray-900 rounded-lg overflow-hidden group cursor-pointer border border-gray-700">
                     <img
                       src={image}
@@ -198,6 +199,21 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
                   </div>
                 ))}
               </div>
+
+              {/* Ver Todas Button */}
+              {pkg.previewImages.length > 4 && (
+                <div className="mt-3 flex justify-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAllPreviews(true)}
+                    className="bg-gray-700/50 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Ver todas ({pkg.previewImages.length} imagens)
+                  </Button>
+                </div>
+              )}
 
               <div className="h-4"></div>
 
@@ -284,6 +300,40 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
         </div>
 
       </div>
+
+      {/* Modal Ver Todas as Preview Images */}
+      {showAllPreviews && (
+        <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-4" onClick={() => setShowAllPreviews(false)}>
+          <div className="bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto border border-gray-700" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-700 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-white">Todas as Preview Images</h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowAllPreviews(false)} className="text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {pkg.previewImages.map((image, index) => (
+                  <div key={index} className="aspect-square bg-gray-900 rounded-lg overflow-hidden border border-gray-700">
+                    <img
+                      src={image}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                        e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                      }}
+                    />
+                    <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center relative hidden">
+                      <span className="text-3xl opacity-50 text-gray-400">🖼️</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Compra Rápida de Créditos */}
       {showCreditsPurchase && (

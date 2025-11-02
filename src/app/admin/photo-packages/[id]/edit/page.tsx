@@ -160,17 +160,12 @@ export default function EditPhotoPackagePage() {
     const files = Array.from(e.target.files || [])
     const validFiles = files.filter(f => f.type.startsWith('image/'))
     
-    const currentCount = existingPreviewUrls.length + previewImages.length
-    if (currentCount + validFiles.length > 4) {
-      setError('Máximo de 4 imagens de preview permitidas')
-      return
-    }
-    
+    // Sem limite - adiciona todas as imagens válidas
     const startIndex = existingPreviewUrls.length + previewImages.length
-    setPreviewImages([...previewImages, ...validFiles.slice(0, 4 - currentCount)])
+    setPreviewImages([...previewImages, ...validFiles])
     
-    // Criar previews para exibição
-    validFiles.slice(0, 4 - currentCount).forEach((file, idx) => {
+    // Criar previews para exibição - todas as imagens
+    validFiles.forEach((file, idx) => {
       const reader = new FileReader()
       reader.onload = (e) => {
         const url = e.target?.result as string
@@ -380,10 +375,10 @@ export default function EditPhotoPackagePage() {
         {/* Preview Images Section */}
         <div className="border-t pt-4 mt-4">
           <label className="block text-sm font-medium text-gray-700 mb-3">
-            Imagens de Preview (máximo 4)
+            Imagens de Preview (sem limite)
           </label>
           <p className="text-xs text-gray-500 mb-3">
-            Gerencie as imagens de preview do pacote. Você pode remover imagens existentes ou adicionar novas.
+            Gerencie as imagens de preview do pacote. Você pode remover imagens existentes ou adicionar novas (sem limite).
           </p>
           
           {/* Preview Grid */}
@@ -410,20 +405,18 @@ export default function EditPhotoPackagePage() {
               </div>
             ))}
             
-            {/* Add Image Slot */}
-            {(existingPreviewUrls.length + previewImages.length) < 4 && (
-              <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-colors">
-                <Upload className="w-6 h-6 text-gray-400 mb-2" />
-                <span className="text-xs text-gray-500 text-center px-2">Adicionar Imagem</span>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png"
-                  multiple
-                  onChange={handlePreviewImageChange}
-                  className="hidden"
-                />
-              </label>
-            )}
+            {/* Add Image Slot - sempre visível */}
+            <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-colors">
+              <Upload className="w-6 h-6 text-gray-400 mb-2" />
+              <span className="text-xs text-gray-500 text-center px-2">Adicionar Imagem</span>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png"
+                multiple
+                onChange={handlePreviewImageChange}
+                className="hidden"
+              />
+            </label>
           </div>
 
           {/* File Input Alternative */}
