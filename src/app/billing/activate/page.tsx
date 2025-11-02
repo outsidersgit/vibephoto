@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
+import type React from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -9,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { CreditCard, Smartphone, FileText, Building2, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { PLANS, calculateAnnualSavings, getPlanById, type Plan } from '@/config/pricing'
+import { useToast } from '@/hooks/use-toast'
 
 function ActivatePageContent() {
   const { data: session, update: updateSession } = useSession()
@@ -17,9 +19,11 @@ function ActivatePageContent() {
   const planFromUrl = searchParams.get('plan')
   const cycleFromUrl = searchParams.get('cycle') // 'monthly' ou 'annual'
 
+  const { addToast } = useToast()
   const [selectedPlan, setSelectedPlan] = useState(planFromUrl || 'STARTER')
   const [step, setStep] = useState(planFromUrl ? 1 : 0)
   const [loading, setLoading] = useState(false)
+  const [loadingCEP, setLoadingCEP] = useState(false)
   const [customerData, setCustomerData] = useState({
     name: '',
     email: '',
@@ -48,6 +52,86 @@ function ActivatePageContent() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>(
     cycleFromUrl === 'annual' ? 'annual' : 'monthly'
   )
+
+  // Função para formatar CEP com máscara 00000-000
+  const formatCEP = (cep: string): string => {
+    const numbers = cep.replace(/\D/g, '')
+    if (numbers.length <= 5) {
+      return numbers
+    }
+    return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`
+  }
+
+  // Função para buscar endereço por CEP na API ViaCEP
+  const fetchAddressByCEP = async (cep: string): Promise<void> => {
+    const cleanCEP = cep.replace(/\D/g, '')
+    
+    // Validar se tem 8 dígitos
+    if (cleanCEP.length !== 8) {
+      return
+    }
+
+    setLoadingCEP(true)
+    
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`)
+      const data = await response.json()
+
+      // Verificar se houve erro na API (erro: true ou cep não encontrado)
+      if (data.erro || !data.logradouro) {
+        addToast({
+          type: 'error',
+          title: 'CEP não encontrado',
+          description: 'O CEP informado não foi encontrado. Verifique e tente novamente.'
+        })
+        return
+      }
+
+      // Popular campos com os dados retornados
+      setCustomerData(prev => ({
+        ...prev,
+        address: data.logradouro || prev.address,
+        province: data.bairro || prev.province,
+        city: data.localidade || prev.city,
+        state: data.uf ? data.uf.toUpperCase() : prev.state
+      }))
+
+      addToast({
+        type: 'success',
+        title: 'Endereço encontrado',
+        description: 'Os dados de endereço foram preenchidos automaticamente.'
+      })
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error)
+      addToast({
+        type: 'error',
+        title: 'Erro ao buscar CEP',
+        description: 'Não foi possível buscar o endereço. Tente novamente mais tarde.'
+      })
+    } finally {
+      setLoadingCEP(false)
+    }
+  }
+
+  // Handler para onChange do campo CEP
+  const handleCEPChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedCEP = formatCEP(e.target.value)
+    setCustomerData(prev => ({ ...prev, postalCode: formattedCEP }))
+    
+    // Se atingiu 8 dígitos, buscar automaticamente
+    const cleanCEP = formattedCEP.replace(/\D/g, '')
+    if (cleanCEP.length === 8) {
+      fetchAddressByCEP(formattedCEP)
+    }
+  }
+
+  // Handler para onBlur do campo CEP
+  const handleCEPBlur = () => {
+    const cleanCEP = customerData.postalCode.replace(/\D/g, '')
+    if (cleanCEP.length === 8) {
+      fetchAddressByCEP(customerData.postalCode)
+    }
+  }
 
   // Usar configuração centralizada de pricing
   const planDetails: Record<string, Plan> = Object.fromEntries(
@@ -390,13 +474,21 @@ function ActivatePageContent() {
                 <h3 className="text-sm font-semibold text-white mb-4">Endereço (Opcional)</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-white mb-1">CEP</label>
+                    <label className="block text-sm font-medium text-white mb-1">
+                      CEP
+                      {loadingCEP && (
+                        <span className="ml-2 text-xs text-slate-400">Buscando...</span>
+                      )}
+                    </label>
                     <input
                       type="text"
                       value={customerData.postalCode}
-                      onChange={(e) => setCustomerData(prev => ({ ...prev, postalCode: e.target.value }))}
-                      className="w-full h-11 px-3 py-2 bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      onChange={handleCEPChange}
+                      onBlur={handleCEPBlur}
+                      className="w-full h-11 px-3 py-2 bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
                       placeholder="00000-000"
+                      disabled={loadingCEP}
+                      maxLength={9}
                     />
                   </div>
                   <div>
