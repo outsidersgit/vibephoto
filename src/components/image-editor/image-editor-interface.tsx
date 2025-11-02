@@ -40,35 +40,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
-  // CRITICAL: AGORA sim podemos fazer early returns após todos os hooks
-  // Durante loading, mostrar loading state (não bloquear)
-  // A página server-side já garantiu que há sessão válida
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando...</p>
-        </div>
-      </div>
-    )
-  }
-  
-  // CRITICAL: Se não autenticado após loading, aguardar (página server-side já verificou)
-  // Retornar null só se realmente não autenticado (proteção extra)
-  if (status === 'unauthenticated' || !session?.user) {
-    // Em caso de perda de sessão, aguardar um momento antes de redirecionar
-    // (pode ser um problema temporário de hidratação)
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verificando autenticação...</p>
-        </div>
-      </div>
-    )
-  }
-
+  // CRITICAL: useCallback DEVE vir ANTES de qualquer early return
   const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (!files) return
@@ -102,6 +74,35 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       reader.readAsDataURL(file)
     })
   }, [images.length, addToast])
+  
+  // CRITICAL: AGORA sim podemos fazer early returns após TODOS os hooks
+  // Durante loading, mostrar loading state (não bloquear)
+  // A página server-side já garantiu que há sessão válida
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  // CRITICAL: Se não autenticado após loading, aguardar (página server-side já verificou)
+  // Retornar null só se realmente não autenticado (proteção extra)
+  if (status === 'unauthenticated' || !session?.user) {
+    // Em caso de perda de sessão, aguardar um momento antes de redirecionar
+    // (pode ser um problema temporário de hidratação)
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando autenticação...</p>
+        </div>
+      </div>
+    )
+  }
 
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index))
