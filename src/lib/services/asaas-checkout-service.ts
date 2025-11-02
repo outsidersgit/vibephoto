@@ -324,6 +324,9 @@ export async function createSubscriptionCheckout(
   }
 
   // Salvar no banco
+  // Converter nextDueDate (string YYYY-MM-DD) para Date no início do dia no fuso horário do Brasil
+  const dueDateObj = new Date(`${nextDueDate}T00:00:00-03:00`) // -03:00 é UTC-3 (fuso do Brasil)
+
   await prisma.payment.create({
     data: {
       userId: user.id,
@@ -333,7 +336,7 @@ export async function createSubscriptionCheckout(
       billingType: 'CREDIT_CARD',
       value,
       description: `Assinatura ${plan.name} - ${cycle}`,
-      dueDate: nextDueDate,
+      dueDate: dueDateObj, // Agora é um Date object válido
       planType: planId,
       billingCycle: cycle
     }
