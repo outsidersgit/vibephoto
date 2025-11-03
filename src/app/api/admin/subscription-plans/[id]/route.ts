@@ -182,15 +182,234 @@ export async function PUT(
     }
 
     console.log('✅ [ADMIN_SUBSCRIPTION_PLANS] Updating plan:', { id: existing.id, planId: existing.planId })
-    const updated = await prisma.subscriptionPlan.update({
-      where: { id },
-      data: parsed.data
-    })
+    
+    // CRÍTICO: Usar $executeRaw para atualizar e evitar problema com features (Json vs Json[])
+    // Construir SET dinamicamente apenas para campos que foram enviados
+    const setClauses: string[] = []
+    const params: any[] = []
+    let paramIndex = 1
+
+    if (parsed.data.name !== undefined) {
+      setClauses.push(`name = $${paramIndex}`)
+      params.push(parsed.data.name)
+      paramIndex++
+    }
+    if (parsed.data.description !== undefined) {
+      setClauses.push(`description = $${paramIndex}`)
+      params.push(parsed.data.description)
+      paramIndex++
+    }
+    if (parsed.data.isActive !== undefined) {
+      setClauses.push(`"isActive" = $${paramIndex}`)
+      params.push(parsed.data.isActive)
+      paramIndex++
+    }
+    if (parsed.data.popular !== undefined) {
+      setClauses.push(`popular = $${paramIndex}`)
+      params.push(parsed.data.popular)
+      paramIndex++
+    }
+    if (parsed.data.color !== undefined) {
+      setClauses.push(`color = $${paramIndex}`)
+      params.push(parsed.data.color)
+      paramIndex++
+    }
+    if (parsed.data.monthlyPrice !== undefined) {
+      setClauses.push(`"monthlyPrice" = $${paramIndex}`)
+      params.push(parsed.data.monthlyPrice)
+      paramIndex++
+    }
+    if (parsed.data.annualPrice !== undefined) {
+      setClauses.push(`"annualPrice" = $${paramIndex}`)
+      params.push(parsed.data.annualPrice)
+      paramIndex++
+    }
+    if (parsed.data.monthlyEquivalent !== undefined) {
+      setClauses.push(`"monthlyEquivalent" = $${paramIndex}`)
+      params.push(parsed.data.monthlyEquivalent)
+      paramIndex++
+    }
+    if (parsed.data.credits !== undefined) {
+      setClauses.push(`credits = $${paramIndex}`)
+      params.push(parsed.data.credits)
+      paramIndex++
+    }
+    if (parsed.data.models !== undefined) {
+      setClauses.push(`models = $${paramIndex}`)
+      params.push(parsed.data.models)
+      paramIndex++
+    }
+    if (parsed.data.resolution !== undefined) {
+      setClauses.push(`resolution = $${paramIndex}`)
+      params.push(parsed.data.resolution)
+      paramIndex++
+    }
+    if (parsed.data.features !== undefined) {
+      setClauses.push(`features = $${paramIndex}::jsonb`)
+      params.push(JSON.stringify(parsed.data.features))
+      paramIndex++
+    }
+
+    // Adicionar updatedAt
+    setClauses.push(`"updatedAt" = NOW()`)
+
+    if (setClauses.length === 1) {
+      // Apenas updatedAt foi adicionado, não há nada para atualizar
+      console.log('⚠️ [ADMIN_SUBSCRIPTION_PLANS] No fields to update')
+      // Buscar plano atualizado usando $queryRaw (mesmo método do GET)
+      const updatedPlans = await prisma.$queryRaw<Array<{
+        id: string
+        planId: string
+        name: string
+        description: string
+        isActive: boolean
+        popular: boolean
+        color: string | null
+        monthlyPrice: number
+        annualPrice: number
+        monthlyEquivalent: number
+        credits: number
+        models: number
+        resolution: string
+        features: any
+        createdAt: Date
+        updatedAt: Date
+        deletedAt: Date | null
+      }>>`
+        SELECT 
+          id, 
+          "planId",
+          name, 
+          description, 
+          "isActive", 
+          popular, 
+          color, 
+          "monthlyPrice", 
+          "annualPrice", 
+          "monthlyEquivalent", 
+          credits, 
+          models, 
+          resolution, 
+          features,
+          "createdAt", 
+          "updatedAt", 
+          "deletedAt"
+        FROM subscription_plans
+        WHERE id = ${id}
+        LIMIT 1
+      `
+
+      if (!updatedPlans || updatedPlans.length === 0) {
+        return NextResponse.json({ error: 'Plano não encontrado após atualização' }, { status: 404 })
+      }
+
+      const planRaw = updatedPlans[0]
+      let features = planRaw.features
+      if (!Array.isArray(features)) {
+        try {
+          if (typeof features === 'string') {
+            features = JSON.parse(features)
+          }
+          if (!Array.isArray(features)) {
+            features = []
+          }
+        } catch {
+          features = []
+        }
+      }
+
+      const plan = {
+        ...planRaw,
+        features
+      }
+
+      revalidateTag('subscription-plans')
+      console.log('✅ [ADMIN_SUBSCRIPTION_PLANS] Plan updated (no changes):', id)
+      return NextResponse.json({ plan })
+    }
+
+    // Executar update usando SQL raw
+    const updateQuery = `
+      UPDATE subscription_plans
+      SET ${setClauses.join(', ')}
+      WHERE id = $${paramIndex}
+    `
+    params.push(id)
+
+    await prisma.$executeRawUnsafe(updateQuery, ...params)
+
+    // Buscar plano atualizado usando $queryRaw (mesmo método do GET)
+    const updatedPlans = await prisma.$queryRaw<Array<{
+      id: string
+      planId: string
+      name: string
+      description: string
+      isActive: boolean
+      popular: boolean
+      color: string | null
+      monthlyPrice: number
+      annualPrice: number
+      monthlyEquivalent: number
+      credits: number
+      models: number
+      resolution: string
+      features: any
+      createdAt: Date
+      updatedAt: Date
+      deletedAt: Date | null
+    }>>`
+      SELECT 
+        id, 
+        "planId",
+        name, 
+        description, 
+        "isActive", 
+        popular, 
+        color, 
+        "monthlyPrice", 
+        "annualPrice", 
+        "monthlyEquivalent", 
+        credits, 
+        models, 
+        resolution, 
+        features,
+        "createdAt", 
+        "updatedAt", 
+        "deletedAt"
+      FROM subscription_plans
+      WHERE id = ${id}
+      LIMIT 1
+    `
+
+    if (!updatedPlans || updatedPlans.length === 0) {
+      return NextResponse.json({ error: 'Plano não encontrado após atualização' }, { status: 404 })
+    }
+
+    const planRaw = updatedPlans[0]
+    // Converter features para array se necessário
+    let features = planRaw.features
+    if (!Array.isArray(features)) {
+      try {
+        if (typeof features === 'string') {
+          features = JSON.parse(features)
+        }
+        if (!Array.isArray(features)) {
+          features = []
+        }
+      } catch {
+        features = []
+      }
+    }
+
+    const plan = {
+      ...planRaw,
+      features
+    }
 
     revalidateTag('subscription-plans')
     console.log('✅ [ADMIN_SUBSCRIPTION_PLANS] Plan updated:', id)
 
-    return NextResponse.json({ plan: updated })
+    return NextResponse.json({ plan })
   } catch (error: any) {
     console.error('❌ [ADMIN_SUBSCRIPTION_PLANS] Error updating plan:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
