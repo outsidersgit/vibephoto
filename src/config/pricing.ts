@@ -170,9 +170,19 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
  * Helper: Encontrar plano por ID (busca do banco primeiro)
  */
 export async function getPlanById(planId: 'STARTER' | 'PREMIUM' | 'GOLD'): Promise<Plan | undefined> {
+  console.log('🔍 [PRICING] getPlanById chamado para:', planId)
+  
   try {
+    console.log('📊 [PRICING] Tentando buscar do banco de dados...')
     const dbPlan = await getSubscriptionPlanById(planId)
+    
     if (dbPlan) {
+      console.log('✅ [PRICING] Plano encontrado no BANCO DE DADOS:', {
+        planId: dbPlan.planId,
+        name: dbPlan.name,
+        monthlyPrice: dbPlan.monthlyPrice,
+        annualPrice: dbPlan.annualPrice
+      })
       return {
         id: dbPlan.planId,
         name: dbPlan.name,
@@ -186,11 +196,27 @@ export async function getPlanById(planId: 'STARTER' | 'PREMIUM' | 'GOLD'): Promi
         models: dbPlan.models,
         color: dbPlan.color as 'blue' | 'purple' | 'yellow' | undefined
       }
+    } else {
+      console.warn('⚠️ [PRICING] Plano não encontrado no banco de dados, usando fallback')
     }
   } catch (error) {
-    console.warn('⚠️ [PRICING] Erro ao buscar plano do banco, usando fallback:', error)
+    console.error('❌ [PRICING] Erro ao buscar plano do banco:', error)
+    console.warn('⚠️ [PRICING] Usando fallback devido ao erro')
   }
-  return PLANS_FALLBACK.find(p => p.id === planId)
+  
+  const fallbackPlan = PLANS_FALLBACK.find(p => p.id === planId)
+  if (fallbackPlan) {
+    console.log('🔄 [PRICING] Usando plano FALLBACK (código hardcoded):', {
+      id: fallbackPlan.id,
+      name: fallbackPlan.name,
+      monthlyPrice: fallbackPlan.monthlyPrice,
+      annualPrice: fallbackPlan.annualPrice
+    })
+  } else {
+    console.error('❌ [PRICING] Plano não encontrado nem no banco nem no fallback:', planId)
+  }
+  
+  return fallbackPlan
 }
 
 /**

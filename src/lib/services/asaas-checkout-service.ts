@@ -1,6 +1,6 @@
 import { asaas } from '@/lib/payments/asaas'
 import { prisma } from '@/lib/prisma'
-import { getCreditPackageById, getPlanById } from '@/config/pricing'
+import { getCreditPackageById, getPlanById, PLANS_FALLBACK } from '@/config/pricing'
 import { getAsaasEnvironment, getAsaasCheckoutUrl, getWebhookBaseUrl } from '@/lib/utils/environment'
 
 // URLs de callback para Asaas - usa domínio de produção
@@ -225,10 +225,23 @@ export async function createSubscriptionCheckout(
   userId: string
 ): Promise<{ checkoutId: string; checkoutUrl: string }> {
   // Buscar plano do banco de dados
+  console.log('🔍 [CHECKOUT] Buscando plano:', planId)
   const plan = await getPlanById(planId)
+  
   if (!plan) {
-    throw new Error('Plano não encontrado')
+    console.error('❌ [CHECKOUT] Plano não encontrado:', planId)
+    throw new Error(`Plano não encontrado: ${planId}`)
   }
+  
+  console.log('✅ [CHECKOUT] Plano encontrado:', {
+    id: plan.id,
+    name: plan.name,
+    monthlyPrice: plan.monthlyPrice,
+    annualPrice: plan.annualPrice,
+    source: plan.monthlyPrice === PLANS_FALLBACK.find(p => p.id === planId)?.monthlyPrice 
+      ? 'FALLBACK (código)' 
+      : 'BANCO DE DADOS'
+  })
 
   // Buscar usuário
   const user = await prisma.user.findUnique({

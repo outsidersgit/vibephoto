@@ -46,19 +46,46 @@ export async function getAllSubscriptionPlans(): Promise<SubscriptionPlanData[]>
  * Buscar plano por planId (STARTER, PREMIUM, GOLD)
  */
 export async function getSubscriptionPlanById(planId: Plan): Promise<SubscriptionPlanData | null> {
-  const plan = await prisma.subscriptionPlan.findUnique({
-    where: {
-      planId,
-      deletedAt: null
+  console.log('🔍 [DB] getSubscriptionPlanById chamado para:', planId)
+  
+  try {
+    // CRÍTICO: Buscar pelo planId (chave única) e verificar deletedAt separadamente
+    // findUnique não aceita múltiplos campos no where a menos que seja índice composto
+    const plan = await prisma.subscriptionPlan.findUnique({
+      where: {
+        planId
+      }
+    })
+
+    if (!plan) {
+      console.warn('⚠️ [DB] Plano não encontrado no banco:', planId)
+      return null
     }
-  })
 
-  if (!plan) return null
+    // Verificar se está deletado (soft delete)
+    if (plan.deletedAt) {
+      console.warn('⚠️ [DB] Plano encontrado mas está deletado (soft delete):', planId)
+      return null
+    }
 
-  return {
-    ...plan,
-    features: (plan.features as any[]).map((f: any) => typeof f === 'string' ? f : f.toString())
-  } as SubscriptionPlanData
+    console.log('✅ [DB] Plano encontrado no banco:', {
+      planId: plan.planId,
+      name: plan.name,
+      monthlyPrice: plan.monthlyPrice,
+      annualPrice: plan.annualPrice,
+      deletedAt: plan.deletedAt
+    })
+
+    return {
+      ...plan,
+      features: Array.isArray(plan.features) 
+        ? (plan.features as any[]).map((f: any) => typeof f === 'string' ? f : f.toString())
+        : []
+    } as SubscriptionPlanData
+  } catch (error) {
+    console.error('❌ [DB] Erro ao buscar plano do banco:', error)
+    throw error
+  }
 }
 
 /**
