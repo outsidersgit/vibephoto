@@ -1,16 +1,15 @@
-import { requireAuth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
+import { unstable_noStore as noStore } from 'next/cache'
 import { MonitoringDashboard } from '@/components/admin/monitoring-dashboard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Activity, Shield, TrendingUp } from 'lucide-react'
-import { redirect } from 'next/navigation'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function AdminMonitoringPage() {
-  const session = await requireAuth()
-  
-  // Basic admin check - in production, implement proper role-based access
-  if (session.user.email !== 'admin@ensaiofotos.com') {
-    redirect('/dashboard')
-  }
+  noStore()
+  await requireAdmin()
 
   return (
     <div className="min-h-screen bg-gray-50">

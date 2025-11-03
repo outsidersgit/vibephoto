@@ -1,18 +1,16 @@
+import { requireAdmin } from '@/lib/auth'
+import { unstable_noStore as noStore } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 type SearchParams = { searchParams?: Promise<{ status?: string }> }
 
 export default async function AdminSubscriptionPlansPage({ searchParams }: SearchParams) {
-  const session = await getServerSession(authOptions)
-  const role = String(((session?.user as any)?.role) || '').toUpperCase()
-  if (!session || role !== 'ADMIN') {
-    return <div className="p-6 text-sm text-gray-700">Acesso restrito ao administrador.</div>
-  }
+  noStore()
+  await requireAdmin()
   
   const { status = 'all' } = (await (searchParams || Promise.resolve({}))) || {}
   const where: any = { deletedAt: null }

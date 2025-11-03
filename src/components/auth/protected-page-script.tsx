@@ -25,7 +25,7 @@ export function ProtectedPageScript() {
         dangerouslySetInnerHTML={{
           __html: `
             (function() {
-              const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/editor', '/profile', '/account', '/credits', '/packages', '/pricing', '/support'];
+              const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/editor', '/profile', '/account', '/credits', '/packages', '/pricing', '/support', '/admin'];
               const currentPath = window.location.pathname;
               const isProtected = protectedPaths.some(path => currentPath.startsWith(path));
               
@@ -59,7 +59,7 @@ export function ProtectedPageScript() {
           __html: `
             (function() {
               // CRITICAL: Executar IMEDIATAMENTE, sem aguardar nada
-              const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/editor', '/profile', '/account', '/credits', '/packages', '/pricing', '/support'];
+              const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/editor', '/profile', '/account', '/credits', '/packages', '/pricing', '/support', '/admin'];
               const currentPath = window.location.pathname;
               const isProtected = protectedPaths.some(path => currentPath.startsWith(path));
               

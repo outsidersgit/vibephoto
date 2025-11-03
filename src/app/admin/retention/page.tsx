@@ -1,8 +1,13 @@
+import { requireAdmin } from '@/lib/auth'
+import { unstable_noStore as noStore } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function AdminRetentionPage() {
+  noStore()
+  await requireAdmin()
   const now = new Date()
   const thirty = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 

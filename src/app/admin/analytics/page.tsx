@@ -1,9 +1,10 @@
+import { requireAdmin } from '@/lib/auth'
+import { unstable_noStore as noStore } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import Charts from './charts'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 async function getKpis() {
   const [users, gens, models, purchases] = await Promise.all([
@@ -16,11 +17,8 @@ async function getKpis() {
 }
 
 export default async function AdminAnalyticsPage() {
-  const session = await getServerSession(authOptions)
-  const role = String(((session?.user as any)?.role) || '').toUpperCase()
-  if (!session || role !== 'ADMIN') {
-    return <div className="p-6 text-sm text-gray-700">Acesso restrito ao administrador.</div>
-  }
+  noStore()
+  await requireAdmin()
   const kpis = await getKpis()
   return (
     <div className="space-y-6">

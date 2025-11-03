@@ -1,6 +1,12 @@
-export const dynamic = 'force-dynamic'
+import { requireAdmin } from '@/lib/auth'
+import { unstable_noStore as noStore } from 'next/cache'
 
-export default function AdminHomePage() {
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+export default async function AdminHomePage() {
+  noStore()
+  await requireAdmin()
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Painel Administrativo</h1>

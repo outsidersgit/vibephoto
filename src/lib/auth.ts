@@ -326,3 +326,15 @@ export async function requirePlan(requiredPlan: 'PREMIUM' | 'GOLD') {
   
   return session
 }
+
+export async function requireAdmin() {
+  const session = await requireAuth()
+  
+  const role = String(((session.user as any)?.role) || '').toUpperCase()
+  
+  if (role !== 'ADMIN') {
+    redirect('/dashboard')
+  }
+  
+  return session
+}

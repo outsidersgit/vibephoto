@@ -31,8 +31,8 @@ export async function middleware(request: NextRequest) {
     const isApiRoute = pathname.startsWith('/api/')
     
     // Protect dashboard and other authenticated routes
-    const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/account', '/profile', '/pricing']
-    const protectedApiPaths = ['/api/generations', '/api/models', '/api/gallery', '/api/media', '/api/upscale', '/api/video']
+    const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/account', '/profile', '/pricing', '/admin']
+    const protectedApiPaths = ['/api/generations', '/api/models', '/api/gallery', '/api/media', '/api/upscale', '/api/video', '/api/admin']
     
     const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path))
     const isProtectedApiPath = protectedApiPaths.some(path => pathname.startsWith(path))
@@ -58,6 +58,40 @@ export async function middleware(request: NextRequest) {
           return NextResponse.redirect(signInUrl)
         }
       }
+    }
+
+    // Check admin role for /admin routes
+    if (token && pathname.startsWith('/admin')) {
+      const role = String((token as any).role || '').toUpperCase()
+      
+      if (role !== 'ADMIN') {
+        if (isApiRoute) {
+          return NextResponse.json(
+            { error: 'Admin access required', code: 'FORBIDDEN' },
+            { status: 403 }
+          )
+        } else {
+          const dashboardUrl = new URL('/dashboard', request.url)
+          return NextResponse.redirect(dashboardUrl)
+        }
+      }
+      
+      // Admin routes don't need subscription check
+      const response = NextResponse.next()
+      response.headers.set('X-Frame-Options', 'DENY')
+      response.headers.set('X-Content-Type-Options', 'nosniff')
+      response.headers.set('Referrer-Policy', 'origin-when-cross-origin')
+      
+      // Prevent caching of admin pages
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, private')
+      response.headers.set('Pragma', 'no-cache')
+      response.headers.set('Expires', '0')
+      response.headers.set('Surrogate-Control', 'no-store')
+      response.headers.set('X-Accel-Buffering', 'no')
+      response.headers.set('Vary', 'Accept-Encoding, Cookie, Authorization')
+      response.headers.set('CDN-Cache-Control', 'no-store')
+      
+      return response
     }
 
     // Check subscription status - ALL plans are PAID, access controlled by subscriptionStatus only

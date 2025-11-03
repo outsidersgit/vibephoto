@@ -1,13 +1,19 @@
+import { requireAdmin } from '@/lib/auth'
+import { unstable_noStore as noStore } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import UserRowActions from './user-row-actions'
 import UserActionsInline from './user-actions-inline'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 type SearchParams = { searchParams?: Promise<{ page?: string; q?: string; role?: string; status?: string; sort?: string; dir?: string }> }
 
 export default async function AdminUsersPage({ searchParams }: SearchParams) {
+  noStore()
+  await requireAdmin()
+  
   const params = (await (searchParams || Promise.resolve({}))) as any || {}
   const { page = '1', q = '', role = 'all', status = 'all', sort = 'createdAt', dir = 'desc' } = params
   const currentPage = Math.max(1, parseInt(page || '1'))
