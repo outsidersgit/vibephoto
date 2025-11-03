@@ -183,77 +183,64 @@ export async function PUT(
 
     console.log('✅ [ADMIN_SUBSCRIPTION_PLANS] Updating plan:', { id: existing.id, planId: existing.planId })
     
-    // CRÍTICO: Usar $executeRaw para atualizar e evitar problema com features (Json vs Json[])
+    // CRÍTICO: Usar Prisma.sql para atualizar e evitar problema com features (Json vs Json[])
     // Construir SET dinamicamente apenas para campos que foram enviados
-    const setClauses: string[] = []
-    const params: any[] = []
-    let paramIndex = 1
+    const setParts: Prisma.Sql[] = []
+    const updateData: any = {}
 
     if (parsed.data.name !== undefined) {
-      setClauses.push(`name = $${paramIndex}`)
-      params.push(parsed.data.name)
-      paramIndex++
+      setParts.push(Prisma.sql`name = ${parsed.data.name}`)
+      updateData.name = parsed.data.name
     }
     if (parsed.data.description !== undefined) {
-      setClauses.push(`description = $${paramIndex}`)
-      params.push(parsed.data.description)
-      paramIndex++
+      setParts.push(Prisma.sql`description = ${parsed.data.description}`)
+      updateData.description = parsed.data.description
     }
     if (parsed.data.isActive !== undefined) {
-      setClauses.push(`"isActive" = $${paramIndex}`)
-      params.push(parsed.data.isActive)
-      paramIndex++
+      setParts.push(Prisma.sql`"isActive" = ${parsed.data.isActive}`)
+      updateData.isActive = parsed.data.isActive
     }
     if (parsed.data.popular !== undefined) {
-      setClauses.push(`popular = $${paramIndex}`)
-      params.push(parsed.data.popular)
-      paramIndex++
+      setParts.push(Prisma.sql`popular = ${parsed.data.popular}`)
+      updateData.popular = parsed.data.popular
     }
     if (parsed.data.color !== undefined) {
-      setClauses.push(`color = $${paramIndex}`)
-      params.push(parsed.data.color)
-      paramIndex++
+      setParts.push(Prisma.sql`color = ${parsed.data.color}`)
+      updateData.color = parsed.data.color
     }
     if (parsed.data.monthlyPrice !== undefined) {
-      setClauses.push(`"monthlyPrice" = $${paramIndex}`)
-      params.push(parsed.data.monthlyPrice)
-      paramIndex++
+      setParts.push(Prisma.sql`"monthlyPrice" = ${parsed.data.monthlyPrice}`)
+      updateData.monthlyPrice = parsed.data.monthlyPrice
     }
     if (parsed.data.annualPrice !== undefined) {
-      setClauses.push(`"annualPrice" = $${paramIndex}`)
-      params.push(parsed.data.annualPrice)
-      paramIndex++
+      setParts.push(Prisma.sql`"annualPrice" = ${parsed.data.annualPrice}`)
+      updateData.annualPrice = parsed.data.annualPrice
     }
     if (parsed.data.monthlyEquivalent !== undefined) {
-      setClauses.push(`"monthlyEquivalent" = $${paramIndex}`)
-      params.push(parsed.data.monthlyEquivalent)
-      paramIndex++
+      setParts.push(Prisma.sql`"monthlyEquivalent" = ${parsed.data.monthlyEquivalent}`)
+      updateData.monthlyEquivalent = parsed.data.monthlyEquivalent
     }
     if (parsed.data.credits !== undefined) {
-      setClauses.push(`credits = $${paramIndex}`)
-      params.push(parsed.data.credits)
-      paramIndex++
+      setParts.push(Prisma.sql`credits = ${parsed.data.credits}`)
+      updateData.credits = parsed.data.credits
     }
     if (parsed.data.models !== undefined) {
-      setClauses.push(`models = $${paramIndex}`)
-      params.push(parsed.data.models)
-      paramIndex++
+      setParts.push(Prisma.sql`models = ${parsed.data.models}`)
+      updateData.models = parsed.data.models
     }
     if (parsed.data.resolution !== undefined) {
-      setClauses.push(`resolution = $${paramIndex}`)
-      params.push(parsed.data.resolution)
-      paramIndex++
+      setParts.push(Prisma.sql`resolution = ${parsed.data.resolution}`)
+      updateData.resolution = parsed.data.resolution
     }
     if (parsed.data.features !== undefined) {
-      setClauses.push(`features = $${paramIndex}::jsonb`)
-      params.push(JSON.stringify(parsed.data.features))
-      paramIndex++
+      setParts.push(Prisma.sql`features = ${JSON.stringify(parsed.data.features)}::jsonb`)
+      updateData.features = parsed.data.features
     }
 
     // Adicionar updatedAt
-    setClauses.push(`"updatedAt" = NOW()`)
+    setParts.push(Prisma.sql`"updatedAt" = NOW()`)
 
-    if (setClauses.length === 1) {
+    if (setParts.length === 1) {
       // Apenas updatedAt foi adicionado, não há nada para atualizar
       console.log('⚠️ [ADMIN_SUBSCRIPTION_PLANS] No fields to update')
       // Buscar plano atualizado usando $queryRaw (mesmo método do GET)
@@ -328,15 +315,11 @@ export async function PUT(
       return NextResponse.json({ plan })
     }
 
-    // Executar update usando SQL raw
-    const updateQuery = `
-      UPDATE subscription_plans
-      SET ${setClauses.join(', ')}
-      WHERE id = $${paramIndex}
-    `
-    params.push(id)
-
-    await prisma.$executeRawUnsafe(updateQuery, ...params)
+    // Executar update usando Prisma.sql (mais seguro que $executeRawUnsafe)
+    const setClause = Prisma.join(setParts, Prisma.sql`, `)
+    await prisma.$executeRaw(
+      Prisma.sql`UPDATE subscription_plans SET ${setClause} WHERE id = ${id}`
+    )
 
     // Buscar plano atualizado usando $queryRaw (mesmo método do GET)
     const updatedPlans = await prisma.$queryRaw<Array<{
