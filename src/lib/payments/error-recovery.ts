@@ -450,15 +450,55 @@ export class PaymentRecoveryService {
   private async processSuccessfulPayment(payment: any, asaasPayment: any) {
     try {
       if (payment.type === 'SUBSCRIPTION') {
-        // Activate subscription
-        await prisma.user.update({
+        // CRÍTICO: Usar updateSubscriptionStatus para garantir que creditsLimit seja atualizado
+        const { updateSubscriptionStatus } = await import('@/lib/db/subscriptions')
+        const plan = this.getPlanFromPayment(payment) as any
+        
+        // Buscar billingCycle do Payment se disponível
+        const billingCycle = payment.billingCycle || undefined
+        
+        await updateSubscriptionStatus(
+          payment.userId,
+          'ACTIVE',
+          asaasPayment.dueDate ? new Date(asaasPayment.dueDate) : undefined,
+          plan,
+          billingCycle
+        )
+
+        // CRÍTICO: Broadcast atualização para frontend
+        const updatedUser = await prisma.user.findUnique({
           where: { id: payment.userId },
-          data: {
-            subscriptionStatus: 'ACTIVE',
-            plan: this.getPlanFromPayment(payment),
-            subscriptionStartedAt: new Date(asaasPayment.confirmedDate)
+          select: {
+            creditsUsed: true,
+            creditsLimit: true,
+            creditsBalance: true,
+            subscriptionStatus: true,
+            plan: true
           }
         })
+
+        if (updatedUser) {
+          const { broadcastCreditsUpdate, broadcastUserUpdate } = await import('@/lib/services/realtime-service')
+          await broadcastCreditsUpdate(
+            payment.userId,
+            updatedUser.creditsUsed,
+            updatedUser.creditsLimit,
+            'PAYMENT_RECOVERED',
+            updatedUser.creditsBalance
+          ).catch(console.error)
+          
+          await broadcastUserUpdate(
+            payment.userId,
+            {
+              plan: updatedUser.plan,
+              subscriptionStatus: updatedUser.subscriptionStatus,
+              creditsLimit: updatedUser.creditsLimit,
+              creditsUsed: updatedUser.creditsUsed,
+              creditsBalance: updatedUser.creditsBalance
+            },
+            'PAYMENT_RECOVERED'
+          ).catch(console.error)
+        }
       } else if (payment.type === 'CREDIT_PURCHASE' && payment.creditAmount) {
         // Add credits
         await prisma.user.update({

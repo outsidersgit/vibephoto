@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { asaas, handleAsaasError } from '@/lib/payments/asaas'
 import { updateSubscriptionStatus } from '@/lib/db/subscriptions'
+import { broadcastCreditsUpdate, broadcastUserUpdate } from '@/lib/services/realtime-service'
 import crypto from 'crypto'
 
 interface AsaasWebhookPayload {
@@ -549,13 +550,62 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
       // Usar updateSubscriptionStatus que já possui toda a lógica correta
       // (YEARLY * 12 créditos, reset de créditos, data de expiração, etc.)
       // CRÍTICO: Agora garantimos que plan sempre existe quando chegamos aqui
-      await updateSubscriptionStatus(
+      const updatedUser = await updateSubscriptionStatus(
         user.id,
         'ACTIVE',
         currentPeriodEnd,
         plan!, // Garantimos que plan existe aqui
         billingCycle
       )
+
+      // CRÍTICO: Buscar dados atualizados do usuário para broadcast
+      const userAfterUpdate = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: {
+          creditsUsed: true,
+          creditsLimit: true,
+          creditsBalance: true,
+          subscriptionStatus: true,
+          plan: true
+        }
+      })
+
+      // CRÍTICO: Broadcast atualização em tempo real para frontend
+      if (userAfterUpdate) {
+        await broadcastCreditsUpdate(
+          user.id,
+          userAfterUpdate.creditsUsed,
+          userAfterUpdate.creditsLimit,
+          'SUBSCRIPTION_ACTIVATED',
+          userAfterUpdate.creditsBalance
+        ).catch((error) => {
+          console.error('❌ [WEBHOOK] Erro ao broadcast créditos:', error)
+          // Não falhar webhook se broadcast falhar
+        })
+
+        await broadcastUserUpdate(
+          user.id,
+          {
+            plan: userAfterUpdate.plan,
+            subscriptionStatus: userAfterUpdate.subscriptionStatus,
+            creditsLimit: userAfterUpdate.creditsLimit,
+            creditsUsed: userAfterUpdate.creditsUsed,
+            creditsBalance: userAfterUpdate.creditsBalance
+          },
+          'SUBSCRIPTION_ACTIVATED'
+        ).catch((error) => {
+          console.error('❌ [WEBHOOK] Erro ao broadcast user update:', error)
+          // Não falhar webhook se broadcast falhar
+        })
+
+        console.log('✅ [WEBHOOK] Broadcast SSE enviado para frontend:', {
+          userId: user.id,
+          creditsLimit: userAfterUpdate.creditsLimit,
+          creditsUsed: userAfterUpdate.creditsUsed,
+          creditsBalance: userAfterUpdate.creditsBalance,
+          subscriptionStatus: userAfterUpdate.subscriptionStatus
+        })
+      }
 
       // Atualizar Payment original ou criar novo se não existir
       if (originalPayment && originalPayment.id) {

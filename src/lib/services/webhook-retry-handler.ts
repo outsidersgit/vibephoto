@@ -1,5 +1,6 @@
 import { asaas } from '@/lib/payments/asaas'
 import { updateSubscriptionStatus, getUserByAsaasCustomerId, logUsage } from '@/lib/db/subscriptions'
+import { prisma } from '@/lib/prisma'
 
 /**
  * Handle webhook event processing (used by retry mechanism)
@@ -52,6 +53,42 @@ async function handlePaymentSuccess(payment: any) {
   if (!user) throw new Error('User not found')
 
   await updateSubscriptionStatus(user.id, 'ACTIVE')
+  
+  // CRÍTICO: Broadcast atualização para frontend
+  const updatedUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      creditsUsed: true,
+      creditsLimit: true,
+      creditsBalance: true,
+      subscriptionStatus: true,
+      plan: true
+    }
+  })
+
+  if (updatedUser) {
+    const { broadcastCreditsUpdate, broadcastUserUpdate } = await import('@/lib/services/realtime-service')
+    await broadcastCreditsUpdate(
+      user.id,
+      updatedUser.creditsUsed,
+      updatedUser.creditsLimit,
+      'PAYMENT_RECEIVED_RETRY',
+      updatedUser.creditsBalance
+    ).catch(console.error)
+    
+    await broadcastUserUpdate(
+      user.id,
+      {
+        plan: updatedUser.plan,
+        subscriptionStatus: updatedUser.subscriptionStatus,
+        creditsLimit: updatedUser.creditsLimit,
+        creditsUsed: updatedUser.creditsUsed,
+        creditsBalance: updatedUser.creditsBalance
+      },
+      'PAYMENT_RECEIVED_RETRY'
+    ).catch(console.error)
+  }
+
   await logUsage({
     userId: user.id,
     action: 'PAYMENT_RECEIVED',

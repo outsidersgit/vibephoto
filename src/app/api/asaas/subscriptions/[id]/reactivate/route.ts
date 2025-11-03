@@ -65,6 +65,41 @@ export async function POST(
     // Update user subscription status
     await updateSubscriptionStatus(user.id, 'ACTIVE')
 
+    // CRÍTICO: Broadcast atualização para frontend
+    const updatedUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        creditsUsed: true,
+        creditsLimit: true,
+        creditsBalance: true,
+        subscriptionStatus: true,
+        plan: true
+      }
+    })
+
+    if (updatedUser) {
+      const { broadcastCreditsUpdate, broadcastUserUpdate } = await import('@/lib/services/realtime-service')
+      await broadcastCreditsUpdate(
+        user.id,
+        updatedUser.creditsUsed,
+        updatedUser.creditsLimit,
+        'SUBSCRIPTION_REACTIVATED',
+        updatedUser.creditsBalance
+      ).catch(console.error)
+      
+      await broadcastUserUpdate(
+        user.id,
+        {
+          plan: updatedUser.plan,
+          subscriptionStatus: updatedUser.subscriptionStatus,
+          creditsLimit: updatedUser.creditsLimit,
+          creditsUsed: updatedUser.creditsUsed,
+          creditsBalance: updatedUser.creditsBalance
+        },
+        'SUBSCRIPTION_REACTIVATED'
+      ).catch(console.error)
+    }
+
     await prisma.user.update({
       where: { id: user.id },
       data: {

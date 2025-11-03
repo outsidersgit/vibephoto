@@ -91,6 +91,41 @@ export async function POST(
     // Isso mantém creditsLimit e creditsUsed inalterados
     await updateSubscriptionStatus(user.id, 'ACTIVE')
 
+    // CRÍTICO: Broadcast atualização para frontend
+    const updatedUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        creditsUsed: true,
+        creditsLimit: true,
+        creditsBalance: true,
+        subscriptionStatus: true,
+        plan: true
+      }
+    })
+
+    if (updatedUser) {
+      const { broadcastCreditsUpdate, broadcastUserUpdate } = await import('@/lib/services/realtime-service')
+      await broadcastCreditsUpdate(
+        user.id,
+        updatedUser.creditsUsed,
+        updatedUser.creditsLimit,
+        'SUBSCRIPTION_UPGRADED',
+        updatedUser.creditsBalance
+      ).catch(console.error)
+      
+      await broadcastUserUpdate(
+        user.id,
+        {
+          plan: updatedUser.plan,
+          subscriptionStatus: updatedUser.subscriptionStatus,
+          creditsLimit: updatedUser.creditsLimit,
+          creditsUsed: updatedUser.creditsUsed,
+          creditsBalance: updatedUser.creditsBalance
+        },
+        'SUBSCRIPTION_UPGRADED'
+      ).catch(console.error)
+    }
+
     // Log the upgrade
     await prisma.usageLog.create({
       data: {
