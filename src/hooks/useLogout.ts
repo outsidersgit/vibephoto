@@ -148,8 +148,9 @@ export function useLogout() {
       // Aguardar mais um pouco para garantir que logs foram renderizados
       await new Promise(resolve => setTimeout(resolve, 200))
 
-      // Redirecionar manualmente após limpeza completa
-      window.location.href = redirectUrl
+      // CRITICAL: Usar replace para não adicionar ao histórico do navegador
+      // Isso previne que o usuário use botão voltar para voltar à página protegida
+      window.location.replace(redirectUrl)
     } catch (error) {
       console.error('❌ Erro durante logout:', error)
       
@@ -159,12 +160,12 @@ export function useLogout() {
           redirect: false
         })
         
-        // Forçar redirecionamento mesmo em caso de erro
-        window.location.href = callbackUrl
+        // CRITICAL: Usar replace para prevenir BFCache
+        window.location.replace(callbackUrl)
       } catch (signOutError) {
         console.error('❌ Erro ao fazer signOut:', signOutError)
-        // Última tentativa: redirecionar mesmo sem signOut
-        window.location.href = callbackUrl
+        // Última tentativa: redirecionar mesmo sem signOut usando replace
+        window.location.replace(callbackUrl)
       }
     }
   }, [queryClient])

@@ -7,6 +7,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Skip middleware for static files, API auth routes, and public pages
+  // CRITICAL: Permitir /api/auth/verify para verificação rápida de sessão
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/auth') ||
@@ -122,15 +123,25 @@ export async function middleware(request: NextRequest) {
     response.headers.set('Referrer-Policy', 'origin-when-cross-origin')
     
     // CRITICAL: Prevent caching of protected pages to avoid bfcache issues after logout
-    // This ensures the browser doesn't serve cached content when user presses "back" button
+    // Next.js 15 Best Practice: https://nextjs.org/docs/app/building-your-application/routing/middleware
+    // Headers HTTP são a primeira linha de defesa contra BFCache
     if (isProtectedPath && !isApiRoute) {
-      // CRITICAL: Headers para prevenir BFCache e cache do navegador
+      // CRITICAL: Headers completos para prevenir BFCache e cache do navegador
+      // Baseado em: https://web.dev/articles/bfcache
       response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, private')
       response.headers.set('Pragma', 'no-cache')
       response.headers.set('Expires', '0')
       response.headers.set('Surrogate-Control', 'no-store')
-      // Prevent page from being stored in bfcache (Next.js 15 recommendation)
+      
+      // Headers específicos para prevenir BFCache
       response.headers.set('X-Accel-Buffering', 'no')
+      
+      // Adicionar header para prevenir restauração de cache (Chrome/Safari)
+      // Este header força o navegador a sempre fazer nova requisição
+      response.headers.set('Vary', 'Accept-Encoding, Cookie, Authorization')
+      
+      // Prevenir cache em CDNs/proxies
+      response.headers.set('CDN-Cache-Control', 'no-store')
     }
     
     return response
