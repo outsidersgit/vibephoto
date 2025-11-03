@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/auth'
 import { unstable_noStore as noStore } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -18,12 +19,75 @@ export default async function AdminSubscriptionPlansPage({ searchParams }: Searc
   if (status === 'active') where.isActive = true
   if (status === 'inactive') where.isActive = false
 
-  const plans = await prisma.subscriptionPlan.findMany({
-    where,
-    orderBy: [
-      { popular: 'desc' },
-      { monthlyPrice: 'asc' }
-    ]
+  // Usar raw query para contornar o problema do Prisma com Json[]
+  const plans = await prisma.$queryRaw<Array<{
+    id: string
+    planId: string
+    name: string
+    description: string
+    isActive: boolean
+    popular: boolean
+    color: string | null
+    monthlyPrice: number
+    annualPrice: number
+    monthlyEquivalent: number
+    credits: number
+    models: number
+    resolution: string
+    features: any
+    createdAt: Date
+    updatedAt: Date
+    deletedAt: Date | null
+  }>>`
+    SELECT 
+      id, 
+      "planId",
+      name, 
+      description, 
+      "isActive", 
+      popular, 
+      color, 
+      "monthlyPrice", 
+      "annualPrice", 
+      "monthlyEquivalent", 
+      credits, 
+      models, 
+      resolution, 
+      features,
+      "createdAt", 
+      "updatedAt", 
+      "deletedAt"
+    FROM subscription_plans
+    WHERE "deletedAt" IS NULL
+      ${status === 'active' ? Prisma.sql`AND "isActive" = true` : Prisma.empty}
+      ${status === 'inactive' ? Prisma.sql`AND "isActive" = false` : Prisma.empty}
+    ORDER BY popular DESC, "monthlyPrice" ASC
+  `
+
+  // Converter features para array se necessário (corrigir dados existentes)
+  const plansWithFixedFeatures = plans.map((plan: any) => {
+    let features = plan.features
+    
+    // Se features não é um array, tentar converter
+    if (!Array.isArray(features)) {
+      try {
+        // Se é string JSON, fazer parse
+        if (typeof features === 'string') {
+          features = JSON.parse(features)
+        }
+        // Se ainda não é array mas é um objeto, converter para array
+        if (!Array.isArray(features)) {
+          features = []
+        }
+      } catch {
+        features = []
+      }
+    }
+    
+    return {
+      ...plan,
+      features
+    }
   })
 
   return (
@@ -48,7 +112,7 @@ export default async function AdminSubscriptionPlansPage({ searchParams }: Searc
       </form>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {plans.map((plan: any) => (
+        {plansWithFixedFeatures.map((plan: any) => (
           <div
             key={plan.id}
             className={`border rounded-lg p-4 ${

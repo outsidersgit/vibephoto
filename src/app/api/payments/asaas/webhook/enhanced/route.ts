@@ -467,29 +467,50 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
           }
         }
       } else {
-        // Não encontrou Payment original, criar novo
+        // Não encontrou Payment original, tentar atualizar existente ou criar novo
         try {
-          await prisma.payment.create({
-            data: {
-              asaasPaymentId: payment.id,
-              userId: user.id,
-              type: 'SUBSCRIPTION',
-              status: 'CONFIRMED',
-              billingType: payment.billingType as any,
-              value: payment.value,
-              description: `Payment confirmed - ${payment.billingType}`,
-              dueDate: new Date(payment.dueDate),
-              confirmedDate: new Date(),
-              subscriptionId: payment.subscription,
-              externalReference: payment.externalReference,
-              planType: plan || undefined,
-              billingCycle: billingCycle || undefined
-            }
+          // Primeiro, tentar atualizar um payment existente com esse asaasPaymentId
+          const existingPayment = await prisma.payment.findUnique({
+            where: { asaasPaymentId: payment.id }
           })
-          console.log('✅ [WEBHOOK] Novo Payment criado (original não encontrado)')
+
+          if (existingPayment) {
+            // Payment já existe, apenas atualizar status
+            await prisma.payment.update({
+              where: { id: existingPayment.id },
+              data: {
+                status: 'CONFIRMED',
+                confirmedDate: new Date(),
+                ...(plan && { planType: plan }),
+                ...(billingCycle && { billingCycle: billingCycle }),
+                ...(payment.subscription && { subscriptionId: payment.subscription })
+              }
+            })
+            console.log('✅ [WEBHOOK] Payment existente atualizado para CONFIRMED')
+          } else {
+            // Criar novo Payment
+            await prisma.payment.create({
+              data: {
+                asaasPaymentId: payment.id,
+                userId: user.id,
+                type: 'SUBSCRIPTION',
+                status: 'CONFIRMED',
+                billingType: payment.billingType as any,
+                value: payment.value,
+                description: `Payment confirmed - ${payment.billingType}`,
+                dueDate: new Date(payment.dueDate),
+                confirmedDate: new Date(),
+                subscriptionId: payment.subscription,
+                externalReference: payment.externalReference,
+                planType: plan || undefined,
+                billingCycle: billingCycle || undefined
+              }
+            })
+            console.log('✅ [WEBHOOK] Novo Payment criado (original não encontrado)')
+          }
         } catch (error: any) {
           // Pode dar erro de unique constraint se já existe, não é crítico
-          console.warn('⚠️ [WEBHOOK] Erro ao criar Payment (pode já existir):', error.message)
+          console.warn('⚠️ [WEBHOOK] Erro ao criar/atualizar Payment:', error.message)
         }
       }
 
@@ -501,29 +522,181 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
         creditsWillBeSet: !!plan
       })
     } else {
-      // Handle credit purchase - extract credits from external reference or description
-      const creditAmount = extractCreditAmount(payment.externalReference)
-      if (creditAmount > 0) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            creditsBalance: { increment: creditAmount }
-          }
-        })
+      // Handle credit purchase
+      // Primeiro, tentar encontrar CreditPurchase existente pelo asaasCheckoutId
+      const creditPurchase = await prisma.creditPurchase.findFirst({
+        where: {
+          userId: user.id,
+          asaasCheckoutId: payment.externalReference || undefined,
+          status: 'PENDING'
+        }
+      })
 
-        // Create credit purchase record
-        await prisma.creditPurchase.create({
+      if (creditPurchase) {
+        // Verificar se já foi confirmado antes para evitar adicionar créditos duplicados
+        const needsCreditUpdate = creditPurchase.status === 'PENDING'
+        
+        // Atualizar CreditPurchase existente
+        await prisma.creditPurchase.update({
+          where: { id: creditPurchase.id },
           data: {
-            userId: user.id,
             asaasPaymentId: payment.id,
-            packageName: `Pacote de ${creditAmount} créditos`,
-            creditAmount,
-            value: payment.value,
             status: 'CONFIRMED',
-            validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
             confirmedAt: new Date()
           }
         })
+
+        // Adicionar créditos se ainda não foram adicionados (status era PENDING antes do update)
+        if (needsCreditUpdate) {
+          // Buscar balance atual antes de adicionar
+          const userBeforeUpdate = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { creditsBalance: true }
+          })
+
+          // Adicionar créditos
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              creditsBalance: { increment: creditPurchase.creditAmount }
+            }
+          })
+
+          // Buscar balance após atualização para transaction record
+          const userAfterUpdate = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { creditsBalance: true }
+          })
+
+          await prisma.creditTransaction.create({
+            data: {
+              userId: user.id,
+              type: 'EARNED',
+              source: 'PURCHASE',
+              amount: creditPurchase.creditAmount,
+              description: `Compra de ${creditPurchase.packageName} - ${creditPurchase.creditAmount} créditos`,
+              referenceId: payment.id,
+              creditPurchaseId: creditPurchase.id,
+              balanceAfter: (userAfterUpdate?.creditsBalance || 0),
+              metadata: {
+                packageName: creditPurchase.packageName,
+                packageId: creditPurchase.packageId,
+                value: creditPurchase.value,
+                asaasPaymentId: payment.id,
+                billingType: payment.billingType
+              }
+            }
+          })
+
+          console.log(`✅ [WEBHOOK] Adicionados ${creditPurchase.creditAmount} créditos para usuário ${user.id}`)
+        } else {
+          console.log(`⚠️ [WEBHOOK] CreditPurchase já estava confirmado, pulando adição de créditos`)
+        }
+      } else {
+        // Tentar extrair creditAmount do externalReference ou description
+        const creditAmount = extractCreditAmount(payment.externalReference || payment.description || '')
+        if (creditAmount > 0) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              creditsBalance: { increment: creditAmount }
+            }
+          })
+
+          // Create credit purchase record
+          const newCreditPurchase = await prisma.creditPurchase.create({
+            data: {
+              userId: user.id,
+              asaasPaymentId: payment.id,
+              asaasCheckoutId: payment.externalReference || undefined,
+              packageName: `Pacote de ${creditAmount} créditos`,
+              creditAmount,
+              value: payment.value,
+              status: 'CONFIRMED',
+              validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+              confirmedAt: new Date()
+            }
+          })
+
+          // Criar transaction record
+          const currentUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { creditsBalance: true }
+          })
+
+          await prisma.creditTransaction.create({
+            data: {
+              userId: user.id,
+              type: 'EARNED',
+              source: 'PURCHASE',
+              amount: creditAmount,
+              description: `Compra de Pacote de ${creditAmount} créditos`,
+              referenceId: payment.id,
+              creditPurchaseId: newCreditPurchase.id,
+              balanceAfter: (currentUser?.creditsBalance || 0),
+              metadata: {
+                packageName: newCreditPurchase.packageName,
+                value: payment.value,
+                asaasPaymentId: payment.id,
+                billingType: payment.billingType
+              }
+            }
+          })
+
+          console.log(`✅ [WEBHOOK] Criado CreditPurchase e adicionados ${creditAmount} créditos para usuário ${user.id}`)
+        }
+      }
+
+      // Atualizar ou criar Payment para CREDIT_PURCHASE
+      try {
+        const existingPayment = await prisma.payment.findFirst({
+          where: {
+            userId: user.id,
+            type: 'CREDIT_PURCHASE',
+            asaasCheckoutId: payment.externalReference || undefined,
+            status: 'PENDING'
+          },
+          orderBy: { createdAt: 'desc' }
+        })
+
+        if (existingPayment) {
+          // Atualizar Payment existente
+          await prisma.payment.update({
+            where: { id: existingPayment.id },
+            data: {
+              asaasPaymentId: payment.id,
+              status: 'CONFIRMED',
+              confirmedDate: new Date()
+            }
+          })
+          console.log('✅ [WEBHOOK] Payment CREDIT_PURCHASE atualizado para CONFIRMED')
+        } else {
+          // Verificar se já existe payment com esse asaasPaymentId
+          const paymentWithAsaasId = await prisma.payment.findUnique({
+            where: { asaasPaymentId: payment.id }
+          })
+
+          if (!paymentWithAsaasId) {
+            // Criar novo Payment
+            await prisma.payment.create({
+              data: {
+                asaasPaymentId: payment.id,
+                userId: user.id,
+                type: 'CREDIT_PURCHASE',
+                status: 'CONFIRMED',
+                billingType: payment.billingType as any,
+                value: payment.value,
+                description: `Credit purchase confirmed - ${payment.billingType}`,
+                dueDate: new Date(payment.dueDate),
+                confirmedDate: new Date(),
+                externalReference: payment.externalReference
+              }
+            })
+            console.log('✅ [WEBHOOK] Novo Payment CREDIT_PURCHASE criado')
+          }
+        }
+      } catch (error: any) {
+        console.warn('⚠️ [WEBHOOK] Erro ao criar/atualizar Payment para CREDIT_PURCHASE:', error.message)
       }
     }
 
