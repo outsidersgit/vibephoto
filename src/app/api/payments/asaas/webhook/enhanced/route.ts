@@ -784,7 +784,7 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
           })
 
           // Buscar balance após atualização para transaction record
-          const userAfterUpdate = await prisma.user.findUnique({
+          const userForTransaction = await prisma.user.findUnique({
             where: { id: user.id },
             select: { creditsBalance: true }
           })
@@ -798,7 +798,7 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
               description: `Compra de ${creditPurchase.packageName} - ${creditPurchase.creditAmount} créditos`,
               referenceId: payment.id,
               creditPurchaseId: creditPurchase.id,
-              balanceAfter: (userAfterUpdate?.creditsBalance || 0),
+              balanceAfter: (userForTransaction?.creditsBalance || 0),
               metadata: {
                 packageName: creditPurchase.packageName,
                 packageId: creditPurchase.packageId,
@@ -909,7 +909,7 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
           console.log(`✅ [WEBHOOK] Criado CreditPurchase e adicionados ${creditAmount} créditos para usuário ${user.id}`)
 
           // CRÍTICO: Broadcast atualização em tempo real para frontend
-          const userAfterUpdate = await prisma.user.findUnique({
+          const userAfterCreditUpdate = await prisma.user.findUnique({
             where: { id: user.id },
             select: {
               creditsUsed: true,
@@ -920,13 +920,13 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
             }
           })
 
-          if (userAfterUpdate) {
+          if (userAfterCreditUpdate) {
             await broadcastCreditsUpdate(
               user.id,
-              userAfterUpdate.creditsUsed,
-              userAfterUpdate.creditsLimit,
+              userAfterCreditUpdate.creditsUsed,
+              userAfterCreditUpdate.creditsLimit,
               'CREDIT_PURCHASE_CONFIRMED',
-              userAfterUpdate.creditsBalance
+              userAfterCreditUpdate.creditsBalance
             ).catch((error) => {
               console.error('❌ [WEBHOOK] Erro ao broadcast créditos:', error)
             })
@@ -934,9 +934,9 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
             await broadcastUserUpdate(
               user.id,
               {
-                creditsBalance: userAfterUpdate.creditsBalance,
-                creditsLimit: userAfterUpdate.creditsLimit,
-                creditsUsed: userAfterUpdate.creditsUsed
+                creditsBalance: userAfterCreditUpdate.creditsBalance,
+                creditsLimit: userAfterCreditUpdate.creditsLimit,
+                creditsUsed: userAfterCreditUpdate.creditsUsed
               },
               'CREDIT_PURCHASE_CONFIRMED'
             ).catch((error) => {
@@ -946,7 +946,7 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
             console.log('✅ [WEBHOOK] Broadcast SSE enviado para compra de créditos (fallback):', {
               userId: user.id,
               creditsAdded: creditAmount,
-              creditsBalance: userAfterUpdate.creditsBalance
+              creditsBalance: userAfterCreditUpdate.creditsBalance
             })
           }
         }
