@@ -296,7 +296,14 @@ class AsaasAPI {
   }
 
   async cancelSubscription(subscriptionId: string) {
-    return this.request(`/subscriptions/${subscriptionId}`, {
+    const path = `/subscriptions/${subscriptionId}`
+    console.log('🌐 Asaas API - Cancel Subscription:', {
+      method: 'DELETE',
+      path,
+      fullUrl: `${this.baseURL}${path}`,
+      subscriptionId
+    })
+    return this.request(path, {
       method: 'DELETE',
     })
   }

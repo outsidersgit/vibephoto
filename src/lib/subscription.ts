@@ -48,7 +48,8 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
       select: {
         plan: true,
         subscriptionId: true,
-        subscriptionStatus: true
+        subscriptionStatus: true,
+        subscriptionEndsAt: true
       }
     })
 
@@ -82,20 +83,44 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
     }
   }
 
-    // Production: ONLY check subscriptionStatus field
+    // Production: Check subscriptionStatus AND subscriptionEndsAt
     // ALL plans (STARTER, PREMIUM, GOLD) are PAID
-    // Access is controlled ONLY by subscriptionStatus === 'ACTIVE'
-    const hasActiveSubscription = user.subscriptionStatus === 'ACTIVE'
+    // Access is controlled by subscriptionStatus === 'ACTIVE' OR (CANCELLED + subscriptionEndsAt in future)
+    let hasActiveSubscription = false
+    
+    if (user.subscriptionStatus === 'ACTIVE') {
+      hasActiveSubscription = true
+    } else if (user.subscriptionStatus === 'CANCELLED' && user.subscriptionEndsAt) {
+      // Verificar se subscriptionEndsAt está no futuro
+      const endsAtDate = user.subscriptionEndsAt instanceof Date 
+        ? user.subscriptionEndsAt 
+        : new Date(user.subscriptionEndsAt)
+      const now = new Date()
+      
+      if (endsAtDate > now) {
+        // Usuário cancelou mas ainda tem acesso até subscriptionEndsAt
+        hasActiveSubscription = true
+        console.log('[Subscription] User with CANCELLED subscription has access until:', endsAtDate.toISOString())
+      } else {
+        // Data de término já passou
+        hasActiveSubscription = false
+        console.log('[Subscription] User with CANCELLED subscription - access expired:', endsAtDate.toISOString())
+      }
+    } else {
+      // OVERDUE, EXPIRED, null, etc. - sem acesso
+      hasActiveSubscription = false
+    }
 
     console.log('[Subscription] Subscription check result:', {
       userId,
       hasActiveSubscription,
-      subscriptionStatus: user.subscriptionStatus
+      subscriptionStatus: user.subscriptionStatus,
+      subscriptionEndsAt: user.subscriptionEndsAt
     })
 
     return {
       hasActiveSubscription,
-      subscriptionStatus: user.subscriptionStatus === 'ACTIVE' ? 'active' : 'inactive',
+      subscriptionStatus: hasActiveSubscription ? 'active' : 'inactive',
       subscriptionId: user.subscriptionId,
       plan: user.plan || 'STARTER', // Default to STARTER for display purposes if null
       isInDevelopmentMode: false
@@ -175,9 +200,11 @@ export async function checkSubscriptionStatus() {
 
 /**
  * Validate subscription status for API routes
+ * CRITICAL: Considera subscriptionEndsAt para assinaturas canceladas
  */
 export async function validateSubscriptionForAPI(userId: string): Promise<boolean> {
   const subscriptionInfo = await getSubscriptionInfo(userId)
+  // getSubscriptionInfo já verifica subscriptionEndsAt para CANCELLED
   return subscriptionInfo.hasActiveSubscription
 }
 

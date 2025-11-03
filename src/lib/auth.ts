@@ -145,6 +145,8 @@ export const authOptions: NextAuthOptions = {
         token.subscriptionId = (user as any).subscriptionId || null
         // @ts-ignore
         token.subscriptionStatus = (user as any).subscriptionStatus || (account?.provider !== 'credentials' ? null : undefined)
+        // @ts-ignore - Load subscriptionEndsAt for CANCELLED subscriptions
+        token.subscriptionEndsAt = (user as any).subscriptionEndsAt ? (user as any).subscriptionEndsAt.toISOString() : null
         // @ts-ignore - Load subscription state from user
         token.hasActiveSubscription = (user as any).hasActiveSubscription || false
         // @ts-ignore - Load development mode from user
@@ -177,7 +179,8 @@ export const authOptions: NextAuthOptions = {
                 creditsBalance: true,
                 asaasCustomerId: true,
                 subscriptionId: true,
-                subscriptionStatus: true
+                subscriptionStatus: true,
+                subscriptionEndsAt: true
               }
             })
 
@@ -194,6 +197,8 @@ export const authOptions: NextAuthOptions = {
               token.subscriptionId = updatedUser.subscriptionId || null
               // @ts-ignore
               token.subscriptionStatus = updatedUser.subscriptionStatus || null
+              // @ts-ignore
+              token.subscriptionEndsAt = updatedUser.subscriptionEndsAt ? updatedUser.subscriptionEndsAt.toISOString() : null
             }
           }
         } catch (error) {
@@ -217,6 +222,8 @@ export const authOptions: NextAuthOptions = {
         session.user.subscriptionId = (token as any).subscriptionId || null
         // @ts-ignore
         session.user.subscriptionStatus = (token as any).subscriptionStatus || null
+        // @ts-ignore
+        session.user.subscriptionEndsAt = (token as any).subscriptionEndsAt || null
         // @ts-ignore enhanced subscription fields
         session.user.hasActiveSubscription = (token as any).hasActiveSubscription || false
         // @ts-ignore

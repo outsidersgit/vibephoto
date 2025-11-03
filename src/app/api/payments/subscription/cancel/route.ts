@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { asaas } from '@/lib/payments/asaas'
+import { broadcastUserUpdate } from '@/lib/services/realtime-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,27 +53,124 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      // CRÍTICO: Buscar assinatura do Asaas ANTES de cancelar para obter nextDueDate
+      let subscriptionData: any = null
+      try {
+        subscriptionData = await asaas.getSubscription(subscriptionId)
+        console.log('✅ [CANCEL] Subscription data fetched before cancel:', {
+          subscriptionId,
+          status: subscriptionData.status,
+          nextDueDate: subscriptionData.nextDueDate
+        })
+
+        // Verificar se assinatura já está cancelada
+        if (subscriptionData.status === 'CANCELLED' || subscriptionData.status === 'INACTIVE') {
+          console.warn('⚠️ [CANCEL] Subscription already cancelled in Asaas:', subscriptionData.status)
+          // Atualizar localmente mesmo assim
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              subscriptionStatus: 'CANCELLED',
+              subscriptionEndsAt: new Date(),
+              subscriptionCancelledAt: new Date()
+            }
+          })
+          return NextResponse.json({
+            success: true,
+            message: 'Assinatura já estava cancelada no provedor de pagamento',
+            warning: true
+          })
+        }
+      } catch (fetchError: any) {
+        console.error('❌ [CANCEL] Error fetching subscription before cancel:', fetchError)
+        // Continuar mesmo se falhar, mas usar data atual como fallback
+      }
+
       // Cancel subscription in Asaas
-      const asaasResponse = await asaas.cancelSubscription(subscriptionId)
+      console.log('🔄 [CANCEL] Cancelling subscription in Asaas:', subscriptionId)
+      await asaas.cancelSubscription(subscriptionId)
+      
+      // CRÍTICO: Buscar assinatura APÓS cancelar para obter dados atualizados
+      // (DELETE pode não retornar dados completos)
+      let cancelledSubscriptionData: any = null
+      try {
+        cancelledSubscriptionData = await asaas.getSubscription(subscriptionId)
+        console.log('✅ [CANCEL] Subscription data after cancel:', {
+          subscriptionId,
+          status: cancelledSubscriptionData.status,
+          nextDueDate: cancelledSubscriptionData.nextDueDate,
+          endDate: cancelledSubscriptionData.endDate
+        })
+      } catch (fetchAfterError: any) {
+        console.warn('⚠️ [CANCEL] Could not fetch subscription after cancel, using previous data:', fetchAfterError.message)
+        // Usar dados anteriores se disponível
+        cancelledSubscriptionData = subscriptionData
+      }
       
       // Update user in database
       const cancelDate = new Date()
-      const subscriptionEndsAt = cancelImmediately 
-        ? cancelDate 
-        : new Date(asaasResponse.nextDueDate) // Let it run until next billing cycle
-
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          subscriptionStatus: 'CANCELLED',
-          subscriptionEndsAt,
-          subscriptionCancelledAt: cancelDate,
-          // Reset to STARTER plan if cancelling immediately
-          ...(cancelImmediately && {
-            plan: 'STARTER',
-            creditsLimit: 500 // STARTER plan monthly limit
-          })
+      
+      // Determinar subscriptionEndsAt:
+      // 1. Se cancelImmediately: usar data atual
+      // 2. Se não: usar nextDueDate do Asaas (antes do cancelamento) ou endDate (após cancelamento)
+      let subscriptionEndsAt: Date
+      if (cancelImmediately) {
+        subscriptionEndsAt = cancelDate
+      } else {
+        // Usar nextDueDate da assinatura (antes de cancelar) ou endDate (após cancelar)
+        const nextDueDate = subscriptionData?.nextDueDate || cancelledSubscriptionData?.nextDueDate
+        const endDate = cancelledSubscriptionData?.endDate
+        
+        if (endDate) {
+          subscriptionEndsAt = new Date(endDate)
+        } else if (nextDueDate) {
+          subscriptionEndsAt = new Date(nextDueDate)
+        } else {
+          // Fallback: usar data atual + 30 dias (último recurso)
+          console.warn('⚠️ [CANCEL] No nextDueDate or endDate found, using fallback (now + 30 days)')
+          subscriptionEndsAt = new Date(cancelDate.getTime() + 30 * 24 * 60 * 60 * 1000)
         }
+      }
+
+      const updateData: any = {
+        subscriptionStatus: 'CANCELLED',
+        subscriptionEndsAt,
+        subscriptionCancelledAt: cancelDate
+      }
+
+      // Reset to STARTER plan if cancelling immediately
+      if (cancelImmediately) {
+        updateData.plan = 'STARTER'
+        updateData.creditsLimit = 500 // STARTER plan monthly limit
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: updateData
+      })
+
+      // CRÍTICO: Broadcast atualização para frontend
+      await broadcastUserUpdate(
+        user.id,
+        {
+          subscriptionStatus: 'CANCELLED',
+          subscriptionEndsAt: subscriptionEndsAt.toISOString(),
+          plan: updatedUser.plan,
+          creditsLimit: updatedUser.creditsLimit,
+          creditsUsed: updatedUser.creditsUsed,
+          creditsBalance: updatedUser.creditsBalance
+        },
+        'SUBSCRIPTION_CANCELLED'
+      ).catch((error) => {
+        console.error('❌ [CANCEL] Erro ao broadcast user update:', error)
+        // Não falhar cancelamento se broadcast falhar
+      })
+
+      console.log('✅ [CANCEL] Subscription cancelled and broadcast sent:', {
+        userId: user.id,
+        subscriptionId,
+        subscriptionEndsAt: subscriptionEndsAt.toISOString(),
+        cancelImmediately
       })
 
       // Log the cancellation
@@ -145,31 +243,64 @@ export async function POST(request: NextRequest) {
       })
 
     } catch (asaasError: any) {
-      console.error('Error cancelling subscription in Asaas:', asaasError)
+      console.error('❌ [CANCEL] Error cancelling subscription in Asaas:', {
+        subscriptionId,
+        error: asaasError.message,
+        status: asaasError.status,
+        stack: asaasError.stack
+      })
       
       // If Asaas cancellation fails but subscription should be cancelled locally
-      // (e.g., payment failures), we can still cancel locally
-      if (asaasError.message?.includes('not found') || asaasError.status === 404) {
-        // Subscription doesn't exist in Asaas, cancel locally
-        await prisma.user.update({
+      // (e.g., payment failures, subscription not found, already cancelled)
+      const errorMessage = asaasError.message?.toLowerCase() || ''
+      const isNotFound = asaasError.status === 404 || errorMessage.includes('not found') || errorMessage.includes('não encontrada')
+      const isAlreadyCancelled = errorMessage.includes('cancelled') || errorMessage.includes('cancelada') || errorMessage.includes('inactive')
+      
+      if (isNotFound || isAlreadyCancelled) {
+        console.log('⚠️ [CANCEL] Subscription not found or already cancelled in Asaas, cancelling locally:', {
+          isNotFound,
+          isAlreadyCancelled
+        })
+
+        // Subscription doesn't exist in Asaas or already cancelled, cancel locally
+        const updatedUser = await prisma.user.update({
           where: { id: user.id },
           data: {
             subscriptionStatus: 'CANCELLED',
             subscriptionEndsAt: new Date(),
-            subscriptionCancelledAt: new Date(),
-            subscriptionId: null
+            subscriptionCancelledAt: new Date()
           }
         })
+
+        // Broadcast mesmo em caso de erro
+        await broadcastUserUpdate(
+          user.id,
+          {
+            subscriptionStatus: 'CANCELLED',
+            subscriptionEndsAt: new Date().toISOString(),
+            plan: updatedUser.plan,
+            creditsLimit: updatedUser.creditsLimit,
+            creditsUsed: updatedUser.creditsUsed,
+            creditsBalance: updatedUser.creditsBalance
+          },
+          'SUBSCRIPTION_CANCELLED_LOCAL'
+        ).catch(console.error)
 
         return NextResponse.json({
           success: true,
           message: 'Assinatura cancelada (sincronizada localmente)',
-          warning: 'A assinatura não foi encontrada no provedor de pagamento'
+          warning: isNotFound 
+            ? 'A assinatura não foi encontrada no provedor de pagamento'
+            : 'A assinatura já estava cancelada no provedor de pagamento'
         })
       }
 
+      // Outros erros: retornar erro
       return NextResponse.json(
-        { error: `Erro ao cancelar assinatura: ${asaasError.message}` },
+        { 
+          error: `Erro ao cancelar assinatura: ${asaasError.message || 'Erro desconhecido'}`,
+          details: asaasError.status ? `Status: ${asaasError.status}` : undefined
+        },
         { status: 500 }
       )
     }

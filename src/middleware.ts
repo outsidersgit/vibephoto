@@ -97,22 +97,61 @@ export async function middleware(request: NextRequest) {
     // Check subscription status - ALL plans are PAID, access controlled by subscriptionStatus only
     if (token && (isProtectedPath || isProtectedApiPath)) {
       const subscriptionStatus = (token as any).subscriptionStatus as string | null
+      const subscriptionEndsAt = (token as any).subscriptionEndsAt as string | Date | null
 
       // Allow access to billing and pricing pages for plan management
       if (pathname.startsWith('/billing') || pathname.startsWith('/pricing')) {
         return NextResponse.next()
       }
 
-      // CRITICAL: Block ALL users without ACTIVE subscription status
-      // This includes: null (no subscription), OVERDUE, CANCELLED, EXPIRED, etc.
-      if (subscriptionStatus !== 'ACTIVE') {
-        const errorMessage = subscriptionStatus === 'OVERDUE'
-          ? 'Your subscription payment is overdue. Please update your payment method.'
-          : subscriptionStatus === 'CANCELLED'
-          ? 'Your subscription has been cancelled. Please subscribe to a plan to continue.'
-          : subscriptionStatus === 'EXPIRED'
-          ? 'Your subscription has expired. Please renew your plan to continue.'
-          : 'You need an active subscription to access this feature. Please subscribe to a plan.'
+      // CRITICAL: Verificar acesso baseado em subscriptionStatus e subscriptionEndsAt
+      // Se status é CANCELLED mas subscriptionEndsAt está no futuro, permitir acesso
+      let hasAccess = false
+      
+      if (subscriptionStatus === 'ACTIVE') {
+        hasAccess = true
+      } else if (subscriptionStatus === 'CANCELLED' && subscriptionEndsAt) {
+        // Verificar se subscriptionEndsAt está no futuro
+        const endsAtDate = subscriptionEndsAt instanceof Date 
+          ? subscriptionEndsAt 
+          : new Date(subscriptionEndsAt)
+        const now = new Date()
+        
+        if (endsAtDate > now) {
+          // Usuário cancelou mas ainda tem acesso até subscriptionEndsAt
+          hasAccess = true
+          console.log('✅ [MIDDLEWARE] User with CANCELLED subscription has access until:', endsAtDate.toISOString())
+        } else {
+          // Data de término já passou
+          hasAccess = false
+          console.log('❌ [MIDDLEWARE] User with CANCELLED subscription - access expired:', endsAtDate.toISOString())
+        }
+      } else {
+        // OVERDUE, EXPIRED, null, etc. - sem acesso
+        hasAccess = false
+      }
+
+      // Se não tem acesso, bloquear
+      if (!hasAccess) {
+        // Determinar mensagem de erro baseado no status e data
+        let errorMessage = ''
+        if (subscriptionStatus === 'OVERDUE') {
+          errorMessage = 'Your subscription payment is overdue. Please update your payment method.'
+        } else if (subscriptionStatus === 'CANCELLED') {
+          // Se chegou aqui, subscriptionEndsAt já passou ou não existe
+          if (subscriptionEndsAt) {
+            const endsAtDate = subscriptionEndsAt instanceof Date 
+              ? subscriptionEndsAt 
+              : new Date(subscriptionEndsAt)
+            errorMessage = `Your subscription was cancelled and access expired on ${endsAtDate.toLocaleDateString('pt-BR')}. Please subscribe to a plan to continue.`
+          } else {
+            errorMessage = 'Your subscription has been cancelled. Please subscribe to a plan to continue.'
+          }
+        } else if (subscriptionStatus === 'EXPIRED') {
+          errorMessage = 'Your subscription has expired. Please renew your plan to continue.'
+        } else {
+          errorMessage = 'You need an active subscription to access this feature. Please subscribe to a plan.'
+        }
 
         const errorCode = subscriptionStatus === 'OVERDUE' ? 'PAYMENT_OVERDUE' : 'SUBSCRIPTION_REQUIRED'
         const statusCode = subscriptionStatus === 'OVERDUE' ? 402 : 403
