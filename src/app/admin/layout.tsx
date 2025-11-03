@@ -7,6 +7,7 @@ import { ReactNode } from 'react'
 const items = [
   { href: '/admin', label: 'Home' },
   { href: '/admin/users', label: 'Usuários' },
+  { href: '/admin/subscription-plans', label: 'Planos de Assinatura' },
   { href: '/admin/photo-packages', label: 'Pacotes de Fotos' },
   { href: '/admin/analytics', label: 'Analytics' },
   { href: '/admin/retention', label: 'Retenção' },
