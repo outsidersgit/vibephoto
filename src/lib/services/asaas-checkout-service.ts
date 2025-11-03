@@ -233,14 +233,18 @@ export async function createSubscriptionCheckout(
     throw new Error(`Plano não encontrado: ${planId}`)
   }
   
+  // Verificar se veio do banco ou fallback comparando com valores conhecidos do fallback
+  const fallbackPlan = PLANS_FALLBACK.find(p => p.id === planId)
+  const isFromFallback = fallbackPlan && 
+    plan.monthlyPrice === fallbackPlan.monthlyPrice && 
+    plan.annualPrice === fallbackPlan.annualPrice
+  
   console.log('✅ [CHECKOUT] Plano encontrado:', {
     id: plan.id,
     name: plan.name,
     monthlyPrice: plan.monthlyPrice,
     annualPrice: plan.annualPrice,
-    source: plan.monthlyPrice === PLANS_FALLBACK.find(p => p.id === planId)?.monthlyPrice 
-      ? 'FALLBACK (código)' 
-      : 'BANCO DE DADOS'
+    source: isFromFallback ? 'FALLBACK (código)' : 'BANCO DE DADOS'
   })
 
   // Buscar usuário

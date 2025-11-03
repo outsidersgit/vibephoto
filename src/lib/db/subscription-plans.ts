@@ -44,42 +44,97 @@ export async function getAllSubscriptionPlans(): Promise<SubscriptionPlanData[]>
 
 /**
  * Buscar plano por planId (STARTER, PREMIUM, GOLD)
+ * CRÍTICO: Usar $queryRaw para evitar problema do Prisma com Json[] vs Json
  */
 export async function getSubscriptionPlanById(planId: Plan): Promise<SubscriptionPlanData | null> {
   console.log('🔍 [DB] getSubscriptionPlanById chamado para:', planId)
   
   try {
-    // CRÍTICO: Buscar pelo planId (chave única) e verificar deletedAt separadamente
-    // findUnique não aceita múltiplos campos no where a menos que seja índice composto
-    const plan = await prisma.subscriptionPlan.findUnique({
-      where: {
-        planId
-      }
-    })
+    // CRÍTICO: Usar $queryRaw para contornar problema do Prisma com Json[] vs Json
+    // O mesmo problema que resolvemos no admin panel
+    const plans = await prisma.$queryRaw<Array<{
+      id: string
+      planId: string
+      name: string
+      description: string
+      isActive: boolean
+      popular: boolean
+      color: string | null
+      monthlyPrice: number
+      annualPrice: number
+      monthlyEquivalent: number
+      credits: number
+      models: number
+      resolution: string
+      features: any
+      createdAt: Date
+      updatedAt: Date
+      deletedAt: Date | null
+    }>>`
+      SELECT 
+        id, 
+        "planId",
+        name, 
+        description, 
+        "isActive", 
+        popular, 
+        color, 
+        "monthlyPrice", 
+        "annualPrice", 
+        "monthlyEquivalent", 
+        credits, 
+        models, 
+        resolution, 
+        features,
+        "createdAt", 
+        "updatedAt", 
+        "deletedAt"
+      FROM subscription_plans
+      WHERE "planId" = ${planId}
+        AND "deletedAt" IS NULL
+      LIMIT 1
+    `
 
-    if (!plan) {
+    if (!plans || plans.length === 0) {
       console.warn('⚠️ [DB] Plano não encontrado no banco:', planId)
       return null
     }
 
-    // Verificar se está deletado (soft delete)
-    if (plan.deletedAt) {
+    const planRaw = plans[0]
+
+    // Verificar se está deletado (soft delete) - já filtrado no SQL, mas verificação adicional
+    if (planRaw.deletedAt) {
       console.warn('⚠️ [DB] Plano encontrado mas está deletado (soft delete):', planId)
       return null
     }
 
     console.log('✅ [DB] Plano encontrado no banco:', {
-      planId: plan.planId,
-      name: plan.name,
-      monthlyPrice: plan.monthlyPrice,
-      annualPrice: plan.annualPrice,
-      deletedAt: plan.deletedAt
+      planId: planRaw.planId,
+      name: planRaw.name,
+      monthlyPrice: planRaw.monthlyPrice,
+      annualPrice: planRaw.annualPrice,
+      deletedAt: planRaw.deletedAt
     })
 
+    // Converter features para array se necessário
+    let features = planRaw.features
+    if (!Array.isArray(features)) {
+      try {
+        if (typeof features === 'string') {
+          features = JSON.parse(features)
+        }
+        if (!Array.isArray(features)) {
+          features = []
+        }
+      } catch {
+        features = []
+      }
+    }
+
     return {
-      ...plan,
-      features: Array.isArray(plan.features) 
-        ? (plan.features as any[]).map((f: any) => typeof f === 'string' ? f : f.toString())
+      ...planRaw,
+      features: Array.isArray(features) 
+        ? (features as any[]).map((f: any) => typeof f === 'string' ? f : f.toString())
         : []
     } as SubscriptionPlanData
   } catch (error) {
