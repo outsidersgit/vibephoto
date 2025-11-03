@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { X, Upload, Image as ImageIcon } from 'lucide-react'
+import { NumericInput } from '@/components/ui/numeric-input'
 
 interface Prompt {
   text: string
@@ -103,6 +104,27 @@ export default function EditPhotoPackagePage() {
       loadPackage()
     }
   }, [id])
+
+  const handleFieldUpdate = async (field: string, value: any) => {
+    try {
+      const updateData: any = { [field]: value }
+      
+      const response = await fetch('/api/admin/photo-packages', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...updateData })
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Erro ao atualizar campo')
+      }
+
+      setError('')
+    } catch (err: any) {
+      setError(err.message || 'Erro ao atualizar campo')
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -382,9 +404,13 @@ export default function EditPhotoPackagePage() {
           <input
             id="name"
             type="text"
-            required
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onBlur={(e) => {
+              if (e.target.value.trim()) {
+                handleFieldUpdate('name', e.target.value.trim())
+              }
+            }}
             className="w-full border border-gray-300 rounded-md px-3 py-2"
           />
         </div>
@@ -398,6 +424,11 @@ export default function EditPhotoPackagePage() {
             rows={4}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            onBlur={(e) => {
+              if (e.target.value.trim()) {
+                handleFieldUpdate('description', e.target.value.trim())
+              }
+            }}
             className="w-full border border-gray-300 rounded-md px-3 py-2"
           />
         </div>
@@ -408,9 +439,12 @@ export default function EditPhotoPackagePage() {
           </label>
           <select
             id="category"
-            required
             value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
+            onChange={(e) => {
+              const newCategory = e.target.value as any
+              setFormData({ ...formData, category: newCategory })
+              handleFieldUpdate('category', newCategory)
+            }}
             className="w-full border border-gray-300 rounded-md px-3 py-2"
           >
             <option value="PROFESSIONAL">Profissional</option>
@@ -425,13 +459,16 @@ export default function EditPhotoPackagePage() {
           <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
             Preço (em créditos)
           </label>
-          <input
+          <NumericInput
             id="price"
-            type="number"
-            min="0"
-            step="1"
-            value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            value={formData.price ? parseFloat(formData.price) : 0}
+            onChange={(value) => {
+              setFormData({ ...formData, price: value > 0 ? value.toString() : '' })
+              // Salvar automaticamente ao alterar
+              if (value > 0) {
+                handleFieldUpdate('price', value)
+              }
+            }}
             placeholder="Ex: 400"
             className="w-full border border-gray-300 rounded-md px-3 py-2"
           />
@@ -443,7 +480,11 @@ export default function EditPhotoPackagePage() {
             <input
               type="checkbox"
               checked={formData.isActive}
-              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+              onChange={(e) => {
+                const newValue = e.target.checked
+                setFormData({ ...formData, isActive: newValue })
+                handleFieldUpdate('isActive', newValue)
+              }}
               className="rounded border-gray-300"
             />
             <span className="text-sm text-gray-700">Ativo</span>
@@ -453,7 +494,11 @@ export default function EditPhotoPackagePage() {
             <input
               type="checkbox"
               checked={formData.isPremium}
-              onChange={(e) => setFormData({ ...formData, isPremium: e.target.checked })}
+              onChange={(e) => {
+                const newValue = e.target.checked
+                setFormData({ ...formData, isPremium: newValue })
+                handleFieldUpdate('isPremium', newValue)
+              }}
               className="rounded border-gray-300"
             />
             <span className="text-sm text-gray-700">Premium</span>

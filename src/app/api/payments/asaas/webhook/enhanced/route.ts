@@ -810,6 +810,48 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
           })
 
           console.log(`✅ [WEBHOOK] Adicionados ${creditPurchase.creditAmount} créditos para usuário ${user.id}`)
+
+          // CRÍTICO: Broadcast atualização em tempo real para frontend
+          const userAfterUpdate = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: {
+              creditsUsed: true,
+              creditsLimit: true,
+              creditsBalance: true,
+              subscriptionStatus: true,
+              plan: true
+            }
+          })
+
+          if (userAfterUpdate) {
+            await broadcastCreditsUpdate(
+              user.id,
+              userAfterUpdate.creditsUsed,
+              userAfterUpdate.creditsLimit,
+              'CREDIT_PURCHASE_CONFIRMED',
+              userAfterUpdate.creditsBalance
+            ).catch((error) => {
+              console.error('❌ [WEBHOOK] Erro ao broadcast créditos:', error)
+            })
+
+            await broadcastUserUpdate(
+              user.id,
+              {
+                creditsBalance: userAfterUpdate.creditsBalance,
+                creditsLimit: userAfterUpdate.creditsLimit,
+                creditsUsed: userAfterUpdate.creditsUsed
+              },
+              'CREDIT_PURCHASE_CONFIRMED'
+            ).catch((error) => {
+              console.error('❌ [WEBHOOK] Erro ao broadcast user update:', error)
+            })
+
+            console.log('✅ [WEBHOOK] Broadcast SSE enviado para compra de créditos:', {
+              userId: user.id,
+              creditsAdded: creditPurchase.creditAmount,
+              creditsBalance: userAfterUpdate.creditsBalance
+            })
+          }
         } else {
           console.log(`⚠️ [WEBHOOK] CreditPurchase já estava confirmado, pulando adição de créditos`)
         }
@@ -865,6 +907,48 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
           })
 
           console.log(`✅ [WEBHOOK] Criado CreditPurchase e adicionados ${creditAmount} créditos para usuário ${user.id}`)
+
+          // CRÍTICO: Broadcast atualização em tempo real para frontend
+          const userAfterUpdate = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: {
+              creditsUsed: true,
+              creditsLimit: true,
+              creditsBalance: true,
+              subscriptionStatus: true,
+              plan: true
+            }
+          })
+
+          if (userAfterUpdate) {
+            await broadcastCreditsUpdate(
+              user.id,
+              userAfterUpdate.creditsUsed,
+              userAfterUpdate.creditsLimit,
+              'CREDIT_PURCHASE_CONFIRMED',
+              userAfterUpdate.creditsBalance
+            ).catch((error) => {
+              console.error('❌ [WEBHOOK] Erro ao broadcast créditos:', error)
+            })
+
+            await broadcastUserUpdate(
+              user.id,
+              {
+                creditsBalance: userAfterUpdate.creditsBalance,
+                creditsLimit: userAfterUpdate.creditsLimit,
+                creditsUsed: userAfterUpdate.creditsUsed
+              },
+              'CREDIT_PURCHASE_CONFIRMED'
+            ).catch((error) => {
+              console.error('❌ [WEBHOOK] Erro ao broadcast user update:', error)
+            })
+
+            console.log('✅ [WEBHOOK] Broadcast SSE enviado para compra de créditos (fallback):', {
+              userId: user.id,
+              creditsAdded: creditAmount,
+              creditsBalance: userAfterUpdate.creditsBalance
+            })
+          }
         }
       }
 

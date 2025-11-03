@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { NumericInput } from '@/components/ui/numeric-input'
 
 export default function UserActionsInline({ userId, email }: { userId: string; email: string }) {
   const [open, setOpen] = useState<'none' | 'credits' | 'delete'>('none')
@@ -99,7 +100,13 @@ export default function UserActionsInline({ userId, email }: { userId: string; e
           <div className="bg-white rounded p-4 w-full max-w-sm">
             <div className="font-semibold mb-2">Ajustar créditos</div>
             {error && <div className="text-sm text-red-600 mb-2">{error}</div>}
-            <input type="number" value={Number.isNaN(delta) ? 0 : delta} onChange={e => setDelta(parseInt(e.target.value || '0'))} className="w-full border rounded px-3 py-2 text-sm" placeholder="Ex.: 50 ou -50" />
+            <NumericInput
+              value={Number.isNaN(delta) ? 0 : delta}
+              onChange={(value) => setDelta(value)}
+              allowNegative={true}
+              className="w-full border rounded px-3 py-2 text-sm"
+              placeholder="Ex.: 50 ou -50"
+            />
             <div className="mt-3 flex items-center gap-2">
               <button onClick={adjustCredits} disabled={loading} className="rounded border px-3 py-2 text-sm">{loading ? 'Aplicando…' : 'Aplicar'}</button>
               <button onClick={() => setOpen('none')} className="text-sm text-gray-700 hover:underline">Cancelar</button>

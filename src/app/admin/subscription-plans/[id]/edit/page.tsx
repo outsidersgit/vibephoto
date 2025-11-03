@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { NumericInput } from '@/components/ui/numeric-input'
 
 export default function EditSubscriptionPlanPage() {
   const router = useRouter()
@@ -91,6 +92,49 @@ export default function EditSubscriptionPlanPage() {
     }
   }
 
+  const handleFieldUpdate = async (field: string, value: any) => {
+    try {
+      const updateData: any = {}
+      
+      // Se for features, filtrar vazias
+      if (field === 'features') {
+        const validFeatures = Array.isArray(value) ? value.filter((f: string) => f.trim().length > 0) : []
+        if (validFeatures.length === 0) {
+          setError('Adicione pelo menos uma feature')
+          return
+        }
+        updateData.features = validFeatures
+      } else {
+        updateData[field] = value
+      }
+
+      const response = await fetch(`/api/admin/subscription-plans/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updateData)
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao atualizar campo')
+      }
+
+      // Atualizar estado local
+      if (field === 'features') {
+        setFeatures(Array.isArray(value) ? value : [value])
+      } else {
+        setFormData({ ...formData, [field]: value })
+      }
+
+      setError(null)
+    } catch (err: any) {
+      setError(err.message || 'Erro ao atualizar campo')
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
@@ -164,23 +208,35 @@ export default function EditSubscriptionPlanPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Nome *</label>
+            <label className="block text-sm font-medium mb-1">Nome</label>
             <input
               type="text"
-              required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value })
+              }}
+              onBlur={(e) => {
+                if (e.target.value.trim()) {
+                  handleFieldUpdate('name', e.target.value.trim())
+                }
+              }}
               className="w-full border rounded-md px-3 py-2"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Descrição *</label>
+          <label className="block text-sm font-medium mb-1">Descrição</label>
           <textarea
-            required
             value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            onChange={(e) => {
+              setFormData({ ...formData, description: e.target.value })
+            }}
+            onBlur={(e) => {
+              if (e.target.value.trim()) {
+                handleFieldUpdate('description', e.target.value.trim())
+              }
+            }}
             className="w-full border rounded-md px-3 py-2"
             rows={3}
           />
@@ -188,40 +244,43 @@ export default function EditSubscriptionPlanPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Preço Mensal (R$) *</label>
-            <input
-              type="number"
-              required
-              min="0"
-              step="0.01"
+            <label className="block text-sm font-medium mb-1">Preço Mensal (R$)</label>
+            <NumericInput
               value={formData.monthlyPrice}
-              onChange={(e) => setFormData({ ...formData, monthlyPrice: parseFloat(e.target.value) })}
+              onChange={(value) => {
+                setFormData({ ...formData, monthlyPrice: value })
+                handleFieldUpdate('monthlyPrice', value)
+              }}
+              allowDecimal={true}
+              placeholder="0.00"
               className="w-full border rounded-md px-3 py-2"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Preço Anual (R$) *</label>
-            <input
-              type="number"
-              required
-              min="0"
-              step="0.01"
+            <label className="block text-sm font-medium mb-1">Preço Anual (R$)</label>
+            <NumericInput
               value={formData.annualPrice}
-              onChange={(e) => setFormData({ ...formData, annualPrice: parseFloat(e.target.value) })}
+              onChange={(value) => {
+                setFormData({ ...formData, annualPrice: value })
+                handleFieldUpdate('annualPrice', value)
+              }}
+              allowDecimal={true}
+              placeholder="0.00"
               className="w-full border rounded-md px-3 py-2"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Equivalente Mensal (R$) *</label>
-            <input
-              type="number"
-              required
-              min="0"
-              step="0.01"
+            <label className="block text-sm font-medium mb-1">Equivalente Mensal (R$)</label>
+            <NumericInput
               value={formData.monthlyEquivalent}
-              onChange={(e) => setFormData({ ...formData, monthlyEquivalent: parseFloat(e.target.value) })}
+              onChange={(value) => {
+                setFormData({ ...formData, monthlyEquivalent: value })
+                handleFieldUpdate('monthlyEquivalent', value)
+              }}
+              allowDecimal={true}
+              placeholder="0.00"
               className="w-full border rounded-md px-3 py-2"
             />
           </div>
@@ -229,36 +288,44 @@ export default function EditSubscriptionPlanPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Créditos *</label>
-            <input
-              type="number"
-              required
-              min="1"
+            <label className="block text-sm font-medium mb-1">Créditos</label>
+            <NumericInput
               value={formData.credits}
-              onChange={(e) => setFormData({ ...formData, credits: parseInt(e.target.value) })}
+              onChange={(value) => {
+                setFormData({ ...formData, credits: value })
+                handleFieldUpdate('credits', value)
+              }}
+              placeholder="0"
               className="w-full border rounded-md px-3 py-2"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Modelos Incluídos *</label>
-            <input
-              type="number"
-              required
-              min="1"
+            <label className="block text-sm font-medium mb-1">Modelos Incluídos</label>
+            <NumericInput
               value={formData.models}
-              onChange={(e) => setFormData({ ...formData, models: parseInt(e.target.value) })}
+              onChange={(value) => {
+                setFormData({ ...formData, models: value })
+                handleFieldUpdate('models', value)
+              }}
+              placeholder="0"
               className="w-full border rounded-md px-3 py-2"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Resolução *</label>
+            <label className="block text-sm font-medium mb-1">Resolução</label>
             <input
               type="text"
-              required
               value={formData.resolution}
-              onChange={(e) => setFormData({ ...formData, resolution: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, resolution: e.target.value })
+              }}
+              onBlur={(e) => {
+                if (e.target.value.trim()) {
+                  handleFieldUpdate('resolution', e.target.value.trim())
+                }
+              }}
               className="w-full border rounded-md px-3 py-2"
             />
           </div>
@@ -269,7 +336,11 @@ export default function EditSubscriptionPlanPage() {
             <label className="block text-sm font-medium mb-1">Cor</label>
             <select
               value={formData.color}
-              onChange={(e) => setFormData({ ...formData, color: e.target.value as any })}
+              onChange={(e) => {
+                const newColor = e.target.value as any
+                setFormData({ ...formData, color: newColor })
+                handleFieldUpdate('color', newColor)
+              }}
               className="w-full border rounded-md px-3 py-2"
             >
               <option value="blue">Azul</option>
@@ -283,7 +354,11 @@ export default function EditSubscriptionPlanPage() {
               <input
                 type="checkbox"
                 checked={formData.isActive}
-                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                onChange={(e) => {
+                  const newValue = e.target.checked
+                  setFormData({ ...formData, isActive: newValue })
+                  handleFieldUpdate('isActive', newValue)
+                }}
                 className="rounded"
               />
               <span className="text-sm font-medium">Ativo</span>
@@ -293,7 +368,11 @@ export default function EditSubscriptionPlanPage() {
               <input
                 type="checkbox"
                 checked={formData.popular}
-                onChange={(e) => setFormData({ ...formData, popular: e.target.checked })}
+                onChange={(e) => {
+                  const newValue = e.target.checked
+                  setFormData({ ...formData, popular: newValue })
+                  handleFieldUpdate('popular', newValue)
+                }}
                 className="rounded"
               />
               <span className="text-sm font-medium">Popular</span>
@@ -309,6 +388,12 @@ export default function EditSubscriptionPlanPage() {
                 type="text"
                 value={feature}
                 onChange={(e) => handleFeatureChange(index, e.target.value)}
+                onBlur={() => {
+                  const validFeatures = features.filter(f => f.trim().length > 0)
+                  if (validFeatures.length > 0) {
+                    handleFieldUpdate('features', validFeatures)
+                  }
+                }}
                 className="flex-1 border rounded-md px-3 py-2"
               />
               {features.length > 1 && (
