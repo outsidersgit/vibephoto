@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Check, Crown, ArrowRight, AlertCircle, Calendar, Zap, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
-import { type Plan } from '@/config/pricing'
+import { PLANS, type Plan } from '@/config/pricing'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 
@@ -164,22 +164,35 @@ function PricingPageContent() {
   const isRequired = searchParams.get('required') === 'true'
   const isNewUser = searchParams.get('newuser') === 'true'
 
-  // Buscar planos do banco de dados
+  // Buscar planos do banco de dados (com fallback para planos hardcoded)
   useEffect(() => {
     async function fetchPlans() {
       try {
         const response = await fetch('/api/subscription-plans')
         if (response.ok) {
           const data = await response.json()
-          setPlans(data.plans || [])
+          const fetchedPlans = data.plans || []
+          
+          // Se a API retornou planos, usar eles
+          if (fetchedPlans.length > 0) {
+            setPlans(fetchedPlans)
+          } else {
+            // Se não retornou planos, usar fallback hardcoded
+            console.warn('⚠️ [PRICING] Nenhum plano retornado da API, usando fallback hardcoded')
+            setPlans(PLANS)
+          }
         } else {
-          console.error('Erro ao buscar planos')
-          // Fallback vazio - página não renderiza planos
-          setPlans([])
+          // Se a API retornou erro, usar fallback hardcoded
+          console.warn('⚠️ [PRICING] Erro na API, usando fallback hardcoded')
+          setPlans(PLANS)
+          
+          const errorData = await response.json().catch(() => ({}))
+          console.error('Erro ao buscar planos da API:', response.status, errorData)
         }
       } catch (error) {
-        console.error('Erro ao buscar planos:', error)
-        setPlans([])
+        // Se houver erro de conexão, usar fallback hardcoded
+        console.error('❌ [PRICING] Erro ao conectar com API, usando fallback hardcoded:', error)
+        setPlans(PLANS)
       } finally {
         setLoadingPlans(false)
       }
@@ -298,12 +311,8 @@ function PricingPageContent() {
 
         </div>
 
-        {/* Plans Grid */}
-        {plans.length === 0 ? (
-          <div className="text-center py-12 text-gray-600">
-            Nenhum plano disponível no momento.
-          </div>
-        ) : (
+        {/* Plans Grid - Sempre mostrar planos (do banco ou fallback) */}
+        {!loadingPlans && plans.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto mb-8" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
             {plans.map((plan) => {
             const isSelected = selectedPlan === plan.id

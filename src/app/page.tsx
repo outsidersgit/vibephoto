@@ -69,7 +69,8 @@ interface Plan {
   credits: number
 }
 
-const plans: Plan[] = [
+// Planos hardcoded como fallback (será substituído pelos planos do banco se disponíveis)
+const PLANS_FALLBACK: Plan[] = [
   {
     id: 'STARTER',
     name: 'Starter',
@@ -1380,12 +1381,38 @@ export default function HomePage() {
   const [hoveredSlideIndex, setHoveredSlideIndex] = useState<number | null>(null)
   const sectionRef = useRef<HTMLElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [plans, setPlans] = useState<Plan[]>(PLANS_FALLBACK) // Inicializar com fallback
+  
+  // Buscar planos do banco de dados (opcional - apenas para manter sincronizado)
+  useEffect(() => {
+    async function fetchPlans() {
+      try {
+        const response = await fetch('/api/subscription-plans')
+        if (response.ok) {
+          const data = await response.json()
+          const fetchedPlans = data.plans || []
+          // Se a API retornou planos, usar eles (atualiza dinamicamente)
+          if (fetchedPlans.length > 0) {
+            setPlans(fetchedPlans)
+          }
+          // Se não retornou, mantém o fallback já inicializado
+        }
+        // Se der erro, mantém o fallback (não precisa fazer nada)
+      } catch (error) {
+        // Em caso de erro, mantém o fallback (já inicializado)
+        console.warn('⚠️ [LANDING] Erro ao buscar planos da API, usando fallback:', error)
+      }
+    }
+    
+    // Buscar planos em background (não bloqueia renderização)
+    fetchPlans()
+  }, [])
   
   // Prevent hydration mismatch
   useEffect(() => {
     setMounted(true)
   }, [])
-
+  
   // Carrossel auto-play
   useEffect(() => {
     if (!isCarouselPaused && mounted && status !== 'loading') {
