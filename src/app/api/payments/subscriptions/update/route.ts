@@ -124,12 +124,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Update user plan in database
+    // IMPORTANTE: Apenas atualiza o plan, NÃO atualiza creditsLimit
+    // Os créditos do plano antigo serão mantidos até o próximo pagamento
+    // Quando o próximo pagamento for confirmado via webhook, aí sim o creditsLimit será atualizado
     await prisma.user.update({
       where: { id: session.user.id },
       data: {
         plan: subscriptionPlan.plan,
         billingCycle: subscriptionPlan.cycle,
         subscriptionStatus: updateResult.subscription.status || 'ACTIVE'
+        // creditsLimit e creditsUsed permanecem inalterados
+        // Isso garante que o usuário continue usando os créditos do plano antigo até o próximo pagamento
       }
     })
 

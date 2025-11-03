@@ -356,7 +356,10 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
             }
             console.log('✅ [WEBHOOK] Plan encontrado em Payment recente:', plan)
           } else {
-            // Último fallback: usar do usuário (pode ser undefined se for novo assinante)
+            // Último fallback: usar do usuário
+            // IMPORTANTE: Se o usuário trocou de plano anteriormente (upgrade/downgrade),
+            // o plan do usuário já foi atualizado, então será usado para atualizar creditsLimit
+            // Isso garante que os créditos do novo plano sejam aplicados no próximo pagamento
             plan = user.plan as any
             console.warn('⚠️ [WEBHOOK] Usando plan do usuário como fallback:', plan)
             if (!plan) {

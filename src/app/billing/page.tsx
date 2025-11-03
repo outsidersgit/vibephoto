@@ -48,18 +48,30 @@ function BillingPageContent() {
   const [activeTab, setActiveTab] = useState('overview')
   const [plans, setPlans] = useState<Plan[]>([])
   const [loadingPlans, setLoadingPlans] = useState(true)
+  const [plansError, setPlansError] = useState<string | null>(null)
 
   // Buscar planos do banco de dados
   useEffect(() => {
     async function fetchPlans() {
       try {
+        setPlansError(null)
         const response = await fetch('/api/subscription-plans')
         if (response.ok) {
           const data = await response.json()
-          setPlans(data.plans || [])
+          const fetchedPlans = data.plans || []
+          setPlans(fetchedPlans)
+          
+          if (fetchedPlans.length === 0) {
+            setPlansError('Nenhum plano ativo encontrado. Por favor, tente novamente mais tarde.')
+          }
+        } else {
+          const errorData = await response.json().catch(() => ({}))
+          setPlansError(errorData.error || 'Erro ao carregar planos. Por favor, tente novamente.')
+          console.error('Erro ao buscar planos:', response.status, errorData)
         }
       } catch (error) {
         console.error('Erro ao buscar planos:', error)
+        setPlansError('Erro ao conectar com o servidor. Por favor, tente novamente.')
       } finally {
         setLoadingPlans(false)
       }
@@ -539,6 +551,38 @@ function BillingPageContent() {
               </div>
             </div>
 
+            {/* Loading State */}
+            {loadingPlans && (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-purple-600 mx-auto mb-4" />
+                  <p className="text-gray-600">Carregando planos...</p>
+                </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {!loadingPlans && plansError && (
+              <Alert variant="destructive" className="max-w-2xl mx-auto">
+                <AlertCircle className="h-5 w-5" />
+                <AlertTitle>Erro ao carregar planos</AlertTitle>
+                <AlertDescription>{plansError}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Empty State */}
+            {!loadingPlans && !plansError && plans.length === 0 && (
+              <Alert className="max-w-2xl mx-auto">
+                <AlertCircle className="h-5 w-5" />
+                <AlertTitle>Nenhum plano disponível</AlertTitle>
+                <AlertDescription>
+                  Não há planos de assinatura disponíveis no momento. Por favor, tente novamente mais tarde.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Plans Grid */}
+            {!loadingPlans && !plansError && plans.length > 0 && (
             <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-8" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
               {plans.map((plan) => {
                 const userPlan = (session.user as any)?.plan || 'STARTER'
@@ -654,7 +698,8 @@ function BillingPageContent() {
                 )
               })}
             </div>
-            
+            )}
+
             {/* Subscription Cancellation Notice */}
             <div className="flex items-center justify-center mb-8">
               <div className="flex items-center text-center">

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { asaas, getPlanPrice, getNextDueDate } from '@/lib/payments/asaas'
+import { asaas, getNextDueDate } from '@/lib/payments/asaas'
 import { createSubscription } from '@/lib/db/subscriptions'
+import { getPlanPrice } from '@/lib/db/subscription-plans'
 import { Plan } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const planPrice = getPlanPrice(plan as 'PREMIUM' | 'GOLD', cycle)
+    const planPrice = await getPlanPrice(plan as Plan, cycle) // Buscar do banco de dados
     const nextDueDate = getNextDueDate(cycle)
 
     // Get client IP address

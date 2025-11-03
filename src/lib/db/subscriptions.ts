@@ -71,8 +71,7 @@ export async function updateSubscriptionStatus(
       where: { id: userId },
       select: {
         subscriptionStartedAt: true,
-        billingCycle: true,
-        creditsUsed: true
+        billingCycle: true
       }
     })
 
@@ -103,15 +102,28 @@ export async function updateSubscriptionStatus(
     if (!user?.subscriptionStartedAt) {
       updateData.subscriptionStartedAt = now
     }
+
+    return prisma.user.update({
+      where: { id: userId },
+      data: updateData
+    })
   }
 
   // CRITICAL: Do NOT downgrade plan on OVERDUE/CANCELLED/EXPIRED
   // User keeps their plan, but subscriptionStatus controls access
   // Middleware will block access based on subscriptionStatus
 
-  return prisma.user.update({
-    where: { id: userId },
-    data: updateData
+  // Se não foi ACTIVE com plan, fazer update normal (sem increment de créditos)
+  if (!(status === 'ACTIVE' && plan)) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: updateData
+    })
+  }
+
+  // Se foi ACTIVE com plan, já foi atualizado acima, apenas retornar
+  return prisma.user.findUnique({
+    where: { id: userId }
   })
 }
 
@@ -248,7 +260,8 @@ export async function renewMonthlyCredits() {
         data: {
           creditsUsed: 0, // Reseta créditos usados
           creditsLimit: creditsLimit, // Renova limite
-          lastCreditRenewalAt: now // Atualiza data de renovação
+          lastCreditRenewalAt: now, // Atualiza data de renovação
+          creditsExpiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // Renova expiração (1 mês)
         }
       })
 
