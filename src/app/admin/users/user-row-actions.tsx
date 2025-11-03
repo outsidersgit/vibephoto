@@ -11,7 +11,7 @@ export default function UserRowActions({ userId }: { userId: string }) {
   const [txLoading, setTxLoading] = useState(false)
   const [txError, setTxError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
-  const [tx, setTx] = useState<{ credits: any; photoPackages: any } | null>(null)
+  const [tx, setTx] = useState<{ credits: any; photoPackages: any; feedbacks: any } | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -121,6 +121,42 @@ export default function UserRowActions({ userId }: { userId: string }) {
                                 <td className="px-2 py-1">{p.status || '—'}</td>
                               </tr>
                             ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-medium mb-1">Feedbacks</div>
+                      <div className="max-h-48 overflow-auto border rounded">
+                        <table className="min-w-full text-xs">
+                          <thead className="bg-gray-50 text-left">
+                            <tr>
+                              <th className="px-2 py-1">Data</th>
+                              <th className="px-2 py-1">Avaliação</th>
+                              <th className="px-2 py-1">Comentário</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {tx.feedbacks && tx.feedbacks.items && tx.feedbacks.items.length > 0 ? (
+                              tx.feedbacks.items.map((f: any) => (
+                                <tr key={f.id} className="border-t">
+                                  <td className="px-2 py-1">{new Date(f.createdAt).toLocaleString()}</td>
+                                  <td className="px-2 py-1">
+                                    <span className="inline-flex items-center gap-1">
+                                      {'★'.repeat(f.rating || 0)}{'☆'.repeat(5 - (f.rating || 0))}
+                                      <span className="text-gray-600">({f.rating || 0})</span>
+                                    </span>
+                                  </td>
+                                  <td className="px-2 py-1">{f.comment || '—'}</td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan={3} className="px-2 py-4 text-center text-gray-500">
+                                  Nenhum feedback encontrado
+                                </td>
+                              </tr>
+                            )}
                           </tbody>
                         </table>
                       </div>

@@ -13,7 +13,11 @@ export default function EditSubscriptionPlanPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [features, setFeatures] = useState<string[]>([''])
+  
+  // Estado original para comparar mudanças
+  const [originalData, setOriginalData] = useState<any>(null)
   
   const [formData, setFormData] = useState({
     planId: 'STARTER' as 'STARTER' | 'PREMIUM' | 'GOLD',
@@ -41,26 +45,34 @@ export default function EditSubscriptionPlanPage() {
         const data = await response.json()
         const plan = data.plan
         
-        setFormData({
+        const loadedFormData = {
           planId: plan.planId,
-          name: plan.name,
-          description: plan.description,
-          isActive: plan.isActive,
-          popular: plan.popular,
-          color: plan.color || 'blue',
-          monthlyPrice: plan.monthlyPrice,
-          annualPrice: plan.annualPrice,
-          monthlyEquivalent: plan.monthlyEquivalent,
-          credits: plan.credits,
-          models: plan.models,
-          resolution: plan.resolution
-        })
+          name: plan.name || '',
+          description: plan.description || '',
+          isActive: plan.isActive !== undefined ? plan.isActive : true,
+          popular: plan.popular !== undefined ? plan.popular : false,
+          color: (plan.color || 'blue') as 'blue' | 'purple' | 'yellow',
+          monthlyPrice: plan.monthlyPrice || 0,
+          annualPrice: plan.annualPrice || 0,
+          monthlyEquivalent: plan.monthlyEquivalent || 0,
+          credits: plan.credits || 0,
+          models: plan.models || 1,
+          resolution: plan.resolution || '1024x1024'
+        }
+        
+        setFormData(loadedFormData)
         
         const planFeatures = Array.isArray(plan.features) 
           ? plan.features.map((f: any) => typeof f === 'string' ? f : String(f))
           : []
         
         setFeatures(planFeatures.length > 0 ? planFeatures : [''])
+        
+        // Salvar dados originais para comparação (após carregar todos os dados)
+        setOriginalData({
+          ...loadedFormData,
+          features: planFeatures.length > 0 ? planFeatures : []
+        })
       } catch (err: any) {
         setError(err.message || 'Erro ao carregar plano')
       } finally {
@@ -94,15 +106,15 @@ export default function EditSubscriptionPlanPage() {
 
   const handleFieldUpdate = async (field: string, value: any) => {
     try {
+      setError(null)
+      setSuccess(null)
+      
       const updateData: any = {}
       
-      // Se for features, filtrar vazias
+      // Se for features, filtrar vazias mas permitir salvar mesmo se vazio (será validado apenas na criação)
       if (field === 'features') {
         const validFeatures = Array.isArray(value) ? value.filter((f: string) => f.trim().length > 0) : []
-        if (validFeatures.length === 0) {
-          setError('Adicione pelo menos uma feature')
-          return
-        }
+        // Em edição, permitir features vazias (será validado apenas na criação)
         updateData.features = validFeatures
       } else {
         updateData[field] = value
@@ -129,34 +141,90 @@ export default function EditSubscriptionPlanPage() {
         setFormData({ ...formData, [field]: value })
       }
 
-      setError(null)
+      setSuccess('Campo atualizado com sucesso!')
+      setTimeout(() => setSuccess(null), 3000)
     } catch (err: any) {
       setError(err.message || 'Erro ao atualizar campo')
     }
   }
 
+  // Verificar se houve alterações
+  const hasChanges = () => {
+    if (!originalData) return false
+    
+    // Comparar campos básicos
+    const basicFieldsChanged = 
+      formData.name !== originalData.name ||
+      formData.description !== originalData.description ||
+      formData.isActive !== originalData.isActive ||
+      formData.popular !== originalData.popular ||
+      formData.color !== originalData.color ||
+      formData.monthlyPrice !== originalData.monthlyPrice ||
+      formData.annualPrice !== originalData.annualPrice ||
+      formData.monthlyEquivalent !== originalData.monthlyEquivalent ||
+      formData.credits !== originalData.credits ||
+      formData.models !== originalData.models ||
+      formData.resolution !== originalData.resolution
+    
+    // Comparar features
+    const originalFeatures = Array.isArray(originalData.features) ? originalData.features : []
+    const currentFeatures = features.filter(f => f.trim().length > 0)
+    const featuresChanged = JSON.stringify(originalFeatures.sort()) !== JSON.stringify(currentFeatures.sort())
+    
+    return basicFieldsChanged || featuresChanged
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSaving(true)
-    setError(null)
-
-    const validFeatures = features.filter(f => f.trim().length > 0)
-    if (validFeatures.length === 0) {
-      setError('Adicione pelo menos uma feature')
-      setSaving(false)
+    
+    // Se não houver alterações, não fazer nada (mas não gerar erro)
+    if (!hasChanges()) {
+      setSuccess('Nenhuma alteração detectada. Dados mantidos.')
+      setTimeout(() => setSuccess(null), 3000)
       return
     }
+    
+    setSaving(true)
+    setError(null)
+    setSuccess(null)
 
     try {
+      // Preparar dados para atualização (apenas campos que foram alterados)
+      const updateData: any = {}
+      
+      if (formData.name !== originalData.name) updateData.name = formData.name
+      if (formData.description !== originalData.description) updateData.description = formData.description
+      if (formData.isActive !== originalData.isActive) updateData.isActive = formData.isActive
+      if (formData.popular !== originalData.popular) updateData.popular = formData.popular
+      if (formData.color !== originalData.color) updateData.color = formData.color
+      if (formData.monthlyPrice !== originalData.monthlyPrice) updateData.monthlyPrice = formData.monthlyPrice
+      if (formData.annualPrice !== originalData.annualPrice) updateData.annualPrice = formData.annualPrice
+      if (formData.monthlyEquivalent !== originalData.monthlyEquivalent) updateData.monthlyEquivalent = formData.monthlyEquivalent
+      if (formData.credits !== originalData.credits) updateData.credits = formData.credits
+      if (formData.models !== originalData.models) updateData.models = formData.models
+      if (formData.resolution !== originalData.resolution) updateData.resolution = formData.resolution
+      
+      // Features
+      const originalFeatures = Array.isArray(originalData.features) ? originalData.features : []
+      const currentFeatures = features.filter(f => f.trim().length > 0)
+      const featuresChanged = JSON.stringify(originalFeatures.sort()) !== JSON.stringify(currentFeatures.sort())
+      if (featuresChanged) {
+        updateData.features = currentFeatures
+      }
+
+      // Se não houver nada para atualizar (não deveria chegar aqui, mas segurança)
+      if (Object.keys(updateData).length === 0) {
+        setSuccess('Nenhuma alteração detectada. Dados mantidos.')
+        setSaving(false)
+        return
+      }
+
       const response = await fetch(`/api/admin/subscription-plans/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          ...formData,
-          features: validFeatures
-        })
+        body: JSON.stringify(updateData)
       })
 
       const data = await response.json()
@@ -165,7 +233,16 @@ export default function EditSubscriptionPlanPage() {
         throw new Error(data.error || 'Erro ao atualizar plano')
       }
 
-      router.push('/admin/subscription-plans')
+      // Atualizar dados originais após sucesso
+      setOriginalData({
+        ...formData,
+        features: currentFeatures
+      })
+
+      setSuccess('Plano atualizado com sucesso!')
+      setTimeout(() => {
+        router.push('/admin/subscription-plans')
+      }, 1500)
     } catch (err: any) {
       setError(err.message || 'Erro ao atualizar plano')
       setSaving(false)
@@ -189,13 +266,18 @@ export default function EditSubscriptionPlanPage() {
           {error}
         </div>
       )}
+      
+      {success && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded">
+          {success}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">ID do Plano *</label>
+            <label className="block text-sm font-medium mb-1">ID do Plano</label>
             <select
-              required
               disabled
               value={formData.planId}
               className="w-full border rounded-md px-3 py-2 bg-gray-100"
@@ -381,7 +463,7 @@ export default function EditSubscriptionPlanPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Features *</label>
+          <label className="block text-sm font-medium mb-2">Features</label>
           {features.map((feature, index) => (
             <div key={index} className="flex gap-2 mb-2">
               <input
@@ -419,10 +501,10 @@ export default function EditSubscriptionPlanPage() {
         <div className="flex gap-4">
           <Button
             type="submit"
-            disabled={saving}
-            className="bg-purple-600 hover:bg-purple-700"
+            disabled={saving || (!hasChanges() && originalData !== null)}
+            className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? 'Salvando...' : 'Salvar Alterações'}
+            {saving ? 'Salvando...' : hasChanges() ? 'Salvar Alterações' : 'Nenhuma Alteração'}
           </Button>
           <Button
             type="button"

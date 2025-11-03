@@ -18,7 +18,7 @@ export async function GET(
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20')))
   const skip = (page - 1) * limit
 
-  const [creditTotal, credits, pkgTotal, packages] = await Promise.all([
+  const [creditTotal, credits, pkgTotal, packages, feedbackTotal, feedbacks] = await Promise.all([
     prisma.creditTransaction.count({ where: { userId: id } }),
     prisma.creditTransaction.findMany({
       where: { userId: id },
@@ -34,7 +34,15 @@ export async function GET(
       skip,
       take: limit,
       select: { id: true, packageId: true, status: true, createdAt: true }
-    } as any).catch(() => [])
+    } as any).catch(() => []),
+    prisma.feedback.count({ where: { userId: id } }),
+    prisma.feedback.findMany({
+      where: { userId: id },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+      select: { id: true, rating: true, comment: true, createdAt: true }
+    })
   ])
 
   return NextResponse.json({
@@ -49,6 +57,12 @@ export async function GET(
       page,
       limit,
       items: Array.isArray(packages) ? packages : []
+    },
+    feedbacks: {
+      total: feedbackTotal,
+      page,
+      limit,
+      items: feedbacks
     }
   })
 }
