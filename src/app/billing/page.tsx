@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { CREDIT_PACKAGES, type Plan, type CreditPackage } from '@/config/pricing'
+import { CREDIT_PACKAGES, PLANS, type Plan, type CreditPackage } from '@/config/pricing'
 import { CheckoutModal } from '@/components/checkout/checkout-modal'
 import { UpdateCardModal } from '@/components/payments/update-card-modal'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
@@ -50,7 +50,7 @@ function BillingPageContent() {
   const [loadingPlans, setLoadingPlans] = useState(true)
   const [plansError, setPlansError] = useState<string | null>(null)
 
-  // Buscar planos do banco de dados
+  // Buscar planos do banco de dados (com fallback para planos hardcoded)
   useEffect(() => {
     async function fetchPlans() {
       try {
@@ -59,19 +59,27 @@ function BillingPageContent() {
         if (response.ok) {
           const data = await response.json()
           const fetchedPlans = data.plans || []
-          setPlans(fetchedPlans)
           
-          if (fetchedPlans.length === 0) {
-            setPlansError('Nenhum plano ativo encontrado. Por favor, tente novamente mais tarde.')
+          // Se a API retornou planos, usar eles
+          if (fetchedPlans.length > 0) {
+            setPlans(fetchedPlans)
+          } else {
+            // Se não retornou planos, usar fallback hardcoded
+            console.warn('⚠️ [BILLING] Nenhum plano retornado da API, usando fallback hardcoded')
+            setPlans(PLANS)
           }
         } else {
+          // Se a API retornou erro, usar fallback hardcoded
+          console.warn('⚠️ [BILLING] Erro na API, usando fallback hardcoded')
+          setPlans(PLANS)
+          
           const errorData = await response.json().catch(() => ({}))
-          setPlansError(errorData.error || 'Erro ao carregar planos. Por favor, tente novamente.')
-          console.error('Erro ao buscar planos:', response.status, errorData)
+          console.error('Erro ao buscar planos da API:', response.status, errorData)
         }
       } catch (error) {
-        console.error('Erro ao buscar planos:', error)
-        setPlansError('Erro ao conectar com o servidor. Por favor, tente novamente.')
+        // Se houver erro de conexão, usar fallback hardcoded
+        console.error('❌ [BILLING] Erro ao conectar com API, usando fallback hardcoded:', error)
+        setPlans(PLANS)
       } finally {
         setLoadingPlans(false)
       }
@@ -561,8 +569,8 @@ function BillingPageContent() {
               </div>
             )}
 
-            {/* Error State */}
-            {!loadingPlans && plansError && (
+            {/* Error State - Só mostrar se realmente houver erro E não estiver usando fallback */}
+            {!loadingPlans && plansError && plans.length === 0 && (
               <Alert variant="destructive" className="max-w-2xl mx-auto">
                 <AlertCircle className="h-5 w-5" />
                 <AlertTitle>Erro ao carregar planos</AlertTitle>
@@ -570,19 +578,8 @@ function BillingPageContent() {
               </Alert>
             )}
 
-            {/* Empty State */}
-            {!loadingPlans && !plansError && plans.length === 0 && (
-              <Alert className="max-w-2xl mx-auto">
-                <AlertCircle className="h-5 w-5" />
-                <AlertTitle>Nenhum plano disponível</AlertTitle>
-                <AlertDescription>
-                  Não há planos de assinatura disponíveis no momento. Por favor, tente novamente mais tarde.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Plans Grid */}
-            {!loadingPlans && !plansError && plans.length > 0 && (
+            {/* Plans Grid - Mostrar planos se houver (do banco ou fallback) */}
+            {!loadingPlans && plans.length > 0 && (
             <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-8" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
               {plans.map((plan) => {
                 const userPlan = (session.user as any)?.plan || 'STARTER'
