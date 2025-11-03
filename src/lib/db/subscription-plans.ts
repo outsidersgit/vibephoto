@@ -24,22 +24,76 @@ export interface SubscriptionPlanData {
 
 /**
  * Buscar todos os planos de assinatura ativos (não deletados)
+ * CRÍTICO: Usar $queryRaw para evitar problema do Prisma com Json[] vs Json
  */
 export async function getAllSubscriptionPlans(): Promise<SubscriptionPlanData[]> {
-  const plans = await prisma.subscriptionPlan.findMany({
-    where: {
-      deletedAt: null
-    },
-    orderBy: [
-      { popular: 'desc' },
-      { monthlyPrice: 'asc' }
-    ]
-  })
+  // CRÍTICO: Usar $queryRaw para contornar problema do Prisma com Json[] vs Json
+  // O mesmo problema que resolvemos no admin panel e getSubscriptionPlanById
+  const plans = await prisma.$queryRaw<Array<{
+    id: string
+    planId: string
+    name: string
+    description: string
+    isActive: boolean
+    popular: boolean
+    color: string | null
+    monthlyPrice: number
+    annualPrice: number
+    monthlyEquivalent: number
+    credits: number
+    models: number
+    resolution: string
+    features: any
+    createdAt: Date
+    updatedAt: Date
+    deletedAt: Date | null
+  }>>`
+    SELECT 
+      id, 
+      "planId",
+      name, 
+      description, 
+      "isActive", 
+      popular, 
+      color, 
+      "monthlyPrice", 
+      "annualPrice", 
+      "monthlyEquivalent", 
+      credits, 
+      models, 
+      resolution, 
+      features,
+      "createdAt", 
+      "updatedAt", 
+      "deletedAt"
+    FROM subscription_plans
+    WHERE "deletedAt" IS NULL
+    ORDER BY popular DESC, "monthlyPrice" ASC
+  `
 
-  return plans.map(plan => ({
-    ...plan,
-    features: (plan.features as any[]).map((f: any) => typeof f === 'string' ? f : f.toString())
-  })) as SubscriptionPlanData[]
+  return plans.map(planRaw => {
+    // Converter features para array se necessário
+    let features = planRaw.features
+    if (!Array.isArray(features)) {
+      try {
+        if (typeof features === 'string') {
+          features = JSON.parse(features)
+        }
+        if (!Array.isArray(features)) {
+          features = []
+        }
+      } catch {
+        features = []
+      }
+    }
+
+    return {
+      ...planRaw,
+      features: Array.isArray(features) 
+        ? (features as any[]).map((f: any) => typeof f === 'string' ? f : f.toString())
+        : []
+    } as SubscriptionPlanData
+  })
 }
 
 /**

@@ -34,17 +34,74 @@ export async function GET() {
   if (!ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   
   try {
-    const plans = await prisma.subscriptionPlan.findMany({
-      where: {
-        deletedAt: null
-      },
-      orderBy: [
-        { popular: 'desc' },
-        { monthlyPrice: 'asc' }
-      ]
+    // CRÍTICO: Usar $queryRaw para contornar problema do Prisma com Json[] vs Json
+    const plans = await prisma.$queryRaw<Array<{
+      id: string
+      planId: string
+      name: string
+      description: string
+      isActive: boolean
+      popular: boolean
+      color: string | null
+      monthlyPrice: number
+      annualPrice: number
+      monthlyEquivalent: number
+      credits: number
+      models: number
+      resolution: string
+      features: any
+      createdAt: Date
+      updatedAt: Date
+      deletedAt: Date | null
+    }>>`
+      SELECT 
+        id, 
+        "planId",
+        name, 
+        description, 
+        "isActive", 
+        popular, 
+        color, 
+        "monthlyPrice", 
+        "annualPrice", 
+        "monthlyEquivalent", 
+        credits, 
+        models, 
+        resolution, 
+        features,
+        "createdAt", 
+        "updatedAt", 
+        "deletedAt"
+      FROM subscription_plans
+      WHERE "deletedAt" IS NULL
+      ORDER BY popular DESC, "monthlyPrice" ASC
+    `
+
+    // Converter features para array se necessário
+    const plansWithFeatures = plans.map(planRaw => {
+      let features = planRaw.features
+      if (!Array.isArray(features)) {
+        try {
+          if (typeof features === 'string') {
+            features = JSON.parse(features)
+          }
+          if (!Array.isArray(features)) {
+            features = []
+          }
+        } catch {
+          features = []
+        }
+      }
+
+      return {
+        ...planRaw,
+        features: Array.isArray(features) 
+          ? (features as any[]).map((f: any) => typeof f === 'string' ? f : f.toString())
+          : []
+      }
     })
 
-    return NextResponse.json({ plans })
+    return NextResponse.json({ plans: plansWithFeatures })
   } catch (error: any) {
     console.error('❌ [ADMIN_SUBSCRIPTION_PLANS] Error fetching plans:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -67,9 +124,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se já existe plano com este planId
-    const existing = await prisma.subscriptionPlan.findUnique({
-      where: { planId: parsed.data.planId }
-    })
+    // CRÍTICO: Usar $queryRaw para contornar problema do Prisma com Json[] vs Json
+    const existingPlans = await prisma.$queryRaw<Array<{
+      id: string
+      planId: string
+      deletedAt: Date | null
+    }>>`
+      SELECT id, "planId", "deletedAt"
+      FROM subscription_plans
+      WHERE "planId" = ${parsed.data.planId}
+      LIMIT 1
+    `
+
+    const existing = existingPlans && existingPlans.length > 0 ? existingPlans[0] : null
 
     if (existing && !existing.deletedAt) {
       return NextResponse.json(
