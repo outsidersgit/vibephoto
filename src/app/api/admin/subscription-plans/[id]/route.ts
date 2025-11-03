@@ -13,19 +13,21 @@ async function ensureAdmin() {
   return session
 }
 
+// Schema flexível para edição - permite valores 0, strings vazias e arrays vazios
+// Validação rigorosa apenas na criação (não aqui)
 const updatePlanSchema = z.object({
-  name: z.string().min(1).optional(),
-  description: z.string().min(1).optional(),
+  name: z.string().optional(), // Permite string vazia
+  description: z.string().optional(), // Permite string vazia
   isActive: z.boolean().optional(),
   popular: z.boolean().optional(),
   color: z.enum(['blue', 'purple', 'yellow']).optional().nullable(),
-  monthlyPrice: z.number().positive().optional(),
-  annualPrice: z.number().positive().optional(),
-  monthlyEquivalent: z.number().positive().optional(),
-  credits: z.number().int().positive().optional(),
-  models: z.number().int().positive().optional(),
-  resolution: z.string().min(1).optional(),
-  features: z.array(z.string()).min(1).optional()
+  monthlyPrice: z.number().nonnegative().optional(), // Permite 0 (não negativo)
+  annualPrice: z.number().nonnegative().optional(), // Permite 0 (não negativo)
+  monthlyEquivalent: z.number().nonnegative().optional(), // Permite 0 (não negativo)
+  credits: z.number().int().nonnegative().optional(), // Permite 0 (não negativo)
+  models: z.number().int().nonnegative().optional(), // Permite 0 (não negativo)
+  resolution: z.string().optional(), // Permite string vazia
+  features: z.array(z.string()).optional() // Permite array vazio
 })
 
 export async function GET(
@@ -138,8 +140,16 @@ export async function PUT(
     const parsed = updatePlanSchema.safeParse(body)
 
     if (!parsed.success) {
+      console.error('❌ [ADMIN_SUBSCRIPTION_PLANS] Validation error:', parsed.error.issues)
       return NextResponse.json(
-        { error: 'Invalid payload', issues: parsed.error.issues },
+        { 
+          error: 'Dados inválidos', 
+          issues: parsed.error.issues.map((issue: any) => ({
+            path: issue.path,
+            message: issue.message,
+            code: issue.code
+          }))
+        },
         { status: 400 }
       )
     }

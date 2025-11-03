@@ -246,6 +246,14 @@ export default function EditSubscriptionPlanPage() {
       const data = await response.json()
 
       if (!response.ok) {
+        // Se houver detalhes de validação, mostrar mensagens mais específicas
+        if (data.issues && Array.isArray(data.issues)) {
+          const issuesText = data.issues.map((issue: any) => {
+            const field = issue.path?.join('.') || 'campo'
+            return `${field}: ${issue.message}`
+          }).join(', ')
+          throw new Error(`Erro de validação: ${issuesText}`)
+        }
         throw new Error(data.error || 'Erro ao atualizar plano')
       }
 
