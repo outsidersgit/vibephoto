@@ -96,6 +96,9 @@ export function NumericInput({
         e.target.select()
         props.onFocus?.(e)
       }}
+      onBlur={(e) => {
+        props.onBlur?.(e)
+      }}
       className={`${props.className || ''} focus:ring-2 focus:ring-purple-500`}
     />
   )

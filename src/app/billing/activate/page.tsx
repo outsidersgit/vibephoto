@@ -50,6 +50,64 @@ function ActivatePageContent() {
     }
   }, [session])
 
+  // Carregar planos do banco de dados
+  useEffect(() => {
+    async function fetchPlans() {
+      try {
+        setLoadingPlans(true)
+        const response = await fetch('/api/subscription-plans', {
+          cache: 'no-store',
+          credentials: 'include'
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          console.error('❌ [ACTIVATE] Erro ao buscar planos:', response.status, errorData)
+          
+          // Se for erro de configuração do banco, usar fallback
+          if (errorData.code === 'DATABASE_CONFIG_ERROR' || response.status === 500) {
+            console.warn('⚠️ [ACTIVATE] Erro na API, usando fallback hardcoded')
+            // Importar fallback dinamicamente
+            import('@/config/pricing').then(({ PLANS }) => {
+              setPlans(PLANS)
+              setLoadingPlans(false)
+            })
+            return
+          }
+          
+          throw new Error(errorData.message || `Erro ${response.status}`)
+        }
+
+        const data = await response.json()
+        
+        if (data.plans && Array.isArray(data.plans) && data.plans.length > 0) {
+          console.log('✅ [ACTIVATE] Planos carregados do banco:', data.plans.length)
+          setPlans(data.plans)
+        } else {
+          console.warn('⚠️ [ACTIVATE] Nenhum plano retornado, usando fallback')
+          // Usar fallback se não houver planos
+          const { PLANS } = await import('@/config/pricing')
+          setPlans(PLANS)
+        }
+      } catch (error: any) {
+        console.error('❌ [ACTIVATE] Erro ao buscar planos da API:', error)
+        // Em caso de erro, usar fallback
+        try {
+          const { PLANS } = await import('@/config/pricing')
+          console.warn('⚠️ [ACTIVATE] Usando planos fallback devido ao erro')
+          setPlans(PLANS)
+        } catch (fallbackError) {
+          console.error('❌ [ACTIVATE] Erro ao carregar fallback:', fallbackError)
+          setError('Erro ao carregar planos. Por favor, recarregue a página.')
+        }
+      } finally {
+        setLoadingPlans(false)
+      }
+    }
+
+    fetchPlans()
+  }, [])
+
   // Ler ciclo da URL ou usar 'monthly' como padrão
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>(
     cycleFromUrl === 'annual' ? 'annual' : 'monthly'

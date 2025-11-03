@@ -10,6 +10,18 @@ export const revalidate = 3600 // 1 hora
  */
 export async function GET() {
   try {
+    // Verificar se DATABASE_URL está definido
+    if (!process.env.DATABASE_URL) {
+      console.error('❌ [API_SUBSCRIPTION_PLANS] DATABASE_URL is not defined')
+      return NextResponse.json(
+        { 
+          error: 'Database configuration error',
+          message: 'DATABASE_URL environment variable is not set'
+        },
+        { status: 500 }
+      )
+    }
+
     const plans = await getAllSubscriptionPlans()
     
     console.log(`✅ [API_SUBSCRIPTION_PLANS] Found ${plans.length} plans in database`)
@@ -40,7 +52,21 @@ export async function GET() {
     return NextResponse.json({ plans: activePlans })
   } catch (error: any) {
     console.error('❌ [API_SUBSCRIPTION_PLANS] Error fetching plans:', error)
+    console.error('❌ [API_SUBSCRIPTION_PLANS] Error message:', error.message)
     console.error('❌ [API_SUBSCRIPTION_PLANS] Error stack:', error.stack)
+    
+    // Se for erro de Prisma por falta de DATABASE_URL, retornar erro específico
+    if (error.message?.includes('DATABASE_URL') || error.message?.includes('environment variable')) {
+      return NextResponse.json(
+        { 
+          error: 'Database configuration error',
+          message: 'DATABASE_URL environment variable is not set. Please check your environment configuration.',
+          code: 'DATABASE_CONFIG_ERROR'
+        },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
       { 
         error: 'Internal server error',

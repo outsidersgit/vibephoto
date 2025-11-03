@@ -355,7 +355,11 @@ export default function EditSubscriptionPlanPage() {
               value={formData.monthlyPrice}
               onChange={(value) => {
                 setFormData({ ...formData, monthlyPrice: value })
-                handleFieldUpdate('monthlyPrice', value)
+              }}
+              onBlur={() => {
+                if (formData.monthlyPrice !== originalData?.monthlyPrice) {
+                  handleFieldUpdate('monthlyPrice', formData.monthlyPrice)
+                }
               }}
               allowDecimal={true}
               placeholder="0.00"
@@ -369,7 +373,11 @@ export default function EditSubscriptionPlanPage() {
               value={formData.annualPrice}
               onChange={(value) => {
                 setFormData({ ...formData, annualPrice: value })
-                handleFieldUpdate('annualPrice', value)
+              }}
+              onBlur={() => {
+                if (formData.annualPrice !== originalData?.annualPrice) {
+                  handleFieldUpdate('annualPrice', formData.annualPrice)
+                }
               }}
               allowDecimal={true}
               placeholder="0.00"
@@ -383,7 +391,11 @@ export default function EditSubscriptionPlanPage() {
               value={formData.monthlyEquivalent}
               onChange={(value) => {
                 setFormData({ ...formData, monthlyEquivalent: value })
-                handleFieldUpdate('monthlyEquivalent', value)
+              }}
+              onBlur={() => {
+                if (formData.monthlyEquivalent !== originalData?.monthlyEquivalent) {
+                  handleFieldUpdate('monthlyEquivalent', formData.monthlyEquivalent)
+                }
               }}
               allowDecimal={true}
               placeholder="0.00"
@@ -399,7 +411,11 @@ export default function EditSubscriptionPlanPage() {
               value={formData.credits}
               onChange={(value) => {
                 setFormData({ ...formData, credits: value })
-                handleFieldUpdate('credits', value)
+              }}
+              onBlur={() => {
+                if (formData.credits !== originalData?.credits) {
+                  handleFieldUpdate('credits', formData.credits)
+                }
               }}
               placeholder="0"
               className="w-full border rounded-md px-3 py-2"
@@ -412,7 +428,11 @@ export default function EditSubscriptionPlanPage() {
               value={formData.models}
               onChange={(value) => {
                 setFormData({ ...formData, models: value })
-                handleFieldUpdate('models', value)
+              }}
+              onBlur={() => {
+                if (formData.models !== originalData?.models) {
+                  handleFieldUpdate('models', formData.models)
+                }
               }}
               placeholder="0"
               className="w-full border rounded-md px-3 py-2"
