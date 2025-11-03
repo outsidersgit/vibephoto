@@ -22,18 +22,8 @@ export default function CreateModelPage() {
   const router = useRouter()
   const { addToast } = useToast()
   
-  // CRITICAL: Verificar autenticação ANTES de renderizar conteúdo
+  // Hooks DEVEM vir antes de qualquer early return para não violar regras do React
   const isAuthorized = useAuthGuard()
-  
-  // CRITICAL: Bloquear renderização completamente se não autorizado
-  if (isAuthorized === false || status === 'unauthenticated' || !session?.user) {
-    return null // Retornar null para não renderizar nada (o script vai redirecionar)
-  }
-  
-  // CRITICAL: Bloquear renderização durante verificação de autenticação
-  if (isAuthorized === null || status === 'loading') {
-    return null // Retornar null para não renderizar nada durante loading
-  }
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [modelCostInfo, setModelCostInfo] = useState<any>(null)
@@ -287,11 +277,22 @@ export default function CreateModelPage() {
     }
   }
 
+  // Early returns APÓS todos os hooks
+  if (isAuthorized === false || status === 'unauthenticated' || !session?.user) {
+    return null
+  }
+
+  if (isAuthorized === null || status === 'loading') {
+    return null
+  }
+
   if (!session) {
     return <div>Loading...</div>
   }
 
   return (
+    <>
+    <ProtectedPageScript />
     <SubscriptionGate feature="criação de modelos de IA">
       <div className="min-h-screen bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
         {/* Header */}
@@ -382,5 +383,6 @@ export default function CreateModelPage() {
       </div>
     </div>
     </SubscriptionGate>
+    </>
   )
 }

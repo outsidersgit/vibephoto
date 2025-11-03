@@ -18,18 +18,8 @@ import { useAuthGuard } from '@/hooks/useAuthGuard'
 export default function ProfilePage() {
   const { data: session, status, update } = useSession()
   
-  // CRITICAL: Verificar autenticação ANTES de renderizar conteúdo
+  // Hooks DEVEM vir antes de qualquer early return
   const isAuthorized = useAuthGuard()
-  
-  // CRITICAL: Bloquear renderização completamente se não autorizado
-  if (isAuthorized === false || status === 'unauthenticated' || !session?.user) {
-    return null // Retornar null para não renderizar nada (o script vai redirecionar)
-  }
-  
-  // CRITICAL: Bloquear renderização durante verificação de autenticação
-  if (isAuthorized === null || status === 'loading') {
-    return null // Retornar null para não renderizar nada durante loading
-  }
 
   // Estados do formulário
   const [formData, setFormData] = useState({
@@ -85,7 +75,8 @@ export default function ProfilePage() {
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
-  if (status === 'loading') {
+  // Early returns APÓS todos os hooks
+  if (isAuthorized === null || status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
         <div className="text-center">
@@ -96,7 +87,7 @@ export default function ProfilePage() {
     )
   }
 
-  if (!session) {
+  if (isAuthorized === false || status === 'unauthenticated' || !session?.user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
         <Card className="w-full max-w-md">

@@ -9,6 +9,8 @@ import { ModelCard } from '@/components/models/model-card'
 import { ModelStats } from '@/components/models/model-stats'
 import { RealtimeModelList } from '@/components/models/realtime-model-list'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function ModelsPage() {
   const session = await requireAuth()
