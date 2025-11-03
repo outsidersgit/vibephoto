@@ -62,18 +62,33 @@ export async function updateSubscriptionStatus(
   }
 
   // If subscription is activated, set credits limit and reset usage
-  if (status === 'ACTIVE' && plan) {
-    const creditsLimit = await getCreditsLimitForPlan(plan)
-    const now = new Date()
-
-    // Busca dados atuais do usuário
+  // CRÍTICO: Se não tiver plan como parâmetro, tentar usar do usuário atual
+  if (status === 'ACTIVE') {
+    // Busca dados atuais do usuário (precisa buscar plan também)
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
+        plan: true,
         subscriptionStartedAt: true,
         billingCycle: true
       }
     })
+
+    // Se não passou plan como parâmetro, usar do usuário (fallback)
+    const finalPlan = plan || user?.plan
+    
+    if (!finalPlan) {
+      console.error('❌ [updateSubscriptionStatus] CRÍTICO: Não há plan disponível (nem parâmetro nem do usuário)')
+      console.error('❌ [updateSubscriptionStatus] userId:', userId, 'status:', status)
+      // Mesmo sem plan, atualizar status (mas creditsLimit permanecerá 0)
+      return prisma.user.update({
+        where: { id: userId },
+        data: updateData
+      })
+    }
+
+    const creditsLimit = await getCreditsLimitForPlan(finalPlan)
+    const now = new Date()
 
     const currentBillingCycle = billingCycle || user?.billingCycle
 
@@ -87,7 +102,7 @@ export async function updateSubscriptionStatus(
       ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000) // + 1 ano
       : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // + 1 mês (30 dias)
 
-    updateData.plan = plan
+    updateData.plan = finalPlan // Usar plan encontrado (parâmetro ou do usuário)
     updateData.creditsLimit = totalCredits
     updateData.creditsUsed = 0 // Reset credits - créditos anteriores NÃO acumulam
     updateData.lastCreditRenewalAt = now // Atualiza data de renovação
@@ -102,6 +117,14 @@ export async function updateSubscriptionStatus(
     if (!user?.subscriptionStartedAt) {
       updateData.subscriptionStartedAt = now
     }
+
+    console.log('✅ [updateSubscriptionStatus] Atualizando creditsLimit:', {
+      userId,
+      plan: finalPlan,
+      creditsLimit: totalCredits,
+      billingCycle: currentBillingCycle,
+      source: plan ? 'parameter' : 'user_record'
+    })
 
     return prisma.user.update({
       where: { id: userId },
