@@ -7,6 +7,7 @@ export default function AdminHomePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
           { title: 'Usuários', href: '/admin/users', desc: 'Gerencie usuários, planos e créditos' },
+          { title: 'Planos de Assinatura', href: '/admin/subscription-plans', desc: 'Gerencie planos, preços, créditos e features' },
           { title: 'Pacotes de Fotos', href: '/admin/photo-packages', desc: 'CRUD de pacotes' },
           { title: 'Analytics', href: '/admin/analytics', desc: 'KPIs e gráficos' },
           { title: 'Retenção', href: '/admin/retention', desc: 'Crescimento e churn' },
