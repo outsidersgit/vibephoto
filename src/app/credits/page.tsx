@@ -1,6 +1,10 @@
 import { requireActiveSubscription } from '@/lib/subscription'
 import { CreditPackagesInterface } from '@/components/credits/credit-packages-interface'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
+import { unstable_noStore as noStore } from 'next/cache'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export const metadata = {
   title: 'Pacotes de Créditos - VibePhoto',
@@ -8,6 +12,7 @@ export const metadata = {
 }
 
 export default async function CreditsPage() {
+  noStore()
   const session = await requireActiveSubscription()
   
   return (

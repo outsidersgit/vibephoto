@@ -5,6 +5,10 @@ import { redirect } from 'next/navigation'
 import { GenerationInterface } from '@/components/generation/generation-interface'
 import { VideoGenerationInterface } from '@/components/generation/video-generation-interface'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
+import { unstable_noStore as noStore } from 'next/cache'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 interface GeneratePageProps {
   searchParams: Promise<{
@@ -15,6 +19,7 @@ interface GeneratePageProps {
 }
 
 export default async function GeneratePage({ searchParams }: GeneratePageProps) {
+  noStore()
   const session = await requireActiveSubscription()
   const userId = session.user.id
 

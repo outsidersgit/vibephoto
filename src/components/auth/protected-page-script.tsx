@@ -9,8 +9,8 @@ import Script from 'next/script'
  * PERFORMANCE: Script executa antes do React hidratar (strategy="beforeInteractive")
  * MOBILE COMPATIBLE: Funciona em iOS Safari, Android Chrome, etc.
  * 
- * CRITICAL: Só atua em casos de bfcache (página restaurada após logout)
- * Não interfere com navegação normal ou hidratação do React
+ * CRITICAL: Verifica autenticação via API quando página é restaurada do BFCache
+ * Isso garante que mesmo que cookies existam, a sessão seja validada no servidor
  */
 export function ProtectedPageScript() {
   return (
@@ -21,58 +21,88 @@ export function ProtectedPageScript() {
         __html: `
           (function() {
             // CRITICAL: Executar IMEDIATAMENTE, sem aguardar nada
-            const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/editor', '/profile', '/account', '/credits', '/packages', '/pricing'];
+            const protectedPaths = ['/dashboard', '/models', '/generate', '/billing', '/gallery', '/editor', '/profile', '/account', '/credits', '/packages', '/pricing', '/support'];
             const currentPath = window.location.pathname;
             const isProtected = protectedPaths.some(path => currentPath.startsWith(path));
             
             // CRITICAL: Só atuar em rotas protegidas
             if (!isProtected) return;
             
-            function hasNextAuthSession() {
+            let isRedirecting = false;
+            
+            function redirectToLogin() {
+              if (isRedirecting) return;
+              isRedirecting = true;
+              console.log('🚫 [AuthRedirectScript] Redirecionando para login...');
+              const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent(currentPath);
+              // CRITICAL: Usar replace para não adicionar ao histórico
+              window.location.replace(redirectUrl);
+            }
+            
+            // CRITICAL: Verificação ROBUSTA via API do NextAuth
+            async function verifySession() {
               try {
-                const cookies = document.cookie.split(';');
-                return cookies.some(cookie => {
-                  const cookieName = cookie.trim().split('=')[0];
-                  return cookieName.includes('next-auth') || 
-                         cookieName.includes('__Secure-next-auth') || 
-                         cookieName.includes('__Host-next-auth');
+                // Fazer requisição HEAD para /api/auth/session (mais leve que GET)
+                // Se não autenticado, retorna 401 ou redireciona
+                const response = await fetch('/api/auth/session', {
+                  method: 'GET',
+                  credentials: 'include',
+                  cache: 'no-store',
+                  headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                  }
                 });
-              } catch (e) {
+                
+                if (!response.ok || response.status === 401 || response.status === 403) {
+                  console.log('🚫 [AuthRedirectScript] Sessão inválida detectada via API');
+                  redirectToLogin();
+                  return false;
+                }
+                
+                const data = await response.json().catch(() => ({}));
+                if (!data || !data.user || !data.user.id) {
+                  console.log('🚫 [AuthRedirectScript] Sessão sem usuário válido');
+                  redirectToLogin();
+                  return false;
+                }
+                
+                console.log('✅ [AuthRedirectScript] Sessão válida confirmada');
+                return true;
+              } catch (error) {
+                console.error('❌ [AuthRedirectScript] Erro ao verificar sessão:', error);
+                // Em caso de erro, redirecionar por segurança
+                redirectToLogin();
                 return false;
               }
             }
             
-            // CRITICAL: REDUZIDO - Só verificar e redirecionar em casos de bfcache (página restaurada)
-            // NÃO verificar no carregamento normal da página
-            // A página server-side já verificou autenticação via middleware
-            
-            function checkAndRedirect() {
-              if (!hasNextAuthSession()) {
-                console.log('🚫 [AuthRedirectScript] Sem sessão detectada - redirecionando para login');
-                const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent(currentPath);
-                try {
-                  window.location.replace(redirectUrl);
-                } catch (e) {
-                  window.location.href = redirectUrl;
-                }
-                return true;
+            // CRITICAL: Verificar quando página é restaurada do bfcache (botão voltar)
+            function handlePageShow(event) {
+              if (event.persisted) {
+                console.log('🔄 [AuthRedirectScript] Página restaurada do bfcache - verificando sessão via API...');
+                // CRITICAL: Verificar imediatamente via API (não confiar apenas em cookies)
+                verifySession();
               }
-              return false;
             }
             
-            // CRITICAL: SÓ verificar quando página é restaurada do bfcache (botão voltar)
-            // MOBILE COMPATIBLE: pageshow funciona em iOS Safari e Android Chrome
-            window.addEventListener('pageshow', function(event) {
-              if (event.persisted) {
-                console.log('🔄 [AuthRedirectScript] Página restaurada do bfcache - verificando sessão...');
-                // Verificar imediatamente para bfcache
-                checkAndRedirect();
-              }
-            }, true); // CRITICAL: capture phase para executar ANTES de React
+            // CRITICAL: Verificar também no popstate (navegação back/forward)
+            function handlePopState(event) {
+              console.log('🔄 [AuthRedirectScript] popstate detectado - verificando sessão...');
+              verifySession();
+            }
             
-            // CRITICAL: NÃO verificar no DOMContentLoaded ou load
-            // NÃO verificar popstate para navegação normal
-            // A página server-side já verificou autenticação
+            // CRITICAL: Registrar listeners na capture phase (antes de React)
+            window.addEventListener('pageshow', handlePageShow, true);
+            window.addEventListener('popstate', handlePopState, true);
+            
+            // CRITICAL: Também verificar no focus da janela (usuário voltou de outra aba)
+            window.addEventListener('focus', function() {
+              if (document.visibilityState === 'visible') {
+                console.log('🔄 [AuthRedirectScript] Janela recebeu foco - verificando sessão...');
+                verifySession();
+              }
+            }, true);
           })();
         `,
       }}

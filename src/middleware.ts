@@ -124,10 +124,12 @@ export async function middleware(request: NextRequest) {
     // CRITICAL: Prevent caching of protected pages to avoid bfcache issues after logout
     // This ensures the browser doesn't serve cached content when user presses "back" button
     if (isProtectedPath && !isApiRoute) {
-      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+      // CRITICAL: Headers para prevenir BFCache e cache do navegador
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, private')
       response.headers.set('Pragma', 'no-cache')
       response.headers.set('Expires', '0')
-      // Prevent page from being stored in bfcache
+      response.headers.set('Surrogate-Control', 'no-store')
+      // Prevent page from being stored in bfcache (Next.js 15 recommendation)
       response.headers.set('X-Accel-Buffering', 'no')
     }
     

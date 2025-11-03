@@ -9,10 +9,16 @@ import { ModelCard } from '@/components/models/model-card'
 import { ModelStats } from '@/components/models/model-stats'
 import { RealtimeModelList } from '@/components/models/realtime-model-list'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
+import { unstable_noStore as noStore } from 'next/cache'
+
+// CRITICAL: Prevenir cache do servidor e forçar renderização dinâmica
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function ModelsPage() {
+  // CRITICAL: Prevenir cache do servidor
+  noStore()
+  
   const session = await requireAuth()
   const userId = session.user.id
 
