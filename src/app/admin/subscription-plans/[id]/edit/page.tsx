@@ -37,13 +37,29 @@ export default function EditSubscriptionPlanPage() {
   useEffect(() => {
     async function loadPlan() {
       try {
+        if (!id) {
+          setError('ID do plano não fornecido')
+          setLoading(false)
+          return
+        }
+
+        console.log('📋 [EDIT_PLAN] Loading plan with id:', id)
         const response = await fetch(`/api/admin/subscription-plans/${id}`)
+        
         if (!response.ok) {
-          throw new Error('Plano não encontrado')
+          const errorData = await response.json().catch(() => ({}))
+          console.error('❌ [EDIT_PLAN] Failed to load plan:', errorData)
+          throw new Error(errorData.error || 'Plano não encontrado')
         }
         
         const data = await response.json()
         const plan = data.plan
+
+        if (!plan) {
+          throw new Error('Plano não encontrado nos dados retornados')
+        }
+
+        console.log('✅ [EDIT_PLAN] Plan loaded:', { id: plan.id, planId: plan.planId, name: plan.name })
         
         const loadedFormData = {
           planId: plan.planId,

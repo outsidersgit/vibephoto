@@ -36,14 +36,25 @@ export async function GET(
 
   try {
     const { id } = await params
+    
+    // CRÍTICO: Buscar pelo id (row ID) e verificar deletedAt separadamente
+    // O id é o identificador único da row no banco (ex: sub_plan_starter)
     const plan = await prisma.subscriptionPlan.findUnique({
-      where: { id, deletedAt: null }
+      where: { id }
     })
 
     if (!plan) {
+      console.error('❌ [ADMIN_SUBSCRIPTION_PLANS] Plan not found by id:', id)
       return NextResponse.json({ error: 'Plano não encontrado' }, { status: 404 })
     }
 
+    // Verificar se está deletado (soft delete)
+    if (plan.deletedAt) {
+      console.warn('⚠️ [ADMIN_SUBSCRIPTION_PLANS] Plan is deleted:', id)
+      return NextResponse.json({ error: 'Plano foi deletado' }, { status: 404 })
+    }
+
+    console.log('✅ [ADMIN_SUBSCRIPTION_PLANS] Plan found:', { id: plan.id, planId: plan.planId, name: plan.name })
     return NextResponse.json({ plan })
   } catch (error: any) {
     console.error('❌ [ADMIN_SUBSCRIPTION_PLANS] Error fetching plan:', error)
@@ -70,15 +81,24 @@ export async function PUT(
       )
     }
 
-    // Verificar se plano existe
+    // CRÍTICO: Buscar pelo id (row ID), não pelo planId
+    // O id é o identificador único da row no banco (ex: sub_plan_starter)
     const existing = await prisma.subscriptionPlan.findUnique({
       where: { id }
     })
 
     if (!existing) {
+      console.error('❌ [ADMIN_SUBSCRIPTION_PLANS] Plan not found for update, id:', id)
       return NextResponse.json({ error: 'Plano não encontrado' }, { status: 404 })
     }
 
+    // Verificar se está deletado
+    if (existing.deletedAt) {
+      console.warn('⚠️ [ADMIN_SUBSCRIPTION_PLANS] Attempting to update deleted plan:', id)
+      return NextResponse.json({ error: 'Plano foi deletado' }, { status: 404 })
+    }
+
+    console.log('✅ [ADMIN_SUBSCRIPTION_PLANS] Updating plan:', { id: existing.id, planId: existing.planId })
     const updated = await prisma.subscriptionPlan.update({
       where: { id },
       data: parsed.data
@@ -104,16 +124,18 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    // Verificar se plano existe
+    // CRÍTICO: Buscar pelo id (row ID), não pelo planId
     const existing = await prisma.subscriptionPlan.findUnique({
       where: { id }
     })
 
     if (!existing) {
+      console.error('❌ [ADMIN_SUBSCRIPTION_PLANS] Plan not found for delete, id:', id)
       return NextResponse.json({ error: 'Plano não encontrado' }, { status: 404 })
     }
 
     // Soft delete
+    console.log('✅ [ADMIN_SUBSCRIPTION_PLANS] Soft deleting plan:', { id: existing.id, planId: existing.planId })
     const deleted = await prisma.subscriptionPlan.update({
       where: { id },
       data: {
