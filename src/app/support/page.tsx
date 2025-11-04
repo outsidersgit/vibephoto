@@ -9,12 +9,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CheckCircle, AlertCircle, Send, Loader2, Paperclip, X } from 'lucide-react'
-import { ProtectedPageScript } from '@/components/auth/protected-page-script'
-import { useAuthGuard } from '@/hooks/useAuthGuard'
-
 export default function SupportPage() {
   const { data: session, status } = useSession()
-  const isAuthorized = useAuthGuard()
   const [isLoading, setIsLoading] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
@@ -136,18 +132,17 @@ export default function SupportPage() {
     }
   }, [session])
 
-  // Early returns APÓS todos os hooks
-  if (isAuthorized === false || status === 'unauthenticated' || !session?.user) {
-    return null
-  }
-  
-  if (isAuthorized === null || status === 'loading') {
-    return null
+  // Mostrar loading apenas enquanto verifica sessão (opcional)
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    )
   }
 
   return (
     <>
-      <ProtectedPageScript />
       <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
         {/* Header */}
       <div className="bg-white border-b border-gray-100">
