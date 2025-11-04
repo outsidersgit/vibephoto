@@ -180,7 +180,9 @@ function BillingPageContent() {
     )
   }
 
-  const currentPlan = plans.find(plan => plan.id === ((session.user as any)?.plan || 'STARTER'))
+  // Buscar plano atual - se não tiver, mostrar "Sem plano"
+  const userPlan = (session.user as any)?.plan
+  const currentPlan = userPlan ? plans.find(plan => plan.id === userPlan) : null
 
   const handleSelectPackage = (packageId: string) => {
     setSelectedPackageId(packageId)
@@ -408,7 +410,7 @@ function BillingPageContent() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-white mb-1">Plano</h3>
-                    <p className="text-xl font-bold text-white">{currentPlan?.name || 'Starter'}</p>
+                    <p className="text-xl font-bold text-white">{currentPlan?.name || 'Sem plano'}</p>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -487,7 +489,7 @@ function BillingPageContent() {
                     <div className="space-y-2 text-sm text-slate-300">
                       <div className="flex items-start">
                         <span className="text-white mr-2">•</span>
-                        <span>{currentPlan?.credits || 500} créditos mensais</span>
+                        <span>{currentPlan?.credits ?? 0} créditos mensais</span>
                       </div>
                       <div className="flex items-start">
                         <span className="text-white mr-2">•</span>
@@ -495,7 +497,7 @@ function BillingPageContent() {
                       </div>
                       <div className="flex items-start">
                         <span className="text-white mr-2">•</span>
-                        <span>Uso atual: {(session.user as any)?.creditsUsed || 0} / {(session.user as any)?.creditsLimit || 500} créditos</span>
+                        <span>Uso atual: {(session.user as any)?.creditsUsed ?? 0} / {(session.user as any)?.creditsLimit ?? 0} créditos</span>
                       </div>
                       <div className="flex items-start">
                         <span className="text-white mr-2">•</span>

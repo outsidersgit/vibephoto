@@ -135,9 +135,9 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         // @ts-ignore
         token.role = ((user as any).role || 'user').toUpperCase()
-        token.plan = user.plan || 'STARTER'
+        token.plan = user.plan // Pode ser null - não usar fallback
         token.creditsUsed = user.creditsUsed || 0
-        token.creditsLimit = user.creditsLimit || 100
+        token.creditsLimit = user.creditsLimit ?? 0 // Usar 0 se null/undefined, mas manter 0 se for 0
         // Load Asaas billing fields from user
         // @ts-ignore dynamic fields on token
         token.asaasCustomerId = (user as any).asaasCustomerId || null

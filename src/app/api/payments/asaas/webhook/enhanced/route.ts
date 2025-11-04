@@ -22,6 +22,16 @@ interface AsaasWebhookPayload {
     customer: string
     status: string
   }
+  checkout?: {
+    id: string
+    customer: string
+    status: string
+    subscription?: {
+      cycle: string
+      nextDueDate: string
+    }
+    items?: Array<{ name: string; value: number; description?: string }>
+  }
   dateCreated: string
 }
 
@@ -201,6 +211,9 @@ async function processWebhookEvent(payload: AsaasWebhookPayload): Promise<{
       case 'PAYMENT_RECEIVED':
         return await handlePaymentSuccess(payload.payment!)
         
+      case 'CHECKOUT_PAID':
+        return await handleCheckoutPaid(payload.checkout!)
+        
       case 'PAYMENT_OVERDUE':
         return await handlePaymentOverdue(payload.payment!)
         
@@ -238,6 +251,285 @@ async function processWebhookEvent(payload: AsaasWebhookPayload): Promise<{
   }
 }
 
+async function handleCheckoutPaid(checkout: AsaasWebhookPayload['checkout']): Promise<{
+  success: boolean
+  error?: string
+  retryable?: boolean
+}> {
+  if (!checkout) {
+    return { success: false, error: 'Missing checkout data', retryable: false }
+  }
+
+  console.log('='.repeat(80))
+  console.log('🔔 [WEBHOOK] PROCESSANDO CHECKOUT_PAID')
+  console.log('📦 Dados do checkout recebido:', {
+    id: checkout.id,
+    customer: checkout.customer,
+    status: checkout.status,
+    subscription: checkout.subscription,
+    items: checkout.items
+  })
+  console.log('='.repeat(80))
+
+  try {
+    // Find user by Asaas customer ID
+    const user = await prisma.user.findUnique({
+      where: { asaasCustomerId: checkout.customer },
+      select: { 
+        id: true, 
+        plan: true,
+        billingCycle: true,
+        subscriptionId: true,
+        creditsBalance: true,
+        email: true,
+        name: true
+      }
+    })
+
+    if (!user) {
+      console.error('❌ [WEBHOOK] User not found for checkout:', checkout.id, 'customer:', checkout.customer)
+      return { success: false, error: 'User not found', retryable: false }
+    }
+
+    console.log('✅ [WEBHOOK] Usuário encontrado:', {
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      currentPlan: user.plan,
+      currentBillingCycle: user.billingCycle,
+      subscriptionId: user.subscriptionId
+    })
+
+    // Se é um checkout de assinatura (tem subscription)
+    if (checkout.subscription) {
+      console.log('📋 [WEBHOOK] É um checkout de assinatura (subscription):', checkout.subscription)
+
+      // PRIORIDADE 1: Buscar plan e billingCycle da tabela users (já salvos no checkout)
+      let plan: 'STARTER' | 'PREMIUM' | 'GOLD' | undefined = undefined
+      let billingCycle: 'MONTHLY' | 'YEARLY' | undefined = undefined
+      let currentPeriodEnd: Date | undefined = undefined
+
+      if (user.plan) {
+        plan = user.plan as any
+        console.log('✅ [WEBHOOK] Plan encontrado na tabela users:', plan)
+      }
+      if (user.billingCycle === 'MONTHLY' || user.billingCycle === 'YEARLY') {
+        billingCycle = user.billingCycle as any
+        console.log('✅ [WEBHOOK] billingCycle encontrado na tabela users:', billingCycle)
+      }
+
+      // PRIORIDADE 2: Se não encontrou, extrair do checkout.subscription.cycle
+      if (!billingCycle && checkout.subscription.cycle) {
+        const cycle = checkout.subscription.cycle.toUpperCase()
+        if (cycle === 'MONTHLY' || cycle === 'YEARLY') {
+          billingCycle = cycle as any
+          console.log('✅ [WEBHOOK] billingCycle extraído do checkout.subscription.cycle:', billingCycle)
+        }
+      }
+
+      // Calcular currentPeriodEnd se nextDueDate estiver disponível
+      if (checkout.subscription.nextDueDate) {
+        try {
+          currentPeriodEnd = new Date(checkout.subscription.nextDueDate)
+          console.log('✅ [WEBHOOK] currentPeriodEnd calculado:', currentPeriodEnd.toISOString())
+        } catch (error) {
+          console.warn('⚠️ [WEBHOOK] Erro ao parsear nextDueDate:', error)
+        }
+      }
+
+      // PRIORIDADE 3: Se ainda não tem plan, tentar extrair dos items do checkout
+      if (!plan && checkout.items && checkout.items.length > 0) {
+        // Tentar extrair plan do nome ou descrição do item
+        const itemName = checkout.items[0].name?.toLowerCase() || ''
+        const itemDescription = checkout.items[0].description?.toLowerCase() || ''
+        const combined = `${itemName} ${itemDescription}`
+        
+        if (combined.includes('starter')) {
+          plan = 'STARTER'
+        } else if (combined.includes('premium')) {
+          plan = 'PREMIUM'
+        } else if (combined.includes('gold')) {
+          plan = 'GOLD'
+        }
+        
+        if (plan) {
+          console.log('✅ [WEBHOOK] Plan extraído dos items do checkout:', plan)
+        }
+      }
+
+      // CRÍTICO: Verificar se temos plan antes de chamar updateSubscriptionStatus
+      if (!plan) {
+        console.error('❌ [WEBHOOK] CRÍTICO: Não foi possível determinar o plan do checkout!')
+        console.error('❌ [WEBHOOK] Dados disponíveis:', {
+          userPlan: user.plan,
+          checkoutSubscription: checkout.subscription,
+          checkoutItems: checkout.items
+        })
+        
+        // Se não tem plan, ainda assim ativar a assinatura (mas sem creditsLimit)
+        await updateSubscriptionStatus(
+          user.id,
+          'ACTIVE',
+          currentPeriodEnd,
+          undefined, // sem plan
+          billingCycle
+        )
+        
+        // Criar log de erro crítico
+        await prisma.usageLog.create({
+          data: {
+            userId: user.id,
+            action: 'WEBHOOK_ERROR_NO_PLAN_CHECKOUT',
+            creditsUsed: 0,
+            details: {
+              error: 'Plan não encontrado no webhook CHECKOUT_PAID - creditsLimit não foi atualizado',
+              checkoutId: checkout.id,
+              subscription: checkout.subscription,
+              requiresManualFix: true
+            }
+          }
+        })
+        
+        return {
+          success: false,
+          error: 'Plan não encontrado - subscriptionStatus atualizado mas creditsLimit não foi definido. Requer correção manual.',
+          retryable: false
+        }
+      }
+
+      console.log('✅ [WEBHOOK] Dados finais antes de updateSubscriptionStatus (CHECKOUT_PAID):', {
+        userId: user.id,
+        status: 'ACTIVE',
+        plan,
+        billingCycle,
+        currentPeriodEnd: currentPeriodEnd?.toISOString()
+      })
+
+      // Usar updateSubscriptionStatus que já possui toda a lógica correta
+      const updatedUser = await updateSubscriptionStatus(
+        user.id,
+        'ACTIVE',
+        currentPeriodEnd,
+        plan,
+        billingCycle
+      )
+
+      console.log('✅ [WEBHOOK] updateSubscriptionStatus executado com sucesso (CHECKOUT_PAID)')
+
+      // Buscar dados atualizados do usuário para broadcast
+      const userAfterUpdate = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: {
+          creditsUsed: true,
+          creditsLimit: true,
+          creditsBalance: true,
+          subscriptionStatus: true,
+          plan: true
+        }
+      })
+
+      // Broadcast atualização em tempo real para frontend
+      if (userAfterUpdate) {
+        await broadcastCreditsUpdate(
+          user.id,
+          userAfterUpdate.creditsUsed,
+          userAfterUpdate.creditsLimit,
+          'SUBSCRIPTION_ACTIVATED',
+          userAfterUpdate.creditsBalance
+        ).catch((error) => {
+          console.error('❌ [WEBHOOK] Erro ao broadcast créditos:', error)
+        })
+
+        await broadcastUserUpdate(
+          user.id,
+          {
+            plan: userAfterUpdate.plan,
+            subscriptionStatus: userAfterUpdate.subscriptionStatus,
+            creditsLimit: userAfterUpdate.creditsLimit,
+            creditsUsed: userAfterUpdate.creditsUsed,
+            creditsBalance: userAfterUpdate.creditsBalance
+          },
+          'SUBSCRIPTION_ACTIVATED'
+        ).catch((error) => {
+          console.error('❌ [WEBHOOK] Erro ao broadcast user update:', error)
+        })
+
+        console.log('✅ [WEBHOOK] Broadcast SSE enviado para frontend (CHECKOUT_PAID):', {
+          userId: user.id,
+          creditsLimit: userAfterUpdate.creditsLimit,
+          creditsUsed: userAfterUpdate.creditsUsed,
+          creditsBalance: userAfterUpdate.creditsBalance,
+          subscriptionStatus: userAfterUpdate.subscriptionStatus
+        })
+      }
+
+      // Verificar se Payment foi criado/atualizado
+      const payment = await prisma.payment.findFirst({
+        where: {
+          userId: user.id,
+          asaasCheckoutId: checkout.id,
+          type: 'SUBSCRIPTION'
+        }
+      })
+
+      if (payment) {
+        // Atualizar Payment para CONFIRMED
+        await prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: 'CONFIRMED',
+            confirmedDate: new Date(),
+            ...(plan && { planType: plan }),
+            ...(billingCycle && { billingCycle: billingCycle })
+          }
+        })
+        console.log('✅ [WEBHOOK] Payment atualizado para CONFIRMED (CHECKOUT_PAID):', payment.id)
+      } else {
+        // Criar novo Payment se não existir
+        // Buscar valor dos items
+        const totalValue = checkout.items?.reduce((sum, item) => sum + (item.value || 0), 0) || 0
+        
+        await prisma.payment.create({
+          data: {
+            userId: user.id,
+            asaasCheckoutId: checkout.id,
+            type: 'SUBSCRIPTION',
+            status: 'CONFIRMED',
+            billingType: 'CREDIT_CARD',
+            value: totalValue,
+            description: `Assinatura confirmada via checkout - ${checkout.items?.[0]?.name || 'N/A'}`,
+            dueDate: currentPeriodEnd || new Date(),
+            confirmedDate: new Date(),
+            planType: plan || undefined,
+            billingCycle: billingCycle || undefined
+          }
+        })
+        console.log('✅ [WEBHOOK] Novo Payment criado (CHECKOUT_PAID)')
+      }
+
+      console.log('✅ [WEBHOOK] CHECKOUT_PAID processado com sucesso:', {
+        userId: user.id,
+        plan,
+        billingCycle,
+        checkoutId: checkout.id
+      })
+
+      return { success: true }
+    } else {
+      // Não é checkout de assinatura, apenas logar
+      console.log('ℹ️ [WEBHOOK] CHECKOUT_PAID não é de assinatura, ignorando')
+      return { success: true }
+    }
+  } catch (error: any) {
+    console.error('❌ [WEBHOOK] Erro ao processar CHECKOUT_PAID:', error)
+    return { 
+      success: false, 
+      error: error.message, 
+      retryable: true 
+    }
+  }
+}
+
 async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Promise<{
   success: boolean
   error?: string
@@ -247,37 +539,83 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
     return { success: false, error: 'Missing payment data', retryable: false }
   }
 
+  console.log('='.repeat(80))
+  console.log('🔔 [WEBHOOK] PROCESSANDO PAYMENT_CONFIRMED')
+  console.log('📦 Dados do payment recebido:', {
+    id: payment.id,
+    customer: payment.customer,
+    value: payment.value,
+    status: payment.status,
+    subscription: payment.subscription,
+    externalReference: payment.externalReference,
+    billingType: payment.billingType,
+    dueDate: payment.dueDate
+  })
+  console.log('='.repeat(80))
+
   try {
     // Find user by Asaas customer ID
     const user = await prisma.user.findUnique({
       where: { asaasCustomerId: payment.customer },
       select: { 
         id: true, 
-        plan: true, 
+        plan: true,
+        billingCycle: true, // Buscar billingCycle também
         subscriptionId: true,
-        creditsBalance: true
+        creditsBalance: true,
+        email: true,
+        name: true
       }
     })
 
     if (!user) {
-      console.error('User not found for payment:', payment.id, 'customer:', payment.customer)
+      console.error('❌ [WEBHOOK] User not found for payment:', payment.id, 'customer:', payment.customer)
       return { success: false, error: 'User not found', retryable: false }
     }
 
+    console.log('✅ [WEBHOOK] Usuário encontrado:', {
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      currentPlan: user.plan,
+      subscriptionId: user.subscriptionId
+    })
+
     // Update user subscription status if it's a subscription payment
     if (payment.subscription) {
-      // CRÍTICO: Buscar Payment ORIGINAL criado no checkout (tem planType e billingCycle)
-      // Buscar por subscriptionId primeiro, depois por userId + type + status PENDING
+      console.log('📋 [WEBHOOK] É um pagamento de assinatura (subscription):', payment.subscription)
+      console.log('🔍 [WEBHOOK] Iniciando busca do Payment original...')
+      console.log('🔍 [WEBHOOK] Critérios de busca:', {
+        userId: user.id,
+        externalReference: payment.externalReference,
+        subscriptionId: payment.subscription,
+        asaasPaymentId: payment.id
+      })
+      
+      // CRÍTICO: Buscar plan e billingCycle - PRIORIDADE 1: Tabela users (já salvos no checkout)
+      // PRIORIDADE 2: Tabela payments (fallback para compatibilidade)
+      // PRIORIDADE 3: Subscription do Asaas (fallback final)
       let originalPayment = null
       let plan: 'STARTER' | 'PREMIUM' | 'GOLD' | undefined = undefined
       let billingCycle: 'MONTHLY' | 'YEARLY' | undefined = undefined
       let currentPeriodEnd: Date | undefined = undefined
+
+      // PRIORIDADE 1: Buscar plan e billingCycle diretamente da tabela users (já salvos no checkout)
+      if (user.plan) {
+        plan = user.plan as any
+        console.log('✅ [WEBHOOK] Plan encontrado na tabela users:', plan)
+      }
+      if (user.billingCycle === 'MONTHLY' || user.billingCycle === 'YEARLY') {
+        billingCycle = user.billingCycle as any
+        console.log('✅ [WEBHOOK] billingCycle encontrado na tabela users:', billingCycle)
+      }
 
       try {
         // CRÍTICO: Payment criado no checkout tem asaasCheckoutId
         // O webhook pode vir com externalReference = checkoutId ou subscriptionId
         // Estratégia 1: Buscar pelo externalReference do webhook = asaasCheckoutId
         if (payment.externalReference) {
+          console.log('🔍 [WEBHOOK] Estratégia 1: Buscando pelo externalReference (checkoutId):', payment.externalReference)
           originalPayment = await prisma.payment.findFirst({
             where: {
               userId: user.id,
@@ -299,13 +637,18 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
             console.log('✅ [WEBHOOK] Payment encontrado pelo externalReference (checkoutId):', {
               paymentId: originalPayment.id,
               checkoutId: payment.externalReference,
-              currentStatus: originalPayment.status
+              currentStatus: originalPayment.status,
+              planType: originalPayment.planType,
+              billingCycle: originalPayment.billingCycle
             })
+          } else {
+            console.warn('⚠️ [WEBHOOK] Payment não encontrado pelo externalReference:', payment.externalReference)
           }
         }
 
         // Estratégia 2: Se não encontrou, buscar por userId + type + status PENDING + asaasCheckoutId
         if (!originalPayment) {
+          console.log('🔍 [WEBHOOK] Estratégia 2: Buscando por PENDING + asaasCheckoutId não null + asaasPaymentId null')
           originalPayment = await prisma.payment.findFirst({
             where: {
               userId: user.id,
@@ -329,13 +672,34 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
             console.log('✅ [WEBHOOK] Payment encontrado por critérios gerais:', {
               paymentId: originalPayment.id,
               checkoutId: originalPayment.asaasCheckoutId,
-              currentStatus: originalPayment.status
+              currentStatus: originalPayment.status,
+              planType: originalPayment.planType,
+              billingCycle: originalPayment.billingCycle
             })
+          } else {
+            console.warn('⚠️ [WEBHOOK] Payment não encontrado pela Estratégia 2')
+            // Listar todos os Payments do usuário para debug
+            const allPayments = await prisma.payment.findMany({
+              where: { userId: user.id, type: 'SUBSCRIPTION' },
+              orderBy: { createdAt: 'desc' },
+              take: 5,
+              select: {
+                id: true,
+                status: true,
+                asaasCheckoutId: true,
+                asaasPaymentId: true,
+                planType: true,
+                billingCycle: true,
+                createdAt: true
+              }
+            })
+            console.log('📋 [WEBHOOK] Últimos 5 Payments do usuário (para debug):', allPayments)
           }
         }
 
         // Estratégia 3: Buscar pelo subscriptionId (se o Payment já foi atualizado antes)
         if (!originalPayment && payment.subscription) {
+          console.log('🔍 [WEBHOOK] Estratégia 3: Buscando pelo subscriptionId:', payment.subscription)
           originalPayment = await prisma.payment.findFirst({
             where: {
               userId: user.id,
@@ -357,8 +721,12 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
             console.log('✅ [WEBHOOK] Payment encontrado pelo subscriptionId:', {
               paymentId: originalPayment.id,
               subscriptionId: payment.subscription,
-              currentStatus: originalPayment.status
+              currentStatus: originalPayment.status,
+              planType: originalPayment.planType,
+              billingCycle: originalPayment.billingCycle
             })
+          } else {
+            console.warn('⚠️ [WEBHOOK] Payment não encontrado pelo subscriptionId:', payment.subscription)
           }
         }
 
@@ -370,11 +738,14 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
             checkoutId: originalPayment.asaasCheckoutId
           })
 
-          if (originalPayment.billingCycle === 'MONTHLY' || originalPayment.billingCycle === 'YEARLY') {
+          // PRIORIDADE 2: Usar plan/billingCycle do Payment apenas se não encontrou na tabela users
+          if (!billingCycle && (originalPayment.billingCycle === 'MONTHLY' || originalPayment.billingCycle === 'YEARLY')) {
             billingCycle = originalPayment.billingCycle
+            console.log('✅ [WEBHOOK] billingCycle obtido do Payment (fallback):', billingCycle)
           }
-          if (originalPayment.planType) {
+          if (!plan && originalPayment.planType) {
             plan = originalPayment.planType as any
+            console.log('✅ [WEBHOOK] Plan obtido do Payment (fallback):', plan)
           }
         } else {
           console.warn('⚠️ [WEBHOOK] Payment original não encontrado pelo subscriptionId, tentando buscar pelo asaasPaymentId')
@@ -389,11 +760,14 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
           })
 
           if (existingPayment) {
-            if (existingPayment.billingCycle === 'MONTHLY' || existingPayment.billingCycle === 'YEARLY') {
+            // PRIORIDADE 2: Usar plan/billingCycle do Payment apenas se não encontrou na tabela users
+            if (!billingCycle && (existingPayment.billingCycle === 'MONTHLY' || existingPayment.billingCycle === 'YEARLY')) {
               billingCycle = existingPayment.billingCycle
+              console.log('✅ [WEBHOOK] billingCycle obtido do Payment existente (fallback):', billingCycle)
             }
-            if (existingPayment.planType) {
+            if (!plan && existingPayment.planType) {
               plan = existingPayment.planType as any
+              console.log('✅ [WEBHOOK] Plan obtido do Payment existente (fallback):', plan)
             }
           }
         }
@@ -401,7 +775,7 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
         console.error('❌ [WEBHOOK] Error fetching payment info from DB:', error)
       }
 
-      // Se ainda não encontrou plan, tentar buscar de Payments recentes do usuário
+      // PRIORIDADE 3: Se ainda não encontrou plan, tentar buscar de Payments recentes do usuário
       if (!plan) {
         try {
           // Buscar Payment mais recente com planType (pode ser o checkout que ainda não foi confirmado)
@@ -476,30 +850,25 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
         userPlan: user.plan
       })
 
-      // CRÍTICO: Se não tiver plan, tentar usar do usuário ou buscar do subscription
+      // CRÍTICO: Se ainda não tiver plan após todas as tentativas, tentar extrair do subscription do Asaas
       if (!plan) {
-        console.warn('⚠️ [WEBHOOK] plan não encontrado nos Payments, tentando fallbacks...')
+        console.warn('⚠️ [WEBHOOK] plan não encontrado na tabela users nem nos Payments, tentando extrair do subscription do Asaas...')
         
-        // Fallback 1: Usar plan do usuário (pode estar desatualizado, mas é melhor que nada)
-        if (user.plan) {
-          plan = user.plan as any
-          console.log('✅ [WEBHOOK] Usando plan do usuário como fallback:', plan)
-        } else {
-          // Fallback 2: Tentar extrair do subscription do Asaas (se subscriptionInfo foi buscado)
-          if (subscriptionInfo && subscriptionInfo.description) {
-            // Tentar extrair plan do description (ex: "Plano Premium Mensal")
-            const desc = subscriptionInfo.description.toLowerCase()
-            if (desc.includes('starter')) plan = 'STARTER' as any
-            else if (desc.includes('premium')) plan = 'PREMIUM' as any
-            else if (desc.includes('gold')) plan = 'GOLD' as any
-            
-            if (plan) {
-              console.log('✅ [WEBHOOK] Plan extraído do description do subscription:', plan)
-            }
-          }
+        // Fallback final: Tentar extrair do subscription do Asaas (se subscriptionInfo foi buscado)
+        if (subscriptionInfo && subscriptionInfo.description) {
+          // Tentar extrair plan do description (ex: "Plano Premium Mensal")
+          const desc = subscriptionInfo.description.toLowerCase()
+          if (desc.includes('starter')) plan = 'STARTER' as any
+          else if (desc.includes('premium')) plan = 'PREMIUM' as any
+          else if (desc.includes('gold')) plan = 'GOLD' as any
           
-          // Se ainda não tem plan, é um erro crítico
-          if (!plan) {
+          if (plan) {
+            console.log('✅ [WEBHOOK] Plan extraído do description do subscription:', plan)
+          }
+        }
+        
+        // Se ainda não tem plan, é um erro crítico
+        if (!plan) {
             console.error('❌ [WEBHOOK] CRÍTICO: Não foi possível determinar o plan!')
             console.error('❌ [WEBHOOK] Payment data:', {
               paymentId: payment.id,
@@ -547,6 +916,60 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
         }
       }
 
+      // CRÍTICO: Verificar se temos plan antes de chamar updateSubscriptionStatus
+      if (!plan) {
+        console.error('❌ [WEBHOOK] CRÍTICO: Não foi possível determinar o plan!')
+        console.error('❌ [WEBHOOK] Dados disponíveis:', {
+          originalPaymentFound: !!originalPayment,
+          userPlan: user.plan,
+          subscriptionInfo: subscriptionInfo ? {
+            cycle: subscriptionInfo.cycle,
+            description: subscriptionInfo.description
+          } : null,
+          paymentExternalReference: payment.externalReference
+        })
+        
+        // Se não tem plan, ainda assim ativar a assinatura (mas sem creditsLimit)
+        // O admin pode corrigir manualmente depois
+        await updateSubscriptionStatus(
+          user.id,
+          'ACTIVE',
+          currentPeriodEnd,
+          undefined, // sem plan
+          billingCycle
+        )
+        
+        // Criar log de erro crítico
+        await prisma.usageLog.create({
+          data: {
+            userId: user.id,
+            action: 'WEBHOOK_ERROR_NO_PLAN',
+            creditsUsed: 0,
+            details: {
+              error: 'Plan não encontrado no webhook - creditsLimit não foi atualizado',
+              paymentId: payment.id,
+              subscriptionId: payment.subscription,
+              externalReference: payment.externalReference,
+              requiresManualFix: true
+            }
+          }
+        })
+        
+        return {
+          success: false,
+          error: 'Plan não encontrado - subscriptionStatus atualizado mas creditsLimit não foi definido. Requer correção manual.',
+          retryable: false
+        }
+      }
+
+      console.log('✅ [WEBHOOK] Dados finais antes de updateSubscriptionStatus:', {
+        userId: user.id,
+        status: 'ACTIVE',
+        plan,
+        billingCycle,
+        currentPeriodEnd: currentPeriodEnd?.toISOString()
+      })
+
       // Usar updateSubscriptionStatus que já possui toda a lógica correta
       // (YEARLY * 12 créditos, reset de créditos, data de expiração, etc.)
       // CRÍTICO: Agora garantimos que plan sempre existe quando chegamos aqui
@@ -554,9 +977,11 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
         user.id,
         'ACTIVE',
         currentPeriodEnd,
-        plan!, // Garantimos que plan existe aqui
+        plan, // Agora garantimos que plan existe
         billingCycle
       )
+
+      console.log('✅ [WEBHOOK] updateSubscriptionStatus executado com sucesso')
 
       // CRÍTICO: Buscar dados atualizados do usuário para broadcast
       const userAfterUpdate = await prisma.user.findUnique({
@@ -708,7 +1133,16 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
               })
             } else {
               // Criar novo Payment apenas se realmente não existir nenhum
-              await prisma.payment.create({
+              console.log('📝 [WEBHOOK] Criando novo Payment (original não encontrado):', {
+                asaasPaymentId: payment.id,
+                userId: user.id,
+                subscriptionId: payment.subscription,
+                plan: plan || 'NÃO DEFINIDO',
+                billingCycle: billingCycle || 'NÃO DEFINIDO',
+                externalReference: payment.externalReference
+              })
+              
+              const newPayment = await prisma.payment.create({
                 data: {
                   asaasPaymentId: payment.id,
                   userId: user.id,
@@ -726,12 +1160,32 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
                   billingCycle: billingCycle || undefined
                 }
               })
-              console.log('✅ [WEBHOOK] Novo Payment criado (original não encontrado)')
+              console.log('✅ [WEBHOOK] Novo Payment criado (original não encontrado):', {
+                paymentId: newPayment.id,
+                planType: newPayment.planType,
+                billingCycle: newPayment.billingCycle,
+                status: newPayment.status
+              })
             }
           }
         } catch (error: any) {
           // Pode dar erro de unique constraint se já existe, não é crítico
-          console.warn('⚠️ [WEBHOOK] Erro ao criar/atualizar Payment:', error.message)
+          console.error('❌ [WEBHOOK] Erro ao criar/atualizar Payment:', error)
+          console.error('❌ [WEBHOOK] Stack trace:', error.stack)
+          // Criar log de erro
+          await prisma.usageLog.create({
+            data: {
+              userId: user.id,
+              action: 'WEBHOOK_PAYMENT_CREATE_ERROR',
+              creditsUsed: 0,
+              details: {
+                error: error.message,
+                paymentId: payment.id,
+                subscriptionId: payment.subscription,
+                errorStack: error.stack
+              }
+            }
+          }).catch(() => {}) // Não falhar se log der erro
         }
       }
 
@@ -739,9 +1193,53 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
         userId: user.id,
         plan,
         billingCycle,
-        currentPeriodEnd,
+        currentPeriodEnd: currentPeriodEnd?.toISOString(),
         creditsWillBeSet: !!plan
       })
+      
+      // Verificar se Payment foi criado/atualizado
+      const finalPayment = await prisma.payment.findFirst({
+        where: {
+          asaasPaymentId: payment.id,
+          userId: user.id
+        }
+      })
+      
+      if (finalPayment) {
+        console.log('✅ [WEBHOOK] Payment final confirmado no banco:', {
+          paymentId: finalPayment.id,
+          status: finalPayment.status,
+          planType: finalPayment.planType,
+          billingCycle: finalPayment.billingCycle
+        })
+      } else {
+        console.error('❌ [WEBHOOK] CRÍTICO: Payment não foi criado/atualizado no banco!')
+        console.error('❌ [WEBHOOK] asaasPaymentId:', payment.id, 'userId:', user.id)
+      }
+      
+      // Verificar se usuário foi atualizado
+      const finalUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: {
+          plan: true,
+          creditsLimit: true,
+          subscriptionStatus: true
+        }
+      })
+      
+      if (finalUser) {
+        console.log('✅ [WEBHOOK] Usuário final após processamento:', {
+          userId: finalUser ? user.id : 'NÃO ENCONTRADO',
+          plan: finalUser.plan,
+          creditsLimit: finalUser.creditsLimit,
+          subscriptionStatus: finalUser.subscriptionStatus
+        })
+        
+        if (!finalUser.plan || !finalUser.creditsLimit) {
+          console.error('❌ [WEBHOOK] CRÍTICO: Usuário não foi atualizado corretamente!')
+          console.error('❌ [WEBHOOK] plan:', finalUser.plan, 'creditsLimit:', finalUser.creditsLimit)
+        }
+      }
     } else {
       // Handle credit purchase
       // Primeiro, tentar encontrar CreditPurchase existente pelo asaasCheckoutId

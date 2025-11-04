@@ -399,6 +399,22 @@ export async function createSubscriptionCheckout(
     }
   })
 
+  // CRÍTICO: Salvar plan e billingCycle diretamente na tabela users
+  // Isso garante que os dados estejam disponíveis mesmo se o Payment não for encontrado no webhook
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      plan: planId, // Salvar plan diretamente (Plan enum)
+      billingCycle: cycle // Salvar billingCycle diretamente (MONTHLY/YEARLY)
+    }
+  })
+
+  console.log('✅ [CHECKOUT] Plan e billingCycle salvos na tabela users:', {
+    userId: user.id,
+    plan: planId,
+    billingCycle: cycle
+  })
+
   // Montar URL do checkout
   const checkoutUrl = `${ASAAS_CHECKOUT_BASE}/checkoutSession/show?id=${checkout.id}`
 
