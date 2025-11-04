@@ -36,7 +36,7 @@ export interface CreditPackage {
  * Esta constante é mantida apenas como fallback temporário
  * DEPRECATED: Use getAllSubscriptionPlans() do banco
  */
-const PLANS_FALLBACK: Plan[] = [
+export const PLANS_FALLBACK: Plan[] = [
   {
     id: 'STARTER',
     name: 'Starter',
