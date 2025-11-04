@@ -144,7 +144,7 @@ export async function getSubscriptionPlanById(planId: Plan): Promise<Subscriptio
         "updatedAt", 
         "deletedAt"
       FROM subscription_plans
-      WHERE "planId" = ${planId}
+      WHERE "planId" = ${planId}::"Plan"
         AND "deletedAt" IS NULL
       LIMIT 1
     `

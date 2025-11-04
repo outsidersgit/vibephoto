@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
     }>>`
       SELECT id, "planId", "deletedAt"
       FROM subscription_plans
-      WHERE "planId" = ${parsed.data.planId}
+      WHERE "planId" = ${parsed.data.planId}::"Plan"
       LIMIT 1
     `
 
