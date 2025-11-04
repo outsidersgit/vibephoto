@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
-import { CheckCircle, ArrowRight, Home, LogIn, Sparkles, Zap, Shield, Mail } from 'lucide-react'
+import { CheckCircle, ArrowRight, LogIn } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 function SubscriptionSuccessContent() {
@@ -62,10 +62,6 @@ function SubscriptionSuccessContent() {
     router.push(`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}&paymentSuccess=true`)
   }
 
-  const handleHome = () => {
-    router.push('/')
-  }
-
   // Mostrar loading apenas enquanto verifica sessão (com timeout mais curto)
   if (isChecking && status === 'loading') {
     return (
@@ -79,7 +75,7 @@ function SubscriptionSuccessContent() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#334155] flex items-center justify-center p-4 sm:p-6 -mt-20 relative overflow-hidden">
+    <div className="min-h-[calc(100vh-5rem)] bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#334155] flex items-center justify-center p-4 sm:p-6 pt-24 relative overflow-hidden">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Gradient orbs */}
@@ -151,76 +147,58 @@ function SubscriptionSuccessContent() {
             }}
           />
 
-          {/* Success Icon with enhanced animation */}
+          {/* Title with inline icon */}
           <motion.div
-            initial={{ scale: 0, rotate: -180 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ 
-              delay: 0.2, 
-              type: 'spring', 
-              stiffness: 200,
-              damping: 15
-            }}
-            className="relative mb-8"
-          >
-            <div className="relative w-24 h-24 mx-auto">
-              {/* Pulsing glow effect */}
-              <motion.div
-                className="absolute inset-0 bg-green-500/30 rounded-full blur-xl"
-                animate={{
-                  scale: [1, 1.3, 1],
-                  opacity: [0.5, 0.8, 0.5],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              />
-              {/* Icon container */}
-              <div className="relative w-24 h-24 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full flex items-center justify-center border border-green-500/30 shadow-lg">
-                <CheckCircle className="w-14 h-14 text-green-400" strokeWidth={2.5} />
-              </div>
-              {/* Success sparkles */}
-              {[...Array(6)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute inset-0"
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ 
-                    opacity: [0, 1, 0],
-                    scale: [0, 1.5, 0],
-                    x: [0, Math.cos(i * 60 * Math.PI / 180) * 60],
-                    y: [0, Math.sin(i * 60 * Math.PI / 180) * 60],
-                  }}
-                  transition={{
-                    delay: 0.5 + i * 0.1,
-                    duration: 1.5,
-                    repeat: Infinity,
-                    repeatDelay: 3
-                  }}
-                >
-                  <Sparkles className="w-4 h-4 text-yellow-400" />
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Title */}
-          <motion.h1
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="text-3xl sm:text-4xl font-bold text-white mb-4 tracking-tight"
-            style={{
-              fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
-              fontWeight: 700,
-              letterSpacing: '-0.02em',
-              lineHeight: '1.2'
-            }}
+            className="flex items-center justify-center gap-3 mb-4"
           >
-            Pagamento Confirmado! 🎉
-          </motion.h1>
+            {/* Success Icon - smaller and inline */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ 
+                delay: 0.2, 
+                type: 'spring', 
+                stiffness: 200,
+                damping: 15
+              }}
+              className="relative"
+            >
+              <div className="relative w-10 h-10">
+                {/* Pulsing glow effect */}
+                <motion.div
+                  className="absolute inset-0 bg-green-500/30 rounded-full blur-md"
+                  animate={{
+                    scale: [1, 1.2, 1],
+                    opacity: [0.5, 0.7, 0.5],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+                {/* Icon container */}
+                <div className="relative w-10 h-10 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-full flex items-center justify-center border border-green-500/30 shadow-lg">
+                  <CheckCircle className="w-6 h-6 text-green-400" strokeWidth={2.5} />
+                </div>
+              </div>
+            </motion.div>
+            
+            <h1
+              className="text-3xl sm:text-4xl font-bold text-white tracking-tight"
+              style={{
+                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                lineHeight: '1.2'
+              }}
+            >
+              Pagamento Confirmado!
+            </h1>
+          </motion.div>
 
           {/* Description */}
           <motion.p
@@ -231,31 +209,6 @@ function SubscriptionSuccessContent() {
           >
             Seu pagamento foi processado com sucesso! Sua assinatura será ativada automaticamente após o login.
           </motion.p>
-
-          {/* Feature highlights */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8"
-          >
-            {[
-              { icon: Zap, text: 'Acesso Imediato', color: 'yellow' },
-              { icon: Shield, text: 'Pagamento Seguro', color: 'green' },
-              { icon: Mail, text: 'Email Confirmado', color: 'blue' }
-            ].map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.6 + index * 0.1 }}
-                className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 backdrop-blur-sm"
-              >
-                <feature.icon className={`w-6 h-6 mb-2 text-${feature.color}-400`} />
-                <span className="text-xs text-slate-300 font-medium">{feature.text}</span>
-              </motion.div>
-            ))}
-          </motion.div>
 
           {/* Info Box - Enhanced */}
           <motion.div
@@ -269,17 +222,11 @@ function SubscriptionSuccessContent() {
             }}
           >
             <div className="relative z-10">
-              <div className="flex items-start mb-3">
-                <Sparkles className="w-5 h-5 text-purple-400 mr-2 flex-shrink-0 mt-0.5" />
-                <p className="text-sm font-semibold text-white">
-                  Próximo passo
-                </p>
-              </div>
-              <p className="text-sm text-slate-200 leading-relaxed mb-2">
-                Faça login para acessar sua conta e começar a usar todos os recursos do seu plano.
+              <p className="text-sm font-semibold text-white mb-2">
+                Próximo passo
               </p>
-              <p className="text-xs text-slate-400">
-                Sua assinatura será ativada automaticamente após o login.
+              <p className="text-sm text-slate-200 leading-relaxed">
+                Caso não seja redirecionado automaticamente, faça o login para acessar sua conta e começar a usar todos os recursos do seu plano.
               </p>
             </div>
             {/* Animated gradient overlay */}
@@ -300,12 +247,12 @@ function SubscriptionSuccessContent() {
             />
           </motion.div>
 
-          {/* CTA Buttons - Enhanced */}
+          {/* CTA Button - Enhanced */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            className="flex justify-center items-center"
           >
             <Button
               size="lg"
@@ -324,15 +271,6 @@ function SubscriptionSuccessContent() {
                 Fazer Login
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </span>
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={handleHome}
-              className="w-full sm:w-auto border-slate-600 text-slate-300 hover:bg-slate-700/50 hover:text-white hover:border-slate-500 px-8 py-6 text-base transition-all duration-300"
-            >
-              <Home className="w-5 h-5 mr-2" />
-              Ir para Home
             </Button>
           </motion.div>
         </div>
