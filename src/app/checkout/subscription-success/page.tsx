@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
-import { CheckCircle, ArrowRight, LogIn } from 'lucide-react'
+import { CheckCircle, LogIn } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 function SubscriptionSuccessContent() {
@@ -269,7 +269,6 @@ function SubscriptionSuccessContent() {
               <span className="relative flex items-center">
                 <LogIn className="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" />
                 Fazer Login
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </span>
             </Button>
           </motion.div>
