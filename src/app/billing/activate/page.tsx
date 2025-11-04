@@ -215,9 +215,18 @@ function ActivatePageContent() {
       if (!customerData.email) missingFields.push('Email')
       if (!customerData.cpfCnpj) missingFields.push('CPF/CNPJ')
       if (!customerData.phone) missingFields.push('Telefone')
+      if (!customerData.address) missingFields.push('Endereço')
+      if (!customerData.addressNumber) missingFields.push('Número do endereço')
+      if (!customerData.city) missingFields.push('Cidade')
+      if (!customerData.state) missingFields.push('Estado')
+      if (!customerData.postalCode) missingFields.push('CEP')
 
       if (missingFields.length > 0) {
-        alert(`Campos obrigatórios faltando: ${missingFields.join(', ')}`)
+        addToast({
+          type: 'error',
+          title: 'Campos obrigatórios faltando',
+          description: `Por favor, preencha: ${missingFields.join(', ')}`
+        })
         return
       }
 
@@ -559,13 +568,14 @@ function ActivatePageContent() {
                 </div>
               </div>
 
-              {/* Endereço (Opcional) */}
+              {/* Endereço (Obrigatório) */}
               <div className="border-t border-slate-600 pt-6">
-                <h3 className="text-sm font-semibold text-white mb-4">Endereço (Opcional)</h3>
+                <h3 className="text-sm font-semibold text-white mb-4">Endereço *</h3>
+                <p className="text-xs text-slate-400 mb-4">Campos obrigatórios para criação do checkout</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-white mb-1">
-                      CEP
+                      CEP *
                       {loadingCEP && (
                         <span className="ml-2 text-xs text-slate-400">Buscando...</span>
                       )}
@@ -579,25 +589,31 @@ function ActivatePageContent() {
                       placeholder="00000-000"
                       disabled={loadingCEP}
                       maxLength={9}
+                      required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-white mb-1">Logradouro/Rua</label>
+                    <label className="block text-sm font-medium text-white mb-1">Logradouro/Rua *</label>
                     <input
                       type="text"
                       value={customerData.address}
                       onChange={(e) => setCustomerData(prev => ({ ...prev, address: e.target.value }))}
                       className="w-full h-11 px-3 py-2 bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                       placeholder="Av Paulista, Rua das Flores, etc"
+                      required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-white mb-1">Número</label>
+                    <label className="block text-sm font-medium text-white mb-1">
+                      Número *
+                    </label>
                     <input
                       type="text"
                       value={customerData.addressNumber}
                       onChange={(e) => setCustomerData(prev => ({ ...prev, addressNumber: e.target.value }))}
                       className="w-full h-11 px-3 py-2 bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      placeholder="Ex: 123, S/N"
+                      required
                     />
                   </div>
                   <div>
@@ -620,23 +636,25 @@ function ActivatePageContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-white mb-1">Cidade</label>
+                    <label className="block text-sm font-medium text-white mb-1">Cidade *</label>
                     <input
                       type="text"
                       value={customerData.city}
                       onChange={(e) => setCustomerData(prev => ({ ...prev, city: e.target.value }))}
                       className="w-full h-11 px-3 py-2 bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-white mb-1">Estado</label>
+                    <label className="block text-sm font-medium text-white mb-1">Estado *</label>
                     <input
                       type="text"
                       value={customerData.state}
-                      onChange={(e) => setCustomerData(prev => ({ ...prev, state: e.target.value }))}
+                      onChange={(e) => setCustomerData(prev => ({ ...prev, state: e.target.value.toUpperCase() }))}
                       className="w-full h-11 px-3 py-2 bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                       placeholder="SP"
                       maxLength={2}
+                      required
                     />
                   </div>
                 </div>

@@ -39,6 +39,22 @@ async function getOrCreateAsaasCustomer(user: any): Promise<string> {
       const existingCustomer = existingCustomers.data[0]
       console.log(`♻️ Cliente encontrado no Asaas ${ASAAS_ENVIRONMENT}:`, existingCustomer.id)
 
+      // CRÍTICO: Verificar se o cliente tem addressNumber
+      // Se não tiver, atualizar com 'S/N' (requisito do Asaas)
+      if (!existingCustomer.addressNumber || existingCustomer.addressNumber.trim() === '') {
+        console.log('⚠️ Cliente encontrado sem addressNumber, atualizando com "S/N"...')
+        try {
+          const addressNumber = user.addressNumber?.trim() || 'S/N'
+          await asaas.updateCustomer(existingCustomer.id, {
+            addressNumber: addressNumber
+          })
+          console.log('✅ Cliente atualizado com addressNumber:', addressNumber)
+        } catch (updateError: any) {
+          console.warn('⚠️ Erro ao atualizar addressNumber do cliente existente:', updateError.message)
+          // Continuar mesmo se não conseguir atualizar - pode ser que o Asaas aceite
+        }
+      }
+
       // Salvar customer ID no usuário (sobrescrever se for de outro ambiente)
       if (user.asaasCustomerId !== existingCustomer.id) {
         console.log(`💾 Atualizando customer ID no DB: ${user.asaasCustomerId || 'null'} → ${existingCustomer.id}`)
@@ -56,13 +72,27 @@ async function getOrCreateAsaasCustomer(user: any): Promise<string> {
 
   // Cliente não existe, criar novo
   console.log(`📝 Criando novo cliente no Asaas ${ASAAS_ENVIRONMENT}...`)
+  
+  // Asaas requer addressNumber - usar 'S/N' se não tiver
+  const addressNumber = user.addressNumber?.trim() || 'S/N'
+  
+  console.log('📝 Dados do cliente para criar no Asaas:', {
+    name: user.name,
+    email: user.email,
+    address: user.address,
+    addressNumber,
+    city: user.city,
+    state: user.state,
+    postalCode: user.postalCode
+  })
+  
   const newCustomer = await asaas.createCustomer({
     name: user.name,
     email: user.email,
     cpfCnpj: user.cpfCnpj?.replace(/\D/g, ''),
     phone: (user.mobilePhone || user.phone)?.replace(/\D/g, ''),
     address: user.address,
-    addressNumber: user.addressNumber,
+    addressNumber: addressNumber, // Sempre preenche com valor ou 'S/N'
     complement: user.complement,
     province: user.province,
     city: user.city,
