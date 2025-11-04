@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se o pacote existe
-    const creditPackage = CreditPackageService.getPackageById(packageId)
+    const creditPackage = await CreditPackageService.getPackageById(packageId)
     if (!creditPackage) {
       return NextResponse.json(
         { error: 'Package not found' },

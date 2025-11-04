@@ -1,6 +1,7 @@
 import { asaas } from '@/lib/payments/asaas'
 import { prisma } from '@/lib/prisma'
-import { getCreditPackageById, getPlanById, PLANS_FALLBACK } from '@/config/pricing'
+import { getPlanById, PLANS_FALLBACK } from '@/config/pricing'
+import { CreditPackageService } from '@/lib/services/credit-package-service'
 import { getAsaasEnvironment, getAsaasCheckoutUrl, getWebhookBaseUrl } from '@/lib/utils/environment'
 
 // URLs de callback para Asaas - usa domínio de produção
@@ -123,8 +124,8 @@ export async function createCreditPackageCheckout(
   billingType: 'PIX' | 'CREDIT_CARD' | 'DEBIT_CARD',
   userId: string
 ): Promise<{ checkoutId: string; checkoutUrl: string }> {
-  // Buscar pacote
-  const creditPackage = getCreditPackageById(packageId)
+  // Buscar pacote do banco de dados
+  const creditPackage = await CreditPackageService.getPackageById(packageId)
   if (!creditPackage) {
     throw new Error('Pacote de créditos não encontrado')
   }
@@ -155,7 +156,8 @@ export async function createCreditPackageCheckout(
   }
 
   // Preparar descrição do pacote
-  const packageDescription = `${creditPackage.name} - ${creditPackage.credits} créditos`
+  const totalCredits = creditPackage.creditAmount + creditPackage.bonusCredits
+  const packageDescription = `${creditPackage.name} - ${totalCredits} créditos`
 
   // Preparar dados do checkout
   const checkoutData: any = {
@@ -229,7 +231,7 @@ export async function createCreditPackageCheckout(
       asaasCheckoutId: checkout.id,
       // packageId: creditPackage.id, // Removido - foreign key constraint issue
       packageName: creditPackage.name,
-      creditAmount: creditPackage.credits,
+      creditAmount: creditPackage.creditAmount + creditPackage.bonusCredits,
       value: creditPackage.price,
       status: 'PENDING',
       validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year from now

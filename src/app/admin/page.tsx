@@ -14,6 +14,7 @@ export default async function AdminHomePage() {
         {[
           { title: 'Usuários', href: '/admin/users', desc: 'Gerencie usuários, planos e créditos' },
           { title: 'Planos de Assinatura', href: '/admin/subscription-plans', desc: 'Gerencie planos, preços, créditos e features' },
+          { title: 'Pacotes de Créditos', href: '/admin/credit-packages', desc: 'Gerencie pacotes de créditos avulsos' },
           { title: 'Pacotes de Fotos', href: '/admin/photo-packages', desc: 'CRUD de pacotes' },
           { title: 'Analytics', href: '/admin/analytics', desc: 'KPIs e gráficos' },
           { title: 'Retenção', href: '/admin/retention', desc: 'Crescimento e churn' },

@@ -222,8 +222,27 @@ export async function getPlanById(planId: 'STARTER' | 'PREMIUM' | 'GOLD'): Promi
 /**
  * Helper: Encontrar pacote de créditos por ID
  */
-export function getCreditPackageById(packageId: string): CreditPackage | undefined {
-  return CREDIT_PACKAGES.find(p => p.id === packageId)
+/**
+ * DEPRECATED: Use CreditPackageService.getPackageById() instead
+ * Mantido para compatibilidade, mas agora busca do banco
+ */
+export async function getCreditPackageById(packageId: string): Promise<CreditPackage | undefined> {
+  // Importar dinamicamente para evitar dependência circular
+  const { CreditPackageService } = await import('@/lib/services/credit-package-service')
+  const pkg = await CreditPackageService.getPackageById(packageId)
+  
+  if (!pkg) return undefined
+  
+  // Converter formato do CreditPackageService para CreditPackage do pricing
+  return {
+    id: pkg.id.toLowerCase(),
+    name: pkg.name,
+    credits: pkg.creditAmount + pkg.bonusCredits,
+    price: pkg.price,
+    photos: Math.floor((pkg.creditAmount + pkg.bonusCredits) / 10), // Estimativa
+    description: pkg.description || '',
+    popular: pkg.sortOrder === 2 // Assumir que o segundo pacote é popular
+  }
 }
 
 /**

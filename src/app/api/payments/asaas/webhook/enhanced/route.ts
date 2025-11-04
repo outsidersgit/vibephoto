@@ -460,33 +460,79 @@ async function handleCheckoutPaid(checkout: AsaasWebhookPayload['checkout']): Pr
         })
       }
 
-      // Verificar se Payment foi criado/atualizado
-      const payment = await prisma.payment.findFirst({
+      // CRÍTICO: Atualizar Payment para CONFIRMED
+      // Estratégia 1: Buscar por asaasCheckoutId (forma mais direta)
+      let payment = await prisma.payment.findFirst({
         where: {
           userId: user.id,
           asaasCheckoutId: checkout.id,
           type: 'SUBSCRIPTION'
-        }
+        },
+        orderBy: { createdAt: 'desc' }
       })
+
+      // Estratégia 2: Se não encontrou, buscar qualquer Payment PENDING do usuário para assinatura
+      if (!payment) {
+        console.log('⚠️ [WEBHOOK] Payment não encontrado por asaasCheckoutId, buscando Payment PENDING...')
+        payment = await prisma.payment.findFirst({
+          where: {
+            userId: user.id,
+            type: 'SUBSCRIPTION',
+            status: 'PENDING',
+            asaasCheckoutId: { not: null } // Payment do checkout tem asaasCheckoutId
+          },
+          orderBy: { createdAt: 'desc' }
+        })
+        
+        if (payment) {
+          console.log('✅ [WEBHOOK] Payment PENDING encontrado, atualizando asaasCheckoutId:', payment.id)
+          // Atualizar o asaasCheckoutId se não estava salvo corretamente
+          await prisma.payment.update({
+            where: { id: payment.id },
+            data: { asaasCheckoutId: checkout.id }
+          })
+        }
+      }
+
+      // Estratégia 3: Se ainda não encontrou, buscar pelo subscriptionId (se houver)
+      if (!payment && checkout.subscription && user.subscriptionId) {
+        console.log('⚠️ [WEBHOOK] Payment não encontrado, tentando buscar por subscriptionId...')
+        payment = await prisma.payment.findFirst({
+          where: {
+            userId: user.id,
+            type: 'SUBSCRIPTION',
+            subscriptionId: checkout.subscription
+          },
+          orderBy: { createdAt: 'desc' }
+        })
+      }
 
       if (payment) {
         // Atualizar Payment para CONFIRMED
+        console.log('🔄 [WEBHOOK] Atualizando Payment para CONFIRMED:', {
+          paymentId: payment.id,
+          currentStatus: payment.status,
+          checkoutId: checkout.id
+        })
+        
         await prisma.payment.update({
           where: { id: payment.id },
           data: {
             status: 'CONFIRMED',
             confirmedDate: new Date(),
+            asaasCheckoutId: checkout.id, // Garantir que está salvo corretamente
             ...(plan && { planType: plan }),
             ...(billingCycle && { billingCycle: billingCycle })
           }
         })
         console.log('✅ [WEBHOOK] Payment atualizado para CONFIRMED (CHECKOUT_PAID):', payment.id)
       } else {
-        // Criar novo Payment se não existir
+        // Criar novo Payment se não existir (fallback de segurança)
+        console.log('⚠️ [WEBHOOK] Payment não encontrado, criando novo registro...')
         // Buscar valor dos items
         const totalValue = checkout.items?.reduce((sum, item) => sum + (item.value || 0), 0) || 0
         
-        await prisma.payment.create({
+        const newPayment = await prisma.payment.create({
           data: {
             userId: user.id,
             asaasCheckoutId: checkout.id,
@@ -498,10 +544,11 @@ async function handleCheckoutPaid(checkout: AsaasWebhookPayload['checkout']): Pr
             dueDate: currentPeriodEnd || new Date(),
             confirmedDate: new Date(),
             planType: plan || undefined,
-            billingCycle: billingCycle || undefined
+            billingCycle: billingCycle || undefined,
+            ...(checkout.subscription && { subscriptionId: checkout.subscription })
           }
         })
-        console.log('✅ [WEBHOOK] Novo Payment criado (CHECKOUT_PAID)')
+        console.log('✅ [WEBHOOK] Novo Payment criado (CHECKOUT_PAID):', newPayment.id)
       }
 
       console.log('✅ [WEBHOOK] CHECKOUT_PAID processado com sucesso:', {
@@ -1641,26 +1688,108 @@ async function handleSubscriptionCancelled(subscription: AsaasWebhookPayload['su
     return { success: false, error: 'Missing subscription data', retryable: false }
   }
 
+  console.log('='.repeat(80))
+  console.log('🔔 [WEBHOOK] PROCESSANDO SUBSCRIPTION_CANCELLED')
+  console.log('📦 Dados da subscription recebida:', {
+    id: subscription.id,
+    customer: subscription.customer,
+    status: subscription.status
+  })
+  console.log('='.repeat(80))
+
   try {
+    // Buscar dados completos da subscription do Asaas para obter nextDueDate e endDate
+    let subscriptionData: any = null
+    try {
+      subscriptionData = await asaas.getSubscription(subscription.id)
+      console.log('✅ [WEBHOOK] Subscription data fetched:', {
+        subscriptionId: subscription.id,
+        status: subscriptionData.status,
+        nextDueDate: subscriptionData.nextDueDate,
+        endDate: subscriptionData.endDate
+      })
+    } catch (fetchError: any) {
+      console.warn('⚠️ [WEBHOOK] Could not fetch subscription details from Asaas:', fetchError.message)
+      // Continuar mesmo se não conseguir buscar, usar dados do webhook
+    }
+
     const user = await prisma.user.findUnique({
       where: { asaasCustomerId: subscription.customer },
-      select: { id: true }
+      select: { 
+        id: true,
+        subscriptionId: true,
+        subscriptionStatus: true
+      }
     })
 
     if (!user) {
+      console.error('❌ [WEBHOOK] User not found for subscription:', subscription.id, 'customer:', subscription.customer)
       return { success: false, error: 'User not found', retryable: false }
     }
 
+    // Verificar se a subscription pertence ao usuário
+    if (user.subscriptionId !== subscription.id) {
+      console.warn('⚠️ [WEBHOOK] Subscription ID mismatch:', {
+        userSubscriptionId: user.subscriptionId,
+        webhookSubscriptionId: subscription.id
+      })
+      // Continuar mesmo assim, pode ser uma atualização
+    }
+
+    const cancelDate = new Date()
+
+    // CRÍTICO: Determinar subscriptionEndsAt baseado em:
+    // 1. endDate da subscription (se disponível) - data real de término
+    // 2. nextDueDate da subscription (se disponível) - próxima cobrança que não acontecerá
+    // 3. Fallback: usar data atual + 30 dias se não encontrar nada
+    let subscriptionEndsAt: Date
+    
+    if (subscriptionData?.endDate) {
+      subscriptionEndsAt = new Date(subscriptionData.endDate)
+      console.log('✅ [WEBHOOK] Usando endDate da subscription:', subscriptionEndsAt.toISOString())
+    } else if (subscriptionData?.nextDueDate) {
+      subscriptionEndsAt = new Date(subscriptionData.nextDueDate)
+      console.log('✅ [WEBHOOK] Usando nextDueDate da subscription:', subscriptionEndsAt.toISOString())
+    } else {
+      // Fallback: usar data atual + 30 dias (último recurso)
+      console.warn('⚠️ [WEBHOOK] No endDate or nextDueDate found, using fallback (now + 30 days)')
+      subscriptionEndsAt = new Date(cancelDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+    }
+
+    // Atualizar usuário com dados completos
     await prisma.user.update({
       where: { id: user.id },
-      data: { subscriptionStatus: 'CANCELLED' }
+      data: {
+        subscriptionStatus: 'CANCELLED',
+        subscriptionCancelledAt: cancelDate,
+        subscriptionEndsAt: subscriptionEndsAt
+      }
     })
 
-    console.log('Subscription cancelled:', subscription.id)
+    console.log('✅ [WEBHOOK] Subscription cancelled:', {
+      subscriptionId: subscription.id,
+      userId: user.id,
+      cancelledAt: cancelDate.toISOString(),
+      endsAt: subscriptionEndsAt.toISOString()
+    })
+
+    // Broadcast atualização para frontend
+    await broadcastUserUpdate(
+      user.id,
+      {
+        subscriptionStatus: 'CANCELLED',
+        subscriptionEndsAt: subscriptionEndsAt.toISOString()
+      },
+      'SUBSCRIPTION_CANCELLED'
+    ).catch((error) => {
+      console.error('❌ [WEBHOOK] Erro ao broadcast user update:', error)
+      // Não falhar se broadcast falhar
+    })
+
     return { success: true }
 
   } catch (error: any) {
-    console.error('Error handling subscription cancellation:', error)
+    console.error('❌ [WEBHOOK] Error handling subscription cancellation:', error)
     return { success: false, error: error.message, retryable: true }
   }
 }

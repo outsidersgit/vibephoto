@@ -41,8 +41,8 @@ export interface CreditTransaction {
   createdAt: Date
 }
 
-// Pacotes de créditos disponíveis (hardcoded por enquanto, depois vem do banco)
-const CREDIT_PACKAGES: CreditPackage[] = [
+// Pacotes de créditos padrão (usado como fallback e para seed inicial)
+const DEFAULT_CREDIT_PACKAGES: CreditPackage[] = [
   {
     id: 'ESSENTIAL',
     name: 'Pacote Essencial',
@@ -128,23 +128,110 @@ export class CreditPackageService {
   /**
    * Calcula o total de créditos incluindo bônus
    */
-  static calculateTotalCredits(packageId: string): number {
-    const pkg = this.getPackageById(packageId)
+  static async calculateTotalCredits(packageId: string): Promise<number> {
+    const pkg = await this.getPackageById(packageId)
     return pkg ? pkg.creditAmount + pkg.bonusCredits : 0
   }
 
   /**
-   * Retorna todos os pacotes de créditos disponíveis
+   * Busca pacotes disponíveis do banco de dados
+   * Se não houver pacotes no banco, retorna os padrão (fallback)
    */
-  static getAvailablePackages(): CreditPackage[] {
-    return CREDIT_PACKAGES.filter(pkg => pkg.isActive).sort((a, b) => a.sortOrder - b.sortOrder)
+  static async getAvailablePackages(): Promise<CreditPackage[]> {
+    try {
+      const dbPackages = await prisma.creditPackage.findMany({
+        where: { isActive: true },
+        orderBy: { sortOrder: 'asc' }
+      })
+
+      if (dbPackages && dbPackages.length > 0) {
+        return dbPackages.map(pkg => ({
+          id: pkg.id,
+          name: pkg.name,
+          description: pkg.description || undefined,
+          creditAmount: pkg.creditAmount,
+          price: pkg.price,
+          bonusCredits: pkg.bonusCredits,
+          validityMonths: pkg.validityMonths,
+          isActive: pkg.isActive,
+          sortOrder: pkg.sortOrder
+        }))
+      }
+
+      // Fallback para pacotes padrão se banco estiver vazio
+      console.warn('⚠️ [CreditPackageService] Nenhum pacote encontrado no banco, usando fallback')
+      return DEFAULT_CREDIT_PACKAGES.filter(pkg => pkg.isActive).sort((a, b) => a.sortOrder - b.sortOrder)
+    } catch (error) {
+      console.error('❌ [CreditPackageService] Erro ao buscar pacotes do banco:', error)
+      // Fallback em caso de erro
+      return DEFAULT_CREDIT_PACKAGES.filter(pkg => pkg.isActive).sort((a, b) => a.sortOrder - b.sortOrder)
+    }
   }
   
   /**
-   * Retorna um pacote específico por ID
+   * Retorna um pacote específico por ID (do banco de dados)
    */
-  static getPackageById(id: string): CreditPackage | null {
-    return CREDIT_PACKAGES.find(pkg => pkg.id === id && pkg.isActive) || null
+  static async getPackageById(id: string): Promise<CreditPackage | null> {
+    try {
+      const pkg = await prisma.creditPackage.findUnique({
+        where: { id, isActive: true }
+      })
+
+      if (pkg) {
+        return {
+          id: pkg.id,
+          name: pkg.name,
+          description: pkg.description || undefined,
+          creditAmount: pkg.creditAmount,
+          price: pkg.price,
+          bonusCredits: pkg.bonusCredits,
+          validityMonths: pkg.validityMonths,
+          isActive: pkg.isActive,
+          sortOrder: pkg.sortOrder
+        }
+      }
+
+      // Fallback para pacotes padrão
+      return DEFAULT_CREDIT_PACKAGES.find(pkg => pkg.id === id && pkg.isActive) || null
+    } catch (error) {
+      console.error('❌ [CreditPackageService] Erro ao buscar pacote do banco:', error)
+      // Fallback em caso de erro
+      return DEFAULT_CREDIT_PACKAGES.find(pkg => pkg.id === id && pkg.isActive) || null
+    }
+  }
+
+  /**
+   * Inicializa pacotes padrão no banco de dados se não existirem
+   */
+  static async initializeDefaultPackages(): Promise<void> {
+    try {
+      const existingPackages = await prisma.creditPackage.findMany()
+      
+      if (existingPackages.length === 0) {
+        console.log('📦 [CreditPackageService] Inicializando pacotes padrão no banco...')
+        
+        await prisma.creditPackage.createMany({
+          data: DEFAULT_CREDIT_PACKAGES.map(pkg => ({
+            id: pkg.id,
+            name: pkg.name,
+            description: pkg.description,
+            creditAmount: pkg.creditAmount,
+            price: pkg.price,
+            bonusCredits: pkg.bonusCredits,
+            validityMonths: pkg.validityMonths,
+            isActive: pkg.isActive,
+            sortOrder: pkg.sortOrder
+          }))
+        })
+        
+        console.log('✅ [CreditPackageService] Pacotes padrão criados no banco')
+      } else {
+        console.log(`ℹ️ [CreditPackageService] ${existingPackages.length} pacotes já existem no banco`)
+      }
+    } catch (error: any) {
+      console.error('❌ [CreditPackageService] Erro ao inicializar pacotes:', error)
+      // Não lançar erro, apenas logar
+    }
   }
   
   /**

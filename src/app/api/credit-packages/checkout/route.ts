@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     // Import credit package service
     const { CreditPackageService } = await import('@/lib/services/credit-package-service')
 
-    const creditPackage = CreditPackageService.getPackageById(packageId || 'ESSENTIAL')
+    const creditPackage = await CreditPackageService.getPackageById(packageId || 'ESSENTIAL')
     if (!creditPackage) {
       return NextResponse.json({ error: 'Package not found' }, { status: 404 })
     }
