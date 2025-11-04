@@ -10,8 +10,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, AlertCircle, ArrowLeft, Check } from 'lucide-react'
-import { CREDIT_PACKAGES, type CreditPackage } from '@/config/pricing'
 import { CheckoutModal } from '@/components/checkout/checkout-modal'
+
+interface CreditPackage {
+  id: string
+  name: string
+  description?: string
+  creditAmount: number
+  bonusCredits: number
+  price: number
+  validityMonths: number
+  isActive: boolean
+  sortOrder: number
+}
 
 interface PackageSelectorModalProps {
   isOpen: boolean
@@ -35,14 +46,36 @@ export function PackageSelectorModal({
   const [checkoutUrl, setCheckoutUrl] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [packages, setPackages] = useState<CreditPackage[]>([])
+  const [loadingPackages, setLoadingPackages] = useState(true)
 
-  // Pré-selecionar o pacote "Popular" ao abrir o modal
+  // Buscar pacotes da API quando o modal abrir
   useEffect(() => {
     if (isOpen) {
-      const popularPackage = CREDIT_PACKAGES.find(pkg => pkg.popular)
-      if (popularPackage) {
-        setSelectedPackageId(popularPackage.id)
+      async function fetchPackages() {
+        try {
+          setLoadingPackages(true)
+          const response = await fetch('/api/credit-packages')
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success && data.packages) {
+              setPackages(data.packages)
+              // Pré-selecionar o primeiro pacote ou o mais popular
+              if (data.packages.length > 0 && !selectedPackageId) {
+                const popularPackage = data.packages.find((pkg: CreditPackage) => pkg.sortOrder === 1 || pkg.sortOrder === 2) || data.packages[0]
+                if (popularPackage) {
+                  setSelectedPackageId(popularPackage.id)
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching packages:', err)
+        } finally {
+          setLoadingPackages(false)
+        }
       }
+      fetchPackages()
     }
   }, [isOpen])
 
@@ -118,7 +151,7 @@ export function PackageSelectorModal({
     }
   }
 
-  const selectedPackage = CREDIT_PACKAGES.find(pkg => pkg.id === selectedPackageId)
+  const selectedPackage = packages.find(pkg => pkg.id === selectedPackageId)
 
   return (
     <>
@@ -136,9 +169,15 @@ export function PackageSelectorModal({
           {/* Step 1: Select Package */}
           {step === 'select-package' && (
             <div className="space-y-6 mt-4">
-                {/* Grid de Pacotes */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {CREDIT_PACKAGES.map((pkg) => {
+                {loadingPackages ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+                  </div>
+                ) : (
+                  <>
+                    {/* Grid de Pacotes */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {packages.map((pkg) => {
                     const isSelected = selectedPackageId === pkg.id
                     return (
                       <Card
@@ -176,7 +215,10 @@ export function PackageSelectorModal({
                                 <Check className="w-2.5 h-2.5 text-gray-600" />
                               </div>
                               <span className="text-gray-700" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                                {pkg.credits} créditos
+                                {pkg.creditAmount + pkg.bonusCredits} créditos
+                                {pkg.bonusCredits > 0 && (
+                                  <span className="text-green-600 ml-1">(+{pkg.bonusCredits} bônus)</span>
+                                )}
                               </span>
                             </li>
                             <li className="flex items-center text-xs">
@@ -184,7 +226,7 @@ export function PackageSelectorModal({
                                 <Check className="w-2.5 h-2.5 text-gray-600" />
                               </div>
                               <span className="text-gray-700" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                                {pkg.photos} fotos
+                                Válido por {pkg.validityMonths} {pkg.validityMonths === 1 ? 'mês' : 'meses'}
                               </span>
                             </li>
                           </ul>
@@ -192,6 +234,8 @@ export function PackageSelectorModal({
                       </Card>
                     )
                   })}
+                    </>
+                  )}
                 </div>
             </div>
           )}

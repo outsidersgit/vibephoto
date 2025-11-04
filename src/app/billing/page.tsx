@@ -27,13 +27,23 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { CREDIT_PACKAGES, PLANS, type Plan, type CreditPackage } from '@/config/pricing'
+import { PLANS, type Plan } from '@/config/pricing'
 import { CheckoutModal } from '@/components/checkout/checkout-modal'
 import { UpdateCardModal } from '@/components/payments/update-card-modal'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 
-const creditPackages: CreditPackage[] = CREDIT_PACKAGES
+interface CreditPackage {
+  id: string
+  name: string
+  description?: string
+  creditAmount: number
+  bonusCredits: number
+  price: number
+  validityMonths: number
+  isActive: boolean
+  sortOrder: number
+}
 
 function BillingPageContent() {
   // CRITICAL: Todos os hooks DEVEM ser chamados ANTES de qualquer early return
@@ -49,6 +59,8 @@ function BillingPageContent() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [loadingPlans, setLoadingPlans] = useState(true)
   const [plansError, setPlansError] = useState<string | null>(null)
+  const [creditPackages, setCreditPackages] = useState<CreditPackage[]>([])
+  const [loadingCreditPackages, setLoadingCreditPackages] = useState(true)
 
   // Buscar planos do banco de dados (com fallback para planos hardcoded)
   useEffect(() => {
@@ -87,6 +99,28 @@ function BillingPageContent() {
     
     fetchPlans()
   }, [])
+
+  // Buscar pacotes de créditos da API
+  useEffect(() => {
+    async function fetchCreditPackages() {
+      try {
+        const response = await fetch('/api/credit-packages')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.packages) {
+            setCreditPackages(data.packages)
+          }
+        }
+      } catch (error) {
+        console.error('❌ [BILLING] Erro ao buscar pacotes de créditos:', error)
+      } finally {
+        setLoadingCreditPackages(false)
+      }
+    }
+    
+    fetchCreditPackages()
+  }, [])
+
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [showSubscriptionDetails, setShowSubscriptionDetails] = useState(false)
@@ -116,13 +150,13 @@ function BillingPageContent() {
 
   // Pré-selecionar pacote popular quando entrar na aba credits
   useEffect(() => {
-    if (activeTab === 'credits' && !selectedPackageId) {
-      const popularPackage = creditPackages.find(pkg => pkg.popular)
+    if (activeTab === 'credits' && !selectedPackageId && creditPackages.length > 0) {
+      const popularPackage = creditPackages.find(pkg => pkg.sortOrder === 1 || pkg.sortOrder === 2) || creditPackages[0]
       if (popularPackage) {
         setSelectedPackageId(popularPackage.id)
       }
     }
-  }, [activeTab, selectedPackageId])
+  }, [activeTab, selectedPackageId, creditPackages])
 
   // Pré-selecionar plano popular quando entrar na aba plans
   useEffect(() => {
@@ -759,7 +793,10 @@ function BillingPageContent() {
                           <Check className="w-2.5 h-2.5 text-gray-600" />
                         </div>
                         <span className="text-gray-700" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                          {pkg.credits} créditos
+                          {pkg.creditAmount + pkg.bonusCredits} créditos
+                          {pkg.bonusCredits > 0 && (
+                            <span className="text-green-600 ml-1">(+{pkg.bonusCredits} bônus)</span>
+                          )}
                         </span>
                       </li>
                       <li className="flex items-center text-xs">
@@ -767,7 +804,7 @@ function BillingPageContent() {
                           <Check className="w-2.5 h-2.5 text-gray-600" />
                         </div>
                         <span className="text-gray-700" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                          {pkg.photos} fotos
+                          Válido por {pkg.validityMonths} {pkg.validityMonths === 1 ? 'mês' : 'meses'}
                         </span>
                       </li>
                     </ul>

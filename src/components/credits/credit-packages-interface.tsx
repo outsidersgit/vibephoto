@@ -21,7 +21,6 @@ import {
 } from 'lucide-react'
 import { CreditBalance } from './credit-balance'
 import { CheckoutModal } from '@/components/checkout/checkout-modal'
-import { CREDIT_PACKAGES } from '@/config/pricing'
 
 interface CreditPackage {
   id: string
@@ -107,13 +106,15 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
     }
   }, [session?.user, user?.id])
 
-  // Pré-selecionar o pacote "Popular" ao carregar
+  // Pré-selecionar o pacote "Popular" ao carregar (depois que os pacotes forem carregados)
   useEffect(() => {
-    const popularPackage = CREDIT_PACKAGES.find(pkg => pkg.popular)
-    if (popularPackage) {
-      setSelectedPackageId(popularPackage.id)
+    if (packages.length > 0 && !selectedPackageId) {
+      const popularPackage = packages.find(pkg => pkg.sortOrder === 1 || pkg.sortOrder === 2) || packages[0]
+      if (popularPackage) {
+        setSelectedPackageId(popularPackage.id)
+      }
     }
-  }, [])
+  }, [packages, selectedPackageId])
 
   useEffect(() => {
     // CRITICAL: Verificar se há sessão antes de fazer fetch
@@ -217,10 +218,10 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
     setCheckoutUrl('')
   }
 
-  const selectedPackage = CREDIT_PACKAGES.find(pkg => pkg.id === selectedPackageId)
+  const selectedPackage = packages.find(pkg => pkg.id === selectedPackageId)
 
-  // Use official credit packages from pricing config
-  const creditPackages = CREDIT_PACKAGES
+  // Use packages from API (database)
+  const creditPackages = packages
 
   return (
     <div className="space-y-8" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
