@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useSession } from 'next-auth/react'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ExternalLink, CheckCircle, Clock, AlertCircle } from 'lucide-react'
@@ -94,7 +96,7 @@ export function CheckoutModal({
 
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [onSuccess, onClose, checkoutWindow])
+  }, [onSuccess, onClose, checkoutWindow, queryClient, updateSession])
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
