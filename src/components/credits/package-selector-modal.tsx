@@ -237,7 +237,6 @@ export function PackageSelectorModal({
                     </div>
                   </>
                 )}
-                </div>
             </div>
           )}
         </DialogContent>
