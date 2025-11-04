@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { signIn, getSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowRight, Github, Mail, Sparkles } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { ArrowRight, Github, Mail, Sparkles, CheckCircle } from 'lucide-react'
 
 export default function SignInPage() {
   const [email, setEmail] = useState('')
@@ -15,6 +16,15 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false)
+
+  useEffect(() => {
+    // Verificar se veio da página de sucesso do checkout
+    if (searchParams.get('paymentSuccess') === 'true') {
+      setShowPaymentSuccess(true)
+    }
+  }, [searchParams])
 
   const handleCredentialsSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,11 +54,20 @@ export default function SignInPage() {
           return
         }
         
+        // Verificar callbackUrl se fornecido
+        const callbackUrl = searchParams.get('callbackUrl')
+        
         const subscriptionStatus = user?.subscriptionStatus
         if (subscriptionStatus !== 'ACTIVE') {
-          window.location.href = '/pricing'
+          // Se veio do checkout success, redirecionar para dashboard mesmo sem ACTIVE
+          // O webhook pode ainda estar processando
+          if (showPaymentSuccess || callbackUrl) {
+            window.location.href = callbackUrl || '/dashboard'
+          } else {
+            window.location.href = '/pricing'
+          }
         } else {
-          window.location.href = '/'
+          window.location.href = callbackUrl || '/'
         }
       }
     } catch (error) {
@@ -76,6 +95,15 @@ export default function SignInPage() {
             <CardTitle style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>Entrar</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {showPaymentSuccess && (
+              <Alert variant="success">
+                <CheckCircle className="h-4 w-4" />
+                <AlertTitle className="font-semibold">Pagamento Confirmado!</AlertTitle>
+                <AlertDescription>
+                  Seu pagamento foi processado com sucesso. Faça login para acessar sua conta ativada.
+                </AlertDescription>
+              </Alert>
+            )}
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
                 {error}

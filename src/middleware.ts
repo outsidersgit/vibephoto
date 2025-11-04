@@ -15,7 +15,8 @@ export async function middleware(request: NextRequest) {
     pathname === '/favicon.ico' ||
     pathname === '/' ||
     pathname.startsWith('/auth') ||
-    pathname.startsWith('/legal')
+    pathname.startsWith('/legal') ||
+    pathname.startsWith('/checkout/subscription-success')
   ) {
     return NextResponse.next()
   }
