@@ -178,64 +178,65 @@ export function PackageSelectorModal({
                     {/* Grid de Pacotes */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                       {packages.map((pkg) => {
-                    const isSelected = selectedPackageId === pkg.id
-                    return (
-                      <Card
-                        key={pkg.id}
-                        onClick={() => handlePackageSelect(pkg.id)}
-                        className={`relative transition-all hover:shadow-lg cursor-pointer border-gray-300 bg-gray-200 ${
-                          isSelected ? 'ring-2 ring-gray-900 shadow-md' : ''
-                        }`}
-                      >
-                        {pkg.popular && (
-                          <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                            Popular
-                          </Badge>
-                        )}
+                        const isSelected = selectedPackageId === pkg.id
+                        return (
+                          <Card
+                            key={pkg.id}
+                            onClick={() => handlePackageSelect(pkg.id)}
+                            className={`relative transition-all hover:shadow-lg cursor-pointer border-gray-300 bg-gray-200 ${
+                              isSelected ? 'ring-2 ring-gray-900 shadow-md' : ''
+                            }`}
+                          >
+                            {pkg.popular && (
+                              <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                                Popular
+                              </Badge>
+                            )}
 
-                        <CardHeader className="text-left pb-4">
-                          <CardTitle className="text-2xl font-bold text-gray-900 mb-4" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                            {pkg.name}
-                          </CardTitle>
-                          <div className="mb-4">
-                            <div className="text-xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                              R$ {pkg.price}
-                              <span className="text-sm font-normal text-gray-500"> único</span>
-                            </div>
-                            <div className="text-xs text-gray-600 font-medium">
-                              Válido por 1 ano
-                            </div>
-                          </div>
-                        </CardHeader>
+                            <CardHeader className="text-left pb-4">
+                              <CardTitle className="text-2xl font-bold text-gray-900 mb-4" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                                {pkg.name}
+                              </CardTitle>
+                              <div className="mb-4">
+                                <div className="text-xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                                  R$ {pkg.price}
+                                  <span className="text-sm font-normal text-gray-500"> único</span>
+                                </div>
+                                <div className="text-xs text-gray-600 font-medium">
+                                  Válido por 1 ano
+                                </div>
+                              </div>
+                            </CardHeader>
 
-                        <CardContent>
-                          <ul className="space-y-2 mb-6">
-                            <li className="flex items-center text-xs">
-                              <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center mr-2">
-                                <Check className="w-2.5 h-2.5 text-gray-600" />
-                              </div>
-                              <span className="text-gray-700" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                                {pkg.creditAmount + pkg.bonusCredits} créditos
-                                {pkg.bonusCredits > 0 && (
-                                  <span className="text-green-600 ml-1">(+{pkg.bonusCredits} bônus)</span>
-                                )}
-                              </span>
-                            </li>
-                            <li className="flex items-center text-xs">
-                              <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center mr-2">
-                                <Check className="w-2.5 h-2.5 text-gray-600" />
-                              </div>
-                              <span className="text-gray-700" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                                Válido por {pkg.validityMonths} {pkg.validityMonths === 1 ? 'mês' : 'meses'}
-                              </span>
-                            </li>
-                          </ul>
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
-                    </>
-                  )}
+                            <CardContent>
+                              <ul className="space-y-2 mb-6">
+                                <li className="flex items-center text-xs">
+                                  <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center mr-2">
+                                    <Check className="w-2.5 h-2.5 text-gray-600" />
+                                  </div>
+                                  <span className="text-gray-700" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                                    {pkg.creditAmount + pkg.bonusCredits} créditos
+                                    {pkg.bonusCredits > 0 && (
+                                      <span className="text-green-600 ml-1">(+{pkg.bonusCredits} bônus)</span>
+                                    )}
+                                  </span>
+                                </li>
+                                <li className="flex items-center text-xs">
+                                  <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center mr-2">
+                                    <Check className="w-2.5 h-2.5 text-gray-600" />
+                                  </div>
+                                  <span className="text-gray-700" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                                    Válido por {pkg.validityMonths} {pkg.validityMonths === 1 ? 'mês' : 'meses'}
+                                  </span>
+                                </li>
+                              </ul>
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
+                    </div>
+                  </>
+                )}
                 </div>
             </div>
           )}
