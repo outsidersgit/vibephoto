@@ -272,9 +272,6 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
                   R$ {pkg.price}
                   <span className="text-sm font-normal text-gray-500"> único</span>
                 </div>
-                <div className="text-xs text-gray-600 font-medium">
-                  Válido por {pkg.validityMonths} {pkg.validityMonths === 1 ? 'mês' : 'meses'}
-                </div>
               </div>
             </CardHeader>
 

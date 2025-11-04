@@ -202,9 +202,6 @@ export function PackageSelectorModal({
                                   R$ {pkg.price}
                                   <span className="text-sm font-normal text-gray-500"> único</span>
                                 </div>
-                                <div className="text-xs text-gray-600 font-medium">
-                                  Válido por 1 ano
-                                </div>
                               </div>
                             </CardHeader>
 
