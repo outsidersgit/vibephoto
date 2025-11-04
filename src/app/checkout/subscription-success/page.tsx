@@ -31,22 +31,31 @@ function SubscriptionSuccessContent() {
     // Limpar timeout se a verificação completou
     clearTimeout(timeoutId)
 
+    // Verificar se deve redirecionar (apenas se usuário estiver autenticado E tiver plano ativo)
     if (status === 'authenticated' && session?.user) {
-      // Se já está autenticado, redirecionar para dashboard
-      // O webhook pode ainda não ter processado, mas o usuário pode acessar
-      console.log('✅ [SubscriptionSuccess] Usuário autenticado - redirecionando para dashboard')
-      router.push('/dashboard')
-      return
+      const user = session.user as any
+      const subscriptionStatus = user?.subscriptionStatus
+      
+      // Redirecionar apenas se tiver plano ativo
+      if (subscriptionStatus === 'ACTIVE') {
+        console.log('✅ [SubscriptionSuccess] Usuário autenticado com plano ativo - redirecionando para dashboard')
+        router.push('/dashboard')
+        return
+      }
+      
+      // Se está autenticado mas não tem plano ativo, mostrar página de sucesso
+      console.log('ℹ️ [SubscriptionSuccess] Usuário autenticado mas sem plano ativo - mostrando página de sucesso')
+    } else {
+      // Se não está autenticado, mostrar página de sucesso
+      console.log('ℹ️ [SubscriptionSuccess] Usuário não autenticado - mostrando página de sucesso')
     }
 
-    // Se não está autenticado, mostrar página de sucesso
-    console.log('ℹ️ [SubscriptionSuccess] Usuário não autenticado - mostrando página de sucesso')
     setIsChecking(false)
 
     return () => {
       clearTimeout(timeoutId)
     }
-  }, [status, session, router])
+  }, [status, session, router, searchParams])
 
   const handleLogin = () => {
     const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
