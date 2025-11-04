@@ -24,9 +24,11 @@ model User {
   billingCycle            String?   // MONTHLY, YEARLY
   asaasCustomerId         String?   @unique // Asaas customer ID
   subscriptionId          String?   @unique // Asaas subscription ID
+  asaasCreditCardToken   String?   // Token do cartão de crédito do Asaas (fallback)
   subscriptionStatus      String?   // ACTIVE, EXPIRED, CANCELLED, OVERDUE - controls access
   subscriptionEndsAt      DateTime?
   subscriptionCancelledAt DateTime?
+  nextDueDate            DateTime? // Data da próxima renovação automática (do webhook SUBSCRIPTION_CREATED)
   subscriptionStartedAt   DateTime? // Data de início da assinatura (para calcular renovações mensais)
   lastCreditRenewalAt     DateTime? // Última vez que os créditos foram renovados (para planos mensais)
   creditsExpiresAt        DateTime? // Data de expiração dos créditos (para planos anuais - 1 ano após ativação)

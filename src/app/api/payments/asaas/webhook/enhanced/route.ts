@@ -16,11 +16,14 @@ interface AsaasWebhookPayload {
     billingType: string
     subscription?: string
     externalReference?: string
+    creditCardToken?: string
   }
   subscription?: {
     id: string
     customer: string
     status: string
+    nextDueDate?: string
+    creditCardToken?: string
   }
   checkout?: {
     id: string
@@ -221,6 +224,9 @@ async function processWebhookEvent(payload: AsaasWebhookPayload): Promise<{
       case 'SUBSCRIPTION_EXPIRED':
         return await handleSubscriptionExpired(payload.subscription!)
         
+      case 'SUBSCRIPTION_CREATED':
+        return await handleSubscriptionCreated(payload.subscription!)
+        
       case 'SUBSCRIPTION_CANCELLED':
         return await handleSubscriptionCancelled(payload.subscription!)
         
@@ -245,6 +251,71 @@ async function processWebhookEvent(payload: AsaasWebhookPayload): Promise<{
       error: error.message, 
       retryable: isRetryable 
     }
+  }
+}
+
+/**
+ * Helper function para salvar creditCardToken em User e PaymentMethod
+ */
+async function saveCreditCardToken(
+  userId: string,
+  token: string,
+  isDefault: boolean = true
+): Promise<void> {
+  try {
+    // 1. Salvar no User (fallback)
+    await prisma.user.update({
+      where: { id: userId },
+      data: { asaasCreditCardToken: token }
+    })
+    console.log('✅ [WEBHOOK] Token salvo em User.asaasCreditCardToken:', userId)
+
+    // 2. Criar ou atualizar PaymentMethod
+    const existingPaymentMethod = await prisma.paymentMethod.findFirst({
+      where: {
+        userId,
+        asaasTokenId: token
+      }
+    })
+
+    if (existingPaymentMethod) {
+      // Atualizar existente
+      await prisma.paymentMethod.update({
+        where: { id: existingPaymentMethod.id },
+        data: {
+          isActive: true,
+          isDefault: isDefault
+        }
+      })
+      console.log('✅ [WEBHOOK] PaymentMethod atualizado com token:', existingPaymentMethod.id)
+    } else {
+      // Criar novo
+      // Se isDefault é true, desativar outros métodos default
+      if (isDefault) {
+        await prisma.paymentMethod.updateMany({
+          where: {
+            userId,
+            isDefault: true
+          },
+          data: {
+            isDefault: false
+          }
+        })
+      }
+
+      await prisma.paymentMethod.create({
+        data: {
+          userId,
+          asaasTokenId: token,
+          isActive: true,
+          isDefault: isDefault
+        }
+      })
+      console.log('✅ [WEBHOOK] Novo PaymentMethod criado com token para usuário:', userId)
+    }
+  } catch (error: any) {
+    console.error('❌ [WEBHOOK] Erro ao salvar creditCardToken:', error)
+    // Não lançar erro, apenas logar (não crítico)
   }
 }
 
@@ -624,6 +695,11 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
       currentPlan: user.plan,
       subscriptionId: user.subscriptionId
     })
+
+    // Salvar creditCardToken se presente
+    if (payment.creditCardToken) {
+      await saveCreditCardToken(user.id, payment.creditCardToken, true)
+    }
 
     // Update user subscription status if it's a subscription payment
     if (payment.subscription) {
@@ -1718,7 +1794,8 @@ async function handleSubscriptionCancelled(subscription: AsaasWebhookPayload['su
       select: { 
         id: true,
         subscriptionId: true,
-        subscriptionStatus: true
+        subscriptionStatus: true,
+        nextDueDate: true // Buscar nextDueDate salvo
       }
     })
 
@@ -1739,20 +1816,25 @@ async function handleSubscriptionCancelled(subscription: AsaasWebhookPayload['su
     const cancelDate = new Date()
 
     // CRÍTICO: Determinar subscriptionEndsAt baseado em:
-    // 1. endDate da subscription (se disponível) - data real de término
-    // 2. nextDueDate da subscription (se disponível) - próxima cobrança que não acontecerá
-    // 3. Fallback: usar data atual + 30 dias se não encontrar nada
+    // PRIORIDADE 1: nextDueDate salvo na tabela users (do webhook SUBSCRIPTION_CREATED)
+    // PRIORIDADE 2: endDate da subscription do Asaas (se disponível)
+    // PRIORIDADE 3: nextDueDate da subscription do Asaas (se disponível)
+    // FALLBACK: usar data atual + 30 dias se não encontrar nada
     let subscriptionEndsAt: Date
     
-    if (subscriptionData?.endDate) {
+    if (user.nextDueDate) {
+      // Usar nextDueDate salvo do webhook SUBSCRIPTION_CREATED (correto)
+      subscriptionEndsAt = user.nextDueDate
+      console.log('✅ [WEBHOOK] Usando nextDueDate salvo na tabela users (do SUBSCRIPTION_CREATED):', subscriptionEndsAt.toISOString())
+    } else if (subscriptionData?.endDate) {
       subscriptionEndsAt = new Date(subscriptionData.endDate)
-      console.log('✅ [WEBHOOK] Usando endDate da subscription:', subscriptionEndsAt.toISOString())
+      console.log('⚠️ [WEBHOOK] nextDueDate não encontrado na tabela, usando endDate da subscription:', subscriptionEndsAt.toISOString())
     } else if (subscriptionData?.nextDueDate) {
       subscriptionEndsAt = new Date(subscriptionData.nextDueDate)
-      console.log('✅ [WEBHOOK] Usando nextDueDate da subscription:', subscriptionEndsAt.toISOString())
+      console.log('⚠️ [WEBHOOK] nextDueDate não encontrado na tabela, usando nextDueDate da API:', subscriptionEndsAt.toISOString())
     } else {
       // Fallback: usar data atual + 30 dias (último recurso)
-      console.warn('⚠️ [WEBHOOK] No endDate or nextDueDate found, using fallback (now + 30 days)')
+      console.warn('⚠️ [WEBHOOK] Nenhum nextDueDate encontrado, usando fallback (now + 30 days)')
       subscriptionEndsAt = new Date(cancelDate.getTime() + 30 * 24 * 60 * 60 * 1000)
     }
 
@@ -1790,6 +1872,108 @@ async function handleSubscriptionCancelled(subscription: AsaasWebhookPayload['su
 
   } catch (error: any) {
     console.error('❌ [WEBHOOK] Error handling subscription cancellation:', error)
+    return { success: false, error: error.message, retryable: true }
+  }
+}
+
+async function handleSubscriptionCreated(subscription: AsaasWebhookPayload['subscription']): Promise<{
+  success: boolean
+  error?: string
+  retryable?: boolean
+}> {
+  if (!subscription) {
+    return { success: false, error: 'Missing subscription data', retryable: false }
+  }
+
+  console.log('='.repeat(80))
+  console.log('🔔 [WEBHOOK] PROCESSANDO SUBSCRIPTION_CREATED')
+  console.log('📦 Dados da subscription recebida:', {
+    id: subscription.id,
+    customer: subscription.customer,
+    status: subscription.status,
+    nextDueDate: subscription.nextDueDate,
+    creditCardToken: subscription.creditCardToken ? '***' : undefined
+  })
+  console.log('='.repeat(80))
+
+  try {
+    // Buscar dados completos da subscription via API do Asaas
+    let subscriptionData: any = null
+    try {
+      subscriptionData = await asaas.getSubscription(subscription.id)
+      console.log('✅ [WEBHOOK] Subscription data fetched from Asaas:', {
+        subscriptionId: subscription.id,
+        status: subscriptionData.status,
+        nextDueDate: subscriptionData.nextDueDate,
+        cycle: subscriptionData.cycle
+      })
+    } catch (fetchError: any) {
+      console.warn('⚠️ [WEBHOOK] Could not fetch subscription details from Asaas:', fetchError.message)
+      // Continuar mesmo se não conseguir buscar
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { asaasCustomerId: subscription.customer },
+      select: { 
+        id: true,
+        subscriptionId: true,
+        email: true,
+        name: true
+      }
+    })
+
+    if (!user) {
+      console.error('❌ [WEBHOOK] User not found for subscription:', subscription.id, 'customer:', subscription.customer)
+      return { success: false, error: 'User not found', retryable: false }
+    }
+
+    // Determinar nextDueDate
+    // PRIORIDADE 1: Do webhook (subscription.nextDueDate) - este é o correto (data da próxima renovação)
+    // PRIORIDADE 2: Da API do Asaas (subscriptionData.nextDueDate)
+    let nextDueDate: Date | null = null
+    
+    if (subscription.nextDueDate) {
+      nextDueDate = new Date(subscription.nextDueDate)
+      console.log('✅ [WEBHOOK] nextDueDate do webhook (CORRETO - próxima renovação):', nextDueDate.toISOString())
+    } else if (subscriptionData?.nextDueDate) {
+      nextDueDate = new Date(subscriptionData.nextDueDate)
+      console.log('✅ [WEBHOOK] nextDueDate da API do Asaas:', nextDueDate.toISOString())
+    } else {
+      console.warn('⚠️ [WEBHOOK] nextDueDate não encontrado no webhook nem na API')
+    }
+
+    // Preparar dados de atualização
+    const updateData: any = {
+      subscriptionId: subscription.id
+    }
+
+    if (nextDueDate) {
+      updateData.nextDueDate = nextDueDate
+    }
+
+    // Atualizar usuário
+    await prisma.user.update({
+      where: { id: user.id },
+      data: updateData
+    })
+
+    console.log('✅ [WEBHOOK] Subscription ID e nextDueDate salvos:', {
+      userId: user.id,
+      subscriptionId: subscription.id,
+      nextDueDate: nextDueDate?.toISOString()
+    })
+
+    // Salvar creditCardToken se presente
+    const tokenToSave = subscription.creditCardToken || subscriptionData?.creditCardToken
+    if (tokenToSave) {
+      await saveCreditCardToken(user.id, tokenToSave, true)
+      console.log('✅ [WEBHOOK] creditCardToken salvo do webhook SUBSCRIPTION_CREATED')
+    }
+
+    return { success: true }
+
+  } catch (error: any) {
+    console.error('❌ [WEBHOOK] Error handling subscription created:', error)
     return { success: false, error: error.message, retryable: true }
   }
 }

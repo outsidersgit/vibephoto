@@ -61,7 +61,13 @@ export default async function AdminSubscriptionPlansPage({ searchParams }: Searc
     WHERE "deletedAt" IS NULL
       ${status === 'active' ? Prisma.sql`AND "isActive" = true` : Prisma.empty}
       ${status === 'inactive' ? Prisma.sql`AND "isActive" = false` : Prisma.empty}
-    ORDER BY popular DESC, "monthlyPrice" ASC
+    ORDER BY 
+      CASE "planId"
+        WHEN 'STARTER' THEN 1
+        WHEN 'PREMIUM' THEN 2
+        WHEN 'GOLD' THEN 3
+        ELSE 4
+      END ASC
   `
 
   // Converter features para array se necessário (corrigir dados existentes)

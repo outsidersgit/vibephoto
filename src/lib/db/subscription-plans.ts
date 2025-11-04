@@ -68,7 +68,13 @@ export async function getAllSubscriptionPlans(): Promise<SubscriptionPlanData[]>
       "deletedAt"
     FROM subscription_plans
     WHERE "deletedAt" IS NULL
-    ORDER BY popular DESC, "monthlyPrice" ASC
+    ORDER BY 
+      CASE "planId"
+        WHEN 'STARTER' THEN 1
+        WHEN 'PREMIUM' THEN 2
+        WHEN 'GOLD' THEN 3
+        ELSE 4
+      END ASC
   `
 
   return plans.map(planRaw => {
