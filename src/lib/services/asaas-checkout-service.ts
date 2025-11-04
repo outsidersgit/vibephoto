@@ -167,11 +167,10 @@ export async function createCreditPackageCheckout(
     autoRedirect: true, // Redireciona automaticamente após pagamento
     callback: {
       successUrl: `${CALLBACK_BASE}/`, // Redireciona para área logada após pagamento bem-sucedido
-      // cancelUrl e expiredUrl removidos para pacotes de créditos:
-      // - O usuário já tem assinatura ativa e acesso ao app
-      // - O CheckoutModal trata cancelamento/expiração via postMessage
-      // - O próprio checkout do Asaas já informa ao usuário sobre cancelamento/expiração
-      // - Não há necessidade de redirecionar para /pricing (usuário já tem acesso)
+      // cancelUrl e expiredUrl são obrigatórios pelo Asaas, mas redirecionam para área logada
+      // já que o usuário tem assinatura ativa e acesso ao app
+      cancelUrl: `${CALLBACK_BASE}/`, // Volta para área logada (usuário já tem acesso)
+      expiredUrl: `${CALLBACK_BASE}/` // Volta para área logada (usuário já tem acesso)
     },
     items: [
       {
