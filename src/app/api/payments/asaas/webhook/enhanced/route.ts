@@ -46,51 +46,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: securityResult.error }, { status: securityResult.status })
     }
 
-    const body: AsaasWebhookPayload = securityResult.body
+    const body: AsaasWebhookPayload = securityResult.body!
 
-    // 2. Create idempotency key
-    const idempotencyKey = generateIdempotencyKey(body)
-
-    // 3. Check for duplicate processing
-    const existingEvent = await prisma.webhookEvent.findUnique({
-      where: { idempotencyKey }
+    // 2. Check for duplicate processing (idempotency)
+    const existingEvent = await prisma.webhookEvent.findFirst({
+      where: {
+        event: body.event,
+        asaasPaymentId: body.payment?.id || null,
+        asaasSubscriptionId: body.subscription?.id || null,
+        status: 'PROCESSED'
+      },
+      orderBy: { createdAt: 'desc' }
     })
 
-    if (existingEvent?.processed) {
-      console.log('Webhook already processed:', idempotencyKey)
+    if (existingEvent) {
+      console.log('Webhook already processed:', existingEvent.id)
       return NextResponse.json({ status: 'already_processed', eventId: existingEvent.id })
     }
 
-    // 4. Create/update webhook event record
-    webhookEvent = await prisma.webhookEvent.upsert({
-      where: { idempotencyKey },
-      create: {
+    // 3. Create webhook event record
+    webhookEvent = await prisma.webhookEvent.create({
+      data: {
         event: body.event,
         asaasPaymentId: body.payment?.id,
         asaasSubscriptionId: body.subscription?.id,
-        asaasCustomerId: body.payment?.customer || body.subscription?.customer,
-        idempotencyKey,
-        rawPayload: body,
-        processed: false,
-        receivedAt: new Date()
-      },
-      update: {
-        retryCount: { increment: 1 },
-        lastRetryAt: new Date(),
-        rawPayload: body
+        status: 'PENDING',
+        rawData: body as any,
+        userAgent: request.headers.get('user-agent') || undefined,
+        ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] ||
+                   request.headers.get('x-real-ip') ||
+                   undefined
       }
     })
 
-    // 5. Process the webhook
+    // 4. Process the webhook
     const processingResult = await processWebhookEvent(body)
 
-    // 6. Update webhook event status
+    // 5. Update webhook event status
     await prisma.webhookEvent.update({
       where: { id: webhookEvent.id },
       data: {
-        processed: processingResult.success,
+        status: processingResult.success ? 'PROCESSED' : 'FAILED',
         processedAt: processingResult.success ? new Date() : null,
-        processingError: processingResult.error
+        errorMessage: processingResult.error
       }
     })
 
@@ -128,10 +126,9 @@ export async function POST(request: NextRequest) {
         await prisma.webhookEvent.update({
           where: { id: webhookEvent.id },
           data: {
-            processed: false,
-            processingError: error.message,
-            retryCount: { increment: 1 },
-            lastRetryAt: new Date()
+            status: 'FAILED',
+            errorMessage: error.message,
+            retryCount: { increment: 1 }
           }
         })
       } catch (logError) {
@@ -443,8 +440,8 @@ async function handleCheckoutPaid(checkout: AsaasWebhookPayload['checkout']): Pr
         await broadcastUserUpdate(
           user.id,
           {
-            plan: userAfterUpdate.plan,
-            subscriptionStatus: userAfterUpdate.subscriptionStatus,
+            plan: userAfterUpdate.plan || undefined,
+            subscriptionStatus: userAfterUpdate.subscriptionStatus || undefined,
             creditsLimit: userAfterUpdate.creditsLimit,
             creditsUsed: userAfterUpdate.creditsUsed,
             creditsBalance: userAfterUpdate.creditsBalance
@@ -869,96 +866,49 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
         
         // Se ainda não tem plan, é um erro crítico
         if (!plan) {
-            console.error('❌ [WEBHOOK] CRÍTICO: Não foi possível determinar o plan!')
-            console.error('❌ [WEBHOOK] Payment data:', {
-              paymentId: payment.id,
-              subscriptionId: payment.subscription,
-              customer: payment.customer,
-              originalPaymentFound: !!originalPayment,
-              userPlan: user.plan,
-              subscriptionInfo: subscriptionInfo ? {
-                cycle: subscriptionInfo.cycle,
-                description: subscriptionInfo.description
-              } : null
-            })
-            
-            // Mesmo sem plan, atualizar status para ACTIVE
-            // Mas creditsLimit permanecerá 0 (problema conhecido que precisa ser corrigido manualmente)
-            await updateSubscriptionStatus(
-              user.id,
-              'ACTIVE',
-              currentPeriodEnd,
-              undefined, // sem plan
-              billingCycle
-            )
-            
-            // Criar log de erro para rastreamento
-            await prisma.usageLog.create({
-              data: {
-                userId: user.id,
-                action: 'WEBHOOK_ERROR',
-                creditsUsed: 0,
-                details: {
-                  error: 'Plan não encontrado no webhook',
-                  paymentId: payment.id,
-                  subscriptionId: payment.subscription,
-                  requiresManualFix: true
-                }
+          console.error('❌ [WEBHOOK] CRÍTICO: Não foi possível determinar o plan!')
+          console.error('❌ [WEBHOOK] Payment data:', {
+            paymentId: payment.id,
+            subscriptionId: payment.subscription,
+            customer: payment.customer,
+            originalPaymentFound: !!originalPayment,
+            userPlan: user.plan,
+            subscriptionInfo: subscriptionInfo ? {
+              cycle: subscriptionInfo.cycle,
+              description: subscriptionInfo.description
+            } : null
+          })
+          
+          // Mesmo sem plan, atualizar status para ACTIVE
+          // Mas creditsLimit permanecerá 0 (problema conhecido que precisa ser corrigido manualmente)
+          await updateSubscriptionStatus(
+            user.id,
+            'ACTIVE',
+            currentPeriodEnd,
+            undefined, // sem plan
+            billingCycle
+          )
+          
+          // Criar log de erro para rastreamento
+          await prisma.usageLog.create({
+            data: {
+              userId: user.id,
+              action: 'WEBHOOK_ERROR',
+              creditsUsed: 0,
+              details: {
+                error: 'Plan não encontrado no webhook',
+                paymentId: payment.id,
+                subscriptionId: payment.subscription,
+                requiresManualFix: true
               }
-            })
-            
-            return { 
-              success: false, 
-              error: 'Plan não encontrado - creditsLimit não foi atualizado. Requer correção manual.',
-              retryable: false 
             }
+          })
+          
+          return { 
+            success: false, 
+            error: 'Plan não encontrado - creditsLimit não foi atualizado. Requer correção manual.',
+            retryable: false 
           }
-        }
-      }
-
-      // CRÍTICO: Verificar se temos plan antes de chamar updateSubscriptionStatus
-      if (!plan) {
-        console.error('❌ [WEBHOOK] CRÍTICO: Não foi possível determinar o plan!')
-        console.error('❌ [WEBHOOK] Dados disponíveis:', {
-          originalPaymentFound: !!originalPayment,
-          userPlan: user.plan,
-          subscriptionInfo: subscriptionInfo ? {
-            cycle: subscriptionInfo.cycle,
-            description: subscriptionInfo.description
-          } : null,
-          paymentExternalReference: payment.externalReference
-        })
-        
-        // Se não tem plan, ainda assim ativar a assinatura (mas sem creditsLimit)
-        // O admin pode corrigir manualmente depois
-        await updateSubscriptionStatus(
-          user.id,
-          'ACTIVE',
-          currentPeriodEnd,
-          undefined, // sem plan
-          billingCycle
-        )
-        
-        // Criar log de erro crítico
-        await prisma.usageLog.create({
-          data: {
-            userId: user.id,
-            action: 'WEBHOOK_ERROR_NO_PLAN',
-            creditsUsed: 0,
-            details: {
-              error: 'Plan não encontrado no webhook - creditsLimit não foi atualizado',
-              paymentId: payment.id,
-              subscriptionId: payment.subscription,
-              externalReference: payment.externalReference,
-              requiresManualFix: true
-            }
-          }
-        })
-        
-        return {
-          success: false,
-          error: 'Plan não encontrado - subscriptionStatus atualizado mas creditsLimit não foi definido. Requer correção manual.',
-          retryable: false
         }
       }
 
@@ -1011,8 +961,8 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
         await broadcastUserUpdate(
           user.id,
           {
-            plan: userAfterUpdate.plan,
-            subscriptionStatus: userAfterUpdate.subscriptionStatus,
+            plan: userAfterUpdate.plan || undefined,
+            subscriptionStatus: userAfterUpdate.subscriptionStatus || undefined,
             creditsLimit: userAfterUpdate.creditsLimit,
             creditsUsed: userAfterUpdate.creditsUsed,
             creditsBalance: userAfterUpdate.creditsBalance
@@ -1355,7 +1305,7 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
         }
       } else {
         // Tentar extrair creditAmount do externalReference ou description
-        const creditAmount = extractCreditAmount(payment.externalReference || payment.description || '')
+        const creditAmount = extractCreditAmount(payment.externalReference || '')
         if (creditAmount > 0) {
           await prisma.user.update({
             where: { id: user.id },
