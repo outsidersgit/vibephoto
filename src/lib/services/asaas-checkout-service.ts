@@ -224,6 +224,10 @@ export async function createCreditPackageCheckout(
     throw new Error('Erro ao criar checkout no Asaas')
   }
 
+  // Calcular data de validade baseado no validityMonths do pacote
+  const validUntilDate = new Date()
+  validUntilDate.setMonth(validUntilDate.getMonth() + creditPackage.validityMonths)
+
   // Salvar no banco
   await prisma.creditPurchase.create({
     data: {
@@ -234,7 +238,7 @@ export async function createCreditPackageCheckout(
       creditAmount: creditPackage.creditAmount + creditPackage.bonusCredits,
       value: creditPackage.price,
       status: 'PENDING',
-      validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year from now
+      validUntil: validUntilDate // Usar validityMonths do pacote do banco
     }
   })
 

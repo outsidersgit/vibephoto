@@ -52,7 +52,8 @@ export async function POST(request: NextRequest) {
 
     // Criar o pagamento baseado no método escolhido
     let payment
-    const description = `${creditPackage.name} - ${creditPackage.creditAmount} créditos`
+    const totalCredits = creditPackage.creditAmount + creditPackage.bonusCredits
+    const description = `${creditPackage.name} - ${totalCredits} créditos`
     const externalReference = `credit-package-${packageId}-${Date.now()}`
 
     try {
@@ -71,9 +72,10 @@ export async function POST(request: NextRequest) {
 
         default:
           // Para método não especificado, criar payment link que permite escolher
+          const totalCreditsForLink = creditPackage.creditAmount + creditPackage.bonusCredits
           const paymentLink = await asaas.createPaymentLink({
             name: creditPackage.name,
-            description: `Compra de ${creditPackage.creditAmount} créditos`,
+            description: `Compra de ${totalCreditsForLink} créditos`,
             value: creditPackage.price,
             billingType: 'UNDEFINED', // Permite PIX, cartão e boleto
             chargeType: 'DETACHED',
