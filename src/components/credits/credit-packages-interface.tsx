@@ -273,7 +273,7 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
                   <span className="text-sm font-normal text-gray-500"> único</span>
                 </div>
                 <div className="text-xs text-gray-600 font-medium">
-                  Válido por 1 ano
+                  Válido por {pkg.validityMonths} {pkg.validityMonths === 1 ? 'mês' : 'meses'}
                 </div>
               </div>
             </CardHeader>
@@ -285,7 +285,10 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
                     <Check className="w-2.5 h-2.5 text-gray-600" />
                   </div>
                   <span className="text-gray-700" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                    {pkg.credits} créditos
+                    {pkg.creditAmount + pkg.bonusCredits} créditos
+                    {pkg.bonusCredits > 0 && (
+                      <span className="text-green-600 ml-1">(+{pkg.bonusCredits} bônus)</span>
+                    )}
                   </span>
                 </li>
                 <li className="flex items-center text-xs">
@@ -293,7 +296,7 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
                     <Check className="w-2.5 h-2.5 text-gray-600" />
                   </div>
                   <span className="text-gray-700" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                    {pkg.photos} fotos
+                    Válido por {pkg.validityMonths} {pkg.validityMonths === 1 ? 'mês' : 'meses'}
                   </span>
                 </li>
               </ul>
