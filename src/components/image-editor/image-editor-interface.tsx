@@ -328,206 +328,169 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     )
   }
 
-  // Desktop Layout - Keep current design
+  // Desktop Layout - ChatGPT style with dark theme
   return (
-    <div className="max-w-7xl mx-auto p-6 bg-[#2C3E50] min-h-screen rounded-2xl">
-      <div className="flex gap-6">
-        {/* Left Column - Controls */}
-        <div className="w-96 flex-shrink-0 space-y-6">
-          {/* Informações do Editor */}
-          <Card className="border-[#34495E] bg-[#34495E] rounded-2xl shadow-lg">
-            <CardContent className="p-6 space-y-5">
-              <div className="text-sm text-gray-200 leading-relaxed font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                <p className="mb-4 font-medium">
-                  Com o Editor IA você pode transformar suas imagens de qualquer forma:
-                </p>
-                <ul className="space-y-3 text-xs text-gray-300">
-                  <li className="flex items-start gap-3">
-                    <Edit3 className="w-4 h-4 mt-0.5 text-[#5DADE2] flex-shrink-0" />
-                    <span className="font-medium"><strong>Modificar elementos</strong> existentes na imagem</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Plus className="w-4 h-4 mt-0.5 text-[#5DADE2] flex-shrink-0" />
-                    <span className="font-medium"><strong>Adicionar objetos</strong> ou elementos novos</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Minus className="w-4 h-4 mt-0.5 text-[#5DADE2] flex-shrink-0" />
-                    <span className="font-medium"><strong>Remover partes</strong> indesejadas</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Blend className="w-4 h-4 mt-0.5 text-[#5DADE2] flex-shrink-0" />
-                    <span className="font-medium"><strong>Fundir até 3 fotos</strong> para criar composições únicas</span>
-                  </li>
-                </ul>
-                <div className="mt-4 p-3 bg-[#5DADE2]/10 border border-[#5DADE2]/30 rounded-lg">
-                  <p className="text-xs text-[#5DADE2] font-medium flex items-start gap-2">
-                    <span className="text-[#5DADE2] mt-0.5">💡</span>
-                    <span>
-                      <strong>Dica:</strong> Você também pode criar imagens do zero! Basta digitar sua ideia no prompt e gerar, sem precisar anexar nenhuma imagem.
-                    </span>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        {/* Features Card - Discreet above prompt */}
+        <div className="mb-6">
+          <Card className="border-[#34495E]/50 bg-[#34495E]/30 rounded-xl shadow-sm backdrop-blur-sm">
+            <CardContent className="p-4">
+              <div className="text-xs text-gray-300 leading-relaxed font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                <div className="flex items-start gap-2 flex-wrap">
+                  <span className="flex items-center gap-1.5">
+                    <Edit3 className="w-3 h-3 text-[#5DADE2] flex-shrink-0" />
+                    <span className="font-medium">Modificar</span>
+                  </span>
+                  <span className="text-gray-500">•</span>
+                  <span className="flex items-center gap-1.5">
+                    <Plus className="w-3 h-3 text-[#5DADE2] flex-shrink-0" />
+                    <span className="font-medium">Adicionar</span>
+                  </span>
+                  <span className="text-gray-500">•</span>
+                  <span className="flex items-center gap-1.5">
+                    <Minus className="w-3 h-3 text-[#5DADE2] flex-shrink-0" />
+                    <span className="font-medium">Remover</span>
+                  </span>
+                  <span className="text-gray-500">•</span>
+                  <span className="flex items-center gap-1.5">
+                    <Blend className="w-3 h-3 text-[#5DADE2] flex-shrink-0" />
+                    <span className="font-medium">Fundir até 3 fotos</span>
+                  </span>
+                </div>
+                <div className="mt-2 pt-2 border-t border-[#4A5F7A]/30">
+                  <p className="text-[#5DADE2] text-xs font-medium flex items-start gap-1.5">
+                    <span className="mt-0.5">💡</span>
+                    <span>Você também pode criar imagens do zero! Basta digitar sua ideia no prompt e gerar, sem precisar anexar nenhuma imagem.</span>
                   </p>
                 </div>
-                <p className="mt-4 text-xs text-gray-400 font-medium">
-                  Simplesmente carregue suas imagens e descreva o que você quer fazer!
-                </p>
               </div>
             </CardContent>
           </Card>
+        </div>
 
-          {/* Image Upload */}
-          <Card className="border-[#34495E] bg-[#34495E] rounded-2xl shadow-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-white font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                Upload de Imagens
-                <Badge variant="secondary" className="ml-2 text-xs bg-[#5DADE2]/20 text-[#5DADE2] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                  até 3 imagens
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Upload Area */}
-              <div
-                className="border-2 border-dashed border-[#4A5F7A] bg-[#2C3E50] rounded-xl p-6 text-center hover:border-[#5DADE2] hover:bg-[#34495E] transition-all duration-200 cursor-pointer group"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {images.length === 0 ? (
-                  <>
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-3 group-hover:text-[#5DADE2] transition-colors" />
-                    <p className="text-sm font-medium text-white mb-1 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                      Arraste ou clique aqui
-                    </p>
-                    <p className="text-xs text-gray-400 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                      PNG, JPG, WEBP (máx. 10MB)
-                    </p>
-                  </>
-                ) : null}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple={true}
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </div>
+        {/* ChatGPT Style - Centered Layout */}
+        <div className="space-y-4">
+          {/* Prompt Input - ChatGPT style */}
+          <div className="relative">
+            <Textarea
+              placeholder="Descreva o que deseja editar, adicionar ou remover da imagem..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={5}
+              maxLength={2500}
+              className="resize-none text-sm bg-[#2C3E50] border-2 border-[#4A5F7A] text-white placeholder:text-gray-400 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-2xl px-4 py-4 pr-12 shadow-lg transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              style={{
+                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
+              }}
+            />
+            <div className="absolute bottom-4 right-4 text-xs text-gray-400">
+              {prompt.length}/2500
+            </div>
+          </div>
 
-              {/* Uploaded Images */}
-              {images.length > 0 && (
-                <div className="grid grid-cols-2 gap-3">
-                  {images.map((image, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={image}
-                        alt={`Imagem ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border border-[#4A5F7A]"
-                      />
-                      <button
-                        onClick={() => removeImage(index)}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
+          {/* Upload Button - Secondary, below prompt */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={images.length >= 3 || loading}
+            className="w-full border-2 border-[#4A5F7A] hover:border-[#667EEA] hover:bg-[#667EEA]/10 bg-[#34495E]/50 text-gray-200 rounded-xl py-3 text-sm font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+          >
+            <ImageIcon className="w-4 h-4 mr-2" />
+            {images.length > 0 ? `${images.length}/3 imagens` : 'Adicionar imagem (opcional)'}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple={true}
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+
+          {/* Uploaded Images Preview */}
+          {images.length > 0 && (
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {images.map((image, index) => (
+                <div key={index} className="relative flex-shrink-0">
+                  <img
+                    src={image}
+                    alt={`Imagem ${index + 1}`}
+                    className="w-24 h-24 object-cover rounded-lg border-2 border-[#4A5F7A]"
+                  />
+                  <button
+                    onClick={() => removeImage(index)}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-sm"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              ))}
+            </div>
+          )}
 
-          {/* Prompt Input */}
-          <Card className="border-[#34495E] bg-[#34495E] rounded-2xl shadow-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-white font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                Descrição da Edição
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                placeholder="Descreva o que você quer fazer com a imagem..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={4}
-                maxLength={2500}
-                className="resize-none text-sm bg-[#2C3E50] border-[#4A5F7A] text-white placeholder:text-gray-400 focus:border-[#5DADE2] rounded-xl font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-              />
-            </CardContent>
-          </Card>
-
-          {/* Process Button */}
+          {/* Process Button - Fixed below prompt */}
           <Button
             onClick={handleSubmit}
             disabled={!canProcess}
-            className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-500 disabled:to-gray-600 text-white border-0 py-4 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+            className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white py-4 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
           >
             {loading ? (
               <>
-                <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                 Processando...
               </>
             ) : (
               <>
-                <Edit3 className="w-5 h-5 mr-3" />
-                Processar Imagem (15 créditos)
+                Processar imagem (15 créditos)
               </>
             )}
           </Button>
 
           {/* Error Display */}
           {error && (
-            <Card className="border-red-400 bg-red-500/20 rounded-2xl">
-              <CardContent className="p-4">
-                <div className="text-sm text-red-300 flex items-start gap-2 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                  <span className="text-red-400 mt-0.5">•</span>
-                  <span>{error}</span>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="bg-red-500/10 border-2 border-red-500/30 rounded-xl p-4">
+              <p className="text-sm text-red-300 font-medium font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                {error}
+              </p>
+            </div>
           )}
-        </div>
 
-        {/* Right Column - Result */}
-        <div className="flex-1">
-          <Card className="border-[#34495E] bg-[#34495E] shadow-lg rounded-2xl h-full">
-            <CardContent className="p-8">
-              <div className="aspect-square bg-gradient-to-br from-[#2C3E50] to-[#34495E] rounded-2xl border-2 border-dashed border-[#4A5F7A] flex items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#667EEA]/10 to-[#764BA2]/10"></div>
-                {result ? (
-                  <div className="relative z-10 w-full h-full flex flex-col">
+          {/* Result Display - Desktop */}
+          {result && (
+            <div className="mt-6 space-y-4">
+              <Card className="border-[#34495E] bg-[#34495E]/50 rounded-xl shadow-lg">
+                <CardContent className="p-6">
+                  <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-[#4A5F7A] bg-[#2C3E50]">
                     <img
                       src={result}
                       alt="Resultado processado"
-                      className="flex-1 object-contain rounded-xl"
+                      className="w-full h-full object-contain"
                     />
-                    <div className="mt-4 flex justify-center">
-                      <Button
-                        asChild
-                        className="bg-[#5DADE2] hover:bg-[#4A90C2] text-white rounded-xl"
-                      >
-                        <a href={result} download="imagem-editada.jpg">
-                          <Download className="w-4 h-4 mr-2" />
-                          Baixar Imagem
-                        </a>
-                      </Button>
-                    </div>
                   </div>
-                ) : (
-                  <div className="text-center space-y-4 relative z-10">
-                    <div className="p-4 bg-[#34495E] rounded-full shadow-lg mx-auto w-fit">
-                      <Edit3 className="w-12 h-12 text-gray-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold text-white mb-2 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                        Resultado da Edição
-                      </h3>
-                      <p className="text-base text-gray-300 max-w-md mx-auto font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                        Sua imagem editada aparecerá aqui após o processamento
-                      </p>
-                    </div>
+                  <div className="mt-4 flex gap-3 justify-center">
+                    <Button
+                      onClick={() => router.push('/gallery')}
+                      className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 text-white font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                    >
+                      Ver na galeria
+                    </Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="border-2 border-[#4A5F7A] hover:border-[#667EEA] bg-[#34495E]/50 text-gray-200 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                    >
+                      <a href={result} download="imagem-editada.jpg">
+                        <Download className="w-4 h-4 mr-2" />
+                        Baixar
+                      </a>
+                    </Button>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
     </div>

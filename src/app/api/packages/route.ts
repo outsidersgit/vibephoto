@@ -12,7 +12,7 @@ export async function GET() {
         // Buscar do banco (fonte de verdade)
         const dbPackages = await prisma.photoPackage.findMany({
           where: { isActive: true },
-          orderBy: { createdAt: 'desc' } // Ordenar por data de criação se não houver sortOrder
+          orderBy: { name: 'asc' } // Ordenar alfabeticamente por nome
         })
 
         if (dbPackages && dbPackages.length > 0) {
