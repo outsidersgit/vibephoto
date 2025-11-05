@@ -7,7 +7,7 @@ import { ArrowDown, Sparkles, Users, Zap, Shield, Plus, ImageIcon, TrendingUp, C
 import Link from 'next/link'
 import Image from 'next/image'
 import { useEffect, useState, useRef } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSession, signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 // Framer Motion imports
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion'
@@ -341,8 +341,8 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
 
         {/* Conteúdo do card */}
         <div className="p-8 h-full flex flex-col justify-between relative z-10">
-          {/* Título - maior, alinhado à direita */}
-          <div className="ml-auto text-right"> {/* Alinhado à direita */}
+          {/* Título e Descrição - alinhados à direita, mesma margem */}
+          <div className="ml-auto text-right">
             <h3 
               className="text-2xl font-bold mb-3 tracking-tight"
               style={{
@@ -355,18 +355,15 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
             >
               {step.title}
             </h3>
-          </div>
-
-          {/* Descrição - alinhada à direita */}
-          <div className="ml-auto text-right">
+            
+            {/* Descrição - alinhada exatamente com o título */}
             <p 
               className="text-sm line-clamp-2 leading-relaxed"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
                 fontWeight: 400,
                 letterSpacing: '0.015em',
-                color: 'rgba(200,200,210,0.85)', // Cinza claro
-                maxWidth: '90%' // Garante alinhamento à direita
+                color: 'rgba(200,200,210,0.85)' // Cinza claro
               }}
             >
               {step.description}
@@ -482,7 +479,7 @@ const MobileStackingCard = ({ step, index }: {
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
       transition={{ duration: 0.6, delay: index * 0.15 }}
       style={{ scrollSnapAlign: 'start' }}
-      className="min-h-[280px] flex items-center mb-4 sm:mb-8"
+      className="min-h-[280px] flex items-center mb-2 sm:mb-8"
     >
       <motion.div 
         className="w-full relative overflow-hidden rounded-2xl shadow-2xl"
@@ -602,7 +599,7 @@ const MobileStackingCards = () => {
   ]
 
   return (
-    <div className="space-y-2 sm:space-y-4">
+    <div className="space-y-1 sm:space-y-4">
       {steps.map((step, index) => (
         <MobileStackingCard key={step.id} step={step} index={index} />
       ))}
@@ -2069,10 +2066,22 @@ export default function HomePage() {
             </p>
             <div className="max-w-md mx-auto">
               <form 
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault()
-                  const email = (e.target as HTMLFormElement).email.value
-                  if (email) {
+                  const form = e.target as HTMLFormElement
+                  const emailInput = form.email as HTMLInputElement
+                  const email = emailInput.value.trim().toLowerCase()
+                  
+                  if (!email) return
+                  
+                  // Verificar se é email do Google (gmail.com, googlemail.com)
+                  const isGoogleEmail = email.endsWith('@gmail.com') || email.endsWith('@googlemail.com')
+                  
+                  if (isGoogleEmail) {
+                    // Redirecionar diretamente para Google OAuth
+                    await signIn('google', { callbackUrl: '/auth/callback' })
+                  } else {
+                    // Redirecionar para signup com email preenchido
                     window.location.href = `/auth/signup?email=${encodeURIComponent(email)}`
                   }
                 }}
