@@ -467,45 +467,46 @@ function BillingPageContent() {
                       >
                         Comprar créditos
                       </Button>
-                    </div>
 
-                    <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 sm:px-3 text-xs text-red-400/70 hover:text-red-400 hover:bg-red-400/5 border border-red-400/20 hover:border-red-400/40 rounded-lg sm:ml-2 w-full sm:w-auto"
-                        >
-                          Cancelar assinatura
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Cancelar Assinatura</DialogTitle>
-                          <DialogDescription>
-                            Tem certeza que deseja cancelar sua assinatura? Você continuará tendo acesso até o final do período atual.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                      {/* Mobile: Cancelar assinatura ao lado de Comprar créditos */}
+                      <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+                        <DialogTrigger asChild>
                           <Button
-                            variant="outline"
-                            onClick={() => setShowCancelModal(false)}
-                            disabled={cancellingSubscription}
-                            className="w-full sm:w-auto"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 sm:px-3 text-xs text-red-400/70 hover:text-red-400 hover:bg-red-400/5 border border-red-400/20 hover:border-red-400/40 rounded-lg sm:ml-2 sm:w-auto"
                           >
-                            Manter Assinatura
+                            Cancelar assinatura
                           </Button>
-                          <Button
-                            variant="destructive"
-                            onClick={handleCancelSubscription}
-                            disabled={cancellingSubscription}
-                            className="w-full sm:w-auto"
-                          >
-                            {cancellingSubscription ? 'Cancelando...' : 'Confirmar Cancelamento'}
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Cancelar Assinatura</DialogTitle>
+                            <DialogDescription>
+                              Tem certeza que deseja cancelar sua assinatura? Você continuará tendo acesso até o final do período atual.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                            <Button
+                              variant="outline"
+                              onClick={() => setShowCancelModal(false)}
+                              disabled={cancellingSubscription}
+                              className="w-full sm:w-auto"
+                            >
+                              Manter Assinatura
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              onClick={handleCancelSubscription}
+                              disabled={cancellingSubscription}
+                              className="w-full sm:w-auto"
+                            >
+                              {cancellingSubscription ? 'Cancelando...' : 'Confirmar Cancelamento'}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
 
                     <Button
                       variant="ghost"
