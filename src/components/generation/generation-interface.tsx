@@ -58,6 +58,7 @@ export function GenerationInterface({
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState('')
   const [isLastBlockSelected, setIsLastBlockSelected] = useState(false)
+  const [isGuidedMode, setIsGuidedMode] = useState(false)
   const [generationResults, setGenerationResults] = useState<any[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [currentGeneration, setCurrentGeneration] = useState<any>(null)
@@ -355,6 +356,15 @@ export function GenerationInterface({
   const handleGenerate = async () => {
     if (!prompt.trim() || !canUseCredits) return
 
+    // Log do prompt que será enviado
+    console.log('🚀 [GENERATION] Starting generation with prompt:', {
+      prompt: prompt.substring(0, 100) + (prompt.length > 100 ? '...' : ''),
+      promptLength: prompt.length,
+      isGuidedMode,
+      isLastBlockSelected,
+      modelId: selectedModel
+    })
+
     // Limpar estado anterior antes de iniciar nova geração
     setCurrentGeneration(null)
     setSuccessImageUrl(null)
@@ -363,7 +373,7 @@ export function GenerationInterface({
     try {
       const generation = await generateImage.mutateAsync({
         modelId: selectedModel,
-        prompt: prompt,
+        prompt: prompt.trim(), // Garantir que o prompt está trimado
         negativePrompt: negativePrompt,
         settings: {
           ...settings,
@@ -508,13 +518,16 @@ export function GenerationInterface({
   const creditsNeeded = settings.variations * 10
   
   // Check if we're in guided mode by checking if last block (environment) was selected
-  // In guided mode, require last block (environment) to be selected
+  // In guided mode, require last block (environment) to be selected AND prompt to be filled
   // In free mode, just require prompt text
+  // If isLastBlockSelected is true, we're in guided mode and the last block was selected
+  // If isLastBlockSelected is false, we're in free mode and just need prompt
+  // The condition is: prompt must be filled, and if we're in guided mode (isLastBlockSelected), it's already satisfied
   const canGenerate = 
     canUseCredits && 
     !isGenerating && 
     creditsRemaining >= creditsNeeded &&
-    (isLastBlockSelected ? (isLastBlockSelected && prompt.trim()) : prompt.trim())
+    prompt.trim() // Prompt is sufficient - if in guided mode, isLastBlockSelected being true already ensures last block was selected
 
   const getClassLabel = (modelClass: string) => {
     const labels = {
@@ -590,6 +603,7 @@ export function GenerationInterface({
                 isGenerating={isGenerating}
                 modelClass={selectedModelData?.class || 'MAN'}
                 onLastBlockSelected={setIsLastBlockSelected}
+                onModeChange={setIsGuidedMode}
               />
 
               {/* Generate Button */}
@@ -639,30 +653,32 @@ export function GenerationInterface({
             </CardContent>
           </Card>
 
-          {/* Examples Card - Collapsible */}
-          <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
-            <CardContent className="pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowExamples(!showExamples)}
-                className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
-              >
-                {showExamples ? 'Ocultar' : 'Ver'} Exemplos de Descrições
-                {showExamples ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
-              </Button>
+          {/* Examples Card - Collapsible - Only visible in free mode */}
+          {!isGuidedMode && (
+            <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
+              <CardContent className="pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowExamples(!showExamples)}
+                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  {showExamples ? 'Ocultar' : 'Ver'} Exemplos de Descrições
+                  {showExamples ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
+                </Button>
 
-              {/* Prompt Examples - Show when expanded */}
-              {showExamples && (
-                <div className="mt-4">
-                  <PromptExamples
-                    modelClass={selectedModelData?.class || 'MAN'}
-                    onPromptSelect={handlePromptSelect}
-                    onClose={() => setShowExamples(false)}
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                {/* Prompt Examples - Show when expanded */}
+                {showExamples && (
+                  <div className="mt-4">
+                    <PromptExamples
+                      modelClass={selectedModelData?.class || 'MAN'}
+                      onPromptSelect={handlePromptSelect}
+                      onClose={() => setShowExamples(false)}
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Current Generation Status - Only show when failed */}
           {currentGeneration && currentGeneration.status === 'FAILED' && (

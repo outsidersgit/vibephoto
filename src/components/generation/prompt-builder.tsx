@@ -201,6 +201,20 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelect
       const hasEnvironment = newSelectedBlocks.some(b => b.category === 'environment')
       onLastBlockSelected?.(hasEnvironment)
 
+      // Auto-generate prompt when last block is selected
+      if (hasEnvironment && newSelectedBlocks.length > 0) {
+        // Generate prompt immediately using the same logic as generatePrompt()
+        const modelGender = getModelGender(modelClass)
+        const genderPrefix = getGenderPrefix(modelGender)
+        const combinedPrompt = newSelectedBlocks.map(block => block.value).join(', ')
+        const fullPrompt = genderPrefix + combinedPrompt
+        if (fullPrompt) {
+          console.log('✅ [PROMPT_BUILDER] Last block selected, generating prompt:', fullPrompt.substring(0, 100) + '...')
+          // Update prompt immediately when last block is selected
+          onPromptGenerated(fullPrompt)
+        }
+      }
+
       return newSelectedBlocks
     })
   }

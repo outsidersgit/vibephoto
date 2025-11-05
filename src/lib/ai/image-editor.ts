@@ -74,7 +74,7 @@ export class ImageEditor {
       const imageUrl = await NanoBananaProvider.fileToUrl(imageFile)
       
       // Call Nano Banana provider via Replicate
-      const result = await this.provider!.editWithPrompt(imageUrl, promptText, 'png', aspectRatio)
+      const result = await this.provider!.editWithPrompt(imageUrl, promptText, 'jpg', aspectRatio)
 
       console.log('✅ Nano Banana edit completed:', result.id)
       return result
@@ -106,7 +106,7 @@ export class ImageEditor {
       }
 
       // Call Nano Banana provider to generate from scratch
-      const result = await this.provider!.generateImage(promptText, 'png', aspectRatio)
+      const result = await this.provider!.generateImage(promptText, 'jpg', aspectRatio)
 
       console.log('✅ Nano Banana generation completed:', result.id)
       return result
@@ -141,7 +141,7 @@ export class ImageEditor {
       }
 
       const imageUrl = await NanoBananaProvider.fileToUrl(imageFile)
-      const result = await this.provider!.addElementToImage(imageUrl, prompt, 'png')
+      const result = await this.provider!.addElementToImage(imageUrl, prompt, 'jpg')
 
       console.log('✅ Element added successfully:', result.id)
       return result
@@ -176,7 +176,7 @@ export class ImageEditor {
       }
 
       const imageUrl = await NanoBananaProvider.fileToUrl(imageFile)
-      const result = await this.provider!.removeElementFromImage(imageUrl, prompt, 'png')
+      const result = await this.provider!.removeElementFromImage(imageUrl, prompt, 'jpg')
 
       console.log('✅ Element removed successfully:', result.id)
       return result
@@ -211,7 +211,7 @@ export class ImageEditor {
       }
 
       const imageUrl = await NanoBananaProvider.fileToUrl(imageFile)
-      const result = await this.provider!.transferStyle(imageUrl, stylePrompt, 'png')
+      const result = await this.provider!.transferStyle(imageUrl, stylePrompt, 'jpg')
 
       console.log('✅ Style transfer completed:', result.id)
       return result
@@ -265,7 +265,7 @@ export class ImageEditor {
         imageFiles.map(file => NanoBananaProvider.fileToUrl(file))
       )
 
-      const result = await this.provider!.blendImages(imageUrls, prompt, 'png')
+      const result = await this.provider!.blendImages(imageUrls, prompt, 'jpg')
 
       console.log('✅ Images blended successfully with Nano Banana:', result.id)
       return result
@@ -320,7 +320,7 @@ export class ImageEditor {
       )
 
       // Use blend method for combining (Nano Banana's strength)
-      const result = await this.provider!.blendImages(imageUrls, prompt, 'png')
+      const result = await this.provider!.blendImages(imageUrls, prompt, 'jpg')
 
       console.log('✅ Images combined successfully:', result.id)
       return result

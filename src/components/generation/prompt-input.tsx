@@ -13,6 +13,7 @@ interface PromptInputProps {
   isGenerating: boolean
   modelClass?: string
   onLastBlockSelected?: (isSelected: boolean) => void
+  onModeChange?: (isGuidedMode: boolean) => void
 }
 
 export function PromptInput({
@@ -21,9 +22,15 @@ export function PromptInput({
   onPromptChange,
   isGenerating,
   modelClass = 'MAN',
-  onLastBlockSelected
+  onLastBlockSelected,
+  onModeChange
 }: PromptInputProps) {
   const [isGuidedMode, setIsGuidedMode] = useState(false)
+  
+  // Notify parent when mode changes
+  useEffect(() => {
+    onModeChange?.(isGuidedMode)
+  }, [isGuidedMode, onModeChange])
   const promptRef = useRef<HTMLTextAreaElement | null>(null)
   const adjustPromptHeight = () => {
     const el = promptRef.current
@@ -55,6 +62,7 @@ export function PromptInput({
   }
 
   const handleGuidedPrompt = (generatedPrompt: string) => {
+    console.log('📝 [PROMPT_INPUT] Updating prompt from guided mode:', generatedPrompt.substring(0, 100) + '...')
     onPromptChange(generatedPrompt)
   }
 
