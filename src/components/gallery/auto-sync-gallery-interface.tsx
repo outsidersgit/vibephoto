@@ -247,9 +247,45 @@ export function AutoSyncGalleryInterface({
   }, [status])
   
   // Atualizar estado local quando React Query retornar novos dados
+  // CRITICAL: Fazer merge inteligente para preservar atualizações locais recentes
   useEffect(() => {
     if (galleryData?.generations) {
-      setLocalGenerations(galleryData.generations)
+      setLocalGenerations((prevLocal) => {
+        // Se não há dados locais, usar dados do React Query
+        if (prevLocal.length === 0) {
+          return galleryData.generations
+        }
+        
+        // Criar mapa de gerações locais por ID para merge rápido
+        const localMap = new Map(prevLocal.map((g: any) => [g.id, g]))
+        
+        // Merge: priorizar estado local se for mais recente ou se estiver COMPLETED
+        const merged = galleryData.generations.map((serverGen: any) => {
+          const localGen = localMap.get(serverGen.id)
+          
+          // Se existe localmente e está COMPLETED, priorizar local (evita flash)
+          if (localGen && localGen.status === 'COMPLETED' && serverGen.status !== 'COMPLETED') {
+            return localGen
+          }
+          
+          // Se existe localmente e tem imageUrls (foi atualizado via SSE), priorizar local
+          if (localGen && localGen.imageUrls && localGen.imageUrls.length > 0 && 
+              (!serverGen.imageUrls || serverGen.imageUrls.length === 0)) {
+            return localGen
+          }
+          
+          // Caso contrário, usar dados do servidor
+          return serverGen
+        })
+        
+        // Adicionar novas gerações locais que não estão no servidor ainda
+        const serverIds = new Set(galleryData.generations.map((g: any) => g.id))
+        const newLocalGenerations = prevLocal.filter((g: any) => 
+          !serverIds.has(g.id) && g.status === 'COMPLETED'
+        )
+        
+        return [...newLocalGenerations, ...merged]
+      })
     }
     if (galleryData?.editHistory) {
       setLocalEditHistory(galleryData.editHistory)
@@ -392,20 +428,30 @@ export function AutoSyncGalleryInterface({
         return updated
       } else if (status === 'COMPLETED' && data.imageUrls?.length > 0) {
         // Adicionar nova geração completada no início
-        return [{
+        // CRITICAL: Garantir que sempre adiciona, mesmo se já existe (pode ser atualização)
+        const newGeneration = {
           id: generationId,
-          status: 'COMPLETED',
+          status: 'COMPLETED' as const,
           imageUrls: data.imageUrls,
           thumbnailUrls: data.thumbnailUrls || data.imageUrls,
           completedAt: new Date(),
           processingTime: data.processingTime,
-          createdAt: new Date(),
+          createdAt: data.timestamp ? new Date(data.timestamp) : new Date(),
           updatedAt: new Date(),
-          userId: data.userId,
+          userId: data.userId || user?.id,
           prompt: data.prompt || '',
           modelId: data.modelId || null,
           model: data.model || null
-        }, ...prev]
+        }
+        
+        // Se já existe, substituir; se não, adicionar no início
+        const existingIndex = prev.findIndex((g: any) => g.id === generationId)
+        if (existingIndex >= 0) {
+          const updated = [...prev]
+          updated[existingIndex] = newGeneration
+          return updated
+        }
+        return [newGeneration, ...prev]
       }
       return prev
     })
@@ -736,9 +782,6 @@ export function AutoSyncGalleryInterface({
     )
 
     if (!confirmed) return
-
-    // Mostrar indicador de carregamento
-    setIsRefreshing(true)
 
     try {
       // Identificar itens a deletar por tipo

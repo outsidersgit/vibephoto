@@ -397,25 +397,46 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
 
     // Broadcast real-time status change to user (critical for redirection)
     // Use internalStatus directly to maintain consistency
+    // CRITICAL: Always broadcast, even if imageUrls is empty, to ensure frontend knows status changed
     try {
       const { broadcastGenerationStatusChange } = await import('@/lib/services/realtime-service')
+      
+      // Ensure we always send imageUrls, even if empty (frontend needs to know status)
+      const broadcastData = {
+        imageUrls: finalImageUrls.length > 0 ? finalImageUrls : (updatedGeneration.imageUrls as any || []),
+        thumbnailUrls: finalImageUrls.length > 0 ? finalImageUrls : (updatedGeneration.imageUrls as any || []),
+        processingTime: processingTime,
+        errorMessage: payload.error_message || undefined,
+        webhook: true,
+        timestamp: new Date().toISOString(),
+        // Include additional metadata for frontend
+        generationId: updatedGeneration.id,
+        userId: updatedGeneration.userId,
+        prompt: generation.prompt || undefined,
+        modelId: generation.modelId || undefined
+      }
+      
+      console.log(`📡 Broadcasting generation status change:`, {
+        generationId: updatedGeneration.id,
+        status: internalStatus,
+        hasImageUrls: broadcastData.imageUrls.length > 0,
+        imageUrlsCount: broadcastData.imageUrls.length
+      })
+      
       await broadcastGenerationStatusChange(
         updatedGeneration.id,
         updatedGeneration.userId,
         internalStatus, // Send internalStatus directly (COMPLETED/FAILED/PROCESSING)
-        {
-          imageUrls: finalImageUrls,
-          thumbnailUrls: finalImageUrls, // Use same URLs for thumbnails if separate ones aren't available
-          processingTime: processingTime,
-          errorMessage: payload.error_message || undefined,
-          webhook: true,
-          timestamp: new Date().toISOString()
-        }
+        broadcastData
       )
-      console.log(`📡 Broadcast sent for generation ${updatedGeneration.id} with status: ${internalStatus}`)
+      console.log(`✅ Broadcast sent successfully for generation ${updatedGeneration.id} with status: ${internalStatus}`)
     } catch (broadcastError) {
       console.error('❌ Failed to broadcast generation status change:', broadcastError)
-      // Don't fail the webhook for broadcast errors
+      console.error('❌ Broadcast error details:', {
+        error: broadcastError instanceof Error ? broadcastError.message : String(broadcastError),
+        stack: broadcastError instanceof Error ? broadcastError.stack : undefined
+      })
+      // Don't fail the webhook for broadcast errors, but log them for debugging
     }
 
     return updatedGeneration

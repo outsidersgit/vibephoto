@@ -512,6 +512,7 @@ export class AstriaProvider extends AIProvider {
         status: prediction.status,
         endpoint: endpoint
       })
+      console.log(`📋 [ASTRIA_RESPONSE] Complete Astria API response:`, JSON.stringify(prediction, null, 2))
 
       return {
         id: prediction.id,

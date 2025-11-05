@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 import { useToast } from '@/hooks/use-toast'
-import { useImageGeneration, useManualSync } from '@/hooks/useImageGeneration'
+import { useImageGeneration, useManualSync, useGenerationPolling } from '@/hooks/useImageGeneration'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -78,11 +78,23 @@ export function GenerationInterface({
   // Success modal states
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [successImageUrl, setSuccessImageUrl] = useState<string | null>(null)
+  // Flag para evitar toasts duplicados
+  const [completedGenerationIds, setCompletedGenerationIds] = useState<Set<string>>(new Set())
 
   // React Query hooks
   const generateImage = useImageGeneration()
   const manualSync = useManualSync()
-  const isGenerating = generateImage.isPending
+  
+  // Polling como fallback caso SSE falhe
+  const generationPolling = useGenerationPolling(
+    currentGeneration?.id || null,
+    !!currentGeneration && currentGeneration.status === 'PROCESSING'
+  )
+  
+  // Botão deve permanecer em loading enquanto:
+  // - Requisição HTTP está em andamento OU
+  // - Geração está processando (aguardando webhook)
+  const isGenerating = generateImage.isPending || currentGeneration?.status === 'PROCESSING'
 
   // Real-time updates for generation status
   useRealtimeUpdates({
@@ -106,8 +118,18 @@ export function GenerationInterface({
         }))
 
         // If completed successfully, show success message and redirect
+        // CRITICAL: Verificar se já mostramos feedback para evitar duplicação
         if (status === 'COMPLETED' && data.imageUrls && data.imageUrls.length > 0) {
+          // Evitar feedback duplicado
+          if (completedGenerationIds.has(generationId)) {
+            console.log(`⚠️ Feedback já mostrado para generation ${generationId}, ignorando duplicação`)
+            return
+          }
+          
           console.log(`✅ Generation ${generationId} completed - showing success message and redirecting`)
+          
+          // Marcar como completado para evitar duplicação
+          setCompletedGenerationIds((prev) => new Set([...prev, generationId]))
           
           // Show success message immediately (webhook guarantees DB is updated)
           addToast({
@@ -145,8 +167,85 @@ export function GenerationInterface({
     },
     onDisconnect: () => {
       console.log('❌ Disconnected from real-time updates')
+      
+      // Se há uma geração em andamento e SSE desconectou, polling vai cuidar
+      if (currentGeneration?.status === 'PROCESSING') {
+        console.log('⚠️ SSE disconnected during generation - polling will handle status updates')
+      }
+    },
+    onError: (error) => {
+      console.error('❌ SSE connection error:', error)
+      
+      // Se há uma geração em andamento e SSE falhou, polling vai cuidar
+      if (currentGeneration?.status === 'PROCESSING') {
+        console.log('⚠️ SSE error during generation - polling will handle status updates')
+      }
     }
   })
+
+  // Sincronizar polling com estado da geração (fallback caso SSE falhe)
+  useEffect(() => {
+    if (generationPolling.data && currentGeneration?.id === generationPolling.data.id) {
+      const pollingStatus = generationPolling.data.status
+      const pollingData = generationPolling.data
+
+      // Atualizar estado local se polling detectar mudança
+      if (pollingStatus !== currentGeneration.status) {
+        console.log(`🔄 Polling detected status change: ${currentGeneration.status} -> ${pollingStatus}`)
+        
+        setCurrentGeneration((prev: any) => ({
+          ...prev,
+          status: pollingStatus,
+          imageUrls: pollingData.imageUrls || prev.imageUrls,
+          thumbnailUrls: pollingData.thumbnailUrls || prev.thumbnailUrls,
+          processingTime: pollingData.processingTime || prev.processingTime,
+          errorMessage: pollingData.errorMessage || prev.errorMessage,
+          completedAt: pollingStatus === 'COMPLETED' ? new Date() : prev.completedAt
+        }))
+
+        // Se completou via polling, mostrar feedback mesmo se SSE falhou
+        // CRITICAL: Verificar se já mostramos feedback para evitar duplicação
+        if (pollingStatus === 'COMPLETED' && pollingData.imageUrls && pollingData.imageUrls.length > 0) {
+          // Evitar feedback duplicado se SSE já mostrou
+          if (completedGenerationIds.has(currentGeneration.id)) {
+            console.log(`⚠️ Feedback já mostrado para generation ${currentGeneration.id} (via SSE), ignorando polling`)
+            return
+          }
+          
+          console.log(`✅ Generation ${currentGeneration.id} completed via polling - showing success message`)
+          
+          // Marcar como completado para evitar duplicação
+          setCompletedGenerationIds((prev) => new Set([...prev, currentGeneration.id]))
+          
+          addToast({
+            type: 'success',
+            title: '🎉 Sua imagem está pronta!',
+            description: `${pollingData.imageUrls.length} imagem${pollingData.imageUrls.length > 1 ? 's' : ''} disponível${pollingData.imageUrls.length > 1 ? 'eis' : ''} na galeria • Redirecionando em instantes...`,
+            duration: 4000
+          })
+
+          setSuccessImageUrl(pollingData.imageUrls[0])
+          setShowSuccessModal(true)
+
+          setTimeout(() => {
+            console.log('🚀 Redirecting to gallery (via polling)...')
+            window.location.href = '/gallery'
+          }, 2000)
+        }
+
+        // Se falhou via polling
+        if (pollingStatus === 'FAILED') {
+          const errorMessage = pollingData.errorMessage || 'Erro desconhecido na geração'
+          addToast({
+            type: 'error',
+            title: 'Falha na geração de imagem',
+            description: errorMessage,
+            duration: 6000
+          })
+        }
+      }
+    }
+  }, [generationPolling.data, currentGeneration?.id, currentGeneration?.status])
   
   const [settings, setSettings] = useState({
     aspectRatio: '1:1',
