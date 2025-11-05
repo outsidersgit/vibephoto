@@ -367,7 +367,10 @@ export function GenerationInterface({
   const handleGenerate = async () => {
     if (!prompt.trim() || !canUseCredits) return
 
+    // Limpar estado anterior antes de iniciar nova geração
     setCurrentGeneration(null)
+    setSuccessImageUrl(null)
+    setShowSuccessModal(false)
 
     try {
       const generation = await generateImage.mutateAsync({
@@ -398,9 +401,51 @@ export function GenerationInterface({
         status: generation.status || 'PROCESSING'
       })
     } catch (error) {
-      console.error('Generation request error:', error)
+      console.error('❌ Generation request error:', error)
+      
+      // CRITICAL: Limpar estado após erro para resetar o botão
+      setCurrentGeneration(null)
+      setSuccessImageUrl(null)
+      setShowSuccessModal(false)
+      
+      // Extrair mensagem de erro
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
-      alert(`Erro ao iniciar geração: ${errorMessage}`)
+      
+      // Detectar tipo de erro para mostrar mensagem apropriada
+      let userFriendlyMessage = 'Erro desconhecido ao iniciar a geração. Tente novamente.'
+      let userFriendlyTitle = 'Erro ao iniciar geração'
+      
+      // Erro de saldo do Astria (conta VibePhoto) - NÃO mostrar ao usuário
+      if (errorMessage.includes('Not enough balance') || errorMessage.includes('balance in account')) {
+        // Este é um erro técnico interno - não mostrar detalhes ao usuário
+        console.error('⚠️ [ASTRIA_BALANCE_ERROR] Saldo insuficiente na conta do Astria:', errorMessage)
+        userFriendlyMessage = 'Erro temporário no serviço. Nossa equipe foi notificada. Por favor, tente novamente em alguns instantes.'
+        userFriendlyTitle = 'Serviço temporariamente indisponível'
+      }
+      // Erro de créditos do usuário - MOSTRAR (já validado antes, mas pode acontecer em race condition)
+      else if (errorMessage.includes('insufficient credits') || errorMessage.includes('créditos insuficientes') || errorMessage.includes('credits')) {
+        userFriendlyMessage = 'Você não tem créditos suficientes para esta geração. Adquira mais créditos para continuar.'
+        userFriendlyTitle = 'Créditos insuficientes'
+      }
+      // Erro de parâmetros inválidos
+      else if (errorMessage.includes('Invalid parameters')) {
+        userFriendlyMessage = 'Parâmetros inválidos. Verifique suas configurações e tente novamente.'
+        userFriendlyTitle = 'Configuração inválida'
+      }
+      // Erro genérico do Astria
+      else if (errorMessage.includes('Astria API error') || errorMessage.includes('Astria')) {
+        console.error('⚠️ [ASTRIA_ERROR] Erro do provedor Astria:', errorMessage)
+        userFriendlyMessage = 'Erro temporário no serviço de geração. Por favor, tente novamente em alguns instantes.'
+        userFriendlyTitle = 'Erro no serviço'
+      }
+      
+      // Usar toast em vez de alert para melhor UX
+      addToast({
+        type: 'error',
+        title: userFriendlyTitle,
+        description: userFriendlyMessage,
+        duration: 8000 // 8 segundos para ler mensagem completa
+      })
     }
   }
 
