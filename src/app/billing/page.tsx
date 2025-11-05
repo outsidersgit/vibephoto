@@ -362,12 +362,14 @@ function BillingPageContent() {
             </h1>
             {/* Botão Atualizar Método de Pagamento - Mobile optimized */}
             {session?.user?.subscriptionId && (
-              <Button
-                onClick={() => setShowUpdateCardModal(true)}
-                className="w-full sm:w-auto bg-gradient-to-br from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white shadow-lg shadow-[#667EEA]/25 transition-all duration-200 text-sm sm:text-base px-3 sm:px-4 py-2"
-              >
-                Atualizar Método de Pagamento
-              </Button>
+              <div className="flex justify-end sm:justify-start">
+                <Button
+                  onClick={() => setShowUpdateCardModal(true)}
+                  className="w-auto bg-gradient-to-br from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white shadow-lg shadow-[#667EEA]/25 transition-all duration-200 text-xs sm:text-base px-3 sm:px-4 py-1.5 sm:py-2 h-auto"
+                >
+                  Atualizar Método de Pagamento
+                </Button>
+              </div>
             )}
           </div>
         </div>
