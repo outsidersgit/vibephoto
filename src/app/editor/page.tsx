@@ -26,7 +26,7 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
       <div className="min-h-screen">
       {/* Header - Visible in both versions */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-4">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 text-left" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+        <h1 className="text-3xl font-bold text-gray-900 text-left" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
           Editor de imagens
         </h1>
       </div>
