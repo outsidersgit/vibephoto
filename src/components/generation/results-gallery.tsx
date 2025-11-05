@@ -140,16 +140,25 @@ export function ResultsGallery({ generations }: ResultsGalleryProps) {
             </div>
 
             {/* Images Grid */}
-            {generation.status === 'COMPLETED' && generation.imageUrls.length > 0 ? (
+            {generation.status === 'COMPLETED' && generation.imageUrls && generation.imageUrls.length > 0 ? (
               <div className="grid grid-cols-2 gap-2 mb-3">
-                {generation.imageUrls.slice(0, 4).map((imageUrl, index) => (
+                {generation.imageUrls.slice(0, 4).map((imageUrl, index) => {
+                  // Validar que imageUrl existe antes de renderizar
+                  if (!imageUrl) return null
+                  
+                  // Usar thumbnailUrls se disponível, senão usar imageUrl
+                  const thumbnailUrl = (generation.thumbnailUrls && generation.thumbnailUrls[index]) 
+                    ? generation.thumbnailUrls[index] 
+                    : imageUrl
+
+                  return (
                   <div
                     key={`${generation.id}-img-${index}`}
                     className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer group"
                     onClick={() => setSelectedImage(imageUrl)}
                   >
                     <img
-                      src={generation.thumbnailUrls[index] || imageUrl}
+                      src={thumbnailUrl}
                       alt={`Generated image ${index + 1}`}
                       className="w-full h-full object-cover transition-transform group-hover:scale-105"
                     />
@@ -184,7 +193,8 @@ export function ResultsGallery({ generations }: ResultsGalleryProps) {
                       </div>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             ) : generation.status === 'PROCESSING' ? (
               <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center mb-3">

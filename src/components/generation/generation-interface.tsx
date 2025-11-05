@@ -27,14 +27,14 @@ import {
   ChevronRight,
   Check,
   FileText,
-  Eye
+  Eye,
+  X
 } from 'lucide-react'
 import { ModelSelector } from './model-selector'
 import { PromptInput } from './prompt-input'
 import { GenerationSettings } from './generation-settings'
 import { ResultsGallery } from './results-gallery'
 import { PromptExamples } from './prompt-examples'
-import { ImageModal } from '@/components/gallery/image-modal'
 
 interface GenerationInterfaceProps {
   models: Array<{
@@ -139,9 +139,11 @@ export function GenerationInterface({
             duration: 4000
           })
 
-          // Show success modal
-          setSuccessImageUrl(data.imageUrls[0])
-          setShowSuccessModal(true)
+          // Show success modal - validar que imageUrls existe e tem elementos
+          if (data.imageUrls && data.imageUrls.length > 0) {
+            setSuccessImageUrl(data.imageUrls[0])
+            setShowSuccessModal(true)
+          }
 
           // Redirect to gallery after 2 seconds
           setTimeout(() => {
@@ -224,8 +226,11 @@ export function GenerationInterface({
             duration: 4000
           })
 
-          setSuccessImageUrl(pollingData.imageUrls[0])
-          setShowSuccessModal(true)
+          // Validar que imageUrls existe antes de usar
+          if (pollingData.imageUrls && pollingData.imageUrls.length > 0) {
+            setSuccessImageUrl(pollingData.imageUrls[0])
+            setShowSuccessModal(true)
+          }
 
           setTimeout(() => {
             console.log('🚀 Redirecting to gallery (via polling)...')
@@ -677,41 +682,29 @@ export function GenerationInterface({
           </Card>
         )}
 
-        {/* Current Generation Status - Only show when processing or when verified in gallery */}
-        {currentGeneration && (currentGeneration.status === 'PROCESSING' || currentGeneration.status === 'FAILED') && (
-          <Card className="border-blue-200 bg-blue-50">
+        {/* Current Generation Status - Only show when failed (processing status is handled by button state) */}
+        {currentGeneration && currentGeneration.status === 'FAILED' && (
+          <Card className="border-red-200 bg-red-50">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-medium text-blue-900 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                    {currentGeneration.status === 'PROCESSING' ? 'Gerando Fotos...' : 'Geração Falhou'}
+                  <h3 className="text-sm font-medium text-red-900">
+                    Geração Falhou
                   </h3>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {currentGeneration.status === 'PROCESSING' && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleManualSync(currentGeneration.id)}
-                      className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                    >
-                      <RefreshCw className="w-3 h-3 mr-1" />
-                      Sincronizar
-                    </Button>
+                  {currentGeneration.errorMessage && (
+                    <p className="text-xs text-red-700 mt-1">
+                      {currentGeneration.errorMessage}
+                    </p>
                   )}
-                  <div className="text-right">
-                    {currentGeneration.status === 'PROCESSING' ? (
-                      <div className="flex items-center text-blue-600">
-                        <Clock className="w-4 h-4 mr-1 animate-pulse" />
-                        <span className="text-sm">~30 segundos</span>
-                      </div>
-                    ) : (
-                      <Badge variant="default">
-                        {currentGeneration.imageUrls?.length || 0} imagens
-                      </Badge>
-                    )}
-                  </div>
                 </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCurrentGeneration(null)}
+                  className="text-red-600 border-red-300 hover:bg-red-50"
+                >
+                  Fechar
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -764,16 +757,26 @@ export function GenerationInterface({
 
       </div>
 
-      {/* Success Modal */}
+      {/* Success Modal - Simple image preview */}
       {showSuccessModal && successImageUrl && (
-        <ImageModal
-          imageUrl={successImageUrl}
-          onClose={() => {
-            setShowSuccessModal(false)
-            setSuccessImageUrl(null)
-          }}
-          generations={generationResults}
-        />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <div className="relative max-w-4xl max-h-[90vh] w-full">
+            <button
+              onClick={() => {
+                setShowSuccessModal(false)
+                setSuccessImageUrl(null)
+              }}
+              className="absolute top-4 right-4 z-10 bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+            <img
+              src={successImageUrl}
+              alt="Generated image"
+              className="w-full h-auto max-h-[90vh] object-contain rounded-lg"
+            />
+          </div>
+        </div>
       )}
     </div>
     </div>

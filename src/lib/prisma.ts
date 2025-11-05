@@ -6,9 +6,17 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 // Log database connection info (masking password)
+// CRITICAL: Só logar no server-side, nunca no client-side
 const logDatabaseConnection = () => {
+  // Verificar se estamos no server-side
+  if (typeof window !== 'undefined') {
+    // Client-side: não logar nada (evita erro de DATABASE_URL não definido)
+    return
+  }
+
   const url = process.env.DATABASE_URL
   if (!url) {
+    // Só logar erro no server-side
     console.error('[Prisma] DATABASE_URL is not defined')
     return
   }
@@ -26,8 +34,8 @@ const logDatabaseConnection = () => {
   }
 }
 
-// Log connection on startup
-if (process.env.NODE_ENV === 'production') {
+// Log connection on startup (apenas server-side)
+if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
   logDatabaseConnection()
 }
 
