@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Image as ImageIcon, Video, Upload, ChevronDown, ChevronUp, X, Loader2 } from 'lucide-react'
+import { Image as ImageIcon, Video, Upload, X, Loader2 } from 'lucide-react'
 import { VIDEO_CONFIG, VideoGenerationRequest, VideoTemplate } from '@/lib/ai/video/config'
 import { calculateVideoCredits, validatePrompt, getEstimatedProcessingTime, formatProcessingTime } from '@/lib/ai/video/utils'
 import { useToast } from '@/hooks/use-toast'
@@ -40,7 +40,6 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   })
 
   const [selectedTemplate, setSelectedTemplate] = useState<VideoTemplate | null>(null)
-  const [showAdvanced, setShowAdvanced] = useState(false)
   const [loading, setLoading] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [errors, setErrors] = useState<string[]>([])
@@ -101,6 +100,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         const result = e.target?.result as string
         setUploadedImage(result)
         setFormData(prev => ({ ...prev, sourceImageUrl: result }))
+        // Automatically switch to image-to-video mode when image is uploaded
         setActiveMode('image-to-video')
       }
       reader.readAsDataURL(file)
@@ -110,9 +110,8 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   const removeImage = () => {
     setUploadedImage(null)
     setFormData(prev => ({ ...prev, sourceImageUrl: undefined }))
-    if (activeMode === 'image-to-video' && !formData.prompt.trim()) {
-      setActiveMode('text-to-video')
-    }
+    // Automatically switch back to text-to-video mode when image is removed
+    setActiveMode('text-to-video')
   }
 
   const handleSubmit = async () => {
@@ -241,7 +240,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
             {/* Prompt Input */}
             <div className="relative">
               <Textarea
-                placeholder={activeMode === 'image-to-video' 
+                placeholder={uploadedImage 
                   ? "Descreva o movimento desejado para o vídeo..."
                   : "Descreva o vídeo que você quer criar..."
                 }
@@ -264,10 +263,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  fileInputRef.current?.click()
-                  setActiveMode('image-to-video')
-                }}
+                onClick={() => fileInputRef.current?.click()}
                 disabled={loading}
                 className="flex-1 border border-gray-900 hover:border-[#667EEA] hover:bg-[#667EEA]/5 bg-gray-200 text-gray-900 rounded-lg py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               >
@@ -367,43 +363,6 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
           <div className="lg:col-span-1">
             <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
               <CardContent className="p-6 space-y-4">
-                {/* Mode Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Modo de Geração
-                  </label>
-                  <div className="flex gap-2">
-                    <Button
-                      variant={activeMode === 'text-to-video' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setActiveMode('text-to-video')
-                        if (!formData.prompt.trim() && uploadedImage) {
-                          setUploadedImage(null)
-                          setFormData(prev => ({ ...prev, sourceImageUrl: undefined }))
-                        }
-                      }}
-                      className={`flex-1 ${activeMode === 'text-to-video' 
-                        ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white' 
-                        : 'bg-gray-200 text-gray-900 border-gray-900'
-                      }`}
-                    >
-                      Texto
-                    </Button>
-                    <Button
-                      variant={activeMode === 'image-to-video' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setActiveMode('image-to-video')}
-                      className={`flex-1 ${activeMode === 'image-to-video' 
-                        ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white' 
-                        : 'bg-gray-200 text-gray-900 border-gray-900'
-                      }`}
-                    >
-                      Imagem
-                    </Button>
-                  </div>
-                </div>
-
                 {/* Duration */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -443,35 +402,6 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                   </Select>
                 </div>
 
-                {/* Advanced Settings Toggle */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="w-full text-gray-700 hover:bg-gray-100 text-sm"
-                >
-                  {showAdvanced ? 'Menos opções' : 'Mais opções'}
-                  {showAdvanced ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
-                </Button>
-
-                {/* Advanced Settings */}
-                {showAdvanced && (
-                  <div className="pt-4 border-t border-gray-200">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Prompt Negativo
-                      </label>
-                      <Textarea
-                        placeholder="Elementos que você NÃO quer..."
-                        value={formData.negativePrompt}
-                        onChange={(e) => setFormData(prev => ({ ...prev, negativePrompt: e.target.value }))}
-                        rows={3}
-                        className="resize-none text-sm bg-gray-200 border-gray-900 text-gray-900 placeholder:text-gray-500 rounded-lg"
-                      />
-                    </div>
-                  </div>
-                )}
-
                 {/* Quality Info */}
                 <div className="pt-4 border-t border-gray-200">
                   <div className="text-xs text-gray-600 text-center">
@@ -486,20 +416,20 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
           <div className="lg:col-span-2 space-y-4">
             {/* Prompt Input */}
             <div className="relative">
-              <Textarea
-                placeholder={activeMode === 'image-to-video' 
-                  ? "Descreva o movimento desejado para o vídeo..."
-                  : "Descreva o vídeo que você quer criar..."
-                }
-                value={formData.prompt}
-                onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
-                rows={5}
-                maxLength={VIDEO_CONFIG.options.maxPromptLength}
-                className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-lg px-4 py-4 pr-12 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-                style={{
-                  fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
-                }}
-              />
+            <Textarea
+              placeholder={uploadedImage 
+                ? "Descreva o movimento desejado para o vídeo..."
+                : "Descreva o vídeo que você quer criar..."
+              }
+              value={formData.prompt}
+              onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
+              rows={5}
+              maxLength={VIDEO_CONFIG.options.maxPromptLength}
+              className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-lg px-4 py-4 pr-12 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              style={{
+                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
+              }}
+            />
               <div className="absolute bottom-4 right-4 text-xs text-gray-600">
                 {formData.prompt.length}/{VIDEO_CONFIG.options.maxPromptLength}
               </div>
@@ -510,10 +440,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  fileInputRef.current?.click()
-                  setActiveMode('image-to-video')
-                }}
+                onClick={() => fileInputRef.current?.click()}
                 disabled={loading}
                 className="flex-1 border border-gray-900 hover:border-[#667EEA] hover:bg-[#667EEA]/5 bg-gray-200 text-gray-900 rounded-lg py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               >
