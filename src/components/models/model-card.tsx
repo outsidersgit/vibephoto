@@ -114,8 +114,8 @@ export function ModelCard({ model, showProgress, showError, isSelected = false, 
         }`}
         onClick={() => onSelect && onSelect(model.id)}
       >
-        <CardContent className={`p-1 sm:p-1.5 relative ${isSelected ? 'bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] rounded' : ''}`}>
-          <div className="space-y-0.5 sm:space-y-1">
+        <CardContent className={`p-1 relative ${isSelected ? 'bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] rounded' : ''}`}>
+          <div className="space-y-1.5">
             {/* Model Preview */}
             <div className="aspect-square bg-slate-700 rounded-md overflow-hidden relative">
               {previewImage ? (
@@ -125,7 +125,8 @@ export function ModelCard({ model, showProgress, showError, isSelected = false, 
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-slate-800">
+                <div className="w-full h-full flex items-center justify-center">
+                  <VibePhotoLogo size="sm" layout="iconOnly" variant="white" showText={false} />
                 </div>
               )}
 
@@ -135,16 +136,23 @@ export function ModelCard({ model, showProgress, showError, isSelected = false, 
                   <Check className="w-3 h-3 text-white" />
                 </div>
               )}
+
+              {/* VibePhoto Logo Overlay - Bottom Right (only when there's an image and not selected) */}
+              {previewImage && !isSelected && (
+                <div className="absolute bottom-1 right-1">
+                  <VibePhotoLogo size="xs" layout="iconOnly" variant="white" showText={false} />
+                </div>
+              )}
             </div>
 
             {/* Model Info */}
             <div className="space-y-0.5">
-              <h3 className="font-medium text-[10px] sm:text-[11px] truncate text-white leading-tight">
+              <h3 className="font-medium text-xs truncate text-white">
                 {model.name}
               </h3>
 
               <div className="flex items-center justify-between">
-                <span className="text-[9px] sm:text-[10px] text-gray-400">
+                <span className="text-xs text-gray-400">
                   {getClassLabel(model.class)}
                 </span>
 
@@ -152,7 +160,7 @@ export function ModelCard({ model, showProgress, showError, isSelected = false, 
                 {model.qualityScore && (
                   <Badge
                     variant="secondary"
-                    className="text-[9px] sm:text-[10px] px-0.5 py-0 h-3 sm:h-3.5 bg-gray-600 text-gray-200"
+                    className="text-xs px-1 py-0 h-4 bg-gray-600 text-gray-200"
                   >
                     {Math.round(model.qualityScore * 100)}%
                   </Badge>
