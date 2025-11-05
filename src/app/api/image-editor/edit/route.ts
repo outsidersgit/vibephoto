@@ -6,6 +6,8 @@ import { AIError } from '@/lib/ai/base'
 import { createEditHistory } from '@/lib/db/edit-history'
 import { recordImageEditCost } from '@/lib/services/credit-transaction-service'
 import { prisma } from '@/lib/db'
+import { downloadAndStoreImages } from '@/lib/storage/utils'
+import { processAndStoreReplicateImages } from '@/lib/services/auto-image-storage'
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,6 +75,56 @@ export async function POST(request: NextRequest) {
       result = await imageEditor.generateImageFromPrompt(prompt, aspectRatioValue)
     }
 
+    // 🔑 CRITICAL: Upload image to S3 for permanent storage (Replicate URLs expire in 1 hour)
+    let permanentImageUrl = result.resultImage
+    let permanentThumbnailUrl = result.resultImage
+    
+    if (result.resultImage) {
+      try {
+        console.log('📥 Uploading editor image to S3 for permanent storage...')
+        const generationId = `editor_${Date.now()}_${session.user.id}`
+        
+        // Try auto-storage service first (more reliable)
+        try {
+          const autoStorageResults = await processAndStoreReplicateImages(
+            [result.resultImage],
+            generationId,
+            session.user.id
+          )
+          
+          if (autoStorageResults && autoStorageResults.length > 0) {
+            permanentImageUrl = autoStorageResults[0].url
+            permanentThumbnailUrl = autoStorageResults[0].thumbnailUrl || autoStorageResults[0].url
+            console.log('✅ Image uploaded to S3 via auto-storage:', permanentImageUrl)
+          } else {
+            throw new Error('Auto-storage returned no results')
+          }
+        } catch (autoStorageError) {
+          console.warn('⚠️ Auto-storage failed, falling back to legacy storage:', autoStorageError)
+          
+          // Fallback to legacy storage
+          const storageResult = await downloadAndStoreImages(
+            [result.resultImage],
+            generationId,
+            session.user.id,
+            'editor'
+          )
+          
+          if (storageResult.success && storageResult.permanentUrls && storageResult.permanentUrls.length > 0) {
+            permanentImageUrl = storageResult.permanentUrls[0]
+            permanentThumbnailUrl = storageResult.thumbnailUrls?.[0] || storageResult.permanentUrls[0]
+            console.log('✅ Image uploaded to S3 via legacy storage:', permanentImageUrl)
+          } else {
+            console.error('❌ Storage failed, keeping Replicate URL (will expire):', storageResult.error)
+            // Keep original URL if storage fails - user will see warning
+          }
+        }
+      } catch (storageError) {
+        console.error('❌ Failed to upload image to S3:', storageError)
+        // Continue with Replicate URL - don't fail the request
+      }
+    }
+
     // Save to edit history database
     let editHistoryEntry = null
     try {
@@ -84,8 +136,8 @@ export async function POST(request: NextRequest) {
       editHistoryEntry = await createEditHistory({
         userId: session.user.id,
         originalImageUrl: originalImageUrl,
-        editedImageUrl: result.resultImage!,
-        thumbnailUrl: result.resultImage, // Use the same image as thumbnail
+        editedImageUrl: permanentImageUrl, // Use permanent S3 URL
+        thumbnailUrl: permanentThumbnailUrl, // Use permanent S3 URL
         operation: image ? 'nano_banana_edit' : 'nano_banana_generate',
         prompt: prompt,
         metadata: {
@@ -95,7 +147,9 @@ export async function POST(request: NextRequest) {
           fileType: image?.type || 'image/png',
           processingTime: result.metadata?.processingTime,
           replicateId: result.id,
-          generatedFromScratch: !image
+          generatedFromScratch: !image,
+          permanentUrl: permanentImageUrl,
+          temporaryUrl: result.resultImage // Keep original for reference
         }
       })
 
@@ -151,8 +205,8 @@ export async function POST(request: NextRequest) {
               modelId: defaultModel.id,
               prompt: image ? `[EDITOR] ${prompt}` : `[GERADO] ${prompt}`,
               status: 'COMPLETED',
-              imageUrls: [result.resultImage],
-              thumbnailUrls: [result.resultImage],
+              imageUrls: [permanentImageUrl], // Use permanent S3 URL
+              thumbnailUrls: [permanentThumbnailUrl], // Use permanent S3 URL
               aspectRatio: aspectRatioValue || '1:1',
               resolution: aspectRatioValue ? 
                 (aspectRatioValue === '1:1' ? '1024x1024' :
@@ -162,11 +216,13 @@ export async function POST(request: NextRequest) {
                  aspectRatioValue === '16:9' ? '1280x720' : '1024x1024') : '1024x1024',
               estimatedCost: 15,
               aiProvider: 'nano-banana',
+              storageProvider: 'aws',
               metadata: {
                 source: image ? 'editor' : 'editor_generate',
                 editHistoryId: editHistoryEntry?.id,
                 replicateId: result.id,
-                generatedFromScratch: !image
+                generatedFromScratch: !image,
+                temporaryUrl: result.resultImage // Keep original for reference
               }
             },
             include: {
@@ -176,7 +232,7 @@ export async function POST(request: NextRequest) {
             }
           })
 
-          console.log('✅ Generation record saved to gallery:', generationRecord.id)
+          console.log('✅ Generation record saved to gallery with permanent S3 URL:', generationRecord.id)
         } else {
           console.warn('⚠️ No model found to associate with editor generation')
         }
@@ -191,12 +247,12 @@ export async function POST(request: NextRequest) {
       data: {
         id: result.id,
         status: result.status,
-        resultImage: result.resultImage,
+        resultImage: permanentImageUrl, // Return permanent S3 URL
         metadata: result.metadata,
         editHistoryId: editHistoryEntry?.id,
         generationId: generationRecord?.id
       },
-      resultUrl: result.resultImage
+      resultUrl: permanentImageUrl // Return permanent S3 URL
     })
 
   } catch (error) {
