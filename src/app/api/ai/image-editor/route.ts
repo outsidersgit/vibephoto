@@ -72,10 +72,18 @@ export async function POST(request: NextRequest) {
 
     const { operation, prompt, images, aspectRatio } = await request.json()
 
-    // Validate input
-    if (!operation || !prompt || !images || !Array.isArray(images) || images.length === 0) {
+    // Validate input - prompt is required, images can be empty for generation from scratch
+    if (!operation || !prompt || !prompt.trim()) {
       return NextResponse.json(
-        { error: 'Operação, prompt e imagens são obrigatórios' },
+        { error: 'Operação e prompt são obrigatórios' },
+        { status: 400 }
+      )
+    }
+
+    // Validate images array exists (can be empty)
+    if (!Array.isArray(images)) {
+      return NextResponse.json(
+        { error: 'Imagens deve ser um array' },
         { status: 400 }
       )
     }
@@ -89,6 +97,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate images based on operation
+    // For blend, we need at least 2 images
+    if (operation === 'blend' && images.length < 2) {
+      return NextResponse.json(
+        { error: 'Operação blend requer pelo menos 2 imagens' },
+        { status: 400 }
+      )
+    }
+
+    // For other operations, images can be empty (generation from scratch) or have 1 image (edit)
+    if (['edit', 'add', 'remove', 'style'].includes(operation) && images.length > 1) {
+      return NextResponse.json(
+        { error: 'Operação requer no máximo 1 imagem' },
+        { status: 400 }
+      )
+    }
+
     // Convert base64 images to FormData
     const formData = new FormData()
     formData.append('prompt', prompt)
@@ -96,8 +121,8 @@ export async function POST(request: NextRequest) {
       formData.append('aspectRatio', aspectRatio)
     }
 
-    // For single image operations
-    if (['edit', 'add', 'remove', 'style'].includes(operation)) {
+    // For single image operations (only if image is provided)
+    if (['edit', 'add', 'remove', 'style'].includes(operation) && images.length > 0) {
       const imageFile = await urlToFile(images[0], 'image.jpg')
       formData.append('image', imageFile)
     }
@@ -108,6 +133,7 @@ export async function POST(request: NextRequest) {
         formData.append(`image${index}`, imageFile)
       }
     }
+    // For generation from scratch (no images), no image file is appended
 
     // Route to specific operation handler
     const baseUrl = new URL(request.url).origin

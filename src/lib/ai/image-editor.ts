@@ -89,6 +89,38 @@ export class ImageEditor {
   }
 
   /**
+   * Generate an image from text prompt only (no input image)
+   * @param promptText - Text description of the desired image
+   * @param aspectRatio - Aspect ratio for the output image
+   * @returns Promise<ImageEditResponse>
+   */
+  async generateImageFromPrompt(promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9'): Promise<ImageEditResponse> {
+    this.checkConfiguration()
+    
+    try {
+      console.log('🍌 Starting Nano Banana image generation from scratch via Replicate:', { prompt: promptText })
+      
+      // Validate input
+      if (!promptText || promptText.trim().length === 0) {
+        throw new AIError('Prompt text is required', 'INVALID_INPUT')
+      }
+
+      // Call Nano Banana provider to generate from scratch
+      const result = await this.provider!.generateImage(promptText, 'png', aspectRatio)
+
+      console.log('✅ Nano Banana generation completed:', result.id)
+      return result
+
+    } catch (error) {
+      console.error('❌ Nano Banana generation failed:', error)
+      throw error instanceof AIError ? error : new AIError(
+        `Nano Banana generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'NANO_BANANA_GENERATION_ERROR'
+      )
+    }
+  }
+
+  /**
    * Add an element to an image
    * @param imageFile - The base image file
    * @param prompt - Description of what to add

@@ -219,12 +219,14 @@ export class NanoBananaProvider {
   /**
    * Generate image from text prompt only
    */
-  async generateImage(prompt: string, outputFormat: 'jpg' | 'png' = 'jpg'): Promise<NanoBananaEditResponse> {
+  async generateImage(prompt: string, outputFormat: 'jpg' | 'png' = 'jpg', aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9'): Promise<NanoBananaEditResponse> {
     const enhancedPrompt = `Generate a high-quality image: ${prompt}. Create detailed, professional-looking result with excellent composition and lighting.`
     
     return this.editImage({
       prompt: enhancedPrompt,
-      outputFormat
+      imageInput: [],
+      outputFormat,
+      aspectRatio
     })
   }
 

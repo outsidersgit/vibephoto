@@ -20,75 +20,82 @@ export async function POST(request: NextRequest) {
 
     // Parse form data
     const formData = await request.formData()
-    const image = formData.get('image') as File
+    const image = formData.get('image') as File | null
     const prompt = formData.get('prompt') as string
     const aspectRatio = formData.get('aspectRatio') as string | null
 
     // Validate inputs
-    if (!image) {
-      return NextResponse.json(
-        { error: 'Image file is required' },
-        { status: 400 }
-      )
-    }
-
-    if (!prompt) {
+    if (!prompt || !prompt.trim()) {
       return NextResponse.json(
         { error: 'Prompt is required' },
         { status: 400 }
       )
     }
 
-    // Validate file type and size
-    if (!imageEditor.isValidImageFile(image)) {
-      return NextResponse.json(
-        { error: 'Invalid image format. Supported formats: JPEG, PNG, WebP, GIF' },
-        { status: 400 }
-      )
+    // Image is optional - if not provided, generate from scratch
+    if (image) {
+      // Validate file type and size
+      if (!imageEditor.isValidImageFile(image)) {
+        return NextResponse.json(
+          { error: 'Invalid image format. Supported formats: JPEG, PNG, WebP, GIF' },
+          { status: 400 }
+        )
+      }
+
+      if (image.size > imageEditor.getMaxFileSize()) {
+        return NextResponse.json(
+          { error: 'Image file too large. Maximum size: 10MB' },
+          { status: 400 }
+        )
+      }
     }
 
-    if (image.size > imageEditor.getMaxFileSize()) {
-      return NextResponse.json(
-        { error: 'Image file too large. Maximum size: 10MB' },
-        { status: 400 }
-      )
-    }
-
-    console.log(`🎨 Image edit request from ${session.user.email}:`, {
-      filename: image.name,
-      size: image.size,
-      type: image.type,
+    console.log(`🎨 Image edit/generation request from ${session.user.email}:`, {
+      hasImage: !!image,
+      filename: image?.name || 'none',
+      size: image?.size || 0,
+      type: image?.type || 'none',
       prompt: prompt.substring(0, 100) + '...'
     })
 
-    // Process image edit
+    // Process image edit or generation from scratch
     const validAspectRatios = ['1:1', '4:3', '3:4', '9:16', '16:9'] as const
     const aspectRatioValue = aspectRatio && validAspectRatios.includes(aspectRatio as any) 
       ? (aspectRatio as typeof validAspectRatios[number])
       : undefined
     
-    const result = await imageEditor.editImageWithPrompt(image, prompt, aspectRatioValue)
+    let result
+    if (image) {
+      // Edit existing image
+      result = await imageEditor.editImageWithPrompt(image, prompt, aspectRatioValue)
+    } else {
+      // Generate from scratch
+      result = await imageEditor.generateImageFromPrompt(prompt, aspectRatioValue)
+    }
 
     // Save to edit history database
     let editHistoryEntry = null
     try {
       // Get original image URL from form data or create a placeholder
-      const originalImageUrl = formData.get('originalUrl') as string || `data:${image.type};base64,original`
+      const originalImageUrl = image 
+        ? (formData.get('originalUrl') as string || `data:${image.type};base64,original`)
+        : 'generated-from-scratch'
 
       editHistoryEntry = await createEditHistory({
         userId: session.user.id,
         originalImageUrl: originalImageUrl,
         editedImageUrl: result.resultImage!,
         thumbnailUrl: result.resultImage, // Use the same image as thumbnail
-        operation: 'nano_banana_edit',
+        operation: image ? 'nano_banana_edit' : 'nano_banana_generate',
         prompt: prompt,
         metadata: {
           ...result.metadata,
-          originalFileName: image.name,
-          fileSize: image.size,
-          fileType: image.type,
+          originalFileName: image?.name || 'generated',
+          fileSize: image?.size || 0,
+          fileType: image?.type || 'image/png',
           processingTime: result.metadata?.processingTime,
-          replicateId: result.id
+          replicateId: result.id,
+          generatedFromScratch: !image
         }
       })
 
