@@ -295,11 +295,11 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, modelClass = 'MAN
               >
                 <CardTitle className="flex items-center justify-between text-sm">
                   <div className="flex items-center space-x-2">
-                    <span className={`font-medium ${selectedInCategory ? 'text-green-400' : 'text-white'}`}>
+                    <span className={`font-medium ${selectedInCategory ? 'text-[#667EEA]' : 'text-white'}`}>
                       {getCategoryLabel(category.name)}
                     </span>
                     {selectedInCategory && (
-                      <Badge className="bg-green-600 text-white text-xs px-2">
+                      <Badge className="bg-[#667EEA] text-white text-xs px-2">
                         ✓ {selectedInCategory.name}
                       </Badge>
                     )}
@@ -354,7 +354,7 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, modelClass = 'MAN
                               <span className="text-xs opacity-75 mt-0.5">{block.value.slice(0, 50)}...</span>
                             )}
                           </div>
-                          {isCopied && <Check className="w-4 h-4 text-green-400" />}
+                          {isCopied && <Check className="w-4 h-4 text-[#667EEA]" />}
                         </Button>
                       )
                     })}
@@ -379,19 +379,7 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, modelClass = 'MAN
               </p>
             </div>
 
-            <div className="flex space-x-2">
-              <Button
-                onClick={() => {
-                  handleGeneratePrompt()
-                  onGenerate?.()
-                }}
-                className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-[#667EEA]"
-                disabled={selectedBlocks.length === 0}
-              >
-                <Wand2 className="w-4 h-4 mr-2" />
-                Gerar Foto
-              </Button>
-
+            <div className="flex justify-end">
               <Button
                 variant="outline"
                 onClick={handleCopyPrompt}

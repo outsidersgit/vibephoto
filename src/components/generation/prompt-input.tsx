@@ -159,27 +159,6 @@ export function PromptInput({
         </>
       )}
 
-      {/* Current Prompt Display (only in guided mode) */}
-      {isGuidedMode && prompt && (
-        <Card className="bg-gray-50 border-gray-200">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-medium text-gray-900">Prompt Atual</h4>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={copyPrompt}
-                className="text-gray-600 hover:text-gray-900 hover:bg-gray-200"
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
-            </div>
-            <p className="text-sm text-gray-700 leading-relaxed">
-              {prompt}
-            </p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }
