@@ -93,51 +93,47 @@ export function GenerationSettings({ settings, onSettingsChange, userPlan }: Gen
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-        {/* Variations */}
-        <div>
-          <label className="block text-sm font-medium text-gray-200 mb-2">
-            Variações
-          </label>
-          <div className="grid grid-cols-4 gap-1">
-            {[1, 2, 3, 4].map((num) => (
-              <button
-                key={num}
-                onClick={() => updateSetting('variations', num)}
-                className={`p-2 border rounded text-center transition-colors text-sm ${
-                  settings.variations === num
-                    ? 'border-purple-400 bg-purple-600 text-white'
-                    : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
-                }`}
-              >
-                <div className="font-medium">{num}</div>
-              </button>
-            ))}
-          </div>
+      {/* Variations */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Variações
+        </label>
+        <div className="grid grid-cols-4 gap-1">
+          {[1, 2, 3, 4].map((num) => (
+            <button
+              key={num}
+              onClick={() => updateSetting('variations', num)}
+              className={`p-2 border rounded text-center transition-colors text-sm ${
+                settings.variations === num
+                  ? 'border-[#667EEA] bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white'
+                  : 'border-gray-300 bg-gray-200 text-gray-700 hover:border-gray-400'
+              }`}
+            >
+              <div className="font-medium">{num}</div>
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Aspect Ratio */}
-        <div>
-          <label className="block text-sm font-medium text-gray-200 mb-2">
-            Formato
-          </label>
-          <select
-            value={settings.aspectRatio}
-            onChange={(e) => updateSetting('aspectRatio', e.target.value)}
-            className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-gray-200 text-sm focus:border-purple-400"
-          >
-            {aspectRatios.map((ratio) => (
-              <option key={ratio.value} value={ratio.value}>
-                {ratio.label}
-              </option>
-            ))}
-          </select>
-          <div className="mt-1 text-xs text-gray-400">
-            Resolução: {calculateResolution(settings.aspectRatio)}
-          </div>
+      {/* Aspect Ratio */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Formato
+        </label>
+        <select
+          value={settings.aspectRatio}
+          onChange={(e) => updateSetting('aspectRatio', e.target.value)}
+          className="w-full p-2 bg-gray-200 border border-gray-900 rounded text-gray-900 text-sm focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20"
+        >
+          {aspectRatios.map((ratio) => (
+            <option key={ratio.value} value={ratio.value}>
+              {ratio.label}
+            </option>
+          ))}
+        </select>
+        <div className="mt-1 text-xs text-gray-600">
+          Resolução: {calculateResolution(settings.aspectRatio)}
         </div>
-
       </div>
     </div>
   )

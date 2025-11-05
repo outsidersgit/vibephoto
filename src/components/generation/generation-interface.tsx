@@ -9,32 +9,19 @@ import { useToast } from '@/hooks/use-toast'
 import { useImageGeneration, useManualSync, useGenerationPolling } from '@/hooks/useImageGeneration'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   Play,
-  Sparkles,
-  Settings,
   Image,
-  Zap,
-  Clock,
   RefreshCw,
-  Download,
-  Heart,
-  Share2,
-  Copy,
   ChevronDown,
   ChevronUp,
-  ChevronRight,
-  Check,
-  FileText,
-  Eye,
   X
 } from 'lucide-react'
-import { ModelSelector } from './model-selector'
 import { PromptInput } from './prompt-input'
 import { GenerationSettings } from './generation-settings'
 import { ResultsGallery } from './results-gallery'
 import { PromptExamples } from './prompt-examples'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface GenerationInterfaceProps {
   models: Array<{
@@ -72,7 +59,6 @@ export function GenerationInterface({
   const [generationResults, setGenerationResults] = useState<any[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [currentGeneration, setCurrentGeneration] = useState<any>(null)
-  const [currentStep, setCurrentStep] = useState(1)
   const [showExamples, setShowExamples] = useState(false)
 
   // Success modal states
@@ -502,267 +488,126 @@ export function GenerationInterface({
   const creditsNeeded = settings.variations * 10
   const canGenerate = prompt.trim() && canUseCredits && !isGenerating && creditsRemaining >= creditsNeeded
 
-  const steps = [
-    { number: 1, title: 'Escolher Modelo', description: 'Selecione qual modelo de IA usar' },
-    { number: 2, title: 'Descrever Imagem', description: 'Escreva uma descrição detalhada' },
-    { number: 3, title: 'Revisar e Gerar', description: 'Confirme os detalhes e gere sua foto' }
-  ]
-
-  const isStepComplete = (stepNumber: number) => {
-    switch (stepNumber) {
-      case 1: return !!selectedModel
-      case 2: return !!prompt.trim()
-      case 3: return !!selectedModel && !!prompt.trim()
-      default: return false
+  const getClassLabel = (modelClass: string) => {
+    const labels = {
+      MAN: 'Homem',
+      WOMAN: 'Mulher',
+      BOY: 'Menino',
+      GIRL: 'Menina',
+      ANIMAL: 'Animal'
     }
-  }
-
-  const goToStep = (stepNumber: number) => {
-    if (stepNumber <= 3) {
-      setCurrentStep(stepNumber)
-    }
+    return labels[modelClass as keyof typeof labels] || modelClass
   }
 
   return (
-    <div className="space-y-8">
-      {/* Step Navigation */}
-      <div className="bg-white rounded-lg border p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4 sm:gap-0">
-          {steps.map((step, index) => (
-            <div key={step.number} className="flex flex-col sm:flex-row items-start sm:items-center w-full sm:w-auto">
-              <div
-                className={`flex items-center cursor-pointer ${
-                  currentStep === step.number ? 'text-purple-600' :
-                  isStepComplete(step.number) ? 'text-green-600' : 'text-gray-400'
-                }`}
-                onClick={() => goToStep(step.number)}
-              >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 flex-shrink-0 ${
-                  currentStep === step.number ? 'border-purple-600 bg-purple-50' :
-                  isStepComplete(step.number) ? 'border-green-600 bg-green-50' : 'border-gray-300 bg-gray-50'
-                }`}>
-                  {isStepComplete(step.number) && currentStep !== step.number ? (
-                    <Check className="w-5 h-5" />
-                  ) : (
-                    <span className="font-semibold">{step.number}</span>
-                  )}
-                </div>
-                <div className="ml-3 text-left">
-                  <div className="font-medium text-sm sm:text-base">{step.title}</div>
-                  <div className="text-xs sm:text-sm text-gray-500">{step.description}</div>
-                </div>
-              </div>
-              {index < steps.length - 1 && (
-                <ChevronRight className="hidden sm:block w-5 h-5 mx-6 text-slate-300" />
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column - Generation Controls */}
-        <div className="lg:col-span-2 space-y-6">
-        {/* Step 1: Model Selection */}
-        {currentStep === 1 && (
-          <Card className="border-2 border-slate-600/30 bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569]">
+    <div className="space-y-6">
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Model Selection and Settings */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* Model Selection Card */}
+          <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center text-white">
-                <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center mr-3">
-                  <span className="text-white font-bold">1</span>
-                </div>
-                Escolher Modelo de IA
+              <CardTitle className="text-base font-semibold text-gray-900">
+                Escolher Modelo
               </CardTitle>
-              <CardDescription className="text-gray-400">
-                Selecione qual modelo de IA personalizado usar para gerar suas fotos
+              <CardDescription className="text-sm text-gray-500">
+                Selecione qual modelo usar
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ModelSelector
-                models={models}
-                selectedModelId={selectedModel}
-                onModelSelect={setSelectedModel}
-              />
-              <div className="mt-6 flex justify-end">
-                <Button
-                  onClick={() => goToStep(2)}
-                  disabled={!selectedModel}
-                  className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-[#667EEA] shadow-lg shadow-[#667EEA]/25"
-                >
-                  Próximo
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
+              <Select value={selectedModel} onValueChange={setSelectedModel}>
+                <SelectTrigger className="w-full bg-gray-200 border-gray-900 text-gray-900">
+                  <SelectValue placeholder="Selecione um modelo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {models.map((model) => (
+                    <SelectItem key={model.id} value={model.id}>
+                      {model.name} ({getClassLabel(model.class)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </CardContent>
           </Card>
-        )}
 
-        {/* Step 2: Prompt Input */}
-        {currentStep === 2 && (
-          <Card className="border-2 border-slate-600/30 bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569]">
+          {/* Settings Card */}
+          <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center mr-3">
-                  <span className="text-white font-bold">2</span>
-                </div>
-                <span className="text-white">Descrever sua Foto</span>
+              <CardTitle className="text-base font-semibold text-gray-900">
+                Configurações
               </CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardDescription className="text-sm text-gray-500">
+                Ajuste os parâmetros de geração
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <GenerationSettings
+                settings={settings}
+                onSettingsChange={setSettings}
+                userPlan={user.plan}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column - Prompt Input and Examples */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Prompt Card */}
+          <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold text-gray-900">
+                Descrever Imagem
+              </CardTitle>
+              <CardDescription className="text-sm text-gray-500">
                 Escreva uma descrição detalhada da foto que deseja criar
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <PromptInput
                 prompt={prompt}
                 negativePrompt={negativePrompt}
                 onPromptChange={setPrompt}
-                onNegativePromptChange={setNegativePrompt}
                 isGenerating={isGenerating}
                 modelClass={selectedModelData?.class || 'MAN'}
               />
 
-
-              <div className="mt-6 flex justify-between">
-                <Button
-                  variant="outline"
-                  onClick={() => goToStep(1)}
-                  className="border-slate-400 text-slate-600 hover:bg-slate-50"
-                >
-                  <ChevronRight className="w-4 h-4 mr-2 rotate-180" />
-                  Voltar
-                </Button>
-                <Button
-                  onClick={() => goToStep(3)}
-                  disabled={!prompt.trim()}
-                  className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-[#667EEA] shadow-lg shadow-[#667EEA]/25"
-                >
-                  Próximo
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 3: Review and Generate */}
-        {currentStep === 3 && (
-          <>
-            {/* Configurations First */}
-            <Card className="bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border-slate-600/30">
-              <CardHeader>
-                <CardTitle className="flex items-center text-white">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Configurações
-                </CardTitle>
-                <CardDescription className="text-gray-400">
-                  Ajuste os parâmetros de geração
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <GenerationSettings
-                  settings={settings}
-                  onSettingsChange={setSettings}
-                  userPlan={user.plan}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Review Summary */}
-            <Card className="bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border-slate-600/30">
-              <CardHeader>
-                <CardTitle className="flex items-center text-white">
-                  <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center mr-3">
-                    <span className="text-white font-bold">3</span>
-                  </div>
-                  Revisar e Gerar
-                </CardTitle>
-                <CardDescription className="text-gray-400">
-                  Confirme os detalhes da sua geração
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {/* Summary */}
-                <div className="space-y-2">
-                  <div className="p-2 bg-slate-700 rounded">
-                    <h4 className="text-xs font-medium text-white mb-1">Modelo:</h4>
-                    <p className="text-xs text-slate-300">{selectedModelData?.name}</p>
-                  </div>
-
-                  <div className="p-2 bg-slate-700 rounded">
-                    <h4 className="text-xs font-medium text-white mb-1">Descrição:</h4>
-                    <p className="text-xs text-slate-300 line-clamp-2">{prompt || 'Nenhuma descrição fornecida'}</p>
-                  </div>
-
-                  <div className="p-2 bg-slate-700 rounded">
-                    <h4 className="text-xs font-medium text-white mb-1">Resumo:</h4>
-                    <div className="space-y-1">
-                      <p className="text-xs text-slate-300">• {settings.variations} variação{settings.variations > 1 ? 'ões' : ''}</p>
-                      <p className="text-xs text-slate-300">• {settings.aspectRatio}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={() => goToStep(2)}
-                    className="border-slate-400 text-slate-600 hover:bg-slate-50"
-                  >
-                    <ChevronRight className="w-4 h-4 mr-2 rotate-180" />
-                    Voltar
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </>
-        )}
-
-        {/* Generate Button - Only show on step 3 */}
-        {currentStep === 3 && (
-          <Card className="bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border-slate-600/30">
-            <CardContent className="pt-6">
-              <div className="text-center space-y-4">
+              {/* Generate Button */}
+              <div className="space-y-3">
                 {!canUseCredits && (
-                  <div className="bg-red-900/20 border border-red-600 rounded-lg p-4 mb-4">
-                    <p className="text-red-300 font-medium">Limite de Créditos Atingido</p>
-                    <p className="text-red-400 text-sm">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-red-800 font-medium text-sm">Limite de Créditos Atingido</p>
+                    <p className="text-red-600 text-xs mt-1">
                       Você usou todos os seus créditos este mês. Faça upgrade do seu plano para continuar gerando.
                     </p>
                   </div>
                 )}
 
-                <div className="flex items-center justify-center space-x-6">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-400">{settings.variations}</div>
-                    <div className="text-sm text-gray-400">variações</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-400">{settings.variations * 10}</div>
-                    <div className="text-sm text-gray-400">créditos</div>
-                  </div>
+                <div className="flex items-center justify-between text-sm text-gray-600">
+                  <span>{settings.variations} variação{settings.variations > 1 ? 'ões' : ''} • {settings.variations * 10} créditos</span>
+                  <span>{settings.aspectRatio}</span>
                 </div>
 
                 <Button
                   onClick={handleGenerate}
                   disabled={!canGenerate}
-                  size="lg"
-                  className="w-full max-w-md bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-[#667EEA] shadow-lg shadow-[#667EEA]/25"
+                  className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white shadow-lg"
                 >
                   {isGenerating ? (
                     <>
-                      <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                       Gerando...
                     </>
                   ) : (
                     <>
-                      <Play className="w-5 h-5 mr-2" />
+                      <Play className="w-4 h-4 mr-2" />
                       Gerar {settings.variations} Foto{settings.variations > 1 ? 's' : ''}
                     </>
                   )}
                 </Button>
 
                 {!canGenerate && !isGenerating && (
-                  <p className="text-sm text-gray-400">
+                  <p className="text-xs text-gray-500 text-center">
                     {!prompt.trim()
                       ? 'Digite um prompt para gerar fotos'
                       : !canUseCredits
@@ -773,90 +618,78 @@ export function GenerationInterface({
                     }
                   </p>
                 )}
-
-                {/* Info message after generation */}
-                <p className="text-xs text-gray-500 mt-2">
-                  💡 Após gerar, acesse a <Link href="/gallery" className="text-purple-400 hover:text-purple-300 underline">galeria</Link> para visualizar suas imagens
-                </p>
               </div>
             </CardContent>
           </Card>
-        )}
 
-        {/* Current Generation Status - Only show when failed (processing status is handled by button state) */}
-        {currentGeneration && currentGeneration.status === 'FAILED' && (
-          <Card className="border-red-200 bg-red-50">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-red-900">
-                    Geração Falhou
-                  </h3>
-                  {currentGeneration.errorMessage && (
-                    <p className="text-xs text-red-700 mt-1">
-                      {currentGeneration.errorMessage}
-                    </p>
-                  )}
+          {/* Examples Card - Collapsible */}
+          <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
+            <CardContent className="pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowExamples(!showExamples)}
+                className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                {showExamples ? 'Ocultar' : 'Ver'} Exemplos de Descrições
+                {showExamples ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
+              </Button>
+
+              {/* Prompt Examples - Show when expanded */}
+              {showExamples && (
+                <div className="mt-4">
+                  <PromptExamples
+                    modelClass={selectedModelData?.class || 'MAN'}
+                    onPromptSelect={handlePromptSelect}
+                  />
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setCurrentGeneration(null)}
-                  className="text-red-600 border-red-300 hover:bg-red-50"
-                >
-                  Fechar
-                </Button>
-              </div>
+              )}
             </CardContent>
           </Card>
-        )}
-      </div>
 
-      {/* Right Column - Examples and Results */}
-      <div className="space-y-6">
-
-        {/* Toggle for Examples - Only show on step 2 */}
-        {currentStep === 2 && (
-          <>
-            <Card className="bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border-slate-600/30">
-              <CardContent className="pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowExamples(!showExamples)}
-                  className="w-full border-slate-600/30 text-slate-300 hover:bg-slate-600 bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569]"
-                >
-                  {showExamples ? 'Ocultar' : 'Ver'} Exemplos de Descrições
-                  {showExamples ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
-                </Button>
+          {/* Current Generation Status - Only show when failed */}
+          {currentGeneration && currentGeneration.status === 'FAILED' && (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium text-red-900">
+                      Geração Falhou
+                    </h3>
+                    {currentGeneration.errorMessage && (
+                      <p className="text-xs text-red-700 mt-1">
+                        {currentGeneration.errorMessage}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCurrentGeneration(null)}
+                    className="text-red-600 border-red-300 hover:bg-red-50"
+                  >
+                    Fechar
+                  </Button>
+                </div>
               </CardContent>
             </Card>
-
-            {/* Prompt Examples - Only show when toggle is on */}
-            {showExamples && (
-              <PromptExamples
-                modelClass={selectedModelData?.class || 'MAN'}
-                onPromptSelect={handlePromptSelect}
-              />
-            )}
-          </>
-        )}
-
-        {/* Recent Results */}
-        {generationResults.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Image className="w-5 h-5 mr-2" />
-                Resultados Recentes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResultsGallery generations={generationResults.slice(0, 6)} />
-            </CardContent>
-          </Card>
-        )}
-
+          )}
+        </div>
       </div>
+
+      {/* Recent Results */}
+      {generationResults.length > 0 && (
+        <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center text-base font-semibold text-gray-900">
+              <Image className="w-5 h-5 mr-2" />
+              Resultados Recentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResultsGallery generations={generationResults.slice(0, 6)} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Success Modal - Simple image preview */}
       {showSuccessModal && successImageUrl && (
@@ -879,7 +712,6 @@ export function GenerationInterface({
           </div>
         </div>
       )}
-    </div>
     </div>
   )
 }

@@ -29,7 +29,7 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4 sm:py-6">
               <h1 className="text-3xl font-bold text-gray-900" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                Editor de imagens
+                Editor IA
               </h1>
             </div>
           </div>
