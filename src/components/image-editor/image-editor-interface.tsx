@@ -7,13 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { GenerationResultModal } from '@/components/ui/generation-result-modal'
 import {
   Edit3,
   Plus,
@@ -53,6 +47,14 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   const [showResultModal, setShowResultModal] = useState(false)
   const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3' | '3:4' | '9:16' | '16:9'>('1:1')
   const router = useRouter()
+  
+  // Auto-open modal when result is available
+  useEffect(() => {
+    if (result && !showResultModal) {
+      console.log('🎯 [IMAGE_EDITOR] Auto-opening modal with result:', result.substring(0, 100))
+      setShowResultModal(true)
+    }
+  }, [result, showResultModal])
   
   // Detect mobile on mount and resize
   useEffect(() => {
@@ -172,10 +174,21 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       }
 
       const data = await response.json()
-      setResult(data.resultUrl)
+      const resultUrl = data.resultUrl || data.data?.resultImage || data.resultImage
       
-      // Show result modal for both mobile and desktop
-      setShowResultModal(true)
+      console.log('✅ [IMAGE_EDITOR] Image processed successfully:', {
+        hasResultUrl: !!resultUrl,
+        resultUrl: resultUrl?.substring(0, 100) + '...',
+        fullResponse: data
+      })
+      
+      if (!resultUrl) {
+        throw new Error('URL da imagem não foi retornada pela API')
+      }
+      
+      // Set result - useEffect will auto-open modal
+      setResult(resultUrl)
+      console.log('✅ [IMAGE_EDITOR] Result URL set, modal will open automatically')
 
       addToast({
         title: "Sucesso!",
@@ -364,55 +377,13 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           </div>
 
           {/* Result Modal */}
-          <Dialog open={showResultModal} onOpenChange={setShowResultModal}>
-            <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-              <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                <DialogTitle className="font-[system-ui,-apple-system,'SF Pro Display',sans-serif] text-lg font-semibold">
-                  Imagem Processada
-                </DialogTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowResultModal(false)}
-                  className="h-8 w-8"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              {result && (
-                <div className="flex flex-col flex-1 overflow-hidden">
-                  <div className="flex-1 overflow-auto p-4 bg-gray-50 flex items-center justify-center">
-                    <img
-                      src={result}
-                      alt="Resultado processado"
-                      className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-lg"
-                    />
-                  </div>
-                  <div className="flex gap-3 p-4 border-t border-gray-200 bg-white">
-                    <Button
-                      asChild
-                      className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 text-white font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-                    >
-                      <a href={result} download={`imagem-editada-${Date.now()}.png`}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Baixar
-                      </a>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setShowResultModal(false)
-                        router.push('/gallery?tab=generated')
-                      }}
-                      className="flex-1 border-2 border-gray-200 hover:border-[#667EEA] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-                    >
-                      Ver na galeria
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
+          <GenerationResultModal
+            open={showResultModal}
+            onOpenChange={setShowResultModal}
+            imageUrl={result}
+            title="Imagem Processada"
+            type="image"
+          />
         </div>
       </div>
     )
