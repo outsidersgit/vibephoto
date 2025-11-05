@@ -479,7 +479,7 @@ const MobileStackingCard = ({ step, index }: {
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
       transition={{ duration: 0.6, delay: index * 0.15 }}
       style={{ scrollSnapAlign: 'start' }}
-      className="h-[240px] flex items-center mb-1 sm:mb-8"
+      className="h-[200px] sm:h-[240px] flex items-center mb-2 sm:mb-8"
     >
       <motion.div 
         className="w-full h-full relative overflow-hidden rounded-2xl shadow-2xl"
@@ -599,7 +599,7 @@ const MobileStackingCards = () => {
   ]
 
   return (
-    <div className="space-y-0.5 sm:space-y-4">
+    <div className="space-y-2 sm:space-y-4">
       {steps.map((step, index) => (
         <MobileStackingCard key={step.id} step={step} index={index} />
       ))}

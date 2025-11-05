@@ -1,11 +1,19 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Edit3,
   Plus,
@@ -15,7 +23,8 @@ import {
   Upload,
   X,
   Download,
-  Loader2
+  Loader2,
+  Image as ImageIcon
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -39,7 +48,20 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   const [result, setResult] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+  const [showResultModal, setShowResultModal] = useState(false)
+  const router = useRouter()
   
+  // Detect mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
   // CRITICAL: useCallback DEVE vir ANTES de qualquer early return
   const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
@@ -109,19 +131,10 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   }
 
   const handleSubmit = async () => {
-    if (!images.length) {
+    if (!images.length && !prompt.trim()) {
       addToast({
         title: "Erro",
-        description: "Adicione pelo menos uma imagem",
-        type: "error"
-      })
-      return
-    }
-
-    if (!prompt.trim()) {
-      addToast({
-        title: "Erro",
-        description: "Descreva o que você quer fazer",
+        description: "Adicione uma imagem ou descreva o que deseja fazer",
         type: "error"
       })
       return
@@ -148,6 +161,11 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
 
       const data = await response.json()
       setResult(data.resultUrl)
+      
+      // Show result modal on mobile
+      if (isMobile) {
+        setShowResultModal(true)
+      }
 
       addToast({
         title: "Sucesso!",
@@ -167,8 +185,150 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     }
   }
 
-  const canProcess = images.length > 0 && prompt.trim() && !loading
+  const canProcess = (prompt.trim() || images.length > 0) && !loading
 
+  // Mobile Layout - ChatGPT style
+  if (isMobile) {
+    return (
+      <div className="w-full">
+        <div className="max-w-4xl mx-auto px-4 py-0">
+          {/* Mobile: Single prompt box centered */}
+          <div className="space-y-4">
+            {/* Prompt Input - ChatGPT style */}
+            <div className="relative">
+              <Textarea
+                placeholder="Descreva o que deseja editar, adicionar ou remover da imagem..."
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={4}
+                maxLength={2500}
+                className="resize-none text-sm bg-white border-2 border-gray-200 rounded-2xl px-4 py-4 pr-12 shadow-sm focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                style={{
+                  fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
+                }}
+              />
+              <div className="absolute bottom-4 right-4 text-xs text-gray-400">
+                {prompt.length}/2500
+              </div>
+            </div>
+
+            {/* Upload Button - Secondary, below prompt */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={images.length >= 3 || loading}
+              className="w-full border-2 border-gray-200 hover:border-[#667EEA] hover:bg-[#667EEA]/5 rounded-xl py-3 text-sm font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+            >
+              <ImageIcon className="w-4 h-4 mr-2" />
+              {images.length > 0 ? `${images.length}/3 imagens` : 'Adicionar imagem'}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple={true}
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+
+            {/* Uploaded Images Preview */}
+            {images.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {images.map((image, index) => (
+                  <div key={index} className="relative flex-shrink-0">
+                    <img
+                      src={image}
+                      alt={`Imagem ${index + 1}`}
+                      className="w-20 h-20 object-cover rounded-lg border-2 border-gray-200"
+                    />
+                    <button
+                      onClick={() => removeImage(index)}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-sm"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Process Button - Fixed below prompt */}
+            <Button
+              onClick={handleSubmit}
+              disabled={!canProcess}
+              className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white py-4 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  Processar imagem (15 créditos)
+                </>
+              )}
+            </Button>
+
+            {/* Error Display */}
+            {error && (
+              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+                <p className="text-sm text-red-600 font-medium font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                  {error}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Result Modal */}
+          <Dialog open={showResultModal} onOpenChange={setShowResultModal}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                  Imagem Processada
+                </DialogTitle>
+                <DialogDescription className="font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                  Sua imagem foi processada com sucesso!
+                </DialogDescription>
+              </DialogHeader>
+              {result && (
+                <div className="space-y-4">
+                  <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200">
+                    <img
+                      src={result}
+                      alt="Resultado processado"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => router.push('/gallery')}
+                      className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 text-white font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                    >
+                      Ver na galeria
+                    </Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="flex-1 border-2 border-gray-200 hover:border-[#667EEA] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                    >
+                      <a href={result} download="imagem-editada.jpg">
+                        <Download className="w-4 h-4 mr-2" />
+                        Baixar
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+    )
+  }
+
+  // Desktop Layout - Keep current design
   return (
     <div className="max-w-7xl mx-auto p-6 bg-[#2C3E50] min-h-screen rounded-2xl">
       <div className="flex gap-6">

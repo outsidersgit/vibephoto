@@ -26,13 +26,13 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header - Mobile optimized */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-4">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 text-left">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 text-left" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
           Editor de imagens
         </h1>
       </div>
 
       {/* Main Content - Mobile optimized */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-6">
         {!canUseCredits ? (
           <div className="bg-white rounded-lg border border-red-200 p-8 text-center">
             <div className="mb-4">
