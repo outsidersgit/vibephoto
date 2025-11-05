@@ -592,11 +592,6 @@ export function GenerationInterface({
                   </div>
                 )}
 
-                <div className="flex items-center justify-between text-sm text-gray-600">
-                  <span>{settings.variations} variação{settings.variations > 1 ? 'ões' : ''} • {settings.variations * 10} créditos</span>
-                  <span>{settings.aspectRatio}</span>
-                </div>
-
                 <Button
                   onClick={handleGenerate}
                   disabled={!canGenerate}
@@ -614,7 +609,7 @@ export function GenerationInterface({
                   ) : (
                     <>
                       <Play className="w-4 h-4 mr-2" />
-                      Gerar {settings.variations} Foto{settings.variations > 1 ? 's' : ''}
+                      Gerar {settings.variations} Foto{settings.variations > 1 ? 's' : ''} ({settings.variations * 10} créditos)
                     </>
                   )}
                 </Button>

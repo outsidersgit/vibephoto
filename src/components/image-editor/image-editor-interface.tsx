@@ -24,7 +24,8 @@ import {
   X,
   Download,
   Loader2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Copy
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -131,6 +132,15 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     setImages(prev => prev.filter((_, i) => i !== index))
   }
 
+  const copyPrompt = () => {
+    navigator.clipboard.writeText(prompt)
+    addToast({
+      title: "Copiado!",
+      description: "Prompt copiado para a área de transferência",
+      type: "success"
+    })
+  }
+
   const handleSubmit = async () => {
     if (!images.length && !prompt.trim()) {
       addToast({
@@ -221,20 +231,51 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           <div className="space-y-3">
             {/* Prompt Input - ChatGPT style with gray theme */}
             <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Descrição
+                </label>
+                <div className="flex items-center space-x-2">
+                  <div className="text-xs text-gray-600">
+                    {prompt.length}/2500
+                  </div>
+                  {prompt && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setPrompt('')}
+                        className="h-6 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 text-xs"
+                        title="Limpar prompt"
+                      >
+                        Limpar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={copyPrompt}
+                        className="h-6 px-2 text-gray-600 hover:text-gray-900 hover:bg-gray-300"
+                        title="Copiar prompt"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
               <Textarea
                 placeholder="Descreva o que deseja editar, adicionar ou remover da imagem..."
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={4}
                 maxLength={2500}
-                className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-lg px-4 py-4 pr-12 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-lg px-4 py-4 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
                 style={{
                   fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
                 }}
               />
-              <div className="absolute bottom-4 right-4 text-xs text-gray-600">
-                {prompt.length}/2500
-              </div>
             </div>
 
             {/* Format Selection */}
@@ -402,20 +443,51 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         <div className="space-y-4">
           {/* Prompt Input - ChatGPT style with gray theme */}
           <div className="relative">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Descrição
+              </label>
+              <div className="flex items-center space-x-2">
+                <div className="text-xs text-gray-600">
+                  {prompt.length}/2500
+                </div>
+                {prompt && (
+                  <>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPrompt('')}
+                      className="h-6 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 text-xs"
+                      title="Limpar prompt"
+                    >
+                      Limpar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={copyPrompt}
+                      className="h-6 px-2 text-gray-600 hover:text-gray-900 hover:bg-gray-300"
+                      title="Copiar prompt"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
             <Textarea
               placeholder="Descreva o que deseja editar, adicionar ou remover da imagem..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={5}
               maxLength={2500}
-              className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-lg px-4 py-4 pr-12 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-lg px-4 py-4 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
               }}
             />
-            <div className="absolute bottom-4 right-4 text-xs text-gray-600">
-              {prompt.length}/2500
-            </div>
           </div>
 
           {/* Format Selection */}

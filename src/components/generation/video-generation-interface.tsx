@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Image as ImageIcon, Video, Upload, X, Loader2 } from 'lucide-react'
+import { Image as ImageIcon, Video, Upload, X, Loader2, Copy } from 'lucide-react'
 import { VIDEO_CONFIG, VideoGenerationRequest, VideoTemplate } from '@/lib/ai/video/config'
 import { calculateVideoCredits, validatePrompt, getEstimatedProcessingTime, formatProcessingTime } from '@/lib/ai/video/utils'
 import { useToast } from '@/hooks/use-toast'
@@ -207,6 +207,15 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   const hasEnoughCredits = requiredCredits <= remainingCredits
   const canProcess = formData.prompt.trim() && !loading && canUseCredits && hasEnoughCredits
 
+  const copyPrompt = () => {
+    navigator.clipboard.writeText(formData.prompt)
+    addToast({
+      title: "Copiado!",
+      description: "Prompt copiado para a área de transferência",
+      type: "success"
+    })
+  }
+
   // Mobile Layout - Similar to editor
   if (isMobile) {
     return (
@@ -292,6 +301,40 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
           <div className="space-y-3">
             {/* Prompt Input */}
             <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Descrição
+                </label>
+                <div className="flex items-center space-x-2">
+                  <div className="text-xs text-gray-600">
+                    {formData.prompt.length}/{VIDEO_CONFIG.options.maxPromptLength}
+                  </div>
+                  {formData.prompt && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFormData(prev => ({ ...prev, prompt: '' }))}
+                        className="h-6 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 text-xs"
+                        title="Limpar prompt"
+                      >
+                        Limpar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={copyPrompt}
+                        className="h-6 px-2 text-gray-600 hover:text-gray-900 hover:bg-gray-300"
+                        title="Copiar prompt"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
               <Textarea
                 placeholder={uploadedImage 
                   ? "Descreva o movimento desejado para o vídeo..."
@@ -301,14 +344,11 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                 onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
                 rows={4}
                 maxLength={VIDEO_CONFIG.options.maxPromptLength}
-                className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-lg px-4 py-4 pr-12 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-lg px-4 py-4 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
                 style={{
                   fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
                 }}
               />
-              <div className="absolute bottom-4 right-4 text-xs text-gray-600">
-                {formData.prompt.length}/{VIDEO_CONFIG.options.maxPromptLength}
-              </div>
             </div>
 
             {/* Upload and Process Buttons - Side by side, smaller */}
@@ -465,23 +505,54 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
           <div className="lg:col-span-2 space-y-4">
             {/* Prompt Input */}
             <div className="relative">
-            <Textarea
-              placeholder={uploadedImage 
-                ? "Descreva o movimento desejado para o vídeo..."
-                : "Descreva o vídeo que você quer criar..."
-              }
-              value={formData.prompt}
-              onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
-              rows={5}
-              maxLength={VIDEO_CONFIG.options.maxPromptLength}
-              className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-lg px-4 py-4 pr-12 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-              style={{
-                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
-              }}
-            />
-              <div className="absolute bottom-4 right-4 text-xs text-gray-600">
-                {formData.prompt.length}/{VIDEO_CONFIG.options.maxPromptLength}
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Descrição
+                </label>
+                <div className="flex items-center space-x-2">
+                  <div className="text-xs text-gray-600">
+                    {formData.prompt.length}/{VIDEO_CONFIG.options.maxPromptLength}
+                  </div>
+                  {formData.prompt && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFormData(prev => ({ ...prev, prompt: '' }))}
+                        className="h-6 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 text-xs"
+                        title="Limpar prompt"
+                      >
+                        Limpar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={copyPrompt}
+                        className="h-6 px-2 text-gray-600 hover:text-gray-900 hover:bg-gray-300"
+                        title="Copiar prompt"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
+              <Textarea
+                placeholder={uploadedImage 
+                  ? "Descreva o movimento desejado para o vídeo..."
+                  : "Descreva o vídeo que você quer criar..."
+                }
+                value={formData.prompt}
+                onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
+                rows={5}
+                maxLength={VIDEO_CONFIG.options.maxPromptLength}
+                className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-lg px-4 py-4 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                style={{
+                  fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
+                }}
+              />
             </div>
 
             {/* Upload and Process Buttons - Side by side */}
