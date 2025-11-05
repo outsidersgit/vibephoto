@@ -235,6 +235,59 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
             </Card>
           </div>
 
+          {/* Mobile: Settings Card */}
+          <div className="mb-4">
+            <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
+              <CardContent className="p-4 space-y-3">
+                {/* Duration */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Duração
+                  </label>
+                  <Select
+                    value={formData.duration.toString()}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, duration: parseInt(value) as 5 | 10 }))}
+                  >
+                    <SelectTrigger className="w-full bg-gray-200 border-gray-900 text-gray-900">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 segundos</SelectItem>
+                      <SelectItem value="10">10 segundos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Aspect Ratio */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Proporção
+                  </label>
+                  <Select
+                    value={formData.aspectRatio}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, aspectRatio: value as '16:9' | '9:16' | '1:1' }))}
+                  >
+                    <SelectTrigger className="w-full bg-gray-200 border-gray-900 text-gray-900">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="16:9">16:9 (Paisagem)</SelectItem>
+                      <SelectItem value="9:16">9:16 (Retrato)</SelectItem>
+                      <SelectItem value="1:1">1:1 (Quadrado)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Quality Info */}
+                <div className="pt-3 border-t border-gray-200">
+                  <div className="text-xs text-gray-600 text-center">
+                    Qualidade 1080p • Tempo estimado: {formatProcessingTime(getEstimatedProcessingTime(formData.duration, 'pro'))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Mobile: Prompt and Controls */}
           <div className="space-y-3">
             {/* Prompt Input */}
@@ -359,57 +412,53 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
 
         {/* Grid Layout: Settings on the left, Prompt and buttons below */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Settings Card */}
-          <div className="lg:col-span-1">
-            <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
-              <CardContent className="p-6 space-y-4">
-                {/* Duration */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Duração
-                  </label>
-                  <Select
-                    value={formData.duration.toString()}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, duration: parseInt(value) as 5 | 10 }))}
-                  >
-                    <SelectTrigger className="w-full bg-gray-200 border-gray-900 text-gray-900">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5">5 segundos</SelectItem>
-                      <SelectItem value="10">10 segundos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          {/* Left Column - Settings (no card wrapper) */}
+          <div className="lg:col-span-1 space-y-4">
+            {/* Duration */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Duração
+              </label>
+              <Select
+                value={formData.duration.toString()}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, duration: parseInt(value) as 5 | 10 }))}
+              >
+                <SelectTrigger className="w-full bg-gray-200 border-gray-900 text-gray-900">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 segundos</SelectItem>
+                  <SelectItem value="10">10 segundos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                {/* Aspect Ratio */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Proporção
-                  </label>
-                  <Select
-                    value={formData.aspectRatio}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, aspectRatio: value as '16:9' | '9:16' | '1:1' }))}
-                  >
-                    <SelectTrigger className="w-full bg-gray-200 border-gray-900 text-gray-900">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="16:9">16:9 (Paisagem)</SelectItem>
-                      <SelectItem value="9:16">9:16 (Retrato)</SelectItem>
-                      <SelectItem value="1:1">1:1 (Quadrado)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            {/* Aspect Ratio */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Proporção
+              </label>
+              <Select
+                value={formData.aspectRatio}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, aspectRatio: value as '16:9' | '9:16' | '1:1' }))}
+              >
+                <SelectTrigger className="w-full bg-gray-200 border-gray-900 text-gray-900">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="16:9">16:9 (Paisagem)</SelectItem>
+                  <SelectItem value="9:16">9:16 (Retrato)</SelectItem>
+                  <SelectItem value="1:1">1:1 (Quadrado)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                {/* Quality Info */}
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="text-xs text-gray-600 text-center">
-                    Qualidade 1080p • Tempo estimado: {formatProcessingTime(getEstimatedProcessingTime(formData.duration, 'pro'))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Quality Info */}
+            <div className="pt-4 border-t border-gray-200">
+              <div className="text-xs text-gray-600 text-center">
+                Qualidade 1080p • Tempo estimado: {formatProcessingTime(getEstimatedProcessingTime(formData.duration, 'pro'))}
+              </div>
+            </div>
           </div>
 
           {/* Right Column - Prompt and Actions */}
