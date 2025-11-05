@@ -11,7 +11,8 @@ import {
   AlertCircle,
   Clock,
   CheckCircle,
-  Sparkles
+  Sparkles,
+  Check
 } from 'lucide-react'
 import Link from 'next/link'
 import { VibePhotoLogo } from '@/components/ui/vibephoto-logo'
@@ -20,9 +21,11 @@ interface ModelCardProps {
   model: any
   showProgress?: boolean
   showError?: boolean
+  isSelected?: boolean
+  onSelect?: (modelId: string) => void
 }
 
-export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
+export function ModelCard({ model, showProgress, showError, isSelected = false, onSelect }: ModelCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [showActions, setShowActions] = useState(false)
@@ -103,9 +106,16 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
 
   return (
     <>
-      <Card className={`group relative bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border border-slate-600/30 hover:border-slate-500/40 text-white transition-all hover:shadow-lg overflow-visible`}>
-        <CardContent className="p-2 relative">
-          <div className="space-y-1.5">
+      <Card 
+        className={`group relative bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border text-white transition-all hover:shadow-lg overflow-visible cursor-pointer ${
+          isSelected 
+            ? 'border-2 border-transparent bg-gradient-to-br from-[#667EEA] to-[#764BA2] p-[2px]' 
+            : 'border border-slate-600/30 hover:border-slate-500/40'
+        }`}
+        onClick={() => onSelect && onSelect(model.id)}
+      >
+        <CardContent className={`p-1.5 sm:p-2 relative ${isSelected ? 'bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] rounded' : ''}`}>
+          <div className="space-y-1 sm:space-y-1.5">
             {/* Model Preview */}
             <div className="aspect-square bg-slate-700 rounded-md overflow-hidden relative">
               {previewImage ? (
@@ -125,8 +135,15 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
                 {getStatusIcon()}
               </div>
 
-              {/* VibePhoto Logo Overlay - Bottom Right (only when there's an image) */}
-              {previewImage && (
+              {/* Selection Check Icon - Only when selected */}
+              {isSelected && (
+                <div className="absolute top-1 right-1 w-5 h-5 bg-gradient-to-br from-[#667EEA] to-[#764BA2] rounded-full flex items-center justify-center border-2 border-white shadow-lg">
+                  <Check className="w-3 h-3 text-white" />
+                </div>
+              )}
+
+              {/* VibePhoto Logo Overlay - Bottom Right (only when there's an image and not selected) */}
+              {previewImage && !isSelected && (
                 <div className="absolute bottom-1 right-1">
                   <VibePhotoLogo size="xs" layout="iconOnly" variant="white" showText={false} />
                 </div>
@@ -135,12 +152,12 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
 
             {/* Model Info */}
             <div className="space-y-0.5">
-              <h3 className="font-medium text-xs truncate text-white">
+              <h3 className="font-medium text-[11px] sm:text-xs truncate text-white">
                 {model.name}
               </h3>
 
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-400">
+                <span className="text-[10px] sm:text-xs text-gray-400">
                   {getClassLabel(model.class)}
                 </span>
 
@@ -148,7 +165,7 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
                 {model.qualityScore && (
                   <Badge
                     variant="secondary"
-                    className="text-xs px-1 py-0 h-4 bg-gray-600 text-gray-200"
+                    className="text-[10px] sm:text-xs px-1 py-0 h-3.5 sm:h-4 bg-gray-600 text-gray-200"
                   >
                     {Math.round(model.qualityScore * 100)}%
                   </Badge>
@@ -166,6 +183,7 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
                   setShowActions(!showActions)
                 }}
                 className="h-6 w-6 p-0 hover:bg-slate-600/80 text-slate-100 hover:text-white transition-all rounded-full z-10"
+                title="Mais opções"
               >
                 <MoreHorizontal className="w-3 h-3" />
               </Button>

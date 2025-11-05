@@ -144,9 +144,9 @@ export function PromptInput({
             Descrição da Imagem
           </label>
           <div className="flex items-center space-x-2">
-            <Badge variant="secondary" className="text-xs bg-gray-300 text-gray-700 border-gray-400">
+            <div className="text-xs text-gray-600">
               {prompt.length}/2500
-            </Badge>
+            </div>
             {prompt && (
               <>
                 <Button
