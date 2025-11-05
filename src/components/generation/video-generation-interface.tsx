@@ -10,6 +10,8 @@ import { Image as ImageIcon, Video, Upload, X, Loader2, Copy } from 'lucide-reac
 import { VIDEO_CONFIG, VideoGenerationRequest, VideoTemplate } from '@/lib/ai/video/config'
 import { calculateVideoCredits, validatePrompt, getEstimatedProcessingTime, formatProcessingTime } from '@/lib/ai/video/utils'
 import { useToast } from '@/hooks/use-toast'
+import { GenerationResultModal } from '@/components/ui/generation-result-modal'
+import { useRouter } from 'next/navigation'
 
 interface VideoGenerationInterfaceProps {
   user: {
@@ -27,6 +29,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   // Violar esta regra causa erro React #310 (can't set state on unmounted component)
   const { data: session, status } = useSession()
   const { addToast } = useToast()
+  const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [isMobile, setIsMobile] = useState(false)
@@ -43,6 +46,8 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   const [loading, setLoading] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [errors, setErrors] = useState<string[]>([])
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [successVideoUrl, setSuccessVideoUrl] = useState<string | null>(null)
 
   // Detect mobile
   useEffect(() => {
@@ -177,6 +182,11 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         title: "Vídeo em processamento",
         description: `Tempo estimado: ${formatProcessingTime(getEstimatedProcessingTime(formData.duration, 'pro'))}. Você pode acompanhar o progresso na galeria.`,
       })
+
+      // Redirect to gallery to view video progress
+      setTimeout(() => {
+        router.push('/gallery?tab=videos')
+      }, 2000)
 
       // Reset form
       setFormData({
@@ -624,6 +634,18 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
           </div>
         </div>
       </div>
+
+      {/* Success Modal for Video */}
+      <GenerationResultModal
+        open={showSuccessModal}
+        onOpenChange={(open) => {
+          setShowSuccessModal(open)
+          if (!open) setSuccessVideoUrl(null)
+        }}
+        videoUrl={successVideoUrl}
+        title="Vídeo Gerado"
+        type="video"
+      />
     </div>
   )
 }

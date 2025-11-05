@@ -22,6 +22,7 @@ import { GenerationSettings } from './generation-settings'
 import { ResultsGallery } from './results-gallery'
 import { PromptExamples } from './prompt-examples'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { GenerationResultModal } from '@/components/ui/generation-result-modal'
 
 interface GenerationInterfaceProps {
   models: Array<{
@@ -697,27 +698,17 @@ export function GenerationInterface({
         </Card>
       )}
 
-      {/* Success Modal - Simple image preview */}
-      {showSuccessModal && successImageUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="relative max-w-4xl max-h-[90vh] w-full">
-            <button
-              onClick={() => {
-                setShowSuccessModal(false)
-                setSuccessImageUrl(null)
-              }}
-              className="absolute top-4 right-4 z-10 bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors"
-            >
-              <X className="w-5 h-5 text-white" />
-            </button>
-            <img
-              src={successImageUrl}
-              alt="Generated image"
-              className="w-full h-auto max-h-[90vh] object-contain rounded-lg"
-            />
-          </div>
-        </div>
-      )}
+      {/* Success Modal */}
+      <GenerationResultModal
+        open={showSuccessModal}
+        onOpenChange={(open) => {
+          setShowSuccessModal(open)
+          if (!open) setSuccessImageUrl(null)
+        }}
+        imageUrl={successImageUrl}
+        title="Imagem Gerada"
+        type="image"
+      />
     </div>
   )
 }
