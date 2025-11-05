@@ -6,6 +6,7 @@ export interface NanoBananaEditRequest {
   prompt: string
   imageInput?: string | string[] // Base64 or URLs
   outputFormat?: 'jpg' | 'png'
+  aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9'
 }
 
 export interface NanoBananaEditResponse {
@@ -54,6 +55,11 @@ export class NanoBananaProvider {
       const input: any = {
         prompt: request.prompt,
         output_format: request.outputFormat || 'jpg'
+      }
+
+      // Add aspect ratio if provided
+      if (request.aspectRatio) {
+        input.aspect_ratio = request.aspectRatio
       }
 
       // Add image input if provided - Nano Banana supports array of image URIs
@@ -143,13 +149,14 @@ export class NanoBananaProvider {
   /**
    * Edit image with text prompt
    */
-  async editWithPrompt(imageUrl: string, prompt: string, outputFormat: 'jpg' | 'png' = 'jpg'): Promise<NanoBananaEditResponse> {
+  async editWithPrompt(imageUrl: string, prompt: string, outputFormat: 'jpg' | 'png' = 'jpg', aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9'): Promise<NanoBananaEditResponse> {
     const enhancedPrompt = `Edit this image: ${prompt}. Make high-quality, precise changes while maintaining the overall composition and style.`
     
     return this.editImage({
       prompt: enhancedPrompt,
       imageInput: [imageUrl],
-      outputFormat
+      outputFormat,
+      aspectRatio
     })
   }
 

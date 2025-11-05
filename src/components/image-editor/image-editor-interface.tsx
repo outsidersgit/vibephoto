@@ -50,6 +50,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   const [error, setError] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [showResultModal, setShowResultModal] = useState(false)
+  const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3' | '3:4' | '9:16' | '16:9'>('1:1')
   const router = useRouter()
   
   // Detect mobile on mount and resize
@@ -151,6 +152,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           operation,
           prompt,
           images,
+          aspectRatio,
         })
       })
 
@@ -233,6 +235,24 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               <div className="absolute bottom-4 right-4 text-xs text-gray-600">
                 {prompt.length}/2500
               </div>
+            </div>
+
+            {/* Format Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Formato
+              </label>
+              <select
+                value={aspectRatio}
+                onChange={(e) => setAspectRatio(e.target.value as typeof aspectRatio)}
+                className="w-full p-2 bg-gray-200 border border-gray-900 rounded text-gray-900 text-sm focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20"
+              >
+                <option value="1:1">Quadrado (1:1)</option>
+                <option value="4:3">Padrão (4:3)</option>
+                <option value="3:4">Retrato (3:4)</option>
+                <option value="9:16">Vertical (9:16)</option>
+                <option value="16:9">Paisagem (16:9)</option>
+              </select>
             </div>
 
             {/* Upload and Process Buttons - Side by side, smaller */}
@@ -396,6 +416,24 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             <div className="absolute bottom-4 right-4 text-xs text-gray-600">
               {prompt.length}/2500
             </div>
+          </div>
+
+          {/* Format Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Formato
+            </label>
+            <select
+              value={aspectRatio}
+              onChange={(e) => setAspectRatio(e.target.value as typeof aspectRatio)}
+              className="w-full p-2 bg-gray-200 border border-gray-900 rounded text-gray-900 text-sm focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20"
+            >
+              <option value="1:1">Quadrado (1:1)</option>
+              <option value="4:3">Padrão (4:3)</option>
+              <option value="3:4">Retrato (3:4)</option>
+              <option value="9:16">Vertical (9:16)</option>
+              <option value="16:9">Paisagem (16:9)</option>
+            </select>
           </div>
 
           {/* Upload and Process Buttons - Side by side, smaller */}

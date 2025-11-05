@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     const session = await requireAuthAPI()
     const userId = session.user.id
 
-    const { operation, prompt, images } = await request.json()
+    const { operation, prompt, images, aspectRatio } = await request.json()
 
     // Validate input
     if (!operation || !prompt || !images || !Array.isArray(images) || images.length === 0) {
@@ -92,6 +92,9 @@ export async function POST(request: NextRequest) {
     // Convert base64 images to FormData
     const formData = new FormData()
     formData.append('prompt', prompt)
+    if (aspectRatio) {
+      formData.append('aspectRatio', aspectRatio)
+    }
 
     // For single image operations
     if (['edit', 'add', 'remove', 'style'].includes(operation)) {

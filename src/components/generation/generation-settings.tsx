@@ -131,9 +131,6 @@ export function GenerationSettings({ settings, onSettingsChange, userPlan }: Gen
             </option>
           ))}
         </select>
-        <div className="mt-1 text-xs text-gray-600">
-          Resolução: {calculateResolution(settings.aspectRatio)}
-        </div>
       </div>
     </div>
   )

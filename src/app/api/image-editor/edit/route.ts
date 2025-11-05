@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const image = formData.get('image') as File
     const prompt = formData.get('prompt') as string
+    const aspectRatio = formData.get('aspectRatio') as string | null
 
     // Validate inputs
     if (!image) {
@@ -61,7 +62,12 @@ export async function POST(request: NextRequest) {
     })
 
     // Process image edit
-    const result = await imageEditor.editImageWithPrompt(image, prompt)
+    const validAspectRatios = ['1:1', '4:3', '3:4', '9:16', '16:9'] as const
+    const aspectRatioValue = aspectRatio && validAspectRatios.includes(aspectRatio as any) 
+      ? (aspectRatio as typeof validAspectRatios[number])
+      : undefined
+    
+    const result = await imageEditor.editImageWithPrompt(image, prompt, aspectRatioValue)
 
     // Save to edit history database
     let editHistoryEntry = null

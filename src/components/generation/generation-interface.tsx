@@ -443,7 +443,7 @@ export function GenerationInterface({
       const promptElement = document.getElementById('prompt')
       if (promptElement) {
         const rect = promptElement.getBoundingClientRect()
-        const offset = window.pageYOffset + rect.top - 100 // 100px from top
+        const offset = window.pageYOffset + rect.top - 150 // 150px from top para subir mais
         
         window.scrollTo({
           top: offset,
@@ -600,7 +600,11 @@ export function GenerationInterface({
                 <Button
                   onClick={handleGenerate}
                   disabled={!canGenerate}
-                  className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white shadow-lg"
+                  className={`w-full shadow-lg ${
+                    canGenerate
+                      ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
                 >
                   {isGenerating ? (
                     <>

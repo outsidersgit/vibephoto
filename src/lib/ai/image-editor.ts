@@ -41,9 +41,10 @@ export class ImageEditor {
    * Edit an image with a text prompt
    * @param imageFile - The image file to edit
    * @param promptText - Text description of the desired edit
+   * @param aspectRatio - Aspect ratio for the output image
    * @returns Promise<ImageEditResponse>
    */
-  async editImageWithPrompt(imageFile: File, promptText: string): Promise<ImageEditResponse> {
+  async editImageWithPrompt(imageFile: File, promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9'): Promise<ImageEditResponse> {
     this.checkConfiguration()
     
     try {
@@ -73,7 +74,7 @@ export class ImageEditor {
       const imageUrl = await NanoBananaProvider.fileToUrl(imageFile)
       
       // Call Nano Banana provider via Replicate
-      const result = await this.provider!.editWithPrompt(imageUrl, promptText, 'png')
+      const result = await this.provider!.editWithPrompt(imageUrl, promptText, 'png', aspectRatio)
 
       console.log('✅ Nano Banana edit completed:', result.id)
       return result
