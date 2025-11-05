@@ -438,6 +438,24 @@ export function GenerationInterface({
 
   const handlePromptSelect = (selectedPrompt: string) => {
     setPrompt(selectedPrompt)
+    // Scroll automático para a caixa de prompt
+    setTimeout(() => {
+      const promptElement = document.getElementById('prompt')
+      if (promptElement) {
+        const rect = promptElement.getBoundingClientRect()
+        const offset = window.pageYOffset + rect.top - 100 // 100px from top
+        
+        window.scrollTo({
+          top: offset,
+          behavior: 'smooth'
+        })
+        
+        // Focar no textarea após scroll
+        setTimeout(() => {
+          promptElement.focus()
+        }, 500)
+      }
+    }, 100)
   }
 
   const handleManualSync = async (generationId: string) => {
@@ -508,10 +526,7 @@ export function GenerationInterface({
           {/* Model Selection Card */}
           <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
             <CardHeader>
-              <CardTitle className="text-base font-semibold text-gray-900">
-                Escolher Modelo
-              </CardTitle>
-              <CardDescription className="text-sm text-gray-500">
+              <CardDescription className="text-sm font-medium text-gray-900">
                 Selecione qual modelo usar
               </CardDescription>
             </CardHeader>
@@ -534,10 +549,7 @@ export function GenerationInterface({
           {/* Settings Card */}
           <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
             <CardHeader>
-              <CardTitle className="text-base font-semibold text-gray-900">
-                Configurações
-              </CardTitle>
-              <CardDescription className="text-sm text-gray-500">
+              <CardDescription className="text-sm font-medium text-gray-900">
                 Ajuste os parâmetros de geração
               </CardDescription>
             </CardHeader>
@@ -556,10 +568,7 @@ export function GenerationInterface({
           {/* Prompt Card */}
           <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
             <CardHeader>
-              <CardTitle className="text-base font-semibold text-gray-900">
-                Descrever Imagem
-              </CardTitle>
-              <CardDescription className="text-sm text-gray-500">
+              <CardDescription className="text-sm font-medium text-gray-900">
                 Escreva uma descrição detalhada da foto que deseja criar
               </CardDescription>
             </CardHeader>
@@ -608,13 +617,11 @@ export function GenerationInterface({
 
                 {!canGenerate && !isGenerating && (
                   <p className="text-xs text-gray-500 text-center">
-                    {!prompt.trim()
-                      ? 'Digite um prompt para gerar fotos'
-                      : !canUseCredits
+                    {!canUseCredits
                       ? 'Limite de créditos atingido'
                       : creditsRemaining < creditsNeeded
                       ? `Precisa de ${creditsNeeded} créditos (você tem ${creditsRemaining})`
-                      : 'Pronto para gerar'
+                      : null
                     }
                   </p>
                 )}

@@ -105,7 +105,7 @@ export function GenerationSettings({ settings, onSettingsChange, userPlan }: Gen
               onClick={() => updateSetting('variations', num)}
               className={`p-2 border rounded text-center transition-colors text-sm ${
                 settings.variations === num
-                  ? 'border-[#667EEA] bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white'
+                  ? 'border-gray-900 bg-gray-900 text-white'
                   : 'border-gray-300 bg-gray-200 text-gray-700 hover:border-gray-400'
               }`}
             >

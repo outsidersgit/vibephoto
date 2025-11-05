@@ -97,14 +97,14 @@ export function PromptInput({
     <div className="space-y-4">
       {/* Mode Toggle */}
       {/* Tabs horizontais para modos */}
-      <div className="flex items-center mb-2 border-b border-slate-600/50">
+      <div className="flex items-center mb-2 border-b border-gray-300">
         <button
           type="button"
           onClick={() => setIsGuidedMode(false)}
-          className={`px-4 py-2 text-sm -mb-px border-b-2 transition-colors ${
+          className={`px-4 py-2 text-sm -mb-px border-b-2 transition-colors font-medium ${
             !isGuidedMode
-              ? 'border-purple-400 text-white'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-gray-900 text-gray-900'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
           Modo Livre
@@ -112,16 +112,16 @@ export function PromptInput({
         <button
           type="button"
           onClick={() => setIsGuidedMode(true)}
-          className={`px-4 py-2 text-sm -mb-px border-b-2 transition-colors ${
+          className={`px-4 py-2 text-sm -mb-px border-b-2 transition-colors font-medium ${
             isGuidedMode
-              ? 'border-purple-400 text-white'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-gray-900 text-gray-900'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
           Modo Guiado
         </button>
       </div>
-      <p className="text-xs text-gray-400 -mt-1 mb-2">
+      <p className="text-xs text-gray-500 -mt-1 mb-2">
         {isGuidedMode
           ? 'Modo guiado: combine blocos (estilo, luz, câmera) para montar o prompt perfeito, sem precisar escrever tudo.'
           : 'Modo livre: escreva seu prompt manualmente com total controle. Dica: detalhe estilo, iluminação, lente e ambiente.'}
@@ -140,11 +140,11 @@ export function PromptInput({
           {/* Free Mode - Manual Input */}
           <div>
         <div className="flex items-center justify-between mb-2">
-          <label htmlFor="prompt" className="block text-base font-semibold text-gray-200">
+          <label htmlFor="prompt" className="block text-base font-semibold text-gray-900">
             Descrição da Imagem
           </label>
           <div className="flex items-center space-x-2">
-            <Badge variant="secondary" className="text-xs bg-gray-700 text-gray-300 border-slate-600">
+            <Badge variant="secondary" className="text-xs bg-gray-300 text-gray-700 border-gray-400">
               {prompt.length}/2500
             </Badge>
             {prompt && (
@@ -154,7 +154,7 @@ export function PromptInput({
                   variant="ghost"
                   size="sm"
                   onClick={() => onPromptChange('')}
-                  className="h-6 px-3 text-red-400 hover:text-red-300 hover:bg-red-900/20 text-xs"
+                  className="h-6 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 text-xs"
                   title="Limpar prompt"
                 >
                   Limpar
@@ -164,7 +164,7 @@ export function PromptInput({
                   variant="ghost"
                   size="sm"
                   onClick={copyPrompt}
-                  className="h-6 px-2 text-gray-400 hover:text-gray-200 hover:bg-gray-700"
+                  className="h-6 px-2 text-gray-600 hover:text-gray-900 hover:bg-gray-300"
                   title="Copiar prompt"
                 >
                   <Copy className="w-3 h-3" />
@@ -180,12 +180,15 @@ export function PromptInput({
           ref={promptRef}
           onChange={(e) => { onPromptChange(e.target.value); adjustPromptHeight() }}
           disabled={isGenerating}
-          className="w-full px-3 py-3 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 resize-none text-white placeholder-slate-400"
+          className="w-full px-3 py-3 bg-gray-200 border border-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-[#667EEA] focus:border-[#667EEA] resize-none text-gray-900 placeholder:text-gray-500"
           rows={3}
           maxLength={2500}
           placeholder="Descreva a foto que deseja criar... ex: 'foto profissional com roupa social, sorrindo, iluminação natural, alta qualidade'"
+          style={{
+            fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
+          }}
         />
-        <div className="mt-2 text-xs text-gray-400">Seja específico para melhores resultados. Exemplos: iluminação, ambiente, lente, estilo.</div>
+        <div className="mt-2 text-xs text-gray-500">Seja específico para melhores resultados. Exemplos: iluminação, ambiente, lente, estilo.</div>
       </div>
 
       {/* Seção de prompt negativo e 'mostrar sugestões' removidas conforme solicitado */}
@@ -194,20 +197,20 @@ export function PromptInput({
 
       {/* Current Prompt Display (only in guided mode) */}
       {isGuidedMode && prompt && (
-        <Card className="bg-gray-700 border-slate-600">
+        <Card className="bg-gray-50 border-gray-200">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-medium text-gray-200">Prompt Atual</h4>
+              <h4 className="text-sm font-medium text-gray-900">Prompt Atual</h4>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={copyPrompt}
-                className="text-gray-400 hover:text-gray-200 hover:bg-gray-600"
+                className="text-gray-600 hover:text-gray-900 hover:bg-gray-200"
               >
                 <Copy className="w-4 h-4" />
               </Button>
             </div>
-            <p className="text-sm text-gray-300 leading-relaxed">
+            <p className="text-sm text-gray-700 leading-relaxed">
               {prompt}
             </p>
           </CardContent>
