@@ -86,10 +86,29 @@ export function GenerationInterface({
   const manualSync = useManualSync()
   
   // Polling como fallback caso SSE falhe
+  // CRITICAL: Habilitar polling se há uma geração em PROCESSING OU se SSE desconectou
+  const shouldPoll = !!currentGeneration && (
+    currentGeneration.status === 'PROCESSING' || 
+    currentGeneration.status === 'PENDING'
+  )
+  
   const generationPolling = useGenerationPolling(
     currentGeneration?.id || null,
-    !!currentGeneration && currentGeneration.status === 'PROCESSING'
+    shouldPoll
   )
+  
+  // Log polling status para debug
+  useEffect(() => {
+    if (currentGeneration?.id) {
+      console.log(`🔍 [POLLING] Generation ${currentGeneration.id}:`, {
+        status: currentGeneration.status,
+        pollingEnabled: shouldPoll,
+        pollingData: generationPolling.data?.status,
+        pollingError: generationPolling.error,
+        isLoading: generationPolling.isLoading
+      })
+    }
+  }, [currentGeneration?.id, currentGeneration?.status, shouldPoll, generationPolling.data?.status, generationPolling.error, generationPolling.isLoading])
   
   // Botão deve permanecer em loading enquanto:
   // - Requisição HTTP está em andamento OU
@@ -187,13 +206,34 @@ export function GenerationInterface({
 
   // Sincronizar polling com estado da geração (fallback caso SSE falhe)
   useEffect(() => {
+    // Log todas as chamadas deste useEffect para debug
+    if (generationPolling.data) {
+      console.log(`🔍 [POLLING_SYNC] Checking polling data:`, {
+        pollingId: generationPolling.data.id,
+        currentId: currentGeneration?.id,
+        pollingStatus: generationPolling.data.status,
+        currentStatus: currentGeneration?.status,
+        matches: generationPolling.data.id === currentGeneration?.id,
+        statusChanged: generationPolling.data.status !== currentGeneration?.status,
+        hasImageUrls: !!(generationPolling.data.imageUrls && generationPolling.data.imageUrls.length > 0)
+      })
+    }
+
     if (generationPolling.data && currentGeneration?.id === generationPolling.data.id) {
       const pollingStatus = generationPolling.data.status
       const pollingData = generationPolling.data
 
-      // Atualizar estado local se polling detectar mudança
-      if (pollingStatus !== currentGeneration.status) {
-        console.log(`🔄 Polling detected status change: ${currentGeneration.status} -> ${pollingStatus}`)
+      // Atualizar estado local se polling detectar mudança OU se polling tem imageUrls mas currentGeneration não tem
+      const statusChanged = pollingStatus !== currentGeneration.status
+      const hasNewImages = pollingData.imageUrls && pollingData.imageUrls.length > 0 && 
+                          (!currentGeneration.imageUrls || currentGeneration.imageUrls.length === 0)
+
+      if (statusChanged || hasNewImages) {
+        console.log(`🔄 Polling detected change:`, {
+          statusChange: statusChanged ? `${currentGeneration.status} -> ${pollingStatus}` : 'none',
+          newImages: hasNewImages ? `${pollingData.imageUrls.length} images` : 'none',
+          generationId: currentGeneration.id
+        })
         
         setCurrentGeneration((prev: any) => ({
           ...prev,
@@ -202,7 +242,7 @@ export function GenerationInterface({
           thumbnailUrls: pollingData.thumbnailUrls || prev.thumbnailUrls,
           processingTime: pollingData.processingTime || prev.processingTime,
           errorMessage: pollingData.errorMessage || prev.errorMessage,
-          completedAt: pollingStatus === 'COMPLETED' ? new Date() : prev.completedAt
+          completedAt: pollingStatus === 'COMPLETED' ? (pollingData.completedAt ? new Date(pollingData.completedAt) : new Date()) : prev.completedAt
         }))
 
         // Se completou via polling, mostrar feedback mesmo se SSE falhou
@@ -248,9 +288,25 @@ export function GenerationInterface({
             duration: 6000
           })
         }
+      } else {
+        // Log quando não há mudança para debug
+        if (generationPolling.data && currentGeneration?.id === generationPolling.data.id) {
+          console.log(`ℹ️ [POLLING_SYNC] No change detected:`, {
+            pollingStatus,
+            currentStatus: currentGeneration.status,
+            pollingHasImages: !!(pollingData.imageUrls && pollingData.imageUrls.length > 0),
+            currentHasImages: !!(currentGeneration.imageUrls && currentGeneration.imageUrls.length > 0)
+          })
+        }
       }
+    } else if (generationPolling.data && !currentGeneration) {
+      // Polling retornou dados mas não há currentGeneration - pode ser problema de sincronização
+      console.warn(`⚠️ [POLLING_SYNC] Polling data exists but no currentGeneration:`, {
+        pollingId: generationPolling.data.id,
+        pollingStatus: generationPolling.data.status
+      })
     }
-  }, [generationPolling.data, currentGeneration?.id, currentGeneration?.status])
+  }, [generationPolling.data, generationPolling.isLoading, currentGeneration?.id, currentGeneration?.status, currentGeneration?.imageUrls, completedGenerationIds])
   
   const [settings, setSettings] = useState({
     aspectRatio: '1:1',

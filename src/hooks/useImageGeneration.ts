@@ -86,30 +86,57 @@ export function useGenerationPolling(generationId: string | null, enabled: boole
     queryFn: async () => {
       if (!generationId) return null
 
-      const response = await fetch(`/api/generations/${generationId}/check-status`)
+      console.log(`🔍 [POLLING] Fetching status for generation: ${generationId}`)
+      
+      const response = await fetch(`/api/generations/${generationId}/check-status`, {
+        cache: 'no-store' // Garantir que sempre busca dados frescos
+      })
 
       if (!response.ok) {
-        throw new Error('Failed to check generation status')
+        const errorText = await response.text()
+        console.error(`❌ [POLLING] Failed to check status: ${response.status} - ${errorText}`)
+        throw new Error(`Failed to check generation status: ${response.status}`)
       }
 
-      return response.json()
+      const data = await response.json()
+      console.log(`✅ [POLLING] Status fetched:`, {
+        generationId: data.id,
+        status: data.status,
+        hasImageUrls: !!(data.imageUrls && data.imageUrls.length > 0),
+        imageUrlsCount: data.imageUrls?.length || 0
+      })
+
+      return data
     },
     enabled: enabled && !!generationId,
     refetchInterval: (data) => {
       // Fazer polling a cada 3s enquanto estiver processando
-      if (data?.status === 'PROCESSING' || data?.status === 'PENDING') {
+      const shouldContinue = data?.status === 'PROCESSING' || data?.status === 'PENDING'
+      
+      if (shouldContinue) {
+        console.log(`🔄 [POLLING] Will refetch in 3s (status: ${data?.status})`)
         return 3000
       }
+      
       // Parar polling quando completar ou falhar
+      if (data?.status === 'COMPLETED' || data?.status === 'FAILED') {
+        console.log(`⏹️ [POLLING] Stopping polling (status: ${data?.status})`)
+      }
       return false
     },
     staleTime: 0, // Sempre buscar dados frescos para status
+    refetchOnWindowFocus: true, // Refetch quando janela ganha foco
+    refetchOnReconnect: true, // Refetch quando reconectar
     onSuccess: (data) => {
       // Quando completar ou falhar, invalidar cache da galeria
       if (data?.status === 'COMPLETED' || data?.status === 'FAILED') {
+        console.log(`🔄 [POLLING] Invalidating cache for status: ${data?.status}`)
         queryClient.invalidateQueries({ queryKey: ['gallery'] })
         queryClient.invalidateQueries({ queryKey: ['generations'] })
       }
+    },
+    onError: (error) => {
+      console.error(`❌ [POLLING] Query error:`, error)
     },
   })
 }
