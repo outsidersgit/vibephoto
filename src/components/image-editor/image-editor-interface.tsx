@@ -357,7 +357,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
 
         {/* ChatGPT Style - Centered Layout */}
         <div className="space-y-4">
-          {/* Prompt Input - ChatGPT style with dark theme */}
+          {/* Prompt Input - ChatGPT style with gray theme */}
           <div className="relative">
             <Textarea
               placeholder="Descreva o que deseja editar, adicionar ou remover da imagem..."
@@ -365,13 +365,12 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               onChange={(e) => setPrompt(e.target.value)}
               rows={5}
               maxLength={2500}
-              className="resize-none text-sm bg-[#2C3E50] border-2 border-[#34495E] text-white placeholder:text-gray-400 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-2xl px-4 py-4 pr-12 shadow-lg transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-lg px-4 py-4 pr-12 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               style={{
-                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
-                color: '#FFFFFF'
+                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
               }}
             />
-            <div className="absolute bottom-4 right-4 text-xs text-gray-300">
+            <div className="absolute bottom-4 right-4 text-xs text-gray-600">
               {prompt.length}/2500
             </div>
           </div>
