@@ -8,9 +8,10 @@ import { Copy, Sparkles } from 'lucide-react'
 interface PromptExamplesProps {
   modelClass: string
   onPromptSelect: (prompt: string) => void
+  onClose?: () => void
 }
 
-export function PromptExamples({ modelClass, onPromptSelect }: PromptExamplesProps) {
+export function PromptExamples({ modelClass, onPromptSelect, onClose }: PromptExamplesProps) {
   const getPromptsForClass = (className: string) => {
     const basePrompts = {
       MAN: [
@@ -168,7 +169,10 @@ export function PromptExamples({ modelClass, onPromptSelect }: PromptExamplesPro
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => onPromptSelect(prompt)}
+                        onClick={() => {
+                          onPromptSelect(prompt)
+                          onClose?.()
+                        }}
                         className="h-7 px-3 text-xs border-gray-400 text-gray-200 hover:bg-gray-500 bg-gray-600"
                       >
                         Usar Prompt

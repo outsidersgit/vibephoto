@@ -22,10 +22,11 @@ import { getModelGender, getGenderPrefix } from '@/lib/utils/model-gender'
 
 interface PromptBuilderProps {
   onPromptGenerated: (prompt: string) => void
+  onGenerate?: () => void
   modelClass?: string
 }
 
-export function PromptBuilder({ onPromptGenerated, modelClass = 'MAN' }: PromptBuilderProps) {
+export function PromptBuilder({ onPromptGenerated, onGenerate, modelClass = 'MAN' }: PromptBuilderProps) {
   const [selectedBlocks, setSelectedBlocks] = useState<PromptBlock[]>([])
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['style'])
   const [copiedBlocks, setCopiedBlocks] = useState<string[]>([])
@@ -402,12 +403,15 @@ export function PromptBuilder({ onPromptGenerated, modelClass = 'MAN' }: PromptB
 
             <div className="flex space-x-2">
               <Button
-                onClick={handleGeneratePrompt}
+                onClick={() => {
+                  handleGeneratePrompt()
+                  onGenerate?.()
+                }}
                 className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-[#667EEA]"
                 disabled={selectedBlocks.length === 0}
               >
                 <Wand2 className="w-4 h-4 mr-2" />
-                Usar Este Prompt
+                Gerar Foto
               </Button>
 
               <Button

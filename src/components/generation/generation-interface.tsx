@@ -647,6 +647,7 @@ export function GenerationInterface({
                   <PromptExamples
                     modelClass={selectedModelData?.class || 'MAN'}
                     onPromptSelect={handlePromptSelect}
+                    onClose={() => setShowExamples(false)}
                   />
                 </div>
               )}
