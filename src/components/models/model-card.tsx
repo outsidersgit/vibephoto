@@ -109,13 +109,13 @@ export function ModelCard({ model, showProgress, showError, isSelected = false, 
       <Card 
         className={`group relative bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border text-white transition-all hover:shadow-lg overflow-visible cursor-pointer ${
           isSelected 
-            ? 'border-2 border-transparent bg-gradient-to-br from-[#667EEA] to-[#764BA2] p-[2px]' 
+            ? 'border-2 border-blue-500 shadow-[0_0_0_3px_rgba(59,130,246,0.2),0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06)] transform scale-[1.02]' 
             : 'border border-slate-600/30 hover:border-slate-500/40'
         }`}
         onClick={() => onSelect && onSelect(model.id)}
       >
-        <CardContent className={`p-1.5 sm:p-2 relative ${isSelected ? 'bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] rounded' : ''}`}>
-          <div className="space-y-1 sm:space-y-1.5">
+        <CardContent className={`p-1 sm:p-1.5 relative ${isSelected ? 'bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] rounded' : ''}`}>
+          <div className="space-y-0.5 sm:space-y-1">
             {/* Model Preview */}
             <div className="aspect-square bg-slate-700 rounded-md overflow-hidden relative">
               {previewImage ? (
@@ -125,39 +125,26 @@ export function ModelCard({ model, showProgress, showError, isSelected = false, 
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <VibePhotoLogo size="sm" layout="iconOnly" variant="white" showText={false} />
+                <div className="w-full h-full flex items-center justify-center bg-slate-800">
                 </div>
               )}
-
-              {/* Status Indicator - Top Left */}
-              <div className="absolute top-1 left-1">
-                {getStatusIcon()}
-              </div>
 
               {/* Selection Check Icon - Only when selected */}
               {isSelected && (
-                <div className="absolute top-1 right-1 w-5 h-5 bg-gradient-to-br from-[#667EEA] to-[#764BA2] rounded-full flex items-center justify-center border-2 border-white shadow-lg">
+                <div className="absolute top-1 right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
                   <Check className="w-3 h-3 text-white" />
-                </div>
-              )}
-
-              {/* VibePhoto Logo Overlay - Bottom Right (only when there's an image and not selected) */}
-              {previewImage && !isSelected && (
-                <div className="absolute bottom-1 right-1">
-                  <VibePhotoLogo size="xs" layout="iconOnly" variant="white" showText={false} />
                 </div>
               )}
             </div>
 
             {/* Model Info */}
             <div className="space-y-0.5">
-              <h3 className="font-medium text-[11px] sm:text-xs truncate text-white">
+              <h3 className="font-medium text-[10px] sm:text-[11px] truncate text-white leading-tight">
                 {model.name}
               </h3>
 
               <div className="flex items-center justify-between">
-                <span className="text-[10px] sm:text-xs text-gray-400">
+                <span className="text-[9px] sm:text-[10px] text-gray-400">
                   {getClassLabel(model.class)}
                 </span>
 
@@ -165,7 +152,7 @@ export function ModelCard({ model, showProgress, showError, isSelected = false, 
                 {model.qualityScore && (
                   <Badge
                     variant="secondary"
-                    className="text-[10px] sm:text-xs px-1 py-0 h-3.5 sm:h-4 bg-gray-600 text-gray-200"
+                    className="text-[9px] sm:text-[10px] px-0.5 py-0 h-3 sm:h-3.5 bg-gray-600 text-gray-200"
                   >
                     {Math.round(model.qualityScore * 100)}%
                   </Badge>

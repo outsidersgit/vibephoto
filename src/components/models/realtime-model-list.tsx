@@ -104,35 +104,6 @@ export function RealtimeModelList({ initialModels, userId }: RealtimeModelListPr
 
   return (
     <div className="space-y-8">
-      {/* Generate Button - Show when model is selected */}
-      {selectedModelId && selectedModel && (
-        <div className="sticky top-4 z-10 bg-white border-2 border-gray-200 rounded-lg shadow-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 rounded-md bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] flex items-center justify-center overflow-hidden border-2 border-gray-200">
-              {selectedModel.sampleImages?.[0] ? (
-                <img
-                  src={selectedModel.sampleImages[0]}
-                  alt={selectedModel.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="text-white text-xs font-bold">{selectedModel.name.charAt(0)}</div>
-              )}
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-900">Modelo selecionado</p>
-              <p className="text-xs text-gray-600">{selectedModel.name}</p>
-            </div>
-          </div>
-          <Button
-            onClick={handleGenerate}
-            className="w-full sm:w-auto bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white shadow-lg"
-          >
-            <Play className="w-4 h-4 mr-2" />
-            Gerar Fotos
-          </Button>
-        </div>
-      )}
 
       {/* Conexão realtime acontece nos bastidores - não mostrar status */}
 
@@ -149,13 +120,23 @@ export function RealtimeModelList({ initialModels, userId }: RealtimeModelListPr
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
             {modelsByStatus.training.map((model) => (
-              <ModelCard
-                key={model.id}
-                model={model}
-                showProgress={true}
-                isSelected={selectedModelId === model.id}
-                onSelect={handleSelectModel}
-              />
+              <div key={model.id} className="space-y-2">
+                <ModelCard
+                  model={model}
+                  showProgress={true}
+                  isSelected={selectedModelId === model.id}
+                  onSelect={handleSelectModel}
+                />
+                {selectedModelId === model.id && (
+                  <Button
+                    onClick={handleGenerate}
+                    className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white shadow-lg text-xs py-1.5"
+                  >
+                    <Play className="w-3 h-3 mr-1.5" />
+                    Gerar
+                  </Button>
+                )}
+              </div>
             ))}
           </div>
         </div>
@@ -165,13 +146,23 @@ export function RealtimeModelList({ initialModels, userId }: RealtimeModelListPr
         <div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
             {modelsByStatus.ready.map((model) => (
-              <ModelCard
-                key={model.id}
-                model={model}
-                showProgress={false}
-                isSelected={selectedModelId === model.id}
-                onSelect={handleSelectModel}
-              />
+              <div key={model.id} className="space-y-2">
+                <ModelCard
+                  model={model}
+                  showProgress={false}
+                  isSelected={selectedModelId === model.id}
+                  onSelect={handleSelectModel}
+                />
+                {selectedModelId === model.id && (
+                  <Button
+                    onClick={handleGenerate}
+                    className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white shadow-lg text-xs py-1.5"
+                  >
+                    <Play className="w-3 h-3 mr-1.5" />
+                    Gerar
+                  </Button>
+                )}
+              </div>
             ))}
           </div>
         </div>
@@ -186,13 +177,23 @@ export function RealtimeModelList({ initialModels, userId }: RealtimeModelListPr
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
             {modelsByStatus.error.map((model) => (
-              <ModelCard
-                key={model.id}
-                model={model}
-                showProgress={false}
-                isSelected={selectedModelId === model.id}
-                onSelect={handleSelectModel}
-              />
+              <div key={model.id} className="space-y-2">
+                <ModelCard
+                  model={model}
+                  showProgress={false}
+                  isSelected={selectedModelId === model.id}
+                  onSelect={handleSelectModel}
+                />
+                {selectedModelId === model.id && (
+                  <Button
+                    onClick={handleGenerate}
+                    className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white shadow-lg text-xs py-1.5"
+                  >
+                    <Play className="w-3 h-3 mr-1.5" />
+                    Gerar
+                  </Button>
+                )}
+              </div>
             ))}
           </div>
         </div>
@@ -207,13 +208,23 @@ export function RealtimeModelList({ initialModels, userId }: RealtimeModelListPr
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
             {modelsByStatus.draft.map((model) => (
-              <ModelCard
-                key={model.id}
-                model={model}
-                showProgress={false}
-                isSelected={selectedModelId === model.id}
-                onSelect={handleSelectModel}
-              />
+              <div key={model.id} className="space-y-2">
+                <ModelCard
+                  model={model}
+                  showProgress={false}
+                  isSelected={selectedModelId === model.id}
+                  onSelect={handleSelectModel}
+                />
+                {selectedModelId === model.id && (
+                  <Button
+                    onClick={handleGenerate}
+                    className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white shadow-lg text-xs py-1.5"
+                  >
+                    <Play className="w-3 h-3 mr-1.5" />
+                    Gerar
+                  </Button>
+                )}
+              </div>
             ))}
           </div>
         </div>
