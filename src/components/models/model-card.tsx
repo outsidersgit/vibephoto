@@ -6,20 +6,15 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
   MoreHorizontal,
-  Play,
   Eye,
   Trash2,
   AlertCircle,
   Clock,
   CheckCircle,
-  User,
-  Users,
-  RefreshCw,
   Sparkles
 } from 'lucide-react'
 import Link from 'next/link'
-import { AIModel } from '@/types'
-import { formatDate } from '@/lib/utils'
+import { VibePhotoLogo } from '@/components/ui/vibephoto-logo'
 
 interface ModelCardProps {
   model: any
@@ -31,6 +26,17 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [showActions, setShowActions] = useState(false)
+
+  const getClassLabel = (modelClass: string) => {
+    const labels = {
+      MAN: 'Homem',
+      WOMAN: 'Mulher',
+      BOY: 'Menino',
+      GIRL: 'Menina',
+      ANIMAL: 'Animal'
+    }
+    return labels[modelClass as keyof typeof labels] || modelClass
+  }
 
   const getStatusIcon = () => {
     switch (model.status) {
@@ -44,53 +50,6 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
         return <AlertCircle className="w-3 h-3 text-red-500" />
       default:
         return <Clock className="w-3 h-3 text-slate-400" />
-    }
-  }
-
-  const getStatusText = () => {
-    switch (model.status) {
-      case 'READY':
-        return 'Pronto'
-      case 'TRAINING':
-        return 'Treinando'
-      case 'PROCESSING':
-        return 'Processando'
-      case 'UPLOADING':
-        return 'Carregando'
-      case 'ERROR':
-        return 'Erro'
-      default:
-        return model.status
-    }
-  }
-
-  const getStatusGradient = () => {
-    switch (model.status) {
-      case 'READY':
-        return 'from-emerald-500/10 to-green-500/5'
-      case 'TRAINING':
-      case 'PROCESSING':
-      case 'UPLOADING':
-        return 'from-amber-500/10 to-yellow-500/5'
-      case 'ERROR':
-        return 'from-red-500/10 to-rose-500/5'
-      default:
-        return 'from-gray-500/10 to-slate-500/5'
-    }
-  }
-
-  const getAvatarIcon = () => {
-    const iconClass = "w-4 h-4 text-white"
-
-    switch (model.class) {
-      case 'MAN':
-      case 'WOMAN':
-        return <User className={iconClass} />
-      case 'BOY':
-      case 'GIRL':
-        return <Users className={iconClass} />
-      default:
-        return <Sparkles className={iconClass} />
     }
   }
 
@@ -114,6 +73,7 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
       alert('Erro ao excluir modelo')
     } finally {
       setIsDeleting(false)
+      setShowActions(false)
     }
   }
 
@@ -138,109 +98,142 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
     }
   }
 
+  // Get first sample image or preview image
+  const previewImage = model.sampleImages?.[0] || model.previewImages?.[0] || null
+
   return (
-    <Card className={`group relative bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border border-slate-600/30 hover:border-slate-500/40 shadow-sm hover:shadow-xl transition-all duration-300 hover:scale-[1.02]`}>
-      <CardContent className="p-4 overflow-visible">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center space-x-3 flex-1 min-w-0">
-            {/* Avatar */}
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-slate-600 to-slate-700 shadow-sm`}>
-              {getAvatarIcon()}
+    <>
+      <Card className={`group relative bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border border-slate-600/30 hover:border-slate-500/40 text-white transition-all hover:shadow-lg overflow-visible`}>
+        <CardContent className="p-2 relative">
+          <div className="space-y-1.5">
+            {/* Model Preview */}
+            <div className="aspect-square bg-slate-700 rounded-md overflow-hidden relative">
+              {previewImage ? (
+                <img
+                  src={previewImage}
+                  alt={`${model.name} sample`}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <VibePhotoLogo size="sm" layout="iconOnly" variant="white" showText={false} />
+                </div>
+              )}
+
+              {/* Status Indicator - Top Left */}
+              <div className="absolute top-1 left-1">
+                {getStatusIcon()}
+              </div>
+
+              {/* VibePhoto Logo Overlay - Bottom Right (only when there's an image) */}
+              {previewImage && (
+                <div className="absolute bottom-1 right-1">
+                  <VibePhotoLogo size="xs" layout="iconOnly" variant="white" showText={false} />
+                </div>
+              )}
             </div>
 
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-white truncate text-sm leading-tight">
+            {/* Model Info */}
+            <div className="space-y-0.5">
+              <h3 className="font-medium text-xs truncate text-white">
                 {model.name}
               </h3>
+
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-400">
+                  {getClassLabel(model.class)}
+                </span>
+
+                {/* Quality Score */}
+                {model.qualityScore && (
+                  <Badge
+                    variant="secondary"
+                    className="text-xs px-1 py-0 h-4 bg-gray-600 text-gray-200"
+                  >
+                    {Math.round(model.qualityScore * 100)}%
+                  </Badge>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Actions Menu */}
-          <div className="relative">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowActions(!showActions)}
-              className="h-7 w-7 p-0 hover:bg-slate-600/80 text-slate-100 hover:text-white transition-all"
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
+            {/* Actions Button - Bottom Right Corner of Card */}
+            <div className="absolute bottom-2 right-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowActions(!showActions)
+                }}
+                className="h-6 w-6 p-0 hover:bg-slate-600/80 text-slate-100 hover:text-white transition-all rounded-full z-10"
+              >
+                <MoreHorizontal className="w-3 h-3" />
+              </Button>
 
-            {showActions && (
-              <div className="absolute right-0 top-9 bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] backdrop-blur-sm border border-slate-600 rounded-lg shadow-2xl z-20 min-w-[150px] overflow-visible">
-                <div className="py-1">
-                  <Link
-                    href={`/models/${model.id}`}
-                    className="flex items-center px-3 py-2 text-xs text-white hover:bg-slate-600/50 transition-colors"
-                  >
-                    <Eye className="w-3.5 h-3.5 mr-2" />
-                    Ver Detalhes
-                  </Link>
+              {/* Actions Dropdown */}
+              {showActions && (
+                <div className="absolute right-0 bottom-8 bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] backdrop-blur-sm border border-slate-600 rounded-lg shadow-2xl z-30 min-w-[150px] overflow-visible">
+                  <div className="py-1">
+                    <Link
+                      href={`/models/${model.id}`}
+                      onClick={() => setShowActions(false)}
+                      className="flex items-center px-3 py-2 text-xs text-white hover:bg-slate-600/50 transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5 mr-2" />
+                      Ver Detalhes
+                    </Link>
 
-                  <button
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                    className="flex items-center px-3 py-2 text-xs text-red-400 hover:bg-red-900/20 w-full text-left transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 mr-2" />
-                    {isDeleting ? 'Excluindo...' : 'Excluir'}
-                  </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDelete()
+                      }}
+                      disabled={isDeleting}
+                      className="flex items-center px-3 py-2 text-xs text-red-400 hover:bg-red-900/20 w-full text-left transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-2" />
+                      {isDeleting ? 'Excluindo...' : 'Excluir'}
+                    </button>
+                  </div>
                 </div>
+              )}
+            </div>
+
+            {/* Progress Bar for Training - Show below info if needed */}
+            {showProgress && ['TRAINING', 'PROCESSING', 'UPLOADING'].includes(model.status) && (
+              <div className="mt-1.5">
+                <div className="flex justify-between text-xs text-slate-400 mb-1">
+                  <span>
+                    {model.status === 'TRAINING' ? 'Treinando' : 
+                     model.status === 'PROCESSING' ? 'Processando' : 
+                     'Carregando'}
+                    {model.trainingMessage && ` • ${model.trainingMessage}`}
+                  </span>
+                  <span className="font-medium">{model.progress || 0}%</span>
+                </div>
+                <div className="w-full bg-slate-700 rounded-full h-1 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-amber-400 to-amber-500 h-full rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${model.progress || 0}%` }}
+                  />
+                </div>
+                {model.status === 'TRAINING' && (
+                  <p className="text-xs text-slate-400 mt-1">
+                    Tempo estimado: ~30 minutos
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Error Message */}
+            {showError && model.errorMessage && (
+              <div className="mt-1.5 p-1.5 bg-red-900/20 border border-red-700/50 rounded text-xs text-red-300 leading-relaxed">
+                {model.errorMessage}
               </div>
             )}
           </div>
-        </div>
-
-        {/* Progress Bar for Training - Show for TRAINING, PROCESSING, UPLOADING */}
-        {showProgress && ['TRAINING', 'PROCESSING', 'UPLOADING'].includes(model.status) && (
-          <div className="mb-3">
-            <div className="flex justify-between text-xs text-slate-400 mb-1.5">
-              <span>
-                {model.status === 'TRAINING' ? 'Treinando' : 
-                 model.status === 'PROCESSING' ? 'Processando' : 
-                 'Carregando'}
-                {model.trainingMessage && ` • ${model.trainingMessage}`}
-              </span>
-              <span className="font-medium">{model.progress || 0}%</span>
-            </div>
-            <div className="w-full bg-slate-700 rounded-full h-1.5 overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-amber-400 to-amber-500 h-full rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${model.progress || 0}%` }}
-              />
-            </div>
-            {model.status === 'TRAINING' && (
-              <p className="text-xs text-slate-400 mt-1.5">
-                Tempo estimado: ~30 minutos
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Error Message */}
-        {showError && model.errorMessage && (
-          <div className="mb-3 p-2 bg-red-900/20 border border-red-700/50 rounded-lg">
-            <p className="text-xs text-red-300 leading-relaxed">{model.errorMessage}</p>
-          </div>
-        )}
-
-        {/* Action Button */}
-        <div className="flex space-x-2">
-          {model.status === 'READY' ? (
-            <Button size="sm" asChild className="w-full h-7 text-xs bg-slate-600 hover:bg-slate-500 text-white border-slate-500/30 transition-colors">
-              <Link href={`/generate?model=${model.id}`}>
-                Gerar
-              </Link>
-            </Button>
-          ) : (
-            <Button size="sm" disabled className="w-full h-7 text-xs">
-              Aguarde
-            </Button>
-          )}
-        </div>
-      </CardContent>
+        </CardContent>
+      </Card>
 
       {/* Click outside to close actions */}
       {showActions && (
@@ -249,6 +242,6 @@ export function ModelCard({ model, showProgress, showError }: ModelCardProps) {
           onClick={() => setShowActions(false)}
         />
       )}
-    </Card>
+    </>
   )
 }
