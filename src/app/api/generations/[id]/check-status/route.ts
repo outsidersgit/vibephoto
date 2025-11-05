@@ -3,9 +3,66 @@ import { requireAuth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
 /**
- * Endpoint para verificar manualmente o status de uma geração
- * Útil para gerações que ficaram presas em PROCESSING
+ * Endpoint para verificar o status de uma geração
+ * GET: Retorna status atual (usado por polling)
+ * POST: Verifica e corrige gerações presas (usado manualmente)
  */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await requireAuth()
+    const { id } = await params
+    const generationId = id
+
+    // Buscar a geração com todos os dados necessários
+    const generation = await prisma.generation.findFirst({
+      where: {
+        id: generationId,
+        userId: session.user.id
+      },
+      include: {
+        model: {
+          select: {
+            id: true,
+            name: true,
+            class: true
+          }
+        }
+      }
+    })
+
+    if (!generation) {
+      return NextResponse.json(
+        { error: 'Generation not found' },
+        { status: 404 }
+      )
+    }
+
+    // Retornar dados completos para polling
+    return NextResponse.json({
+      id: generation.id,
+      status: generation.status,
+      imageUrls: generation.imageUrls || [],
+      thumbnailUrls: generation.thumbnailUrls || [],
+      processingTime: generation.processingTime,
+      errorMessage: generation.errorMessage,
+      completedAt: generation.completedAt,
+      createdAt: generation.createdAt,
+      prompt: generation.prompt,
+      modelId: generation.modelId,
+      model: generation.model
+    })
+  } catch (error) {
+    console.error('Error fetching generation status:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch generation status' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

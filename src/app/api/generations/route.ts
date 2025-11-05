@@ -451,14 +451,28 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
+    // CRITICAL: Buscar geração atualizada do banco para garantir status correto
+    const updatedGeneration = await prisma.generation.findUnique({
+      where: { id: generation.id },
+      select: {
+        id: true,
+        status: true,
+        prompt: true,
+        variations: true,
+        createdAt: true,
+        jobId: true
+      }
+    })
+
     return NextResponse.json({
       success: true,
       generation: {
-        id: generation.id,
-        status: generation.status,
-        prompt: generation.prompt,
-        variations: generation.variations,
-        createdAt: generation.createdAt
+        id: updatedGeneration?.id || generation.id,
+        status: updatedGeneration?.status || 'PROCESSING', // Garantir PROCESSING se não encontrado
+        prompt: updatedGeneration?.prompt || generation.prompt,
+        variations: updatedGeneration?.variations || generation.variations,
+        createdAt: updatedGeneration?.createdAt || generation.createdAt,
+        jobId: updatedGeneration?.jobId || null
       }
     })
 

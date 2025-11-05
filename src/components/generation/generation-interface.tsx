@@ -327,8 +327,15 @@ export function GenerationInterface({
         }
       })
 
-      setCurrentGeneration(generation)
-      console.log('🚀 Generation started, waiting for real-time updates...')
+      // CRITICAL: Garantir que status seja PROCESSING ao setar currentGeneration
+      setCurrentGeneration({
+        ...generation,
+        status: generation.status || 'PROCESSING' // Garantir PROCESSING se não veio no response
+      })
+      console.log('🚀 Generation started, waiting for real-time updates...', {
+        generationId: generation.id,
+        status: generation.status || 'PROCESSING'
+      })
     } catch (error) {
       console.error('Generation request error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'

@@ -449,9 +449,26 @@ export function AutoSyncGalleryInterface({
         if (existingIndex >= 0) {
           const updated = [...prev]
           updated[existingIndex] = newGeneration
+          console.log(`✅ Updated existing generation ${generationId} in gallery`)
           return updated
         }
+        console.log(`✅ Added new completed generation ${generationId} to gallery`)
         return [newGeneration, ...prev]
+      } else if (status === 'COMPLETED') {
+        // Mesmo sem imageUrls, atualizar status se for COMPLETED
+        const existingIndex = prev.findIndex((g: any) => g.id === generationId)
+        if (existingIndex >= 0) {
+          const updated = [...prev]
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            status: 'COMPLETED',
+            completedAt: new Date(),
+            processingTime: data.processingTime,
+            errorMessage: data.errorMessage
+          }
+          console.log(`✅ Updated generation ${generationId} status to COMPLETED (no imageUrls yet)`)
+          return updated
+        }
       }
       return prev
     })
@@ -512,18 +529,28 @@ export function AutoSyncGalleryInterface({
 
   // Handler para atualizações de upscale via WebSocket
   const handleUpscaleUpdate = useCallback((generationId: string, status: string, data: any) => {
+    console.log(`📥 Gallery received generation status update: ${generationId} -> ${status}`, {
+      isUpscale: data.isUpscale,
+      hasImageUrls: !!data.imageUrls,
+      imageUrlsCount: data.imageUrls?.length
+    })
+    
+    // Processar upscale se for o caso
     if (data.isUpscale && activeUpscale?.jobId) {
-      if (status === 'succeeded' && data.imageUrls?.length > 0) {
-        handleUpscaleComplete({
-          resultImages: data.imageUrls,
-          downloadUrl: data.imageUrls[0]
-        })
-      } else if (status === 'failed') {
+      if (status === 'succeeded' || status === 'COMPLETED') {
+        if (data.imageUrls?.length > 0) {
+          handleUpscaleComplete({
+            resultImages: data.imageUrls,
+            downloadUrl: data.imageUrls[0]
+          })
+        }
+      } else if (status === 'failed' || status === 'FAILED') {
         handleUpscaleError(data.errorMessage || 'Upscale failed')
       }
     }
     
-    // Também atualizar a galeria se for um upscale que virou uma nova geração
+    // CRITICAL: Sempre atualizar a galeria para TODAS as atualizações de geração
+    // Não apenas upscales - isso garante que novas gerações apareçam automaticamente
     handleGenerationStatusChange(generationId, status, data)
   }, [activeUpscale, handleGenerationStatusChange])
 
