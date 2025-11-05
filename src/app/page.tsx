@@ -482,7 +482,7 @@ const MobileStackingCard = ({ step, index }: {
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
       transition={{ duration: 0.6, delay: index * 0.15 }}
       style={{ scrollSnapAlign: 'start' }}
-      className="min-h-[280px] flex items-center mb-12"
+      className="min-h-[280px] flex items-center mb-4 sm:mb-8"
     >
       <motion.div 
         className="w-full relative overflow-hidden rounded-2xl shadow-2xl"
@@ -530,7 +530,7 @@ const MobileStackingCard = ({ step, index }: {
 
         {/* Conteúdo do card */}
         <div className="p-6 h-full flex flex-col justify-between relative z-10">
-          {/* Título - maior, alinhado à direita */}
+          {/* Título e Descrição - alinhados à direita, mesma margem */}
           <div className="ml-auto text-right">
             <h3 
               className="text-2xl font-bold mb-3 tracking-tight"
@@ -544,18 +544,15 @@ const MobileStackingCard = ({ step, index }: {
             >
               {step.title}
             </h3>
-          </div>
-
-          {/* Descrição - alinhada à direita */}
-          <div className="ml-auto text-right">
+            
+            {/* Descrição - alinhada exatamente com o título */}
             <p 
               className="text-sm leading-relaxed"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
                 fontWeight: 400,
                 letterSpacing: '0.015em',
-                color: 'rgba(200,200,210,0.85)', // Cinza claro
-                maxWidth: '90%' // Garante alinhamento à direita
+                color: 'rgba(200,200,210,0.85)' // Cinza claro
               }}
             >
               {step.description}
@@ -605,7 +602,7 @@ const MobileStackingCards = () => {
   ]
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 sm:space-y-4">
       {steps.map((step, index) => (
         <MobileStackingCard key={step.id} step={step} index={index} />
       ))}
@@ -898,6 +895,16 @@ const AIToolsShowcase = () => {
           {/* Upscale: Comparison Slider */}
           {currentTool.type === 'comparison' && (
             <div className="relative aspect-video rounded-2xl overflow-hidden bg-gray-200 group/slider">
+              {/* Tag "Antes" - Canto superior esquerdo */}
+              <div className="absolute top-6 left-6 bg-black bg-opacity-80 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg z-10">
+                <span>Antes</span>
+              </div>
+              
+              {/* Tag "Depois" - Canto superior direito */}
+              <div className="absolute top-6 right-6 bg-black bg-opacity-80 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg z-10">
+                <span>Depois</span>
+              </div>
+
               <div className="absolute inset-0">
                 <Image
                   src={currentExample?.before || currentTool.beforeImage}
@@ -1022,9 +1029,9 @@ const AIToolsShowcase = () => {
                 }}
               />
 
-              {/* Prompt Overlay */}
-              <div className="absolute bottom-4 right-4 bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg max-w-xs">
-                <p className="text-xs font-light leading-relaxed">
+              {/* Prompt Overlay - Mobile optimized: smaller and more transparent */}
+              <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 bg-black bg-opacity-60 md:bg-opacity-80 text-white px-2 py-1.5 md:px-3 md:py-2 rounded-lg max-w-[calc(100%-1rem)] md:max-w-xs">
+                <p className="text-[10px] md:text-xs font-light leading-relaxed line-clamp-2 md:line-clamp-none">
                   "Coloque os óculos escuros e troque o terno por uma polo bege com golas levantadas."
                 </p>
               </div>
@@ -1045,8 +1052,9 @@ const AIToolsShowcase = () => {
                       e.currentTarget.src = '/examples/professional-woman.jpg'
                     }}
                   />
-                  <div className="absolute bottom-4 left-4 bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg max-w-xs">
-                    <p className="text-xs font-light leading-relaxed">
+                  {/* Prompt Overlay - Mobile optimized: smaller and more transparent */}
+                  <div className="absolute bottom-2 left-2 right-2 md:bottom-4 md:left-4 md:right-auto bg-black bg-opacity-60 md:bg-opacity-80 text-white px-2 py-1.5 md:px-3 md:py-2 rounded-lg max-w-[calc(100%-1rem)] md:max-w-xs">
+                    <p className="text-[10px] md:text-xs font-light leading-relaxed line-clamp-2 md:line-clamp-none">
                       Prompt: Coloque os óculos escuros e troque o terno por uma polo bege com gola alta.
                     </p>
                   </div>

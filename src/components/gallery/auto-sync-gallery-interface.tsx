@@ -1511,15 +1511,17 @@ export function AutoSyncGalleryInterface({
       </div>
 
 
-      {/* Bulk Actions */}
+      {/* Bulk Actions - Mobile optimized */}
       {bulkSelectMode && (
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+        <Card className="bg-blue-50 border-blue-200 sticky top-0 z-50 mb-4">
+          <CardContent className="pt-4 pb-4">
+            {/* Mobile: Stack vertically, Desktop: Horizontal */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+              {/* Left side - Selection info and clear */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                 {(activeTab === 'videos' ? selectedVideos.size : selectedImages.length) > 0 ? (
                   <>
-                    <span className="font-medium text-blue-900">
+                    <span className="font-medium text-blue-900 text-sm sm:text-base">
                       {activeTab === 'videos'
                         ? `${selectedVideos.size} vídeo${selectedVideos.size !== 1 ? 's' : ''} selecionado${selectedVideos.size !== 1 ? 's' : ''}`
                         : `${selectedImages.length} imagem${selectedImages.length !== 1 ? 'ns' : ''} selecionada${selectedImages.length !== 1 ? 's' : ''}`
@@ -1529,6 +1531,7 @@ export function AutoSyncGalleryInterface({
                       variant="ghost"
                       size="sm"
                       onClick={handleDeselectAll}
+                      className="text-xs sm:text-sm"
                     >
                       Desmarcar Todas
                     </Button>
@@ -1546,16 +1549,19 @@ export function AutoSyncGalleryInterface({
                     setSelectedVideos(new Set())
                     setBulkSelectMode(false)
                   }}
+                  className="text-xs sm:text-sm"
                 >
-                  Sair do Modo Seleção
+                  Sair
                 </Button>
               </div>
 
-              <div className="flex items-center space-x-2">
+              {/* Right side - Actions */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-2">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={handleSelectAll}
+                  className="text-xs sm:text-sm px-2 sm:px-3"
                 >
                   {activeTab === 'videos' ? 'Selecionar Todos' : 'Selecionar Todas'}
                 </Button>
@@ -1565,33 +1571,36 @@ export function AutoSyncGalleryInterface({
                       size="sm"
                       variant="outline"
                       onClick={() => handleBulkAction('download')}
+                      className="text-xs sm:text-sm px-2 sm:px-3"
                     >
-                      <Download className="w-4 h-4 mr-1" />
-                      Baixar
+                      <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Baixar</span>
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => handleBulkAction('favorite')}
+                      className="text-xs sm:text-sm px-2 sm:px-3"
                     >
-                      <Heart className="w-4 h-4 mr-1" />
-                      Favoritar
+                      <Heart className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Favoritar</span>
                     </Button>
                     <Button
                       size="sm"
                       variant="destructive"
                       onClick={() => handleBulkAction('delete')}
                       disabled={isRefreshing}
+                      className="text-xs sm:text-sm px-2 sm:px-3"
                     >
                       {isRefreshing ? (
                         <>
-                          <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
-                          Excluindo...
+                          <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1 animate-spin" />
+                          <span className="hidden sm:inline">Excluindo...</span>
                         </>
                       ) : (
                         <>
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Excluir
+                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Excluir</span>
                         </>
                       )}
                     </Button>

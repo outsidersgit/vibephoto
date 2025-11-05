@@ -24,15 +24,15 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
     <>
       <ProtectedPageScript />
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
-        <h1 className="text-3xl font-bold text-gray-900 text-left">
+      {/* Header - Mobile optimized */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 text-left">
           Editor de imagens
         </h1>
       </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      {/* Main Content - Mobile optimized */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         {!canUseCredits ? (
           <div className="bg-white rounded-lg border border-red-200 p-8 text-center">
             <div className="mb-4">

@@ -355,16 +355,16 @@ function BillingPageContent() {
       <div className="min-h-screen bg-gradient-to-br from-[#667EEA]/10 via-white to-[#764BA2]/10" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
         {/* Header */}
       <div className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
               Minha Assinatura
             </h1>
-            {/* Botão Atualizar Método de Pagamento */}
+            {/* Botão Atualizar Método de Pagamento - Mobile optimized */}
             {session?.user?.subscriptionId && (
               <Button
                 onClick={() => setShowUpdateCardModal(true)}
-                className="bg-gradient-to-br from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white shadow-lg shadow-[#667EEA]/25 transition-all duration-200"
+                className="w-full sm:w-auto bg-gradient-to-br from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white shadow-lg shadow-[#667EEA]/25 transition-all duration-200 text-sm sm:text-base px-3 sm:px-4 py-2"
               >
                 Atualizar Método de Pagamento
               </Button>
@@ -441,54 +441,57 @@ function BillingPageContent() {
             {/* Current Subscription */}
             <Card className="bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border border-slate-600/30 shadow-2xl">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-white mb-1">Plano</h3>
                     <p className="text-xl font-bold text-white">{currentPlan?.name || 'Sem plano'}</p>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 px-3 text-xs text-slate-300 border-slate-500/30 hover:bg-slate-700/50 bg-transparent"
-                      onClick={() => setActiveTab('plans')}
-                    >
-                      Trocar de plano
-                    </Button>
+                  {/* Mobile: Stack buttons vertically, Desktop: Horizontal */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 sm:px-3 text-xs text-slate-300 border-slate-500/30 hover:bg-slate-700/50 bg-transparent"
+                        onClick={() => setActiveTab('plans')}
+                      >
+                        Trocar de plano
+                      </Button>
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 px-3 text-xs text-slate-300 border-slate-500/30 hover:bg-slate-700/50 bg-transparent"
-                      onClick={() => setActiveTab('credits')}
-                    >
-                      Comprar créditos
-                    </Button>
-
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 sm:px-3 text-xs text-slate-300 border-slate-500/30 hover:bg-slate-700/50 bg-transparent"
+                        onClick={() => setActiveTab('credits')}
+                      >
+                        Comprar créditos
+                      </Button>
+                    </div>
 
                     <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
                       <DialogTrigger asChild>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 px-3 text-xs text-red-400/70 hover:text-red-400 hover:bg-red-400/5 border border-red-400/20 hover:border-red-400/40 rounded-lg ml-2"
+                          className="h-7 px-2 sm:px-3 text-xs text-red-400/70 hover:text-red-400 hover:bg-red-400/5 border border-red-400/20 hover:border-red-400/40 rounded-lg sm:ml-2 w-full sm:w-auto"
                         >
                           Cancelar assinatura
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Cancelar Assinatura</DialogTitle>
                           <DialogDescription>
                             Tem certeza que deseja cancelar sua assinatura? Você continuará tendo acesso até o final do período atual.
                           </DialogDescription>
                         </DialogHeader>
-                        <DialogFooter>
+                        <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
                           <Button
                             variant="outline"
                             onClick={() => setShowCancelModal(false)}
                             disabled={cancellingSubscription}
+                            className="w-full sm:w-auto"
                           >
                             Manter Assinatura
                           </Button>
@@ -496,6 +499,7 @@ function BillingPageContent() {
                             variant="destructive"
                             onClick={handleCancelSubscription}
                             disabled={cancellingSubscription}
+                            className="w-full sm:w-auto"
                           >
                             {cancellingSubscription ? 'Cancelando...' : 'Confirmar Cancelamento'}
                           </Button>
@@ -507,7 +511,7 @@ function BillingPageContent() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowSubscriptionDetails(!showSubscriptionDetails)}
-                      className="p-1 text-white hover:bg-slate-700 ml-1"
+                      className="p-1 text-white hover:bg-slate-700 sm:ml-1 w-8 h-8 sm:w-auto sm:h-auto"
                     >
                       {showSubscriptionDetails ? (
                         <ChevronUp className="w-4 h-4" />

@@ -10,26 +10,11 @@ export function Footer() {
   return (
     <footer className="bg-white border-t border-gray-200 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
-          {/* Brand */}
-          <div className="col-span-1">
-            <div className="mb-2 sm:mb-4">
-              <VibePhotoLogo size="md" layout="horizontal" variant="monochrome" showText={true} />
-            </div>
-            <p className="text-gray-600 text-xs sm:text-sm mb-2 sm:mb-4">
-              Transforme suas selfies em fotos profissionais com nossa tecnologia de IA avançada.
-            </p>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
-              <Mail className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-              <a href="mailto:suporte@vibephoto.app" className="hover:text-purple-600 transition-colors break-all sm:break-normal">
-                suporte@vibephoto.app
-              </a>
-            </div>
-          </div>
-
+        {/* Mobile: 3 colunas (Produto | Suporte | Legal) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 mb-6 sm:mb-8">
           {/* Product */}
           <div>
-            <h3 className="font-medium text-gray-900 mb-2 sm:mb-4 text-xs sm:text-sm">Produto</h3>
+            <h3 className="font-medium text-gray-900 mb-3 sm:mb-4 text-sm">Produto</h3>
             <ul className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
               <li>
                 <Link href="/dashboard" className="text-gray-600 hover:text-purple-600 transition-colors">
@@ -61,7 +46,7 @@ export function Footer() {
 
           {/* Support */}
           <div>
-            <h3 className="font-medium text-gray-900 mb-2 sm:mb-4 text-xs sm:text-sm">Suporte</h3>
+            <h3 className="font-medium text-gray-900 mb-3 sm:mb-4 text-sm">Suporte</h3>
             <ul className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
               <li>
                 <Link 
@@ -92,7 +77,7 @@ export function Footer() {
 
           {/* Legal */}
           <div>
-            <h3 className="font-medium text-gray-900 mb-2 sm:mb-4 text-xs sm:text-sm">Legal & Privacidade</h3>
+            <h3 className="font-medium text-gray-900 mb-3 sm:mb-4 text-sm">Legal & Privacidade</h3>
             <ul className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
               <li>
                 <Link 
@@ -136,6 +121,22 @@ export function Footer() {
                 </button>
               </li>
             </ul>
+          </div>
+        </div>
+
+        {/* Brand and Email - Separated row */}
+        <div className="border-t border-gray-200 pt-6 sm:pt-8">
+          <div className="mb-4">
+            <VibePhotoLogo size="md" layout="horizontal" variant="monochrome" showText={true} />
+          </div>
+          <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4">
+            Transforme suas selfies em fotos profissionais com nossa tecnologia de IA avançada.
+          </p>
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
+            <Mail className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+            <a href="mailto:suporte@vibephoto.app" className="hover:text-purple-600 transition-colors break-all sm:break-normal">
+              suporte@vibephoto.app
+            </a>
           </div>
         </div>
 

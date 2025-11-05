@@ -24,7 +24,11 @@ import { EnhancedPhotoPackage } from '@/types'
 import { usePackages } from '@/hooks/usePackages'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 
-export function PackagesPageClient() {
+interface PackagesPageClientProps {
+  initialPackages?: EnhancedPhotoPackage[]
+}
+
+export function PackagesPageClient({ initialPackages = [] }: PackagesPageClientProps) {
   // CRITICAL: Todos os hooks DEVEM ser chamados ANTES de qualquer early return
   // Violar esta regra causa erro React #300/#310
   const { data: session, status } = useSession()
@@ -41,7 +45,8 @@ export function PackagesPageClient() {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
 
   // Performance: React Query com cache (Sprint 3 - Mobile Performance)
-  const { data: packages = [], isLoading: loading, error: queryError } = usePackages()
+  // Usar initialPackages como fallback para melhor UX (sem delay inicial)
+  const { data: packages = initialPackages, isLoading: loading, error: queryError } = usePackages()
   const error = queryError ? 'Erro ao carregar pacotes' : ''
   
   // CRITICAL: AGORA sim podemos fazer early returns após TODOS os hooks
@@ -69,6 +74,10 @@ export function PackagesPageClient() {
       </div>
     )
   }
+
+  // Se temos initialPackages, não mostrar loading completo (melhor UX)
+  // Apenas mostrar skeleton se não há dados iniciais E está carregando
+  const showLoadingSkeleton = loading && initialPackages.length === 0
 
 
   const categories = [
@@ -112,8 +121,43 @@ export function PackagesPageClient() {
 
   return (
     <div className="space-y-6">
+      {/* Loading Skeleton (apenas se não há dados iniciais) */}
+      {showLoadingSkeleton && (
+        <>
+          {/* Search and Filters Skeleton */}
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 h-10 bg-gray-800 rounded-lg animate-pulse"></div>
+            <div className="w-32 h-10 bg-gray-800 rounded-lg animate-pulse"></div>
+          </div>
 
+          {/* Results Skeleton */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="h-5 w-48 bg-gray-800 rounded animate-pulse"></div>
+          </div>
 
+          {/* Package Grid Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-gray-800 rounded-lg overflow-hidden animate-pulse">
+                <div className="aspect-video bg-gray-700"></div>
+                <div className="p-4 space-y-3">
+                  <div className="h-6 bg-gray-700 rounded w-3/4"></div>
+                  <div className="h-4 bg-gray-700 rounded w-full"></div>
+                  <div className="h-4 bg-gray-700 rounded w-2/3"></div>
+                  <div className="flex gap-2 mt-4">
+                    <div className="h-6 bg-gray-700 rounded w-20"></div>
+                    <div className="h-6 bg-gray-700 rounded w-16"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Conteúdo real (sempre renderizar se há dados, mesmo durante revalidação) */}
+      {!showLoadingSkeleton && (
+        <>
         {/* Search and Filters */}
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
@@ -196,14 +240,36 @@ export function PackagesPageClient() {
           <div className="flex-1">
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-gray-400">
-                Mostrando {filteredPackages.length} de {packages.length} pacotes
+                {loading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Carregando pacotes...
+                  </span>
+                ) : (
+                  `Mostrando ${filteredPackages.length} de ${packages.length} pacotes`
+                )}
               </p>
             </div>
 
-            <PackageGrid
-              packages={filteredPackages}
-              onPackageSelect={setSelectedPackage}
-            />
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="bg-gray-800 rounded-lg overflow-hidden animate-pulse">
+                    <div className="aspect-video bg-gray-700"></div>
+                    <div className="p-4 space-y-3">
+                      <div className="h-6 bg-gray-700 rounded w-3/4"></div>
+                      <div className="h-4 bg-gray-700 rounded w-full"></div>
+                      <div className="h-4 bg-gray-700 rounded w-2/3"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <PackageGrid
+                packages={filteredPackages}
+                onPackageSelect={setSelectedPackage}
+              />
+            )}
           </div>
         </div>
 
@@ -213,6 +279,8 @@ export function PackagesPageClient() {
           package={selectedPackage}
           onClose={() => setSelectedPackage(null)}
         />
+      )}
+        </>
       )}
     </div>
   )

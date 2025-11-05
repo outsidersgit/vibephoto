@@ -55,36 +55,36 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
         {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+          <div className="py-4 sm:py-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4 sm:mb-0" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
               {activeTab === 'video' ? 'Gerar Vídeos com IA' : 'Gerar Fotos com IA'}
             </h1>
-          </div>
 
-          {/* Tabs */}
-          <div className="flex border-b border-gray-200 dark:border-gray-700">
-            <a
-              href="/generate"
-              className={`py-4 px-6 text-sm font-medium transition-colors ${
-                activeTab === 'image'
-                  ? 'text-[#667EEA] border-b-2 border-[#667EEA] bg-[#667EEA]/5 dark:bg-[#667EEA]/10'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
-              style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
-            >
-              Imagens
-            </a>
-            <a
-              href="/generate?tab=video"
-              className={`py-4 px-6 text-sm font-medium transition-colors ${
-                activeTab === 'video'
-                  ? 'text-[#667EEA] border-b-2 border-[#667EEA] bg-[#667EEA]/5 dark:bg-[#667EEA]/10'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
-              style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
-            >
-              Vídeos
-            </a>
+            {/* Tabs - Mobile optimized */}
+            <div className="flex border-b border-gray-200 dark:border-gray-700 -mx-4 sm:mx-0">
+              <a
+                href="/generate"
+                className={`flex-1 sm:flex-none py-3 sm:py-4 px-4 sm:px-6 text-xs sm:text-sm font-medium transition-colors text-center ${
+                  activeTab === 'image'
+                    ? 'text-[#667EEA] border-b-2 border-[#667EEA] bg-[#667EEA]/5 dark:bg-[#667EEA]/10'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+                style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
+              >
+                Imagens
+              </a>
+              <a
+                href="/generate?tab=video"
+                className={`flex-1 sm:flex-none py-3 sm:py-4 px-4 sm:px-6 text-xs sm:text-sm font-medium transition-colors text-center ${
+                  activeTab === 'video'
+                    ? 'text-[#667EEA] border-b-2 border-[#667EEA] bg-[#667EEA]/5 dark:bg-[#667EEA]/10'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+                style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
+              >
+                Vídeos
+              </a>
+            </div>
           </div>
         </div>
       </header>
