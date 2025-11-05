@@ -23,44 +23,48 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
   return (
     <>
       <ProtectedPageScript />
-      <div className="min-h-screen">
-      {/* Header - Visible in both versions */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-4">
-        <h1 className="text-3xl font-bold text-gray-900 text-left" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-          Editor de imagens
-        </h1>
-      </div>
-
-      {/* Main Content - Mobile optimized */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-6">
-        {!canUseCredits ? (
-          <div className="bg-white rounded-lg border border-red-200 p-8 text-center">
-            <div className="mb-4">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">⚠️</span>
-              </div>
-              <h2 className="text-xl font-semibold text-red-800 mb-2">
-                Créditos Insuficientes
-              </h2>
-              <p className="text-red-600 mb-4">
-                Você precisa de pelo menos 1 crédito para usar o Editor IA.
-              </p>
-              <a
-                href="/credits"
-                className="inline-flex items-center px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Comprar Créditos
-              </a>
+      <div className="min-h-screen bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="py-4 sm:py-6">
+              <h1 className="text-3xl font-bold text-gray-900" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                Editor de imagens
+              </h1>
             </div>
           </div>
-        ) : (
-          <>
-            {/* Image Editor Interface */}
-            <ImageEditorInterface preloadedImageUrl={preloadedImageUrl} />
-          </>
-        )}
-      </main>
-    </div>
+        </header>
+
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {!canUseCredits ? (
+            <div className="bg-white rounded-lg border border-red-200 p-8 text-center">
+              <div className="mb-4">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">⚠️</span>
+                </div>
+                <h2 className="text-xl font-semibold text-red-800 mb-2">
+                  Créditos Insuficientes
+                </h2>
+                <p className="text-red-600 mb-4">
+                  Você precisa de pelo menos 1 crédito para usar o Editor IA.
+                </p>
+                <a
+                  href="/credits"
+                  className="inline-flex items-center px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Comprar Créditos
+                </a>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Image Editor Interface */}
+              <ImageEditorInterface preloadedImageUrl={preloadedImageUrl} />
+            </>
+          )}
+        </div>
+      </div>
     </>
   )
 }
