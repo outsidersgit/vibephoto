@@ -366,28 +366,6 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, modelClass = 'MAN
         })}
       </div>
 
-      {/* Selected Blocks Preview */}
-      {selectedBlocks.length > 0 && (
-        <Card className="bg-gray-700 border-slate-600/30">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-white">Blocos Selecionados ({selectedBlocks.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {selectedBlocks.map((block) => (
-                <Badge
-                  key={block.id}
-                  className="cursor-pointer bg-purple-600 hover:bg-red-600 text-white transition-colors"
-                  onClick={() => toggleBlock(block)}
-                >
-                  {block.name} ×
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Generated Prompt Preview */}
       {currentPrompt && (
         <Card className="bg-gray-700 border-slate-600/30">
