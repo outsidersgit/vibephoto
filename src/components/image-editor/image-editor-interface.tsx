@@ -192,9 +192,32 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     return (
       <div className="w-full">
         <div className="max-w-4xl mx-auto px-4 py-0">
+          {/* Mobile: Info Card - Similar to desktop */}
+          <div className="mb-4">
+            <Card className="border-[#2C3E50] bg-[#2C3E50] rounded-lg shadow-lg">
+              <CardContent className="p-4">
+                <div className="text-sm text-white leading-relaxed font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                  <h3 className="text-base font-bold text-white mb-3">
+                    Como Funciona o Editor IA
+                  </h3>
+                  <ul className="space-y-2 text-sm text-gray-200">
+                    <li className="flex items-start">
+                      <span className="text-white mr-2">•</span>
+                      <span>Modifique, adicione, remova ou funda até 3 imagens para criar composições únicas</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-white mr-2">•</span>
+                      <span>Você também pode criar imagens do zero! Basta digitar sua ideia no prompt e gerar, sem precisar anexar nenhuma imagem</span>
+                    </li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Mobile: Single prompt box centered */}
-          <div className="space-y-4">
-            {/* Prompt Input - ChatGPT style */}
+          <div className="space-y-3">
+            {/* Prompt Input - ChatGPT style with gray theme */}
             <div className="relative">
               <Textarea
                 placeholder="Descreva o que deseja editar, adicionar ou remover da imagem..."
@@ -202,27 +225,45 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={4}
                 maxLength={2500}
-                className="resize-none text-sm bg-white border-2 border-gray-200 rounded-2xl px-4 py-4 pr-12 shadow-sm focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-lg px-4 py-4 pr-12 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
                 style={{
                   fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
                 }}
               />
-              <div className="absolute bottom-4 right-4 text-xs text-gray-400">
+              <div className="absolute bottom-4 right-4 text-xs text-gray-600">
                 {prompt.length}/2500
               </div>
             </div>
 
-            {/* Upload Button - Secondary, below prompt */}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={images.length >= 3 || loading}
-              className="w-full border-2 border-gray-200 hover:border-[#667EEA] hover:bg-[#667EEA]/5 rounded-xl py-3 text-sm font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-            >
-              <ImageIcon className="w-4 h-4 mr-2" />
-              {images.length > 0 ? `${images.length}/3 imagens` : 'Adicionar imagem'}
-            </Button>
+            {/* Upload and Process Buttons - Side by side, smaller */}
+            <div className="flex flex-row items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={images.length >= 3 || loading}
+                className="flex-1 border border-gray-900 hover:border-[#667EEA] hover:bg-[#667EEA]/5 bg-gray-200 text-gray-900 rounded-lg py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              >
+                <ImageIcon className="w-3 h-3 mr-1.5" />
+                {images.length > 0 ? `${images.length}/3` : 'Adicionar'}
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={!canProcess}
+                className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    Processar (15 créditos)
+                  </>
+                )}
+              </Button>
+            </div>
             <input
               ref={fileInputRef}
               type="file"
@@ -252,24 +293,6 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 ))}
               </div>
             )}
-
-            {/* Process Button - Fixed below prompt */}
-            <Button
-              onClick={handleSubmit}
-              disabled={!canProcess}
-              className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white py-4 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Processando...
-                </>
-              ) : (
-                <>
-                  Processar imagem (15 créditos)
-                </>
-              )}
-            </Button>
 
             {/* Error Display */}
             {error && (
@@ -375,17 +398,35 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             </div>
           </div>
 
-          {/* Upload Button - Secondary, below prompt */}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={images.length >= 3 || loading}
-            className="w-full border-2 border-gray-200 hover:border-[#667EEA] hover:bg-[#667EEA]/5 bg-white text-gray-700 rounded-xl py-3 text-sm font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-          >
-            <ImageIcon className="w-4 h-4 mr-2" />
-            {images.length > 0 ? `${images.length}/3 imagens` : 'Adicionar imagem (opcional)'}
-          </Button>
+          {/* Upload and Process Buttons - Side by side, smaller */}
+          <div className="flex flex-row items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={images.length >= 3 || loading}
+              className="flex-1 border border-gray-900 hover:border-[#667EEA] hover:bg-[#667EEA]/5 bg-gray-200 text-gray-900 rounded-lg py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+            >
+              <ImageIcon className="w-3 h-3 mr-1.5" />
+              {images.length > 0 ? `${images.length}/3 imagens` : 'Adicionar imagem'}
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!canProcess}
+              className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  Processar (15 créditos)
+                </>
+              )}
+            </Button>
+          </div>
           <input
             ref={fileInputRef}
             type="file"
@@ -403,7 +444,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                   <img
                     src={image}
                     alt={`Imagem ${index + 1}`}
-                    className="w-24 h-24 object-cover rounded-lg border-2 border-[#4A5F7A]"
+                    className="w-24 h-24 object-cover rounded-lg border-2 border-gray-300"
                   />
                   <button
                     onClick={() => removeImage(index)}
@@ -415,24 +456,6 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               ))}
             </div>
           )}
-
-          {/* Process Button - Fixed below prompt */}
-          <Button
-            onClick={handleSubmit}
-            disabled={!canProcess}
-            className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white py-4 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Processando...
-              </>
-            ) : (
-              <>
-                Processar imagem (15 créditos)
-              </>
-            )}
-          </Button>
 
           {/* Error Display */}
           {error && (
