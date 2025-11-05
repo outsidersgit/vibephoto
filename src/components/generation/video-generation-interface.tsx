@@ -1,14 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Play, Clock, Zap, Settings, Sparkles, Image as ImageIcon, Video, Upload, ChevronDown, ChevronUp } from 'lucide-react'
+import { Image as ImageIcon, Video, Upload, ChevronDown, ChevronUp, X, Loader2 } from 'lucide-react'
 import { VIDEO_CONFIG, VideoGenerationRequest, VideoTemplate } from '@/lib/ai/video/config'
 import { calculateVideoCredits, validatePrompt, getEstimatedProcessingTime, formatProcessingTime } from '@/lib/ai/video/utils'
 import { useToast } from '@/hooks/use-toast'
@@ -29,7 +27,9 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   // Violar esta regra causa erro React #310 (can't set state on unmounted component)
   const { data: session, status } = useSession()
   const { addToast } = useToast()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   
+  const [isMobile, setIsMobile] = useState(false)
   const [activeMode, setActiveMode] = useState<'text-to-video' | 'image-to-video'>('text-to-video')
   const [formData, setFormData] = useState<VideoGenerationRequest>({
     prompt: '',
@@ -44,6 +44,16 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   const [loading, setLoading] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [errors, setErrors] = useState<string[]>([])
+
+  // Detect mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Pre-load source image if provided via URL parameter
   useEffect(() => {
@@ -83,19 +93,6 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
     )
   }
 
-  const handleTemplateSelect = (template: VideoTemplate) => {
-    const templateData = VIDEO_CONFIG.promptTemplates[template]
-    setSelectedTemplate(template)
-
-    setFormData(prev => ({
-      ...prev,
-      prompt: templateData.prompt,
-      duration: templateData.recommendedDuration as 5 | 10,
-      aspectRatio: templateData.recommendedAspectRatio as '16:9' | '9:16' | '1:1',
-      template
-    }))
-  }
-
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
@@ -104,8 +101,17 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         const result = e.target?.result as string
         setUploadedImage(result)
         setFormData(prev => ({ ...prev, sourceImageUrl: result }))
+        setActiveMode('image-to-video')
       }
       reader.readAsDataURL(file)
+    }
+  }
+
+  const removeImage = () => {
+    setUploadedImage(null)
+    setFormData(prev => ({ ...prev, sourceImageUrl: undefined }))
+    if (activeMode === 'image-to-video' && !formData.prompt.trim()) {
+      setActiveMode('text-to-video')
     }
   }
 
@@ -198,261 +204,377 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   }
 
   const requiredCredits = calculateVideoCredits(formData.duration, 'pro')
-  const remainingCredits = user.creditsLimit - user.creditsUsed
+  const remainingCredits = (user.creditsLimit || 0) - (user.creditsUsed || 0) + ((user as any).creditsBalance || 0)
   const hasEnoughCredits = requiredCredits <= remainingCredits
+  const canProcess = formData.prompt.trim() && !loading && canUseCredits && hasEnoughCredits
 
-  return (
-    <div className="max-w-7xl mx-auto p-6 bg-[#2C3E50] min-h-screen rounded-2xl">
-      <div className="flex gap-6">
-        {/* Left Column - Controls */}
-        <div className="w-96 flex-shrink-0 space-y-6">
-          {/* Mode Selection */}
-          <Card className="border-[#34495E] bg-[#34495E] rounded-2xl shadow-lg">
-            <CardContent className="p-6">
-              <Tabs value={activeMode} onValueChange={(value) => setActiveMode(value as 'text-to-video' | 'image-to-video')}>
-                <TabsList className="grid w-full grid-cols-2 bg-[#2C3E50] border border-[#4A5F7A] rounded-xl">
-                  <TabsTrigger
-                    value="text-to-video"
-                    className="text-sm font-medium data-[state=active]:bg-[#34495E] data-[state=active]:text-white text-gray-300 rounded-lg"
-                  >
-                    Texto para Vídeo
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="image-to-video"
-                    className="text-sm font-medium data-[state=active]:bg-[#34495E] data-[state=active]:text-white text-gray-300 rounded-lg"
-                  >
-                    Imagem para Vídeo
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="text-to-video" className="mt-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-white mb-3">
-                        Prompt do Vídeo
-                      </label>
-                      <Textarea
-                        placeholder="Descreva o vídeo que você quer criar..."
-                        value={formData.prompt}
-                        onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
-                        rows={5}
-                        maxLength={VIDEO_CONFIG.options.maxPromptLength}
-                        className="resize-none text-sm bg-[#2C3E50] border-[#4A5F7A] text-white placeholder:text-gray-400 focus:border-[#5DADE2] rounded-xl"
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="image-to-video" className="mt-6">
-                  <div className="space-y-4">
-                    {/* Image Upload */}
-                    <div>
-                      <label className="block text-sm font-semibold text-white mb-3">
-                        Upload da Imagem
-                      </label>
-                      <div
-                        className="border-2 border-dashed border-[#4A5F7A] bg-[#2C3E50] rounded-xl p-4 text-center hover:border-[#5DADE2] hover:bg-[#34495E] transition-all duration-200 cursor-pointer group"
-                        onClick={() => document.getElementById('image-upload')?.click()}
-                      >
-                        {uploadedImage ? (
-                          <div className="space-y-4">
-                            <img
-                              src={uploadedImage}
-                              alt="Uploaded"
-                              className="max-h-32 max-w-full mx-auto rounded-lg shadow-lg object-cover border border-[#4A5F7A]"
-                            />
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setUploadedImage(null)
-                                setFormData(prev => ({ ...prev, sourceImageUrl: undefined }))
-                              }}
-                              className="text-gray-300 hover:text-red-400 border-[#4A5F7A] hover:border-red-400 bg-[#34495E] hover:bg-red-500/20"
-                            >
-                              Remover Imagem
-                            </Button>
-                          </div>
-                        ) : (
-                          <div>
-                            <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2 group-hover:text-[#5DADE2] transition-colors" />
-                            <p className="text-sm font-medium text-white mb-1">
-                              Arraste ou clique aqui
-                            </p>
-                            <p className="text-xs text-gray-400">
-                              PNG, JPG, WEBP (máx. 10MB)
-                            </p>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageUpload}
-                              className="hidden"
-                              id="image-upload"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Movement Description */}
-                    <div>
-                      <label className="block text-sm font-semibold text-white mb-3">
-                        Descrição do Movimento
-                      </label>
-                      <Textarea
-                        placeholder="Descreva o movimento desejado..."
-                        value={formData.prompt}
-                        onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
-                        rows={4}
-                        maxLength={VIDEO_CONFIG.options.maxPromptLength}
-                        className="resize-none text-sm bg-[#2C3E50] border-[#4A5F7A] text-white placeholder:text-gray-400 focus:border-[#5DADE2] rounded-xl"
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-
-          {/* Video Settings */}
-          <Card className="border-[#34495E] bg-[#34495E] rounded-2xl shadow-lg">
-            <CardContent className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Duração
-                </label>
-                <Select
-                  value={formData.duration.toString()}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, duration: parseInt(value) as 5 | 10 }))}
-                >
-                  <SelectTrigger className="w-full h-10 bg-[#2C3E50] border-[#4A5F7A] text-white rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#34495E] border-[#4A5F7A] rounded-xl">
-                    <SelectItem value="5" className="text-white">5 segundos</SelectItem>
-                    <SelectItem value="10" className="text-white">10 segundos</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Proporção
-                </label>
-                <Select
-                  value={formData.aspectRatio}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, aspectRatio: value as '16:9' | '9:16' | '1:1' }))}
-                >
-                  <SelectTrigger className="w-full h-10 bg-[#2C3E50] border-[#4A5F7A] text-white rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#34495E] border-[#4A5F7A] rounded-xl">
-                    <SelectItem value="16:9" className="text-white">16:9 (Paisagem)</SelectItem>
-                    <SelectItem value="9:16" className="text-white">9:16 (Retrato)</SelectItem>
-                    <SelectItem value="1:1" className="text-white">1:1 (Quadrado)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {showAdvanced && (
-                <div className="pt-4 border-t border-[#4A5F7A]">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Prompt Negativo
-                    </label>
-                    <Textarea
-                      placeholder="Elementos que você NÃO quer..."
-                      value={formData.negativePrompt}
-                      onChange={(e) => setFormData(prev => ({ ...prev, negativePrompt: e.target.value }))}
-                      rows={3}
-                      className="resize-none text-sm bg-[#2C3E50] border-[#4A5F7A] text-white placeholder:text-gray-400 focus:border-[#5DADE2] rounded-xl"
-                    />
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Generate Button */}
-          <div className="space-y-4">
-            <Button
-              onClick={handleSubmit}
-              disabled={loading || !canUseCredits || !hasEnoughCredits || !formData.prompt.trim()}
-              className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-500 disabled:to-gray-600 text-white border-0 py-4 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] rounded-lg"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-3" />
-                  Criando Vídeo...
-                </>
-              ) : (
-                <>
-                  <Video className="w-5 h-5 mr-3" />
-                  Gerar Vídeo ({requiredCredits} créditos)
-                </>
-              )}
-            </Button>
-
-            {/* Advanced Settings Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="w-full text-gray-300 hover:text-white text-sm font-medium hover:bg-[#34495E] rounded-xl"
-            >
-              {showAdvanced ? 'Menos opções' : 'Mais opções'}
-              {showAdvanced ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
-            </Button>
-          </div>
-
-          {/* Errors */}
-          {errors.length > 0 && (
-            <Card className="border-red-400 bg-red-500/20 rounded-2xl">
+  // Mobile Layout - Similar to editor
+  if (isMobile) {
+    return (
+      <div className="w-full">
+        <div className="max-w-4xl mx-auto px-4 py-0">
+          {/* Mobile: Info Card */}
+          <div className="mb-4">
+            <Card className="border-[#2C3E50] bg-[#2C3E50] rounded-lg shadow-lg">
               <CardContent className="p-4">
-                <div className="space-y-2">
-                  {errors.map((error, index) => (
-                    <div key={index} className="text-sm text-red-300 flex items-start gap-2">
-                      <span className="text-red-400 mt-0.5">•</span>
-                      <span>{error}</span>
-                    </div>
-                  ))}
+                <div className="text-sm text-white leading-relaxed font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                  <h3 className="text-base font-bold text-white mb-3">
+                    Como Gerar Vídeos com IA
+                  </h3>
+                  <ul className="space-y-2 text-sm text-gray-200">
+                    <li className="flex items-start">
+                      <span className="text-white mr-2">•</span>
+                      <span>Você pode gerar vídeos a partir de texto ou usando uma imagem de referência</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-white mr-2">•</span>
+                      <span>Descreva o movimento e a ação desejada no prompt para criar vídeos únicos</span>
+                    </li>
+                  </ul>
                 </div>
               </CardContent>
             </Card>
-          )}
+          </div>
 
-          {/* Quality Info */}
-          <Card className="border-[#34495E] bg-[#34495E] rounded-2xl">
-            <CardContent className="p-4 text-center">
-              <div className="text-xs text-gray-300">
-                Qualidade 1080p • Tempo estimado: {formatProcessingTime(getEstimatedProcessingTime(formData.duration, 'pro'))}
+          {/* Mobile: Prompt and Controls */}
+          <div className="space-y-3">
+            {/* Prompt Input */}
+            <div className="relative">
+              <Textarea
+                placeholder={activeMode === 'image-to-video' 
+                  ? "Descreva o movimento desejado para o vídeo..."
+                  : "Descreva o vídeo que você quer criar..."
+                }
+                value={formData.prompt}
+                onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
+                rows={4}
+                maxLength={VIDEO_CONFIG.options.maxPromptLength}
+                className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-lg px-4 py-4 pr-12 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                style={{
+                  fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
+                }}
+              />
+              <div className="absolute bottom-4 right-4 text-xs text-gray-600">
+                {formData.prompt.length}/{VIDEO_CONFIG.options.maxPromptLength}
+              </div>
+            </div>
+
+            {/* Upload and Process Buttons - Side by side, smaller */}
+            <div className="flex flex-row items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  fileInputRef.current?.click()
+                  setActiveMode('image-to-video')
+                }}
+                disabled={loading}
+                className="flex-1 border border-gray-900 hover:border-[#667EEA] hover:bg-[#667EEA]/5 bg-gray-200 text-gray-900 rounded-lg py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              >
+                <ImageIcon className="w-3 h-3 mr-1.5" />
+                {uploadedImage ? 'Imagem adicionada' : 'Adicionar'}
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={!canProcess}
+                className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    Gerar ({requiredCredits} créditos)
+                  </>
+                )}
+              </Button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+
+            {/* Uploaded Image Preview */}
+            {uploadedImage && (
+              <div className="relative">
+                <img
+                  src={uploadedImage}
+                  alt="Uploaded"
+                  className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
+                />
+                <button
+                  onClick={removeImage}
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-sm"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+
+            {/* Error Display */}
+            {errors.length > 0 && (
+              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+                <div className="space-y-2">
+                  {errors.map((error, index) => (
+                    <p key={index} className="text-sm text-red-600 font-medium font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                      {error}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Desktop Layout - Editor style with white background
+  return (
+    <div className="min-h-screen bg-white">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Info Card - Dark theme */}
+        <div className="mb-6">
+          <Card className="border-[#2C3E50] bg-[#2C3E50] rounded-lg shadow-lg">
+            <CardContent className="p-4">
+              <div className="text-sm text-white leading-relaxed font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                <h3 className="text-base font-bold text-white mb-3">
+                  Como Gerar Vídeos com IA
+                </h3>
+                <ul className="space-y-2 text-sm text-gray-200">
+                  <li className="flex items-start">
+                    <span className="text-white mr-2">•</span>
+                    <span>Você pode gerar vídeos a partir de texto ou usando uma imagem de referência</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-white mr-2">•</span>
+                    <span>Descreva o movimento e a ação desejada no prompt para criar vídeos únicos</span>
+                  </li>
+                </ul>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Right Column - Video Result */}
-        <div className="flex-1">
-          <Card className="border-[#34495E] bg-[#34495E] shadow-lg rounded-2xl h-full">
-            <CardContent className="p-8">
-              <div className="aspect-video bg-gradient-to-br from-[#2C3E50] to-[#34495E] rounded-2xl border-2 border-dashed border-[#4A5F7A] flex items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#667EEA]/10 to-[#764BA2]/10"></div>
-                <div className="text-center space-y-4 relative z-10">
-                  <div className="p-4 bg-[#34495E] rounded-full shadow-lg mx-auto w-fit">
-                    <Video className="w-12 h-12 text-gray-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-white mb-2">
-                      Resultado do Vídeo
-                    </h3>
-                    <p className="text-base text-gray-300 max-w-md mx-auto">
-                      Seu vídeo gerado aparecerá aqui após o processamento
-                    </p>
+        {/* Grid Layout: Settings on the left, Prompt and buttons below */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Settings Card */}
+          <div className="lg:col-span-1">
+            <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
+              <CardContent className="p-6 space-y-4">
+                {/* Mode Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Modo de Geração
+                  </label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={activeMode === 'text-to-video' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setActiveMode('text-to-video')
+                        if (!formData.prompt.trim() && uploadedImage) {
+                          setUploadedImage(null)
+                          setFormData(prev => ({ ...prev, sourceImageUrl: undefined }))
+                        }
+                      }}
+                      className={`flex-1 ${activeMode === 'text-to-video' 
+                        ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white' 
+                        : 'bg-gray-200 text-gray-900 border-gray-900'
+                      }`}
+                    >
+                      Texto
+                    </Button>
+                    <Button
+                      variant={activeMode === 'image-to-video' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setActiveMode('image-to-video')}
+                      className={`flex-1 ${activeMode === 'image-to-video' 
+                        ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white' 
+                        : 'bg-gray-200 text-gray-900 border-gray-900'
+                      }`}
+                    >
+                      Imagem
+                    </Button>
                   </div>
                 </div>
+
+                {/* Duration */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Duração
+                  </label>
+                  <Select
+                    value={formData.duration.toString()}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, duration: parseInt(value) as 5 | 10 }))}
+                  >
+                    <SelectTrigger className="w-full bg-gray-200 border-gray-900 text-gray-900">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 segundos</SelectItem>
+                      <SelectItem value="10">10 segundos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Aspect Ratio */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Proporção
+                  </label>
+                  <Select
+                    value={formData.aspectRatio}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, aspectRatio: value as '16:9' | '9:16' | '1:1' }))}
+                  >
+                    <SelectTrigger className="w-full bg-gray-200 border-gray-900 text-gray-900">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="16:9">16:9 (Paisagem)</SelectItem>
+                      <SelectItem value="9:16">9:16 (Retrato)</SelectItem>
+                      <SelectItem value="1:1">1:1 (Quadrado)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Advanced Settings Toggle */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="w-full text-gray-700 hover:bg-gray-100 text-sm"
+                >
+                  {showAdvanced ? 'Menos opções' : 'Mais opções'}
+                  {showAdvanced ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
+                </Button>
+
+                {/* Advanced Settings */}
+                {showAdvanced && (
+                  <div className="pt-4 border-t border-gray-200">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Prompt Negativo
+                      </label>
+                      <Textarea
+                        placeholder="Elementos que você NÃO quer..."
+                        value={formData.negativePrompt}
+                        onChange={(e) => setFormData(prev => ({ ...prev, negativePrompt: e.target.value }))}
+                        rows={3}
+                        className="resize-none text-sm bg-gray-200 border-gray-900 text-gray-900 placeholder:text-gray-500 rounded-lg"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Quality Info */}
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="text-xs text-gray-600 text-center">
+                    Qualidade 1080p • Tempo estimado: {formatProcessingTime(getEstimatedProcessingTime(formData.duration, 'pro'))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column - Prompt and Actions */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Prompt Input */}
+            <div className="relative">
+              <Textarea
+                placeholder={activeMode === 'image-to-video' 
+                  ? "Descreva o movimento desejado para o vídeo..."
+                  : "Descreva o vídeo que você quer criar..."
+                }
+                value={formData.prompt}
+                onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
+                rows={5}
+                maxLength={VIDEO_CONFIG.options.maxPromptLength}
+                className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-lg px-4 py-4 pr-12 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                style={{
+                  fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
+                }}
+              />
+              <div className="absolute bottom-4 right-4 text-xs text-gray-600">
+                {formData.prompt.length}/{VIDEO_CONFIG.options.maxPromptLength}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            {/* Upload and Process Buttons - Side by side */}
+            <div className="flex flex-row items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  fileInputRef.current?.click()
+                  setActiveMode('image-to-video')
+                }}
+                disabled={loading}
+                className="flex-1 border border-gray-900 hover:border-[#667EEA] hover:bg-[#667EEA]/5 bg-gray-200 text-gray-900 rounded-lg py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              >
+                <ImageIcon className="w-3 h-3 mr-1.5" />
+                {uploadedImage ? 'Imagem adicionada' : 'Adicionar imagem'}
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={!canProcess}
+                className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    Gerar Vídeo ({requiredCredits} créditos)
+                  </>
+                )}
+              </Button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+
+            {/* Uploaded Image Preview */}
+            {uploadedImage && (
+              <div className="relative">
+                <img
+                  src={uploadedImage}
+                  alt="Uploaded"
+                  className="w-full h-48 object-cover rounded-lg border-2 border-gray-300"
+                />
+                <button
+                  onClick={removeImage}
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-sm"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+
+            {/* Error Display */}
+            {errors.length > 0 && (
+              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+                <div className="space-y-2">
+                  {errors.map((error, index) => (
+                    <p key={index} className="text-sm text-red-600 font-medium font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                      {error}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

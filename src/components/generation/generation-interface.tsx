@@ -529,7 +529,7 @@ export function GenerationInterface({
       <div className="bg-white rounded-lg border p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4 sm:gap-0">
           {steps.map((step, index) => (
-            <div key={step.number} className="flex flex-col sm:flex-row items-center w-full sm:w-auto">
+            <div key={step.number} className="flex flex-col sm:flex-row items-start sm:items-center w-full sm:w-auto">
               <div
                 className={`flex items-center cursor-pointer ${
                   currentStep === step.number ? 'text-purple-600' :
@@ -547,7 +547,7 @@ export function GenerationInterface({
                     <span className="font-semibold">{step.number}</span>
                   )}
                 </div>
-                <div className="ml-3">
+                <div className="ml-3 text-left">
                   <div className="font-medium text-sm sm:text-base">{step.title}</div>
                   <div className="text-xs sm:text-sm text-gray-500">{step.description}</div>
                 </div>
