@@ -215,7 +215,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                   <ul className="space-y-2 text-sm text-gray-200">
                     <li className="flex items-start">
                       <span className="text-white mr-2">•</span>
-                      <span>Envie de 1 a 3 imagens: use 1 para editar (adicionar, remover ou alterar algo) ou até 3 para combinar e criar uma nova composição
+                      <span>Envie de 1 a 3 imagens: use 1 para editar (adicionar, remover ou alterar algo) ou até 3 para combinar e criar uma nova composição</span>
                     </li>
                     <li className="flex items-start">
                       <span className="text-white mr-2">•</span>
