@@ -359,6 +359,14 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                     <span className="font-medium"><strong>Fundir até 3 fotos</strong> para criar composições únicas</span>
                   </li>
                 </ul>
+                <div className="mt-4 p-3 bg-[#5DADE2]/10 border border-[#5DADE2]/30 rounded-lg">
+                  <p className="text-xs text-[#5DADE2] font-medium flex items-start gap-2">
+                    <span className="text-[#5DADE2] mt-0.5">💡</span>
+                    <span>
+                      <strong>Dica:</strong> Você também pode criar imagens do zero! Basta digitar sua ideia no prompt e gerar, sem precisar anexar nenhuma imagem.
+                    </span>
+                  </p>
+                </div>
                 <p className="mt-4 text-xs text-gray-400 font-medium">
                   Simplesmente carregue suas imagens e descreva o que você quer fazer!
                 </p>
