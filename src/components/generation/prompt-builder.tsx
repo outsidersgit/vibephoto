@@ -23,10 +23,11 @@ import { getModelGender, getGenderPrefix } from '@/lib/utils/model-gender'
 interface PromptBuilderProps {
   onPromptGenerated: (prompt: string) => void
   onGenerate?: () => void
+  onLastBlockSelected?: (isSelected: boolean) => void
   modelClass?: string
 }
 
-export function PromptBuilder({ onPromptGenerated, onGenerate, modelClass = 'MAN' }: PromptBuilderProps) {
+export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelected, modelClass = 'MAN' }: PromptBuilderProps) {
   const [selectedBlocks, setSelectedBlocks] = useState<PromptBlock[]>([])
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['style'])
   const [copiedBlocks, setCopiedBlocks] = useState<string[]>([])
@@ -196,6 +197,10 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, modelClass = 'MAN
         }
       }
 
+      // Check if environment (last block) is selected
+      const hasEnvironment = newSelectedBlocks.some(b => b.category === 'environment')
+      onLastBlockSelected?.(hasEnvironment)
+
       return newSelectedBlocks
     })
   }
@@ -247,6 +252,7 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, modelClass = 'MAN
 
   const clearAll = () => {
     setSelectedBlocks([])
+    onLastBlockSelected?.(false)
   }
 
   const currentPrompt = generatePrompt()

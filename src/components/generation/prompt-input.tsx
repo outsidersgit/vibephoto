@@ -12,6 +12,7 @@ interface PromptInputProps {
   onPromptChange: (prompt: string) => void
   isGenerating: boolean
   modelClass?: string
+  onLastBlockSelected?: (isSelected: boolean) => void
 }
 
 export function PromptInput({
@@ -19,7 +20,8 @@ export function PromptInput({
   negativePrompt,
   onPromptChange,
   isGenerating,
-  modelClass = 'MAN'
+  modelClass = 'MAN',
+  onLastBlockSelected
 }: PromptInputProps) {
   const [isGuidedMode, setIsGuidedMode] = useState(false)
   const promptRef = useRef<HTMLTextAreaElement | null>(null)
@@ -98,6 +100,7 @@ export function PromptInput({
         <div className="prompt-builder-container">
           <PromptBuilder
             onPromptGenerated={handleGuidedPrompt}
+            onLastBlockSelected={onLastBlockSelected}
             modelClass={modelClass}
           />
         </div>

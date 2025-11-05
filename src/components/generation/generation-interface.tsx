@@ -57,6 +57,7 @@ export function GenerationInterface({
   const [selectedModel, setSelectedModel] = useState(selectedModelId)
   const [prompt, setPrompt] = useState('')
   const [negativePrompt, setNegativePrompt] = useState('')
+  const [isLastBlockSelected, setIsLastBlockSelected] = useState(false)
   const [generationResults, setGenerationResults] = useState<any[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [currentGeneration, setCurrentGeneration] = useState<any>(null)
@@ -505,7 +506,15 @@ export function GenerationInterface({
   // Formula: credits_available = (credits_limit - credits_used) + credits_balance
   const creditsRemaining = (user.creditsLimit || 0) - (user.creditsUsed || 0) + ((user as any).creditsBalance || 0)
   const creditsNeeded = settings.variations * 10
-  const canGenerate = prompt.trim() && canUseCredits && !isGenerating && creditsRemaining >= creditsNeeded
+  
+  // Check if we're in guided mode by checking if last block (environment) was selected
+  // In guided mode, require last block (environment) to be selected
+  // In free mode, just require prompt text
+  const canGenerate = 
+    canUseCredits && 
+    !isGenerating && 
+    creditsRemaining >= creditsNeeded &&
+    (isLastBlockSelected ? (isLastBlockSelected && prompt.trim()) : prompt.trim())
 
   const getClassLabel = (modelClass: string) => {
     const labels = {
@@ -580,6 +589,7 @@ export function GenerationInterface({
                 onPromptChange={setPrompt}
                 isGenerating={isGenerating}
                 modelClass={selectedModelData?.class || 'MAN'}
+                onLastBlockSelected={setIsLastBlockSelected}
               />
 
               {/* Generate Button */}
