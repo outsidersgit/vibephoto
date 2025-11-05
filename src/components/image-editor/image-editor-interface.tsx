@@ -328,42 +328,28 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     )
   }
 
-  // Desktop Layout - ChatGPT style with dark theme
+  // Desktop Layout - ChatGPT style with white background
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div className="min-h-screen bg-white">
       <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* Features Card - Discreet above prompt */}
+        {/* Features Card - Dark theme, similar to attached image */}
         <div className="mb-6">
-          <Card className="border-[#34495E]/50 bg-[#34495E]/30 rounded-xl shadow-sm backdrop-blur-sm">
+          <Card className="border-[#2C3E50] bg-[#2C3E50] rounded-lg shadow-lg">
             <CardContent className="p-4">
-              <div className="text-xs text-gray-300 leading-relaxed font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                <div className="flex items-start gap-2 flex-wrap">
-                  <span className="flex items-center gap-1.5">
-                    <Edit3 className="w-3 h-3 text-[#5DADE2] flex-shrink-0" />
-                    <span className="font-medium">Modificar</span>
-                  </span>
-                  <span className="text-gray-500">•</span>
-                  <span className="flex items-center gap-1.5">
-                    <Plus className="w-3 h-3 text-[#5DADE2] flex-shrink-0" />
-                    <span className="font-medium">Adicionar</span>
-                  </span>
-                  <span className="text-gray-500">•</span>
-                  <span className="flex items-center gap-1.5">
-                    <Minus className="w-3 h-3 text-[#5DADE2] flex-shrink-0" />
-                    <span className="font-medium">Remover</span>
-                  </span>
-                  <span className="text-gray-500">•</span>
-                  <span className="flex items-center gap-1.5">
-                    <Blend className="w-3 h-3 text-[#5DADE2] flex-shrink-0" />
-                    <span className="font-medium">Fundir até 3 fotos</span>
-                  </span>
-                </div>
-                <div className="mt-2 pt-2 border-t border-[#4A5F7A]/30">
-                  <p className="text-[#5DADE2] text-xs font-medium flex items-start gap-1.5">
-                    <span className="mt-0.5">💡</span>
-                    <span>Você também pode criar imagens do zero! Basta digitar sua ideia no prompt e gerar, sem precisar anexar nenhuma imagem.</span>
-                  </p>
-                </div>
+              <div className="text-sm text-white leading-relaxed font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                <h3 className="text-base font-bold text-white mb-3">
+                  Como Funciona o Editor IA
+                </h3>
+                <ul className="space-y-2 text-sm text-gray-200 mb-4">
+                  <li className="flex items-start">
+                    <span className="text-white mr-2">•</span>
+                    <span>Modifique, adicione, remova ou funda até 3 imagens para criar composições únicas</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-white mr-2">•</span>
+                    <span>Você também pode criar imagens do zero! Basta digitar sua ideia no prompt e gerar, sem precisar anexar nenhuma imagem</span>
+                  </li>
+                </ul>
               </div>
             </CardContent>
           </Card>
@@ -379,7 +365,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               onChange={(e) => setPrompt(e.target.value)}
               rows={5}
               maxLength={2500}
-              className="resize-none text-sm bg-[#2C3E50] border-2 border-[#4A5F7A] text-white placeholder:text-gray-400 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-2xl px-4 py-4 pr-12 shadow-lg transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              className="resize-none text-sm bg-white border-2 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-2xl px-4 py-4 pr-12 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
               }}
@@ -395,7 +381,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
             disabled={images.length >= 3 || loading}
-            className="w-full border-2 border-[#4A5F7A] hover:border-[#667EEA] hover:bg-[#667EEA]/10 bg-[#34495E]/50 text-gray-200 rounded-xl py-3 text-sm font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+            className="w-full border-2 border-gray-200 hover:border-[#667EEA] hover:bg-[#667EEA]/5 bg-white text-gray-700 rounded-xl py-3 text-sm font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
           >
             <ImageIcon className="w-4 h-4 mr-2" />
             {images.length > 0 ? `${images.length}/3 imagens` : 'Adicionar imagem (opcional)'}
@@ -450,8 +436,8 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
 
           {/* Error Display */}
           {error && (
-            <div className="bg-red-500/10 border-2 border-red-500/30 rounded-xl p-4">
-              <p className="text-sm text-red-300 font-medium font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+              <p className="text-sm text-red-600 font-medium font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
                 {error}
               </p>
             </div>
@@ -460,9 +446,9 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           {/* Result Display - Desktop */}
           {result && (
             <div className="mt-6 space-y-4">
-              <Card className="border-[#34495E] bg-[#34495E]/50 rounded-xl shadow-lg">
+              <Card className="border-gray-200 bg-white rounded-xl shadow-lg">
                 <CardContent className="p-6">
-                  <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-[#4A5F7A] bg-[#2C3E50]">
+                  <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50">
                     <img
                       src={result}
                       alt="Resultado processado"
@@ -479,7 +465,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                     <Button
                       asChild
                       variant="outline"
-                      className="border-2 border-[#4A5F7A] hover:border-[#667EEA] bg-[#34495E]/50 text-gray-200 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                      className="border-2 border-gray-200 hover:border-[#667EEA] bg-white text-gray-700 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
                     >
                       <a href={result} download="imagem-editada.jpg">
                         <Download className="w-4 h-4 mr-2" />
