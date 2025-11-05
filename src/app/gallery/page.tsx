@@ -44,11 +44,11 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
     // Executar todas as queries em paralelo com Promise.all
     const skip = (page - 1) * limit
     
-    if (activeTab === 'packages') {
+    if (activeTab === 'generated' || !activeTab || activeTab === 'edited' || activeTab === 'packages') {
+      // Consolidate all photos in "Fotos Geradas" tab (normal, editor, packages)
       const where = {
         userId,
         status: 'COMPLETED' as any,
-        packageId: { not: null },
         ...(modelFilter && { modelId: modelFilter }),
         ...(searchQuery && {
           OR: [
@@ -66,7 +66,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
           skip,
           take: limit,
           orderBy: { createdAt: 'desc' },
-          include: {
+          include: { 
             model: {
               select: { id: true, name: true, class: true }
             },
@@ -84,8 +84,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
 
       models = modelsResult
       generationsData = { generations, totalCount: total }
-      
-    } else if (searchQuery) {
+    } else if (searchQuery && activeTab === 'generated') {
       // Query paralela: models + search
       const [modelsResult, searchResult] = await Promise.all([
         getModelsByUserId(userId),
@@ -94,34 +93,6 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
       
       models = modelsResult
       generationsData = searchResult
-      
-    } else {
-      const where = {
-        userId,
-        status: 'COMPLETED' as any,
-        packageId: null,
-        ...(modelFilter && { modelId: modelFilter })
-      }
-
-      // Query paralela: models + generations + count
-      const [modelsResult, generations, total] = await Promise.all([
-        getModelsByUserId(userId),
-        prisma.generation.findMany({
-          where,
-          skip,
-          take: limit,
-          orderBy: { createdAt: 'desc' },
-          include: { 
-            model: {
-              select: { id: true, name: true, class: true }
-            }
-          }
-        }),
-        prisma.generation.count({ where })
-      ])
-
-      models = modelsResult
-      generationsData = { generations, totalCount: total }
     }
   } catch (error) {
     console.error('Database error:', error)
@@ -171,13 +142,10 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
 
   try {
     // Uma única query agregada com groupBy por status
-    const packageCondition = activeTab === 'packages' 
-      ? { packageId: { not: null } } 
-      : { packageId: null }
-    
+    // Include all photos in "Fotos Geradas" tab
     const statsAgg = await prisma.generation.groupBy({
       by: ['status'],
-      where: { userId, ...packageCondition },
+      where: { userId },
       _count: { status: true }
     })
     

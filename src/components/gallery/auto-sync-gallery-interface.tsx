@@ -599,8 +599,8 @@ export function AutoSyncGalleryInterface({
       // Use different polling intervals based on active tab
       const getPollingInterval = () => {
         const currentTab = activeTabRef.current
-        if (currentTab === 'edited' || currentTab === 'videos') {
-          return 10000 // Poll every 10 seconds for edited/videos
+        if (currentTab === 'videos') {
+          return 10000 // Poll every 10 seconds for videos
         }
         return 15000 // Poll every 15 seconds for generated images
       }
@@ -689,7 +689,7 @@ export function AutoSyncGalleryInterface({
     router.push(`/gallery?${params.toString()}`)
   }
 
-  const switchTab = (tab: 'generated' | 'edited' | 'videos' | 'packages') => {
+  const switchTab = (tab: 'generated' | 'videos') => {
     const params = new URLSearchParams(searchParams.toString())
 
     if (tab === 'generated') {
@@ -932,25 +932,8 @@ export function AutoSyncGalleryInterface({
       const allVideoIds = new Set(videos.map(video => video.id))
       setSelectedVideos(allVideoIds)
       console.log(`✅ Selected ${allVideoIds.size} videos in tab [${activeTab}]`)
-    } else if (activeTab === 'edited') {
-      // Select all edited image URLs
-      // Na aba edited, os dados vêm transformados em generations
-      let allImageUrls: string[] = []
-      if (editHistory.length > 0) {
-        allImageUrls = editHistory.flatMap(item => {
-          const urls = []
-          if (item.imageUrl) urls.push(item.imageUrl)
-          if (item.thumbnailUrl && item.thumbnailUrl !== item.imageUrl) urls.push(item.thumbnailUrl)
-          return urls
-        })
-      } else {
-        // Usar generations (que contém os dados transformados de editHistory)
-        allImageUrls = generations.flatMap(gen => gen.imageUrls || [])
-      }
-      setSelectedImages(allImageUrls)
-      console.log(`✅ Selected ${allImageUrls.length} items in tab [${activeTab}]`)
     } else {
-      // Select all generation image URLs
+      // Select all generation image URLs (includes all photos: normal, editor, packages)
       const allImageUrls = filteredGenerations.flatMap(gen => gen.imageUrls || [])
       setSelectedImages(allImageUrls)
       console.log(`✅ Selected ${allImageUrls.length} items in tab [${activeTab}]`)
@@ -1198,17 +1181,9 @@ export function AutoSyncGalleryInterface({
 
     if (activeTab === 'videos') {
       tabData = videos
-    } else if (activeTab === 'packages') {
-      // Filter generations that belong to packages
-      tabData = generations.filter(gen => gen.packageId)
     } else {
-      // For 'generated' and 'edited' tabs, show non-package generations
-      if (activeTab === 'generated') {
-        tabData = generations.filter(gen => !gen.packageId)
-      } else {
-        // For 'edited' tab, use all generations (API handles the transformation)
-        tabData = generations
-      }
+      // For 'generated' tab, show all photos (normal, editor, packages)
+      tabData = generations
     }
 
     // Apply status filter if not on videos tab
@@ -1294,19 +1269,6 @@ export function AutoSyncGalleryInterface({
             )}
           </button>
           <button
-            onClick={() => switchTab('edited')}
-            className={`flex-1 py-3 px-4 text-sm font-medium transition-all duration-200 relative ${
-              activeTab === 'edited'
-                ? 'text-gray-900'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Fotos Editadas
-            {activeTab === 'edited' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#667EEA] to-[#764BA2]"></div>
-            )}
-          </button>
-          <button
             onClick={() => switchTab('videos')}
             className={`flex-1 py-3 px-4 text-sm font-medium transition-all duration-200 relative ${
               activeTab === 'videos'
@@ -1316,19 +1278,6 @@ export function AutoSyncGalleryInterface({
           >
             Vídeos
             {activeTab === 'videos' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#667EEA] to-[#764BA2]"></div>
-            )}
-          </button>
-          <button
-            onClick={() => switchTab('packages')}
-            className={`flex-1 py-3 px-4 text-sm font-medium transition-all duration-200 relative ${
-              activeTab === 'packages'
-                ? 'text-gray-900'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Pacotes
-            {activeTab === 'packages' && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#667EEA] to-[#764BA2]"></div>
             )}
           </button>
@@ -1669,17 +1618,11 @@ export function AutoSyncGalleryInterface({
                 <Card className="text-center py-12">
                   <CardContent>
                     <h3 className="text-xl font-semibold text-gray-900 mb-2" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                      {activeTab === 'generated' ? 'Nenhuma Foto Gerada' :
-                       activeTab === 'edited' ? 'Nenhuma Foto Editada' :
-                       activeTab === 'packages' ? 'Nenhuma Foto de Pacote' : 'Nenhum Item'}
+                      {activeTab === 'generated' ? 'Nenhuma Foto Gerada' : 'Nenhum Item'}
                     </h3>
                     <p className="text-gray-600 mb-6" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
                       {activeTab === 'generated'
                         ? 'Comece gerando fotos com IA para construir sua galeria'
-                        : activeTab === 'edited'
-                        ? 'Edite suas fotos existentes com nosso Editor IA'
-                        : activeTab === 'packages'
-                        ? 'Ative pacotes de fotos para ver suas gerações aqui'
                         : 'Nenhum conteúdo encontrado'
                       }
                     </p>
@@ -1689,26 +1632,8 @@ export function AutoSyncGalleryInterface({
                           <Button asChild className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-0">
                             <a href="/generate" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>Gere Sua Primeira Foto</a>
                           </Button>
-                          <Button variant="outline" onClick={() => switchTab('packages')} style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                            Ver Pacotes
-                          </Button>
-                        </>
-                      ) : activeTab === 'edited' ? (
-                        <>
-                          <Button asChild className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-0">
-                            <a href="/editor" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>✨ Editar com IA</a>
-                          </Button>
-                          <Button variant="outline" onClick={() => switchTab('generated')} style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                            Ver Fotos Geradas
-                          </Button>
-                        </>
-                      ) : activeTab === 'packages' ? (
-                        <>
-                          <Button asChild className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-0">
-                            <a href="/packages" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>Ativar Pacotes</a>
-                          </Button>
-                          <Button variant="outline" onClick={() => switchTab('generated')} style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                            Ver Fotos Geradas
+                          <Button asChild variant="outline" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                            <a href="/editor">Usar Editor IA</a>
                           </Button>
                         </>
                       ) : (

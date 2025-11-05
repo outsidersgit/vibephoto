@@ -174,10 +174,8 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       const data = await response.json()
       setResult(data.resultUrl)
       
-      // Show result modal on mobile
-      if (isMobile) {
-        setShowResultModal(true)
-      }
+      // Show result modal for both mobile and desktop
+      setShowResultModal(true)
 
       addToast({
         title: "Sucesso!",
@@ -367,40 +365,48 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
 
           {/* Result Modal */}
           <Dialog open={showResultModal} onOpenChange={setShowResultModal}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle className="font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+            <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <DialogTitle className="font-[system-ui,-apple-system,'SF Pro Display',sans-serif] text-lg font-semibold">
                   Imagem Processada
                 </DialogTitle>
-                <DialogDescription className="font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                  Sua imagem foi processada com sucesso!
-                </DialogDescription>
-              </DialogHeader>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowResultModal(false)}
+                  className="h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
               {result && (
-                <div className="space-y-4">
-                  <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200">
+                <div className="flex flex-col flex-1 overflow-hidden">
+                  <div className="flex-1 overflow-auto p-4 bg-gray-50 flex items-center justify-center">
                     <img
                       src={result}
                       alt="Resultado processado"
-                      className="w-full h-full object-contain"
+                      className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-lg"
                     />
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => router.push('/gallery')}
-                      className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 text-white font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-                    >
-                      Ver na galeria
-                    </Button>
+                  <div className="flex gap-3 p-4 border-t border-gray-200 bg-white">
                     <Button
                       asChild
-                      variant="outline"
-                      className="flex-1 border-2 border-gray-200 hover:border-[#667EEA] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                      className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 text-white font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
                     >
-                      <a href={result} download="imagem-editada.jpg">
+                      <a href={result} download={`imagem-editada-${Date.now()}.png`}>
                         <Download className="w-4 h-4 mr-2" />
                         Baixar
                       </a>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowResultModal(false)
+                        router.push('/gallery?tab=generated')
+                      }}
+                      className="flex-1 border-2 border-gray-200 hover:border-[#667EEA] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                    >
+                      Ver na galeria
                     </Button>
                   </div>
                 </div>
@@ -576,40 +582,6 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             </div>
           )}
 
-          {/* Result Display - Desktop */}
-          {result && (
-            <div className="mt-6 space-y-4">
-              <Card className="border-gray-200 bg-white rounded-xl shadow-lg">
-                <CardContent className="p-6">
-                  <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50">
-                    <img
-                      src={result}
-                      alt="Resultado processado"
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <div className="mt-4 flex gap-3 justify-center">
-                    <Button
-                      onClick={() => router.push('/gallery')}
-                      className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 text-white font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-                    >
-                      Ver na galeria
-                    </Button>
-                    <Button
-                      asChild
-                      variant="outline"
-                      className="border-2 border-gray-200 hover:border-[#667EEA] bg-white text-gray-700 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-                    >
-                      <a href={result} download="imagem-editada.jpg">
-                        <Download className="w-4 h-4 mr-2" />
-                        Baixar
-                      </a>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
         </div>
       </div>
     </div>

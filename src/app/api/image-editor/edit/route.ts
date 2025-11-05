@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
         editHistoryEntry?.id || result.id || 'unknown',
         creditsUsed,
         {
-          operation: 'nano_banana_edit',
+          operation: image ? 'nano_banana_edit' : 'nano_banana_generate',
           prompt: prompt.substring(0, 100)
         }
       )
@@ -130,6 +130,62 @@ export async function POST(request: NextRequest) {
       // Don't fail the whole request if credit deduction fails
     }
 
+    // Save to gallery automatically (create Generation record)
+    let generationRecord = null
+    try {
+      if (result.resultImage) {
+        // Get or create a default model for editor images
+        const defaultModel = await prisma.aIModel.findFirst({
+          where: { 
+            userId: session.user.id,
+            name: { contains: 'Editor', mode: 'insensitive' }
+          }
+        }) || await prisma.aIModel.findFirst({
+          where: { userId: session.user.id }
+        })
+
+        if (defaultModel) {
+          generationRecord = await prisma.generation.create({
+            data: {
+              userId: session.user.id,
+              modelId: defaultModel.id,
+              prompt: image ? `[EDITOR] ${prompt}` : `[GERADO] ${prompt}`,
+              status: 'COMPLETED',
+              imageUrls: [result.resultImage],
+              thumbnailUrls: [result.resultImage],
+              aspectRatio: aspectRatioValue || '1:1',
+              resolution: aspectRatioValue ? 
+                (aspectRatioValue === '1:1' ? '1024x1024' :
+                 aspectRatioValue === '4:3' ? '1024x768' :
+                 aspectRatioValue === '3:4' ? '768x1024' :
+                 aspectRatioValue === '9:16' ? '720x1280' :
+                 aspectRatioValue === '16:9' ? '1280x720' : '1024x1024') : '1024x1024',
+              estimatedCost: 15,
+              aiProvider: 'nano-banana',
+              metadata: {
+                source: image ? 'editor' : 'editor_generate',
+                editHistoryId: editHistoryEntry?.id,
+                replicateId: result.id,
+                generatedFromScratch: !image
+              }
+            },
+            include: {
+              model: {
+                select: { id: true, name: true, class: true }
+              }
+            }
+          })
+
+          console.log('✅ Generation record saved to gallery:', generationRecord.id)
+        } else {
+          console.warn('⚠️ No model found to associate with editor generation')
+        }
+      }
+    } catch (galleryError) {
+      console.error('❌ Failed to save generation to gallery:', galleryError)
+      // Don't fail the whole request if gallery save fails
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -137,8 +193,10 @@ export async function POST(request: NextRequest) {
         status: result.status,
         resultImage: result.resultImage,
         metadata: result.metadata,
-        editHistoryId: editHistoryEntry?.id
-      }
+        editHistoryId: editHistoryEntry?.id,
+        generationId: generationRecord?.id
+      },
+      resultUrl: result.resultImage
     })
 
   } catch (error) {
