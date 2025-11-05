@@ -11,7 +11,7 @@ export function Footer() {
     <footer className="bg-white border-t border-gray-200 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
         {/* Desktop: 4 colunas (Brand + 3 colunas) | Mobile: 3 colunas lado a lado */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-6 md:gap-8">
           {/* Brand - Desktop: primeira coluna, Mobile: escondido */}
           <div className="hidden md:block">
             <div className="mb-2 sm:mb-4">

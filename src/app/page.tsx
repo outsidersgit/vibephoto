@@ -344,7 +344,7 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
           {/* Título e Descrição - alinhados à direita, mesma margem */}
           <div className="ml-auto text-right">
             <h3 
-              className="text-2xl font-bold mb-3 tracking-tight"
+              className="text-2xl font-bold mb-5 tracking-tight"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
                 fontWeight: 700,
@@ -479,10 +479,10 @@ const MobileStackingCard = ({ step, index }: {
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
       transition={{ duration: 0.6, delay: index * 0.15 }}
       style={{ scrollSnapAlign: 'start' }}
-      className="min-h-[280px] flex items-center mb-2 sm:mb-8"
+      className="h-[240px] flex items-center mb-1 sm:mb-8"
     >
       <motion.div 
-        className="w-full relative overflow-hidden rounded-2xl shadow-2xl"
+        className="w-full h-full relative overflow-hidden rounded-2xl shadow-2xl"
         style={{
           background: 'linear-gradient(135deg, rgba(0,0,0,0.98) 0%, rgba(15,15,25,0.98) 25%, rgba(25,25,35,0.98) 50%, rgba(15,15,25,0.98) 75%, rgba(5,5,15,0.98) 100%)',
           border: '1px solid rgba(255,255,255,0.15)',
@@ -506,13 +506,13 @@ const MobileStackingCard = ({ step, index }: {
 
         {/* Marca d'água - número com maior contraste */}
         <div
-          className="absolute top-4 left-4 z-0 pointer-events-none"
+          className="absolute top-3 sm:top-4 left-3 sm:left-4 z-0 pointer-events-none"
           style={{
             opacity: 0.30
           }}
         >
           <span 
-            className="text-[100px] font-extralight leading-none"
+            className="text-[80px] sm:text-[100px] font-extralight leading-none"
             style={{
               fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
               fontWeight: 100,
@@ -525,12 +525,12 @@ const MobileStackingCard = ({ step, index }: {
           </span>
         </div>
 
-        {/* Conteúdo do card */}
-        <div className="p-6 h-full flex flex-col justify-between relative z-10">
+        {/* Conteúdo do card - Altura fixa para padronização */}
+        <div className="p-5 sm:p-6 h-full flex flex-col justify-center relative z-10">
           {/* Título e Descrição - alinhados à direita, mesma margem */}
           <div className="ml-auto text-right">
             <h3 
-              className="text-2xl font-bold mb-3 tracking-tight"
+              className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3 tracking-tight"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
                 fontWeight: 700,
@@ -544,7 +544,7 @@ const MobileStackingCard = ({ step, index }: {
             
             {/* Descrição - alinhada exatamente com o título */}
             <p 
-              className="text-sm leading-relaxed"
+              className="text-xs sm:text-sm leading-relaxed line-clamp-3"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
                 fontWeight: 400,
@@ -575,7 +575,7 @@ const MobileStackingCards = () => {
     {
       id: 1,
       title: "Upload das Fotos",
-      description: "Carregue 10-20 fotos suas em diferentes poses. Nossa IA analisará seus traços únicos para criar seu modelo personalizado.",
+      description: "Carregue 15-30 fotos suas em diferentes poses. Nossa IA analisará seus traços únicos para criar seu modelo personalizado.",
       gradient: "from-blue-50 to-blue-100",
       borderColor: "border-blue-200",
       iconBg: "from-blue-500 to-blue-600"
@@ -599,7 +599,7 @@ const MobileStackingCards = () => {
   ]
 
   return (
-    <div className="space-y-1 sm:space-y-4">
+    <div className="space-y-0.5 sm:space-y-4">
       {steps.map((step, index) => (
         <MobileStackingCard key={step.id} step={step} index={index} />
       ))}
