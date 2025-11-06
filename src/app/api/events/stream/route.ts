@@ -187,6 +187,20 @@ export function broadcastEvent(event: {
 
   console.log(`${logMessage} (${deadConnections.length} cleaned up)`)
   
+  // Detailed logging for generation_status_changed events
+  if (event.type === 'generation_status_changed') {
+    console.log('🎯 [stream] Generation status changed event details:', {
+      generationId: event.data?.generationId,
+      status: event.data?.status,
+      userId: event.userId,
+      sentCount,
+      targetedCount,
+      hasImageUrls: !!(event.data?.imageUrls && event.data.imageUrls.length > 0),
+      hasTemporaryUrls: !!(event.data?.temporaryUrls && event.data.temporaryUrls.length > 0),
+      messagePreview: message.substring(0, 200) + '...'
+    })
+  }
+  
   return { 
     sentCount, 
     targetedCount,

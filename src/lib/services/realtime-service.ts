@@ -67,13 +67,24 @@ export async function broadcastGenerationStatusChange(
   status: string,
   additionalData?: any
 ) {
+  console.log('📡 [realtime-service] Broadcasting generation status change:', {
+    generationId,
+    userId,
+    status,
+    hasImageUrls: !!(additionalData?.imageUrls && additionalData.imageUrls.length > 0),
+    hasTemporaryUrls: !!(additionalData?.temporaryUrls && additionalData.temporaryUrls.length > 0),
+    imageUrlsCount: additionalData?.imageUrls?.length || 0,
+    temporaryUrlsCount: additionalData?.temporaryUrls?.length || 0,
+    allAdditionalDataKeys: Object.keys(additionalData || {})
+  })
+  
   const broadcast = await getBroadcastFunction()
   if (!broadcast) {
-    console.log('📡 No broadcast function available, skipping event')
+    console.log('❌ [realtime-service] No broadcast function available, skipping event')
     return
   }
 
-  return broadcast({
+  const eventData = {
     type: EVENT_TYPES.GENERATION_STATUS_CHANGED,
     userId,
     data: {
@@ -82,7 +93,21 @@ export async function broadcastGenerationStatusChange(
       timestamp: new Date().toISOString(),
       ...additionalData
     }
+  }
+  
+  console.log('📤 [realtime-service] Sending broadcast event:', {
+    type: eventData.type,
+    userId: eventData.userId,
+    generationId: eventData.data.generationId,
+    status: eventData.data.status,
+    dataKeys: Object.keys(eventData.data)
   })
+
+  const result = broadcast(eventData)
+  
+  console.log('✅ [realtime-service] Broadcast result:', result)
+  
+  return result
 }
 
 /**
