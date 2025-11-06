@@ -68,10 +68,17 @@ export async function POST(request: NextRequest) {
 
         const signedContent = `${webhookId}.${webhookTimestamp}.${body}`
         
-        // Remover prefixo whsec_ da chave secreta se presente
-        const secretKey = webhookSecret.startsWith('whsec_') 
-          ? webhookSecret.replace('whsec_', '')
-          : webhookSecret
+        // Processar chave secreta do Svix
+        // Formato whsec_<base64>: remover prefixo e decodificar base64 para obter a chave real
+        let secretKey: string | Buffer
+        if (webhookSecret.startsWith('whsec_')) {
+          // Remover prefixo whsec_ e decodificar base64
+          const base64Secret = webhookSecret.replace('whsec_', '')
+          secretKey = Buffer.from(base64Secret, 'base64')
+        } else {
+          // Se não tem prefixo, usar diretamente (pode ser que já esteja configurado sem prefixo)
+          secretKey = webhookSecret
+        }
         
         // Calcular assinatura esperada usando HMAC-SHA256 e converter para base64
         const expectedSignature = crypto
@@ -93,8 +100,50 @@ export async function POST(request: NextRequest) {
             receivedSignatureLength: receivedSignature.length,
             expectedSignatureLength: expectedSignature.length,
             bodyLength: body.length,
-            signedContentLength: signedContent.length
+            signedContentLength: signedContent.length,
+            receivedSignaturePreview: receivedSignature.substring(0, 20),
+            expectedSignaturePreview: expectedSignature.substring(0, 20),
+            secretKeyLength: secretKey.length,
+            secretKeyStartsWithWhsec: webhookSecret.startsWith('whsec_')
           })
+          
+          // Debug: tentar diferentes variações da chave secreta
+          console.log('🔍 Debug: Trying alternative secret formats...')
+          const alternatives: Array<{ name: string; key: string | Buffer }> = [
+            { name: 'Original with whsec_', key: webhookSecret },
+            { name: 'Without whsec_ prefix', key: webhookSecret.replace('whsec_', '') },
+            { name: 'Decoded base64 (correct)', key: webhookSecret.startsWith('whsec_') 
+              ? Buffer.from(webhookSecret.replace('whsec_', ''), 'base64')
+              : webhookSecret },
+            { name: 'Base64 decoded as string', key: webhookSecret.startsWith('whsec_')
+              ? Buffer.from(webhookSecret.replace('whsec_', ''), 'base64').toString('utf8')
+              : webhookSecret },
+          ]
+          
+          for (let i = 0; i < alternatives.length; i++) {
+            try {
+              const altSecret = alternatives[i].key
+              const altSignature = crypto
+                .createHmac('sha256', altSecret)
+                .update(signedContent, 'utf8')
+                .digest('base64')
+              
+              const altIsValid = crypto.timingSafeEqual(
+                Buffer.from(receivedSignature),
+                Buffer.from(altSignature)
+              )
+              
+              if (altIsValid) {
+                console.log(`✅ Found valid signature with alternative: ${alternatives[i].name}`)
+                // Não retornar erro aqui, apenas logar para debug
+              } else {
+                console.log(`❌ Alternative ${i + 1} (${alternatives[i].name}) also failed`)
+              }
+            } catch (altError) {
+              console.log(`⚠️ Alternative ${i + 1} (${alternatives[i].name}) threw error:`, altError)
+            }
+          }
+          
           return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
         }
 
