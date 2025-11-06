@@ -37,9 +37,21 @@ export function useRealtimeUpdates(options: UseRealtimeUpdatesOptions = {}) {
   const optionsRef = useRef(options)
   const isDevMode = process.env.NODE_ENV === 'development'
   const connectionStableTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  
-  // Update options ref without causing re-renders
+
+  // CRITICAL: Update options ref immediately AND log when handlers change
   useEffect(() => {
+    const hasHandlerChange =
+      optionsRef.current.onGenerationStatusChange !== options.onGenerationStatusChange ||
+      optionsRef.current.onModelStatusChange !== options.onModelStatusChange
+
+    if (hasHandlerChange) {
+      console.log('🔄 [useRealtimeUpdates] Handlers updated:', {
+        hasGenerationHandler: !!options.onGenerationStatusChange,
+        hasModelHandler: !!options.onModelStatusChange,
+        timestamp: new Date().toISOString()
+      })
+    }
+
     optionsRef.current = options
   }, [options])
 
@@ -136,10 +148,19 @@ export function useRealtimeUpdates(options: UseRealtimeUpdatesOptions = {}) {
 
     eventSource.onmessage = (event) => {
       try {
+        console.log('📨 [useRealtimeUpdates] RAW SSE message received:', {
+          dataPreview: event.data.substring(0, 200),
+          timestamp: new Date().toISOString()
+        })
+
         const eventData: RealtimeEvent = JSON.parse(event.data)
         setLastEvent(eventData)
 
-        console.log('📥 SSE event received:', eventData.type, eventData.data)
+        console.log('📥 [useRealtimeUpdates] SSE event parsed:', {
+          type: eventData.type,
+          hasData: !!eventData.data,
+          timestamp: eventData.timestamp
+        })
 
         // Handle different event types
         switch (eventData.type) {
@@ -164,15 +185,20 @@ export function useRealtimeUpdates(options: UseRealtimeUpdatesOptions = {}) {
             break
 
           case 'generation_status_changed':
-            console.log('🎯 [useRealtimeUpdates] Processing generation_status_changed:', {
+            console.log('🎯 [useRealtimeUpdates] ===== GENERATION STATUS CHANGED =====')
+            console.log('🎯 [useRealtimeUpdates] Event data:', {
               generationId: eventData.data.generationId,
               status: eventData.data.status,
               hasHandler: !!optionsRef.current.onGenerationStatusChange,
-              dataKeys: Object.keys(eventData.data || {})
+              dataKeys: Object.keys(eventData.data || {}),
+              fullEventData: eventData.data
             })
-            
+
             if (optionsRef.current.onGenerationStatusChange) {
-              console.log('✅ [useRealtimeUpdates] Calling onGenerationStatusChange handler')
+              console.log('✅ [useRealtimeUpdates] Calling handler with:', {
+                generationId: eventData.data.generationId,
+                status: eventData.data.status
+              })
               optionsRef.current.onGenerationStatusChange(
                 eventData.data.generationId,
                 eventData.data.status,
@@ -180,8 +206,9 @@ export function useRealtimeUpdates(options: UseRealtimeUpdatesOptions = {}) {
               )
               console.log('✅ [useRealtimeUpdates] Handler called successfully')
             } else {
-              console.warn('⚠️ [useRealtimeUpdates] No onGenerationStatusChange handler registered')
+              console.warn('⚠️ [useRealtimeUpdates] No handler registered')
             }
+            console.log('🎯 [useRealtimeUpdates] ==========================================')
             break
 
           case 'training_progress':
