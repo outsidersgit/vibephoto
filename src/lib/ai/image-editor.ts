@@ -42,9 +42,10 @@ export class ImageEditor {
    * @param imageFile - The image file to edit
    * @param promptText - Text description of the desired edit
    * @param aspectRatio - Aspect ratio for the output image
+   * @param webhookUrl - Optional webhook URL for async processing
    * @returns Promise<ImageEditResponse>
    */
-  async editImageWithPrompt(imageFile: File, promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9'): Promise<ImageEditResponse> {
+  async editImageWithPrompt(imageFile: File, promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string): Promise<ImageEditResponse> {
     this.checkConfiguration()
     
     try {
@@ -73,8 +74,8 @@ export class ImageEditor {
       // Convert file to data URL for Replicate
       const imageUrl = await NanoBananaProvider.fileToUrl(imageFile)
       
-      // Call Nano Banana provider via Replicate
-      const result = await this.provider!.editWithPrompt(imageUrl, promptText, 'jpg', aspectRatio)
+      // Call Nano Banana provider via Replicate with webhook support
+      const result = await this.provider!.editWithPrompt(imageUrl, promptText, 'jpg', aspectRatio, webhookUrl)
 
       console.log('✅ Nano Banana edit completed:', result.id)
       return result
@@ -92,9 +93,10 @@ export class ImageEditor {
    * Generate an image from text prompt only (no input image)
    * @param promptText - Text description of the desired image
    * @param aspectRatio - Aspect ratio for the output image
+   * @param webhookUrl - Optional webhook URL for async processing
    * @returns Promise<ImageEditResponse>
    */
-  async generateImageFromPrompt(promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9'): Promise<ImageEditResponse> {
+  async generateImageFromPrompt(promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string): Promise<ImageEditResponse> {
     this.checkConfiguration()
     
     try {
@@ -105,8 +107,8 @@ export class ImageEditor {
         throw new AIError('Prompt text is required', 'INVALID_INPUT')
       }
 
-      // Call Nano Banana provider to generate from scratch
-      const result = await this.provider!.generateImage(promptText, 'jpg', aspectRatio)
+      // Call Nano Banana provider to generate from scratch with webhook support
+      const result = await this.provider!.generateImage(promptText, 'jpg', aspectRatio, webhookUrl)
 
       console.log('✅ Nano Banana generation completed:', result.id)
       return result

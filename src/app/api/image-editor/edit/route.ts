@@ -66,13 +66,34 @@ export async function POST(request: NextRequest) {
       ? (aspectRatio as typeof validAspectRatios[number])
       : undefined
     
+    // Configure webhook URL for async processing (production only)
+    const webhookUrl = process.env.NEXTAUTH_URL?.startsWith('https://')
+      ? `${process.env.NEXTAUTH_URL}/api/webhooks/replicate?type=edit&id=${session.user.id}&userId=${session.user.id}`
+      : undefined
+    
     let result
     if (image) {
       // Edit existing image
-      result = await imageEditor.editImageWithPrompt(image, prompt, aspectRatioValue)
+      result = await imageEditor.editImageWithPrompt(image, prompt, aspectRatioValue, webhookUrl)
     } else {
       // Generate from scratch
-      result = await imageEditor.generateImageFromPrompt(prompt, aspectRatioValue)
+      result = await imageEditor.generateImageFromPrompt(prompt, aspectRatioValue, webhookUrl)
+    }
+
+    // If webhook is enabled, result might not have resultImage yet (async processing)
+    // In this case, return the prediction ID and let webhook handle completion
+    if (webhookUrl && result.status === 'processing' && !result.resultImage) {
+      console.log('📡 Editor using async webhook processing, returning prediction ID:', result.id)
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: result.id,
+          status: result.status,
+          async: true,
+          message: 'Processing started, webhook will handle completion'
+        },
+        predictionId: result.id
+      })
     }
 
     // 🔑 CRITICAL: Upload image to S3 for permanent storage (Replicate URLs expire in 1 hour)

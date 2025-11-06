@@ -7,6 +7,7 @@ export interface NanoBananaEditRequest {
   imageInput?: string | string[] // Base64 or URLs
   outputFormat?: 'jpg' | 'png'
   aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9'
+  webhookUrl?: string // Optional webhook URL for async processing
 }
 
 export interface NanoBananaEditResponse {
@@ -79,18 +80,47 @@ export class NanoBananaProvider {
         outputFormat: input.output_format
       })
 
-      // Create prediction using the correct version ID
-      const prediction = await this.replicate.predictions.create({
+      // Prepare prediction options
+      const predictionOptions: any = {
         version: this.modelVersion,
         input
-      })
+      }
+
+      // Add webhook if provided (for async processing)
+      const hasValidWebhook = request.webhookUrl && request.webhookUrl.startsWith('https://')
+      if (hasValidWebhook) {
+        predictionOptions.webhook = request.webhookUrl
+        predictionOptions.webhook_events_filter = ['start', 'output', 'logs', 'completed']
+        console.log('📡 Nano Banana webhook configured:', request.webhookUrl)
+      }
+
+      // Create prediction using the correct version ID
+      const prediction = await this.replicate.predictions.create(predictionOptions)
 
       console.log('🍌 Nano Banana prediction created:', { 
         id: prediction.id,
-        status: prediction.status 
+        status: prediction.status,
+        hasWebhook: hasValidWebhook
       })
 
-      // Wait for completion
+      // If webhook is configured, return immediately (async processing)
+      // Otherwise, wait for completion (synchronous fallback)
+      if (hasValidWebhook) {
+        // Return immediately - webhook will handle completion
+        return {
+          id: prediction.id,
+          status: prediction.status === 'starting' || prediction.status === 'processing' ? 'processing' : (prediction.status as any),
+          metadata: {
+            operation: 'edit',
+            prompt: request.prompt,
+            processedAt: new Date().toISOString(),
+            model: 'nano-banana',
+            async: true
+          }
+        }
+      }
+
+      // Synchronous fallback: wait for completion
       const result = await this.replicate.wait(prediction)
 
       console.log('🍌 Nano Banana prediction completed:', { 
@@ -149,14 +179,15 @@ export class NanoBananaProvider {
   /**
    * Edit image with text prompt
    */
-  async editWithPrompt(imageUrl: string, prompt: string, outputFormat: 'jpg' | 'png' = 'jpg', aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9'): Promise<NanoBananaEditResponse> {
+  async editWithPrompt(imageUrl: string, prompt: string, outputFormat: 'jpg' | 'png' = 'jpg', aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string): Promise<NanoBananaEditResponse> {
     const enhancedPrompt = `Edit this image: ${prompt}. Make high-quality, precise changes while maintaining the overall composition and style.`
     
     return this.editImage({
       prompt: enhancedPrompt,
       imageInput: [imageUrl],
       outputFormat,
-      aspectRatio
+      aspectRatio,
+      webhookUrl
     })
   }
 
@@ -219,14 +250,15 @@ export class NanoBananaProvider {
   /**
    * Generate image from text prompt only
    */
-  async generateImage(prompt: string, outputFormat: 'jpg' | 'png' = 'jpg', aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9'): Promise<NanoBananaEditResponse> {
+  async generateImage(prompt: string, outputFormat: 'jpg' | 'png' = 'jpg', aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string): Promise<NanoBananaEditResponse> {
     const enhancedPrompt = `Generate a high-quality image: ${prompt}. Create detailed, professional-looking result with excellent composition and lighting.`
     
     return this.editImage({
       prompt: enhancedPrompt,
       imageInput: [],
       outputFormat,
-      aspectRatio
+      aspectRatio,
+      webhookUrl
     })
   }
 

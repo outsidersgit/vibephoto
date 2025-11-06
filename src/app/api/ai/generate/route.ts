@@ -208,15 +208,16 @@ export async function POST(request: NextRequest) {
       negativePrompt: negativePrompt,
       params: finalParams,
       triggerWord: model.triggerWord || undefined,
-      webhookUrl: (currentProvider === 'astria' || currentProvider === 'hybrid')
-        ? undefined // Force polling for Astria and Hybrid
-        : (process.env.NODE_ENV === 'production'
-          ? `${process.env.NEXTAUTH_URL}/api/webhooks/generation`
-          : undefined) // No webhook in development - will use polling instead
+      webhookUrl: process.env.NEXTAUTH_URL?.startsWith('https://')
+        ? (currentProvider === 'astria' || currentProvider === 'hybrid')
+          ? `${process.env.NEXTAUTH_URL}/api/webhooks/astria?type=prompt&id=${generation.id}&userId=${generation.userId}&secret=${process.env.ASTRIA_WEBHOOK_SECRET}`
+          : `${process.env.NEXTAUTH_URL}/api/webhooks/generation`
+        : undefined // No webhook in development - will use polling instead
     }
 
     // Start generation
     console.log(`🚀 About to call AI provider generateImage`)
+    console.log(`📡 Webhook URL configured:`, generationRequest.webhookUrl ? 'Yes' : 'No (will use polling)')
     const generationResponse = await aiProvider.generateImage(generationRequest)
     console.log(`📋 AI provider response:`, {
       id: generationResponse.id,
