@@ -25,6 +25,17 @@ export function GenerationResultModal({
   const router = useRouter()
   const mediaUrl = type === 'image' ? imageUrl : videoUrl
 
+  // Debug logging
+  if (open) {
+    console.log('🎯 [MODAL] GenerationResultModal render:', {
+      open,
+      hasImageUrl: !!imageUrl,
+      hasVideoUrl: !!videoUrl,
+      mediaUrl: mediaUrl?.substring(0, 100) + '...',
+      type
+    })
+  }
+
   // Don't render modal content if no media URL, but keep Dialog open for transition
   // This allows the modal to open even if URL is still loading
   if (!mediaUrl && open) {

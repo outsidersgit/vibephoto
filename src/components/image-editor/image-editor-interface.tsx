@@ -202,6 +202,11 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       setResult(modalUrl)
       setShowResultModal(true)
       console.log('✅ [IMAGE_EDITOR] Result URL set, opening modal automatically with', temporaryUrl ? 'temporary URL' : 'permanent URL')
+      console.log('🎯 [IMAGE_EDITOR] Modal state:', {
+        result: modalUrl?.substring(0, 100) + '...',
+        showResultModal: true,
+        hasResult: !!modalUrl
+      })
 
       addToast({
         title: "Sucesso!",
@@ -209,8 +214,8 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         type: "success"
       })
       
-      // Clear form after successful generation
-      clearForm()
+      // DON'T clear form immediately - modal needs the result URL
+      // Form will be cleared when modal is closed (see onOpenChange handler)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido'
       setError(errorMessage)
@@ -397,7 +402,10 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             open={showResultModal}
             onOpenChange={(open) => {
               setShowResultModal(open)
-              if (!open) setResult(null)
+              if (!open) {
+                // Clear form ONLY when modal is closed
+                clearForm()
+              }
             }}
             imageUrl={result}
             title="Imagem Processada"
