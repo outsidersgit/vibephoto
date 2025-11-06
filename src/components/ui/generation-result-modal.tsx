@@ -26,19 +26,19 @@ export function GenerationResultModal({
   const mediaUrl = type === 'image' ? imageUrl : videoUrl
 
   // Debug logging
-  if (open) {
-    console.log('🎯 [MODAL] GenerationResultModal render:', {
-      open,
-      hasImageUrl: !!imageUrl,
-      hasVideoUrl: !!videoUrl,
-      mediaUrl: mediaUrl?.substring(0, 100) + '...',
-      type
-    })
-  }
+  console.log('🎯 [MODAL] GenerationResultModal render:', {
+    open,
+    hasImageUrl: !!imageUrl,
+    hasVideoUrl: !!videoUrl,
+    mediaUrl: mediaUrl?.substring(0, 100) + '...',
+    type,
+    willRender: open && !!mediaUrl
+  })
 
   // Don't render modal content if no media URL, but keep Dialog open for transition
   // This allows the modal to open even if URL is still loading
   if (!mediaUrl && open) {
+    console.log('⏳ [MODAL] Modal open but no mediaUrl yet, showing loading state')
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-4xl">
@@ -49,7 +49,12 @@ export function GenerationResultModal({
   }
 
   // If modal is closed, don't render anything
-  if (!open) return null
+  if (!open) {
+    console.log('🚫 [MODAL] Modal is closed, not rendering')
+    return null
+  }
+
+  console.log('✅ [MODAL] Rendering modal with media:', mediaUrl?.substring(0, 50) + '...')
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

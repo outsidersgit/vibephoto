@@ -127,10 +127,30 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             
             if (modalImageUrl) {
               console.log('✅ [IMAGE_EDITOR] Opening modal from SSE update:', modalImageUrl.substring(0, 100) + '...')
+              console.log('✅ [IMAGE_EDITOR] Setting modal state:', {
+                showResultModal: true,
+                result: modalImageUrl.substring(0, 50) + '...',
+                hasResult: !!modalImageUrl
+              })
+              
+              // Set result URL first, then open modal
               setResult(modalImageUrl)
-              setShowResultModal(true)
-              setCurrentEditId(null) // Clear monitoring
-              setLoading(false) // Clear loading state
+              
+              // Use requestAnimationFrame to ensure DOM updates are batched correctly
+              requestAnimationFrame(() => {
+                setShowResultModal(true)
+                setCurrentEditId(null) // Clear monitoring
+                
+                // Clear loading state after a small delay to ensure modal is visible
+                setTimeout(() => {
+                  setLoading(false)
+                  console.log('✅ [IMAGE_EDITOR] Modal opened and loading cleared:', {
+                    showResultModal: true,
+                    loading: false,
+                    hasResult: !!modalImageUrl
+                  })
+                }, 100)
+              })
               
               addToast({
                 title: "Sucesso!",
@@ -139,6 +159,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               })
             } else {
               console.warn('⚠️ [IMAGE_EDITOR] SSE update has COMPLETED status but no image URLs')
+              setLoading(false) // Clear loading even if no URL
             }
           } else if (status === 'FAILED' || status === 'failed') {
             setError(data.errorMessage || 'Erro ao processar imagem')
@@ -308,11 +329,15 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             'data.editHistoryId': `=== ${data.data.editHistoryId}`,
             'data.generationId': `=== ${data.data.editHistoryId}`
           })
+          // CRITICAL: Keep loading state true - will be cleared when SSE completes
+          console.log('⏳ [IMAGE_EDITOR] Keeping loading state active until SSE completion')
         } else {
           console.warn('⚠️ [IMAGE_EDITOR] No editHistoryId in response, cannot monitor via SSE')
+          setLoading(false) // Only clear loading if we can't monitor
         }
         
         // Don't clear form yet - will be cleared when webhook completes
+        // Loading state will be cleared when SSE completes (see SSE handler)
         return
       }
       
