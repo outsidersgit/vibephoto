@@ -78,53 +78,88 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       })
       
       // Check if this is our edit (by editHistoryId or generationId matching currentEditId)
+      // IMPORTANT: The webhook broadcasts with editHistory.id as generationId, so we need to match on that
+      // But the generation created might also broadcast with its own ID, so we check metadata.editHistoryId too
       const isOurEdit = currentEditId && (
         generationId === currentEditId || 
         data.editHistoryId === currentEditId ||
-        data.generationId === currentEditId
+        data.generationId === currentEditId ||
+        // Check if metadata contains editHistoryId
+        (data.metadata && typeof data.metadata === 'object' && 'editHistoryId' in data.metadata && data.metadata.editHistoryId === currentEditId) ||
+        // Also check if the generationId in the SSE matches the editHistoryId we're monitoring (for backwards compatibility)
+        (typeof generationId === 'string' && generationId.includes(currentEditId)) ||
+        (typeof data.generationId === 'string' && data.generationId.includes(currentEditId))
       )
       
+      console.log('🔍 [IMAGE_EDITOR] Matching check:', {
+        currentEditId,
+        generationId,
+        dataEditHistoryId: data.editHistoryId,
+        dataGenerationId: data.generationId,
+        metadataEditHistoryId: data.metadata?.editHistoryId,
+        matchGenerationId: generationId === currentEditId,
+        matchEditHistoryId: data.editHistoryId === currentEditId,
+        matchDataGenerationId: data.generationId === currentEditId,
+        matchMetadataEditHistoryId: data.metadata?.editHistoryId === currentEditId,
+        isOurEdit,
+        fullData: data
+      })
+      
       if (isOurEdit) {
-        console.log('🎯 [IMAGE_EDITOR] SSE update matched our edit:', {
-          generationId,
-          status,
-          hasImageUrls: !!(data.imageUrls && data.imageUrls.length > 0),
-          hasTemporaryUrls: !!(data.temporaryUrls && data.temporaryUrls.length > 0),
-          editHistoryId: data.editHistoryId
-        })
-        
-        if (status === 'COMPLETED' && (data.imageUrls || data.temporaryUrls)) {
-          // Use temporary URL for modal, permanent for gallery
-          const modalImageUrl = data.temporaryUrls && data.temporaryUrls.length > 0
-            ? data.temporaryUrls[0]
-            : (data.imageUrls && data.imageUrls.length > 0 ? data.imageUrls[0] : null)
+          console.log('🎯 [IMAGE_EDITOR] SSE update matched our edit:', {
+            generationId,
+            status,
+            hasImageUrls: !!(data.imageUrls && data.imageUrls.length > 0),
+            hasTemporaryUrls: !!(data.temporaryUrls && data.temporaryUrls.length > 0),
+            editHistoryId: data.editHistoryId,
+            imageUrls: data.imageUrls,
+            temporaryUrls: data.temporaryUrls
+          })
           
-          if (modalImageUrl) {
-            console.log('✅ [IMAGE_EDITOR] Opening modal from SSE update:', modalImageUrl.substring(0, 100) + '...')
-            setResult(modalImageUrl)
-            setShowResultModal(true)
-            setCurrentEditId(null) // Clear monitoring
+          // Accept both 'COMPLETE' and 'COMPLETED' status (some systems use different formats)
+          const isCompleted = status === 'COMPLETED' || status === 'COMPLETE' || status === 'succeeded'
+          
+          if (isCompleted && (data.imageUrls || data.temporaryUrls)) {
+            // Use temporary URL for modal, permanent for gallery
+            const modalImageUrl = data.temporaryUrls && data.temporaryUrls.length > 0
+              ? data.temporaryUrls[0]
+              : (data.imageUrls && data.imageUrls.length > 0 ? data.imageUrls[0] : null)
             
+            if (modalImageUrl) {
+              console.log('✅ [IMAGE_EDITOR] Opening modal from SSE update:', modalImageUrl.substring(0, 100) + '...')
+              setResult(modalImageUrl)
+              setShowResultModal(true)
+              setCurrentEditId(null) // Clear monitoring
+              setLoading(false) // Clear loading state
+              
+              addToast({
+                title: "Sucesso!",
+                description: "Imagem processada e salva com sucesso",
+                type: "success"
+              })
+            } else {
+              console.warn('⚠️ [IMAGE_EDITOR] SSE update has COMPLETED status but no image URLs')
+            }
+          } else if (status === 'FAILED' || status === 'failed') {
+            setError(data.errorMessage || 'Erro ao processar imagem')
+            setCurrentEditId(null)
+            setLoading(false) // Clear loading state
             addToast({
-              title: "Sucesso!",
-              description: "Imagem processada e salva com sucesso",
-              type: "success"
+              title: "Erro",
+              description: data.errorMessage || 'Erro ao processar imagem',
+              type: "error"
             })
           } else {
-            console.warn('⚠️ [IMAGE_EDITOR] SSE update has COMPLETED status but no image URLs')
+            console.log(`⏳ [IMAGE_EDITOR] Status ${status} - waiting for completion...`)
           }
-        } else if (status === 'FAILED') {
-          setError(data.errorMessage || 'Erro ao processar imagem')
-          setCurrentEditId(null)
-          addToast({
-            title: "Erro",
-            description: data.errorMessage || 'Erro ao processar imagem',
-            type: "error"
+        } else {
+          console.log('⏭️ [IMAGE_EDITOR] SSE event not for our edit, ignoring', {
+            generationId,
+            currentEditId,
+            dataEditHistoryId: data.editHistoryId,
+            dataGenerationId: data.generationId
           })
         }
-      } else {
-        console.log('⏭️ [IMAGE_EDITOR] SSE event not for our edit, ignoring')
-      }
     }
   })
 
@@ -254,7 +289,8 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           predictionId: data.predictionId,
           editHistoryId: data.data?.editHistoryId,
           status: data.data?.status,
-          async: data.async
+          async: data.async,
+          fullResponse: data
         })
         
         addToast({
@@ -267,6 +303,11 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         if (data.data?.editHistoryId) {
           setCurrentEditId(data.data.editHistoryId)
           console.log('✅ [IMAGE_EDITOR] Monitoring editHistoryId via SSE:', data.data.editHistoryId)
+          console.log('✅ [IMAGE_EDITOR] Will match SSE events where:', {
+            generationId: `=== ${data.data.editHistoryId}`,
+            'data.editHistoryId': `=== ${data.data.editHistoryId}`,
+            'data.generationId': `=== ${data.data.editHistoryId}`
+          })
         } else {
           console.warn('⚠️ [IMAGE_EDITOR] No editHistoryId in response, cannot monitor via SSE')
         }

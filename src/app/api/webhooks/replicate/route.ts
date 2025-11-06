@@ -952,14 +952,19 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
             await broadcastGenerationStatusChange(
               editHistory.id, // Use editHistory.id as generationId for SSE
               editHistory.userId,
-              'COMPLETED',
+              'COMPLETED', // Use COMPLETED (database format) - will be normalized by SSE handler
               {
                 imageUrls: [permanentUrl],
                 thumbnailUrls: [thumbnailUrl],
                 temporaryUrls: [imageUrl], // URL temporária do Replicate para modal rápido
                 permanentUrls: [permanentUrl],
-                editHistoryId: editHistory.id,
+                editHistoryId: editHistory.id, // CRITICAL: Include editHistoryId for matching
                 generationId: editHistory.id, // Also include as generationId for compatibility
+                metadata: {
+                  editHistoryId: editHistory.id, // Include in metadata too for extra matching
+                  source: 'editor',
+                  webhook: true
+                },
                 webhook: true,
                 timestamp: new Date().toISOString(),
                 source: 'editor'
@@ -970,10 +975,13 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
             console.log(`✅ Broadcast sent with:`, {
               generationId: editHistory.id,
               editHistoryId: editHistory.id,
+              status: 'COMPLETED',
               hasImageUrls: true,
               hasTemporaryUrls: true,
               imageUrlsCount: 1,
-              temporaryUrlsCount: 1
+              temporaryUrlsCount: 1,
+              imageUrl: permanentUrl.substring(0, 50) + '...',
+              temporaryUrl: imageUrl.substring(0, 50) + '...'
             })
           } else {
             throw new Error('Storage returned no results or invalid URL')
