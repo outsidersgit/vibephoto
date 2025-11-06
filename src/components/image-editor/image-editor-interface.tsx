@@ -158,6 +158,8 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       if (isValid) {
         urlToUse = temporaryUrl
         console.log('✅ [IMAGE_EDITOR] Temporary URL validated and will be used')
+        console.log('✅ [IMAGE_EDITOR] Temporary URL (FULL):', temporaryUrl)
+        console.log('✅ [IMAGE_EDITOR] Temporary URL length:', temporaryUrl.length)
       } else {
         console.warn('⚠️ [IMAGE_EDITOR] Temporary URL validation failed, will try permanent URL')
       }
@@ -176,9 +178,21 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     }
     
     if (urlToUse) {
-      console.log('✅ [IMAGE_EDITOR] Opening modal with validated URL:', urlToUse.substring(0, 50) + '...')
+      // CRITICAL: Log FULL URL to verify it's not truncated
+      console.log('✅ [IMAGE_EDITOR] Opening modal with validated URL (FULL):', urlToUse)
+      console.log('✅ [IMAGE_EDITOR] URL length:', urlToUse.length)
+      console.log('✅ [IMAGE_EDITOR] URL preview:', urlToUse.substring(0, 100) + '...')
+      
+      // CRITICAL: Verify URL is complete before setting
+      if (urlToUse.length < 50) {
+        console.error('❌ [IMAGE_EDITOR] WARNING: URL seems truncated! Length:', urlToUse.length)
+      }
+      
       setResult(urlToUse)
+      console.log('✅ [IMAGE_EDITOR] Result state set to (will be):', urlToUse.substring(0, 100) + '...')
+      console.log('✅ [IMAGE_EDITOR] Result state set to (FULL):', urlToUse)
       setShowResultModal(true)
+      console.log('✅ [IMAGE_EDITOR] showResultModal set to true')
       setCurrentEditId(null)
       currentEditIdRef.current = null
       
@@ -294,11 +308,18 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               ? data.imageUrls[0]
               : null
             
-            console.log('✅ [IMAGE_EDITOR] SSE update received with URLs:', {
+            // CRITICAL: Log FULL URLs to verify they're not truncated
+            console.log('✅ [IMAGE_EDITOR] SSE update received with URLs (FULL):', {
               hasTemporaryUrl: !!temporaryUrl,
               hasPermanentUrl: !!permanentUrl,
-              temporaryUrl: temporaryUrl?.substring(0, 50) + '...',
-              permanentUrl: permanentUrl?.substring(0, 50) + '...'
+              temporaryUrl: temporaryUrl, // FULL URL
+              temporaryUrlLength: temporaryUrl?.length || 0,
+              permanentUrl: permanentUrl, // FULL URL
+              permanentUrlLength: permanentUrl?.length || 0,
+              temporaryUrlPreview: temporaryUrl?.substring(0, 100) + '...',
+              permanentUrlPreview: permanentUrl?.substring(0, 100) + '...',
+              allTemporaryUrls: data.temporaryUrls,
+              allImageUrls: data.imageUrls
             })
             
             if (temporaryUrl || permanentUrl) {

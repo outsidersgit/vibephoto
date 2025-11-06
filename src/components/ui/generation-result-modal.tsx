@@ -37,10 +37,14 @@ export function GenerationResultModal({
       hasImageUrl: !!imageUrl,
       hasVideoUrl: !!videoUrl,
       mediaUrl: mediaUrl?.substring(0, 100) + '...',
+      mediaUrlFull: mediaUrl, // CRITICAL: Log full URL
+      mediaUrlLength: mediaUrl?.length || 0,
       type,
       willRender: open && !!mediaUrl,
-      imageUrlValue: imageUrl,
-      videoUrlValue: videoUrl,
+      imageUrlValue: imageUrl, // CRITICAL: Log full imageUrl
+      imageUrlLength: imageUrl?.length || 0,
+      videoUrlValue: videoUrl, // CRITICAL: Log full videoUrl
+      videoUrlLength: videoUrl?.length || 0,
       imageError,
       retryCount
     })
@@ -72,7 +76,9 @@ export function GenerationResultModal({
       )
     }
 
-    console.log('✅ [MODAL] Rendering modal with media:', mediaUrl?.substring(0, 50) + '...')
+    console.log('✅ [MODAL] Rendering modal with media (FULL URL):', mediaUrl)
+    console.log('✅ [MODAL] Media URL length:', mediaUrl?.length || 0)
+    console.log('✅ [MODAL] Media URL preview:', mediaUrl?.substring(0, 100) + '...')
     
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -123,7 +129,10 @@ export function GenerationResultModal({
                         alt="Resultado gerado"
                         className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-lg"
                         onError={(e) => {
-                          console.error('❌ [MODAL] Image failed to load:', mediaUrl, 'Retry count:', retryCount)
+                          console.error('❌ [MODAL] Image failed to load (FULL URL):', mediaUrl)
+                          console.error('❌ [MODAL] Image src attribute:', e.currentTarget.src)
+                          console.error('❌ [MODAL] Image src length:', e.currentTarget.src?.length || 0)
+                          console.error('❌ [MODAL] Retry count:', retryCount)
                           if (retryCount < maxRetries) {
                             // Retry loading the image
                             setRetryCount(prev => prev + 1)
