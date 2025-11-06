@@ -137,35 +137,86 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     return false
   }, [])
 
-  // Função para abrir modal imediatamente (modal tem retry logic interno)
+  // Função para validar se URL está acessível
+  const testUrlAccessibility = useCallback(async (url: string): Promise<boolean> => {
+    try {
+      console.log(`🔍 [IMAGE_EDITOR] Testing URL:`, url.substring(0, 100) + '...')
+
+      const img = new Image()
+      const isAccessible = await new Promise<boolean>((resolve) => {
+        const timeout = setTimeout(() => {
+          console.warn(`⏱️ [IMAGE_EDITOR] URL test timeout (5s)`)
+          resolve(false)
+        }, 5000)
+
+        img.onload = () => {
+          clearTimeout(timeout)
+          console.log(`✅ [IMAGE_EDITOR] URL is accessible`)
+          resolve(true)
+        }
+
+        img.onerror = () => {
+          clearTimeout(timeout)
+          console.warn(`❌ [IMAGE_EDITOR] URL failed to load`)
+          resolve(false)
+        }
+
+        img.src = url
+      })
+
+      return isAccessible
+    } catch (error) {
+      console.error(`❌ [IMAGE_EDITOR] Error testing URL:`, error)
+      return false
+    }
+  }, [])
+
+  // Função para abrir modal com validação robusta de URL
   const openModalWithValidation = useCallback(async (
     temporaryUrl: string | null,
     permanentUrl: string | null
   ) => {
-    console.log('🎯 [IMAGE_EDITOR] Opening modal immediately:', {
-      hasTemporaryUrl: !!temporaryUrl,
-      hasPermanentUrl: !!permanentUrl,
-      temporaryUrl: temporaryUrl?.substring(0, 50) + '...',
-      permanentUrl: permanentUrl?.substring(0, 50) + '...'
+    console.log('🎯 [IMAGE_EDITOR] ===== MODAL VALIDATION START =====')
+    console.log('🎯 [IMAGE_EDITOR] URLs:', {
+      temp: temporaryUrl?.substring(0, 100),
+      perm: permanentUrl?.substring(0, 100)
     })
 
-    // Preferir URL temporária (mais rápida), fallback para permanente
-    const urlToUse = temporaryUrl || permanentUrl
+    let urlToUse: string | null = null
+    let urlType: 'temporary' | 'permanent' | null = null
 
+    // 1. Test temporary URL first
+    if (temporaryUrl) {
+      const isAccessible = await testUrlAccessibility(temporaryUrl)
+      if (isAccessible) {
+        urlToUse = temporaryUrl
+        urlType = 'temporary'
+      }
+    }
+
+    // 2. Fallback to permanent URL
+    if (!urlToUse && permanentUrl) {
+      const isAccessible = await testUrlAccessibility(permanentUrl)
+      if (isAccessible) {
+        urlToUse = permanentUrl
+        urlType = 'permanent'
+      }
+    }
+
+    // 3. Open modal with validated URL
     if (urlToUse) {
-      console.log('✅ [IMAGE_EDITOR] Opening modal with URL:', urlToUse.substring(0, 50) + '...')
+      console.log(`✅ [IMAGE_EDITOR] Opening with ${urlType} URL`)
 
       setResult(urlToUse)
       setShowResultModal(true)
       setCurrentEditId(null)
       currentEditIdRef.current = null
 
-      // Clear loading state and form after modal opens
       setTimeout(() => {
         setLoading(false)
         loadingRef.current = false
-        clearForm() // Limpar campos após modal abrir
-        console.log('✅ [IMAGE_EDITOR] Modal opened, loading cleared, and form cleared')
+        clearForm()
+        console.log('✅ [IMAGE_EDITOR] Modal opened, cleared')
       }, 300)
 
       addToast({
@@ -174,7 +225,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         type: "success"
       })
     } else {
-      console.error('❌ [IMAGE_EDITOR] No valid URL available')
+      console.error('❌ [IMAGE_EDITOR] NO VALID URL')
       setCurrentEditId(null)
       currentEditIdRef.current = null
       setLoading(false)
@@ -186,7 +237,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         type: "warning"
       })
     }
-  }, [addToast])
+  }, [addToast, testUrlAccessibility, clearForm])
 
   // Monitor async processing via SSE - use useCallback to ensure stable reference
   const handleGenerationStatusChange = useCallback((generationId: string, status: string, data: any) => {
@@ -503,14 +554,18 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         
         // Store editHistoryId to monitor via SSE
         if (data.data?.editHistoryId) {
-          setCurrentEditId(data.data.editHistoryId)
-          currentEditIdRef.current = data.data.editHistoryId
-          console.log('✅ [IMAGE_EDITOR] Monitoring editHistoryId via SSE:', data.data.editHistoryId)
-          console.log('✅ [IMAGE_EDITOR] Will match SSE events where:', {
-            generationId: `=== ${data.data.editHistoryId}`,
-            'data.editHistoryId': `=== ${data.data.editHistoryId}`,
-            'data.generationId': `=== ${data.data.editHistoryId}`
-          })
+          const editId = data.data.editHistoryId
+          setCurrentEditId(editId)
+          currentEditIdRef.current = editId
+          console.log('✅ [IMAGE_EDITOR] ===== MONITORING EDIT VIA SSE =====')
+          console.log('✅ [IMAGE_EDITOR] Edit History ID:', editId)
+          console.log('✅ [IMAGE_EDITOR] ID Length:', editId.length)
+          console.log('✅ [IMAGE_EDITOR] ID Type:', typeof editId)
+          console.log('✅ [IMAGE_EDITOR] First 10 chars:', editId.substring(0, 10))
+          console.log('✅ [IMAGE_EDITOR] Last 10 chars:', editId.substring(editId.length - 10))
+          console.log('✅ [IMAGE_EDITOR] Full ID:', editId)
+          console.log('✅ [IMAGE_EDITOR] Will match SSE events where generationId === this ID')
+          console.log('✅ [IMAGE_EDITOR] =====================================')
           // CRITICAL: Keep loading state true - will be cleared when SSE completes
           console.log('⏳ [IMAGE_EDITOR] Keeping loading state active until SSE completion')
         } else {

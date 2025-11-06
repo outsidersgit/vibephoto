@@ -163,27 +163,44 @@ export function GenerationInterface({
     return false
   }, [])
 
-  // Função para abrir modal imediatamente (modal tem retry logic interno)
+  // Função para validar se URL está acessível
+  const testImageUrl = useCallback(async (url: string): Promise<boolean> => {
+    try {
+      const img = new Image()
+      return await new Promise<boolean>((resolve) => {
+        const timeout = setTimeout(() => resolve(false), 5000)
+        img.onload = () => { clearTimeout(timeout); resolve(true) }
+        img.onerror = () => { clearTimeout(timeout); resolve(false) }
+        img.src = url
+      })
+    } catch {
+      return false
+    }
+  }, [])
+
+  // Função para abrir modal com validação de URL
   const openModalWithValidation = useCallback(async (
     temporaryUrl: string | null,
     permanentUrl: string | null
   ) => {
-    console.log('🎯 [GENERATION] Opening modal immediately:', {
-      hasTemporaryUrl: !!temporaryUrl,
-      hasPermanentUrl: !!permanentUrl,
-      temporaryUrl: temporaryUrl?.substring(0, 50) + '...',
-      permanentUrl: permanentUrl?.substring(0, 50) + '...'
-    })
+    console.log('🎯 [GENERATION] Validating URLs for modal...')
 
-    // Preferir URL temporária (mais rápida), fallback para permanente
-    const urlToUse = temporaryUrl || permanentUrl
+    let urlToUse: string | null = null
+
+    // Test temporary URL first
+    if (temporaryUrl && await testImageUrl(temporaryUrl)) {
+      urlToUse = temporaryUrl
+      console.log('✅ [GENERATION] Using temporary URL')
+    } else if (permanentUrl && await testImageUrl(permanentUrl)) {
+      urlToUse = permanentUrl
+      console.log('✅ [GENERATION] Using permanent URL')
+    }
 
     if (urlToUse) {
-      console.log('✅ [GENERATION] Opening modal with URL:', urlToUse.substring(0, 50) + '...')
       setSuccessImageUrl(urlToUse)
       setShowSuccessModal(true)
     } else {
-      console.error('❌ [GENERATION] No URL available')
+      console.error('❌ [GENERATION] No valid URL')
       addToast({
         type: 'warning',
         title: 'Aviso',
@@ -191,7 +208,7 @@ export function GenerationInterface({
         duration: 6000
       })
     }
-  }, [addToast])
+  }, [addToast, testImageUrl])
 
   // Real-time updates for generation status
   useRealtimeUpdates({

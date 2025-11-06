@@ -787,8 +787,13 @@ async function processTrainingWebhook(payload: WebhookPayload, model: any) {
  * Processa webhook de edição de imagens (Nano Banana)
  */
 async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
-  console.log(`🎨 Processing edit webhook for ${editHistory.id}`)
-  
+  console.log(`🎨 [WEBHOOK] ===== PROCESSING EDIT WEBHOOK =====`)
+  console.log(`🎨 [WEBHOOK] Edit ID: ${editHistory.id}`)
+  console.log(`🎨 [WEBHOOK] Payload status: ${payload.status}`)
+  console.log(`🎨 [WEBHOOK] Payload ID: ${payload.id}`)
+  console.log(`🎨 [WEBHOOK] Has output: ${!!payload.output}`)
+  console.log(`🎨 [WEBHOOK] =========================================`)
+
   const updateData: any = {}
   let creditRefund = false
 

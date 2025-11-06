@@ -75,6 +75,14 @@ export async function POST(request: NextRequest) {
     const webhookUrl = process.env.NEXTAUTH_URL?.startsWith('https://')
       ? `${process.env.NEXTAUTH_URL}/api/webhooks/replicate?type=edit&userId=${session.user.id}`
       : undefined
+
+    console.log('🔧 [IMAGE_EDITOR_API] Webhook configuration:', {
+      NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+      isHttps: process.env.NEXTAUTH_URL?.startsWith('https://'),
+      webhookUrl: webhookUrl,
+      webhookEnabled: !!webhookUrl,
+      userId: session.user.id
+    })
     
     let result
     if (image) {
