@@ -813,144 +813,225 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
     case 'succeeded':
       if (payload.output) {
         // Extract image URL from output
-        const imageUrl = typeof payload.output === 'string' ? payload.output : payload.output[0]
+        // Replicate returns output as string (URL) or array of URLs
+        const imageUrl = typeof payload.output === 'string' 
+          ? payload.output 
+          : (Array.isArray(payload.output) ? payload.output[0] : null)
         
-        if (imageUrl) {
-          try {
-            // Store image permanently
-            const { processAndStoreReplicateImages } = await import('@/lib/services/auto-image-storage')
-            
-            const storageResults = await processAndStoreReplicateImages(
-              [imageUrl],
-              editHistory.id,
-              editHistory.userId
-            )
-            
-            if (storageResults && storageResults.length > 0) {
-              const permanentUrl = storageResults[0].url
-              const thumbnailUrl = storageResults[0].thumbnailUrl || permanentUrl
-              
-              // Update edit_history with permanent URLs
-              await prisma.editHistory.update({
-                where: { id: editHistory.id },
-                data: {
-                  editedImageUrl: permanentUrl,
-                  thumbnailUrl: thumbnailUrl,
-                  metadata: {
-                    ...(editHistory.metadata || {}),
-                    status: 'COMPLETED',
-                    replicateId: payload.id,
-                    permanentUrl: permanentUrl,
-                    temporaryUrl: imageUrl,
-                    webhook: true,
-                    processingTime: payload.metrics?.total_time ? Math.round(payload.metrics.total_time * 1000) : undefined,
-                    completedAt: new Date().toISOString()
-                  }
-                }
-              })
-              
-              // Also create generation record for gallery (créditos já foram deduzidos na criação do edit_history)
-              // Não usar createGeneration() pois ela deduz créditos novamente
-              // Precisamos de um modelId válido - buscar qualquer modelo do usuário ou criar um padrão
-              let defaultModelId = editHistory.metadata?.defaultModelId
-              if (!defaultModelId) {
-                // Buscar qualquer modelo do usuário
-                const userModel = await prisma.aIModel.findFirst({
-                  where: {
-                    userId: editHistory.userId
-                  },
-                  select: { id: true },
-                  orderBy: { createdAt: 'desc' }
-                })
-                
-                if (userModel) {
-                  defaultModelId = userModel.id
-                } else {
-                  // Se não tem modelo, criar um modelo padrão "Editor IA" para edições
-                  const newModel = await prisma.aIModel.create({
-                    data: {
-                      userId: editHistory.userId,
-                      name: 'Editor IA',
-                      description: 'Modelo padrão para edições do editor',
-                      status: 'READY',
-                      isPublic: false
-                    }
-                  })
-                  defaultModelId = newModel.id
-                }
+        console.log(`📸 Extracted image URL from Replicate output:`, {
+          outputType: typeof payload.output,
+          isArray: Array.isArray(payload.output),
+          imageUrl: imageUrl?.substring(0, 100) + '...',
+          hasImageUrl: !!imageUrl
+        })
+        
+        if (!imageUrl) {
+          console.error(`❌ Edit ${editHistory.id}: No image URL in output`)
+          await prisma.editHistory.update({
+            where: { id: editHistory.id },
+            data: {
+              metadata: {
+                ...(editHistory.metadata || {}),
+                status: 'FAILED',
+                replicateId: payload.id,
+                errorMessage: 'No image URL in Replicate output',
+                webhook: true,
+                completedAt: new Date().toISOString()
               }
-              
-              await prisma.generation.create({
-                data: {
-                  userId: editHistory.userId,
-                  modelId: defaultModelId,
-                  prompt: editHistory.prompt,
-                  imageUrls: [permanentUrl],
-                  thumbnailUrls: [thumbnailUrl],
-                  status: 'COMPLETED',
-                  jobId: payload.id,
-                  metadata: {
-                    source: 'editor',
-                    editHistoryId: editHistory.id,
-                    operation: editHistory.operation,
-                    webhook: true
-                  },
-                  estimatedCost: 10, // Custo padrão para edições
-                  aiProvider: 'hybrid',
-                  completedAt: new Date()
-                }
-              })
-              
-              // Broadcast completion - use editHistoryId as generationId for SSE compatibility
-              const { broadcastGenerationStatusChange } = await import('@/lib/services/realtime-service')
-              await broadcastGenerationStatusChange(
-                editHistory.id, // Use editHistory.id as generationId for SSE
-                editHistory.userId,
-                'COMPLETED',
-                {
-                  imageUrls: [permanentUrl],
-                  thumbnailUrls: [thumbnailUrl],
-                  temporaryUrls: [imageUrl],
-                  permanentUrls: [permanentUrl],
-                  editHistoryId: editHistory.id,
-                  generationId: editHistory.id, // Also include as generationId for compatibility
-                  webhook: true,
-                  timestamp: new Date().toISOString(),
-                  source: 'editor'
-                }
-              )
-              
-              console.log(`✅ Edit ${editHistory.id} completed and stored permanently`)
-            } else {
-              throw new Error('Storage returned no results')
             }
-          } catch (storageError) {
-            console.error(`❌ Edit ${editHistory.id}: Storage failed -`, storageError)
-            // Update with temporary URL as fallback
+          })
+          return { success: false, type: 'edit', error: 'No image URL in output' }
+        }
+        
+        try {
+          // Store image permanently
+          const { processAndStoreReplicateImages } = await import('@/lib/services/auto-image-storage')
+          
+          console.log(`📥 Starting storage process for edit ${editHistory.id}...`)
+          const storageResults = await processAndStoreReplicateImages(
+            [imageUrl],
+            editHistory.id,
+            editHistory.userId
+          )
+          
+          console.log(`📦 Storage results:`, {
+            resultsCount: storageResults?.length || 0,
+            hasResults: !!storageResults && storageResults.length > 0,
+            firstResult: storageResults?.[0] ? {
+              hasUrl: !!storageResults[0].url,
+              hasThumbnailUrl: !!storageResults[0].thumbnailUrl,
+              urlPreview: storageResults[0].url?.substring(0, 100) + '...'
+            } : null
+          })
+          
+          if (storageResults && storageResults.length > 0 && storageResults[0].url) {
+            const permanentUrl = storageResults[0].url
+            const thumbnailUrl = storageResults[0].thumbnailUrl || permanentUrl
+            
+            console.log(`✅ Storage successful for edit ${editHistory.id}:`, {
+              permanentUrl: permanentUrl.substring(0, 100) + '...',
+              thumbnailUrl: thumbnailUrl.substring(0, 100) + '...',
+              temporaryUrl: imageUrl.substring(0, 100) + '...'
+            })
+            
+            // Update edit_history with permanent URLs
             await prisma.editHistory.update({
               where: { id: editHistory.id },
               data: {
-                editedImageUrl: imageUrl,
+                editedImageUrl: permanentUrl,
+                thumbnailUrl: thumbnailUrl,
                 metadata: {
                   ...(editHistory.metadata || {}),
                   status: 'COMPLETED',
                   replicateId: payload.id,
+                  permanentUrl: permanentUrl,
                   temporaryUrl: imageUrl,
-                  storageError: String(storageError),
                   webhook: true,
+                  processingTime: payload.metrics?.total_time ? Math.round(payload.metrics.total_time * 1000) : undefined,
                   completedAt: new Date().toISOString()
                 }
               }
             })
+            
+            // Also create generation record for gallery (créditos já foram deduzidos na criação do edit_history)
+            // Não usar createGeneration() pois ela deduz créditos novamente
+            // Precisamos de um modelId válido - buscar qualquer modelo do usuário ou criar um padrão
+            let defaultModelId = editHistory.metadata?.defaultModelId
+            if (!defaultModelId) {
+              // Buscar qualquer modelo do usuário
+              const userModel = await prisma.aIModel.findFirst({
+                where: {
+                  userId: editHistory.userId
+                },
+                select: { id: true },
+                orderBy: { createdAt: 'desc' }
+              })
+              
+              if (userModel) {
+                defaultModelId = userModel.id
+              } else {
+                // Se não tem modelo, criar um modelo padrão "Editor IA" para edições
+                const newModel = await prisma.aIModel.create({
+                  data: {
+                    userId: editHistory.userId,
+                    name: 'Editor IA',
+                    description: 'Modelo padrão para edições do editor',
+                    status: 'READY',
+                    isPublic: false
+                  }
+                })
+                defaultModelId = newModel.id
+              }
+            }
+            
+            await prisma.generation.create({
+              data: {
+                userId: editHistory.userId,
+                modelId: defaultModelId,
+                prompt: editHistory.prompt,
+                imageUrls: [permanentUrl],
+                thumbnailUrls: [thumbnailUrl],
+                status: 'COMPLETED',
+                jobId: payload.id,
+                metadata: {
+                  source: 'editor',
+                  editHistoryId: editHistory.id,
+                  operation: editHistory.operation,
+                  webhook: true
+                },
+                estimatedCost: 10, // Custo padrão para edições
+                aiProvider: 'hybrid',
+                completedAt: new Date()
+              }
+            })
+            
+            // Broadcast completion - use editHistoryId as generationId for SSE compatibility
+            const { broadcastGenerationStatusChange } = await import('@/lib/services/realtime-service')
+            
+            console.log(`📡 Broadcasting completion for edit ${editHistory.id}...`)
+            await broadcastGenerationStatusChange(
+              editHistory.id, // Use editHistory.id as generationId for SSE
+              editHistory.userId,
+              'COMPLETED',
+              {
+                imageUrls: [permanentUrl],
+                thumbnailUrls: [thumbnailUrl],
+                temporaryUrls: [imageUrl], // URL temporária do Replicate para modal rápido
+                permanentUrls: [permanentUrl],
+                editHistoryId: editHistory.id,
+                generationId: editHistory.id, // Also include as generationId for compatibility
+                webhook: true,
+                timestamp: new Date().toISOString(),
+                source: 'editor'
+              }
+            )
+            
+            console.log(`✅ Edit ${editHistory.id} completed and stored permanently`)
+            console.log(`✅ Broadcast sent with:`, {
+              generationId: editHistory.id,
+              editHistoryId: editHistory.id,
+              hasImageUrls: true,
+              hasTemporaryUrls: true,
+              imageUrlsCount: 1,
+              temporaryUrlsCount: 1
+            })
+          } else {
+            throw new Error('Storage returned no results or invalid URL')
           }
-        } else {
-          updateData.status = 'FAILED'
-          updateData.errorMessage = 'No image URL in output'
-          creditRefund = true
+        } catch (storageError) {
+          console.error(`❌ Edit ${editHistory.id}: Storage failed -`, storageError)
+          // Update with temporary URL as fallback
+          await prisma.editHistory.update({
+            where: { id: editHistory.id },
+            data: {
+              editedImageUrl: imageUrl,
+              metadata: {
+                ...(editHistory.metadata || {}),
+                status: 'COMPLETED',
+                replicateId: payload.id,
+                temporaryUrl: imageUrl,
+                storageError: String(storageError),
+                webhook: true,
+                completedAt: new Date().toISOString()
+              }
+            }
+          })
+          
+          // Broadcast with temporary URL as fallback
+          const { broadcastGenerationStatusChange } = await import('@/lib/services/realtime-service')
+          await broadcastGenerationStatusChange(
+            editHistory.id,
+            editHistory.userId,
+            'COMPLETED',
+            {
+              imageUrls: [imageUrl], // Use temporary URL as fallback
+              thumbnailUrls: [imageUrl],
+              temporaryUrls: [imageUrl],
+              permanentUrls: [imageUrl],
+              editHistoryId: editHistory.id,
+              generationId: editHistory.id,
+              webhook: true,
+              timestamp: new Date().toISOString(),
+              source: 'editor',
+              storageError: true // Flag to indicate storage failed
+            }
+          )
         }
       } else {
-        updateData.status = 'FAILED'
-        updateData.errorMessage = 'No output provided by Replicate'
+        console.error(`❌ Edit ${editHistory.id}: No output in payload`)
+        await prisma.editHistory.update({
+          where: { id: editHistory.id },
+          data: {
+            metadata: {
+              ...(editHistory.metadata || {}),
+              status: 'FAILED',
+              replicateId: payload.id,
+              errorMessage: 'No output provided by Replicate',
+              webhook: true,
+              completedAt: new Date().toISOString()
+            }
+          }
+        })
         creditRefund = true
       }
       break

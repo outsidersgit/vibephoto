@@ -67,9 +67,25 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   // Monitor async processing via SSE
   useRealtimeUpdates({
     onGenerationStatusChange: (generationId, status, data) => {
+      console.log('🔔 [IMAGE_EDITOR] SSE event received:', {
+        generationId,
+        status,
+        currentEditId,
+        dataEditHistoryId: data.editHistoryId,
+        dataGenerationId: data.generationId,
+        hasImageUrls: !!(data.imageUrls && data.imageUrls.length > 0),
+        hasTemporaryUrls: !!(data.temporaryUrls && data.temporaryUrls.length > 0)
+      })
+      
       // Check if this is our edit (by editHistoryId or generationId matching currentEditId)
-      if (currentEditId && (generationId === currentEditId || data.editHistoryId === currentEditId)) {
-        console.log('🎯 [IMAGE_EDITOR] SSE update received for edit:', {
+      const isOurEdit = currentEditId && (
+        generationId === currentEditId || 
+        data.editHistoryId === currentEditId ||
+        data.generationId === currentEditId
+      )
+      
+      if (isOurEdit) {
+        console.log('🎯 [IMAGE_EDITOR] SSE update matched our edit:', {
           generationId,
           status,
           hasImageUrls: !!(data.imageUrls && data.imageUrls.length > 0),
@@ -94,6 +110,8 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               description: "Imagem processada e salva com sucesso",
               type: "success"
             })
+          } else {
+            console.warn('⚠️ [IMAGE_EDITOR] SSE update has COMPLETED status but no image URLs')
           }
         } else if (status === 'FAILED') {
           setError(data.errorMessage || 'Erro ao processar imagem')
@@ -104,6 +122,8 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             type: "error"
           })
         }
+      } else {
+        console.log('⏭️ [IMAGE_EDITOR] SSE event not for our edit, ignoring')
       }
     }
   })
@@ -228,10 +248,13 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       const data = await response.json()
       
       // Check if processing is async (webhook-enabled)
-      if (data.async && data.data?.status === 'processing') {
+      // Status can be 'processing', 'starting', or the response has async: true
+      if (data.async || (data.data && (data.data.status === 'processing' || data.data.status === 'starting'))) {
         console.log('📡 [IMAGE_EDITOR] Async processing started, waiting for webhook:', {
           predictionId: data.predictionId,
-          editHistoryId: data.data?.editHistoryId
+          editHistoryId: data.data?.editHistoryId,
+          status: data.data?.status,
+          async: data.async
         })
         
         addToast({
@@ -243,6 +266,9 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         // Store editHistoryId to monitor via SSE
         if (data.data?.editHistoryId) {
           setCurrentEditId(data.data.editHistoryId)
+          console.log('✅ [IMAGE_EDITOR] Monitoring editHistoryId via SSE:', data.data.editHistoryId)
+        } else {
+          console.warn('⚠️ [IMAGE_EDITOR] No editHistoryId in response, cannot monitor via SSE')
         }
         
         // Don't clear form yet - will be cleared when webhook completes
