@@ -130,11 +130,11 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               console.log('✅ [IMAGE_EDITOR] Setting modal state:', {
                 showResultModal: true,
                 result: modalImageUrl.substring(0, 50) + '...',
-                hasResult: !!modalImageUrl
+                hasResult: !!modalImageUrl,
+                currentLoadingState: loading
               })
               
               // CRITICAL: Set result URL first, then open modal synchronously
-              // Don't use requestAnimationFrame or setTimeout - set states immediately
               setResult(modalImageUrl)
               setShowResultModal(true)
               setCurrentEditId(null) // Clear monitoring
@@ -148,13 +148,15 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                   hasResult: !!modalImageUrl,
                   resultValue: modalImageUrl.substring(0, 50) + '...'
                 })
-              }, 200)
+              }, 300)
               
               addToast({
                 title: "Sucesso!",
                 description: "Imagem processada e salva com sucesso",
                 type: "success"
               })
+              
+              console.log('✅ [IMAGE_EDITOR] Toast de sucesso enviado')
             } else {
               console.warn('⚠️ [IMAGE_EDITOR] SSE update has COMPLETED status but no image URLs')
               setLoading(false) // Clear loading even if no URL
@@ -309,8 +311,15 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           editHistoryId: data.data?.editHistoryId,
           status: data.data?.status,
           async: data.async,
-          fullResponse: data
+          fullResponse: data,
+          currentLoadingState: loading
         })
+        
+        // CRITICAL: Ensure loading state is true
+        if (!loading) {
+          console.warn('⚠️ [IMAGE_EDITOR] Loading state was false, setting to true')
+          setLoading(true)
+        }
         
         addToast({
           title: "Processando...",
@@ -503,7 +512,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={!canProcess}
+                disabled={!canProcess || loading}
                 className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               >
                 {loading ? (
@@ -687,7 +696,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!canProcess}
+              disabled={!canProcess || loading}
               className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
             >
               {loading ? (
