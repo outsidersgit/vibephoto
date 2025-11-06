@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
@@ -104,6 +104,118 @@ export function GenerationInterface({
   // - Geração está processando (aguardando webhook)
   const isGenerating = generateImage.isPending || currentGeneration?.status === 'PROCESSING'
 
+  // Função para validar se uma URL de imagem está acessível
+  const validateImageUrl = useCallback(async (url: string, maxRetries = 3): Promise<boolean> => {
+    console.log(`🔍 [GENERATION] Validating image URL (attempt 1/${maxRetries}):`, url.substring(0, 100) + '...')
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const img = new Image()
+        const isValid = await new Promise<boolean>((resolve) => {
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              console.log(`✅ [GENERATION] Image URL validated successfully (attempt ${attempt})`)
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              console.warn(`⚠️ [GENERATION] Image URL validation failed (attempt ${attempt})`)
+              resolve(false)
+            }
+          }
+          
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              console.warn(`⏱️ [GENERATION] Image URL validation timeout (attempt ${attempt})`)
+              resolve(false)
+            }
+          }, 5000)
+          
+          img.src = url
+        })
+        
+        if (isValid) {
+          return true
+        }
+        
+        if (attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000
+          console.log(`⏳ [GENERATION] Retrying validation in ${delay}ms...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
+      } catch (error) {
+        console.error(`❌ [GENERATION] Error validating URL (attempt ${attempt}):`, error)
+        if (attempt === maxRetries) {
+          return false
+        }
+        const delay = Math.pow(2, attempt) * 1000
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+    
+    return false
+  }, [])
+
+  // Função para abrir modal com validação de URL
+  const openModalWithValidation = useCallback(async (
+    temporaryUrl: string | null,
+    permanentUrl: string | null
+  ) => {
+    console.log('🎯 [GENERATION] Opening modal with validation:', {
+      hasTemporaryUrl: !!temporaryUrl,
+      hasPermanentUrl: !!permanentUrl,
+      temporaryUrl: temporaryUrl?.substring(0, 50) + '...',
+      permanentUrl: permanentUrl?.substring(0, 50) + '...'
+    })
+    
+    let urlToUse: string | null = null
+    
+    // Tentar URL temporária primeiro
+    if (temporaryUrl) {
+      console.log('🔍 [GENERATION] Validating temporary URL...')
+      const isValid = await validateImageUrl(temporaryUrl)
+      if (isValid) {
+        urlToUse = temporaryUrl
+        console.log('✅ [GENERATION] Temporary URL validated and will be used')
+      } else {
+        console.warn('⚠️ [GENERATION] Temporary URL validation failed, will try permanent URL')
+      }
+    }
+    
+    // Fallback para URL permanente
+    if (!urlToUse && permanentUrl) {
+      console.log('🔍 [GENERATION] Validating permanent URL...')
+      const isValid = await validateImageUrl(permanentUrl)
+      if (isValid) {
+        urlToUse = permanentUrl
+        console.log('✅ [GENERATION] Permanent URL validated and will be used')
+      } else {
+        console.error('❌ [GENERATION] Both URLs failed validation')
+      }
+    }
+    
+    if (urlToUse) {
+      console.log('✅ [GENERATION] Opening modal with validated URL:', urlToUse.substring(0, 50) + '...')
+      setSuccessImageUrl(urlToUse)
+      setShowSuccessModal(true)
+    } else {
+      console.error('❌ [GENERATION] No valid URL available')
+      addToast({
+        type: 'warning',
+        title: 'Aviso',
+        description: 'Imagem processada mas ainda não disponível. Verifique a galeria em alguns instantes.',
+        duration: 6000
+      })
+    }
+  }, [validateImageUrl, addToast])
+
   // Real-time updates for generation status
   useRealtimeUpdates({
     onGenerationStatusChange: (generationId, status, data) => {
@@ -152,23 +264,30 @@ export function GenerationInterface({
             duration: 4000
           })
 
-          // Show success modal - use temporary URL for immediate display, permanent for gallery
-          const modalImageUrl = data.temporaryUrls && data.temporaryUrls.length > 0 
-            ? data.temporaryUrls[0] 
-            : (data.imageUrls && data.imageUrls.length > 0 ? data.imageUrls[0] : null)
+          // Extract URLs: temporary for quick display, permanent as fallback
+          const temporaryUrl = data.temporaryUrls && data.temporaryUrls.length > 0
+            ? data.temporaryUrls[0]
+            : null
+          const permanentUrl = data.imageUrls && data.imageUrls.length > 0
+            ? data.imageUrls[0]
+            : null
           
-          if (modalImageUrl) {
-            console.log('🎯 [GENERATION_SSE] Opening modal with URL:', {
-              hasTemporary: !!(data.temporaryUrls && data.temporaryUrls.length > 0),
-              hasPermanent: !!(data.imageUrls && data.imageUrls.length > 0),
-              modalUrl: modalImageUrl.substring(0, 100) + '...',
+          if (temporaryUrl || permanentUrl) {
+            console.log('🎯 [GENERATION_SSE] Opening modal with validation:', {
+              hasTemporary: !!temporaryUrl,
+              hasPermanent: !!permanentUrl,
+              temporaryUrl: temporaryUrl?.substring(0, 50) + '...',
+              permanentUrl: permanentUrl?.substring(0, 50) + '...',
               generationId,
               status
             })
-            setSuccessImageUrl(modalImageUrl)
-            setShowSuccessModal(true)
-            // Clear form after successful generation
-            clearFormAfterSuccess()
+            // Use validation function to open modal (async, fire and forget)
+            openModalWithValidation(temporaryUrl, permanentUrl).then(() => {
+              // Clear form after successful generation
+              clearFormAfterSuccess()
+            }).catch((error) => {
+              console.error('❌ [GENERATION] Error opening modal with validation:', error)
+            })
           } else {
             console.warn('⚠️ [GENERATION_SSE] No image URL available for modal:', {
               hasImageUrls: !!(data.imageUrls && data.imageUrls.length > 0),
@@ -280,21 +399,30 @@ export function GenerationInterface({
             duration: 4000
           })
 
-          // Use temporary URL for modal if available, otherwise use permanent URL
-          const modalImageUrl = pollingData.temporaryUrls && pollingData.temporaryUrls.length > 0
+          // Extract URLs: temporary for quick display, permanent as fallback
+          const temporaryUrl = pollingData.temporaryUrls && pollingData.temporaryUrls.length > 0
             ? pollingData.temporaryUrls[0]
-            : (pollingData.imageUrls && pollingData.imageUrls.length > 0 ? pollingData.imageUrls[0] : null)
+            : null
+          const permanentUrl = pollingData.imageUrls && pollingData.imageUrls.length > 0
+            ? pollingData.imageUrls[0]
+            : null
           
-          if (modalImageUrl) {
-            console.log('🎯 [GENERATION_POLLING] Opening modal with URL:', {
-              hasTemporary: !!(pollingData.temporaryUrls && pollingData.temporaryUrls.length > 0),
-              hasPermanent: !!(pollingData.imageUrls && pollingData.imageUrls.length > 0),
-              modalUrl: modalImageUrl.substring(0, 100) + '...'
+          if (temporaryUrl || permanentUrl) {
+            console.log('🎯 [GENERATION_POLLING] Opening modal with validation:', {
+              hasTemporary: !!temporaryUrl,
+              hasPermanent: !!permanentUrl,
+              temporaryUrl: temporaryUrl?.substring(0, 50) + '...',
+              permanentUrl: permanentUrl?.substring(0, 50) + '...',
+              generationId: currentGeneration.id,
+              status: pollingData.status
             })
-            setSuccessImageUrl(modalImageUrl)
-            setShowSuccessModal(true)
-            // Clear form after successful generation
-            clearFormAfterSuccess()
+            // Use validation function to open modal (async, fire and forget)
+            openModalWithValidation(temporaryUrl, permanentUrl).then(() => {
+              // Clear form after successful generation
+              clearFormAfterSuccess()
+            }).catch((error) => {
+              console.error('❌ [GENERATION] Error opening modal with validation:', error)
+            })
           } else {
             console.warn('⚠️ [GENERATION_POLLING] No image URL available for modal')
           }

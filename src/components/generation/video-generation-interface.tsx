@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -50,6 +50,131 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   const [successVideoUrl, setSuccessVideoUrl] = useState<string | null>(null)
   const [monitoringVideoId, setMonitoringVideoId] = useState<string | null>(null)
   
+  // Função para validar se uma URL de vídeo está acessível
+  const validateVideoUrl = useCallback(async (url: string, maxRetries = 3): Promise<boolean> => {
+    console.log(`🔍 [VIDEO_GENERATION] Validating video URL (attempt 1/${maxRetries}):`, url.substring(0, 100) + '...')
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Para vídeos, tentar fazer HEAD request primeiro
+        const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' })
+        
+        // Se no-cors não funciona, tentar carregar vídeo
+        const video = document.createElement('video')
+        video.preload = 'metadata'
+        
+        const isValid = await new Promise<boolean>((resolve) => {
+          let resolved = false
+          
+          video.onloadedmetadata = () => {
+            if (!resolved) {
+              resolved = true
+              console.log(`✅ [VIDEO_GENERATION] Video URL validated successfully (attempt ${attempt})`)
+              resolve(true)
+            }
+          }
+          
+          video.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              console.warn(`⚠️ [VIDEO_GENERATION] Video URL validation failed (attempt ${attempt})`)
+              resolve(false)
+            }
+          }
+          
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              console.warn(`⏱️ [VIDEO_GENERATION] Video URL validation timeout (attempt ${attempt})`)
+              resolve(false)
+            }
+          }, 5000)
+          
+          video.src = url
+        })
+        
+        if (isValid) {
+          return true
+        }
+        
+        if (attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000
+          console.log(`⏳ [VIDEO_GENERATION] Retrying validation in ${delay}ms...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
+      } catch (error) {
+        console.error(`❌ [VIDEO_GENERATION] Error validating URL (attempt ${attempt}):`, error)
+        if (attempt === maxRetries) {
+          return false
+        }
+        const delay = Math.pow(2, attempt) * 1000
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+    
+    return false
+  }, [])
+
+  // Função para abrir modal com validação de URL de vídeo
+  const openModalWithValidation = useCallback(async (
+    temporaryUrl: string | null,
+    permanentUrl: string | null
+  ) => {
+    console.log('🎯 [VIDEO_GENERATION] Opening modal with validation:', {
+      hasTemporaryUrl: !!temporaryUrl,
+      hasPermanentUrl: !!permanentUrl,
+      temporaryUrl: temporaryUrl?.substring(0, 50) + '...',
+      permanentUrl: permanentUrl?.substring(0, 50) + '...'
+    })
+    
+    let urlToUse: string | null = null
+    
+    // Tentar URL temporária primeiro
+    if (temporaryUrl) {
+      console.log('🔍 [VIDEO_GENERATION] Validating temporary URL...')
+      const isValid = await validateVideoUrl(temporaryUrl)
+      if (isValid) {
+        urlToUse = temporaryUrl
+        console.log('✅ [VIDEO_GENERATION] Temporary URL validated and will be used')
+      } else {
+        console.warn('⚠️ [VIDEO_GENERATION] Temporary URL validation failed, will try permanent URL')
+      }
+    }
+    
+    // Fallback para URL permanente
+    if (!urlToUse && permanentUrl) {
+      console.log('🔍 [VIDEO_GENERATION] Validating permanent URL...')
+      const isValid = await validateVideoUrl(permanentUrl)
+      if (isValid) {
+        urlToUse = permanentUrl
+        console.log('✅ [VIDEO_GENERATION] Permanent URL validated and will be used')
+      } else {
+        console.error('❌ [VIDEO_GENERATION] Both URLs failed validation')
+      }
+    }
+    
+    if (urlToUse) {
+      console.log('✅ [VIDEO_GENERATION] Opening modal with validated URL:', urlToUse.substring(0, 50) + '...')
+      setSuccessVideoUrl(urlToUse)
+      setShowSuccessModal(true)
+      setMonitoringVideoId(null)
+      
+      addToast({
+        type: 'success',
+        title: "🎉 Vídeo pronto!",
+        description: "Seu vídeo foi gerado com sucesso!",
+      })
+    } else {
+      console.error('❌ [VIDEO_GENERATION] No valid URL available')
+      setMonitoringVideoId(null)
+      addToast({
+        type: 'warning',
+        title: 'Aviso',
+        description: 'Vídeo processado mas ainda não disponível. Verifique a galeria em alguns instantes.',
+      })
+    }
+  }, [validateVideoUrl, addToast])
+  
   // Monitor video generation status and open modal when completed
   const monitorVideoGeneration = (videoId: string) => {
     setMonitoringVideoId(videoId)
@@ -68,25 +193,23 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         
         const data = await response.json()
         
-        // Use temporary URL for modal if available, otherwise use permanent URL
-        const modalVideoUrl = data.temporaryVideoUrl || data.videoUrl
+        // Extract URLs: temporary for quick display, permanent as fallback
+        const temporaryUrl = data.temporaryVideoUrl || null
+        const permanentUrl = data.videoUrl || null
         
-        if (data.status === 'COMPLETED' && modalVideoUrl) {
-          // Video completed - open modal
-          console.log('🎯 [VIDEO_GENERATION] Opening modal with URL:', {
-            hasTemporary: !!data.temporaryVideoUrl,
-            hasPermanent: !!data.videoUrl,
-            modalUrl: modalVideoUrl.substring(0, 100) + '...',
+        if (data.status === 'COMPLETED' && (temporaryUrl || permanentUrl)) {
+          // Video completed - open modal with validation
+          console.log('🎯 [VIDEO_GENERATION] Opening modal with validation:', {
+            hasTemporary: !!temporaryUrl,
+            hasPermanent: !!permanentUrl,
+            temporaryUrl: temporaryUrl?.substring(0, 50) + '...',
+            permanentUrl: permanentUrl?.substring(0, 50) + '...',
             videoId
           })
-          setSuccessVideoUrl(modalVideoUrl)
-          setShowSuccessModal(true)
-          setMonitoringVideoId(null)
-          
-          addToast({
-            type: 'success',
-            title: "🎉 Vídeo pronto!",
-            description: "Seu vídeo foi gerado com sucesso!",
+          // Use validation function to open modal (async, fire and forget)
+          openModalWithValidation(temporaryUrl, permanentUrl).catch((error) => {
+            console.error('❌ [VIDEO_GENERATION] Error opening modal with validation:', error)
+            setMonitoringVideoId(null)
           })
         } else if (data.status === 'FAILED' || data.status === 'CANCELLED') {
           // Video failed - stop monitoring

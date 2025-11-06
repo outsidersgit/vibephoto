@@ -75,6 +75,142 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   }
   
   
+  // Função para validar se uma URL de imagem está acessível
+  const validateImageUrl = useCallback(async (url: string, maxRetries = 3): Promise<boolean> => {
+    console.log(`🔍 [IMAGE_EDITOR] Validating image URL (attempt 1/${maxRetries}):`, url.substring(0, 100) + '...')
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Usar Image object para validar (funciona mesmo com CORS)
+        const img = new Image()
+        const isValid = await new Promise<boolean>((resolve) => {
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              console.log(`✅ [IMAGE_EDITOR] Image URL validated successfully (attempt ${attempt})`)
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              console.warn(`⚠️ [IMAGE_EDITOR] Image URL validation failed (attempt ${attempt})`)
+              resolve(false)
+            }
+          }
+          
+          // Timeout de 5 segundos
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              console.warn(`⏱️ [IMAGE_EDITOR] Image URL validation timeout (attempt ${attempt})`)
+              resolve(false)
+            }
+          }, 5000)
+          
+          img.src = url
+        })
+        
+        if (isValid) {
+          return true
+        }
+        
+        // Se não validou e ainda há tentativas, aguardar antes de tentar novamente
+        if (attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000 // Backoff exponencial: 2s, 4s
+          console.log(`⏳ [IMAGE_EDITOR] Retrying validation in ${delay}ms...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
+      } catch (error) {
+        console.error(`❌ [IMAGE_EDITOR] Error validating URL (attempt ${attempt}):`, error)
+        if (attempt === maxRetries) {
+          return false
+        }
+        const delay = Math.pow(2, attempt) * 1000
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+    
+    return false
+  }, [])
+
+  // Função para abrir modal com validação de URL
+  const openModalWithValidation = useCallback(async (
+    temporaryUrl: string | null,
+    permanentUrl: string | null
+  ) => {
+    console.log('🎯 [IMAGE_EDITOR] Opening modal with validation:', {
+      hasTemporaryUrl: !!temporaryUrl,
+      hasPermanentUrl: !!permanentUrl,
+      temporaryUrl: temporaryUrl?.substring(0, 50) + '...',
+      permanentUrl: permanentUrl?.substring(0, 50) + '...'
+    })
+    
+    let urlToUse: string | null = null
+    
+    // Tentar URL temporária primeiro
+    if (temporaryUrl) {
+      console.log('🔍 [IMAGE_EDITOR] Validating temporary URL...')
+      const isValid = await validateImageUrl(temporaryUrl)
+      if (isValid) {
+        urlToUse = temporaryUrl
+        console.log('✅ [IMAGE_EDITOR] Temporary URL validated and will be used')
+      } else {
+        console.warn('⚠️ [IMAGE_EDITOR] Temporary URL validation failed, will try permanent URL')
+      }
+    }
+    
+    // Fallback para URL permanente
+    if (!urlToUse && permanentUrl) {
+      console.log('🔍 [IMAGE_EDITOR] Validating permanent URL...')
+      const isValid = await validateImageUrl(permanentUrl)
+      if (isValid) {
+        urlToUse = permanentUrl
+        console.log('✅ [IMAGE_EDITOR] Permanent URL validated and will be used')
+      } else {
+        console.error('❌ [IMAGE_EDITOR] Both URLs failed validation')
+      }
+    }
+    
+    if (urlToUse) {
+      console.log('✅ [IMAGE_EDITOR] Opening modal with validated URL:', urlToUse.substring(0, 50) + '...')
+      setResult(urlToUse)
+      setShowResultModal(true)
+      setCurrentEditId(null)
+      currentEditIdRef.current = null
+      
+      // Clear loading state after a small delay to ensure modal is visible
+      setTimeout(() => {
+        setLoading(false)
+        loadingRef.current = false
+        console.log('✅ [IMAGE_EDITOR] Modal opened and loading cleared')
+      }, 300)
+      
+      addToast({
+        title: "Sucesso!",
+        description: "Imagem processada e salva com sucesso",
+        type: "success"
+      })
+      
+      console.log('✅ [IMAGE_EDITOR] Toast de sucesso enviado')
+    } else {
+      console.error('❌ [IMAGE_EDITOR] No valid URL available')
+      setCurrentEditId(null)
+      currentEditIdRef.current = null
+      setLoading(false)
+      loadingRef.current = false
+      
+      addToast({
+        title: "Aviso",
+        description: "Imagem processada mas ainda não disponível. Verifique a galeria em alguns instantes.",
+        type: "warning"
+      })
+    }
+  }, [validateImageUrl, addToast])
+
   // Monitor async processing via SSE - use useCallback to ensure stable reference
   const handleGenerationStatusChange = useCallback((generationId: string, status: string, data: any) => {
     console.log('🔔 [IMAGE_EDITOR] SSE event received:', {
@@ -131,48 +267,31 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           const isCompleted = status === 'COMPLETED' || status === 'COMPLETE' || status === 'succeeded'
           
           if (isCompleted && (data.imageUrls || data.temporaryUrls)) {
-            // Use temporary URL for modal, permanent for gallery
-            const modalImageUrl = data.temporaryUrls && data.temporaryUrls.length > 0
+            // Extract URLs: temporary for quick display, permanent as fallback
+            const temporaryUrl = data.temporaryUrls && data.temporaryUrls.length > 0
               ? data.temporaryUrls[0]
-              : (data.imageUrls && data.imageUrls.length > 0 ? data.imageUrls[0] : null)
+              : null
+            const permanentUrl = data.imageUrls && data.imageUrls.length > 0
+              ? data.imageUrls[0]
+              : null
             
-            if (modalImageUrl) {
-              console.log('✅ [IMAGE_EDITOR] Opening modal from SSE update:', modalImageUrl.substring(0, 100) + '...')
-              console.log('✅ [IMAGE_EDITOR] Setting modal state:', {
-                showResultModal: true,
-                result: modalImageUrl.substring(0, 50) + '...',
-                hasResult: !!modalImageUrl,
-                currentLoadingState: loadingRef.current
-              })
-              
-              // CRITICAL: Set result URL first, then open modal synchronously
-              setResult(modalImageUrl)
-              setShowResultModal(true)
-              setCurrentEditId(null) // Clear monitoring
-              currentEditIdRef.current = null
-              
-              // Clear loading state after a small delay to ensure modal is visible
-              setTimeout(() => {
+            console.log('✅ [IMAGE_EDITOR] SSE update received with URLs:', {
+              hasTemporaryUrl: !!temporaryUrl,
+              hasPermanentUrl: !!permanentUrl,
+              temporaryUrl: temporaryUrl?.substring(0, 50) + '...',
+              permanentUrl: permanentUrl?.substring(0, 50) + '...'
+            })
+            
+            if (temporaryUrl || permanentUrl) {
+              // Use validation function to open modal (async, fire and forget)
+              openModalWithValidation(temporaryUrl, permanentUrl).catch((error) => {
+                console.error('❌ [IMAGE_EDITOR] Error opening modal with validation:', error)
                 setLoading(false)
                 loadingRef.current = false
-                console.log('✅ [IMAGE_EDITOR] Modal opened and loading cleared:', {
-                  showResultModal: true,
-                  loading: false,
-                  hasResult: !!modalImageUrl,
-                  resultValue: modalImageUrl.substring(0, 50) + '...'
-                })
-              }, 300)
-              
-              addToast({
-                title: "Sucesso!",
-                description: "Imagem processada e salva com sucesso",
-                type: "success"
               })
-              
-              console.log('✅ [IMAGE_EDITOR] Toast de sucesso enviado')
             } else {
               console.warn('⚠️ [IMAGE_EDITOR] SSE update has COMPLETED status but no image URLs')
-              setLoading(false) // Clear loading even if no URL
+              setLoading(false)
               loadingRef.current = false
             }
           } else if (status === 'FAILED' || status === 'failed') {
@@ -197,7 +316,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             dataGenerationId: data.generationId
           })
         }
-  }, [addToast])
+  }, [addToast, openModalWithValidation])
   
   useRealtimeUpdates({
     onGenerationStatusChange: handleGenerationStatusChange
