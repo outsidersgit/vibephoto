@@ -163,50 +163,27 @@ export function GenerationInterface({
     return false
   }, [])
 
-  // Função para abrir modal com validação de URL
+  // Função para abrir modal imediatamente (modal tem retry logic interno)
   const openModalWithValidation = useCallback(async (
     temporaryUrl: string | null,
     permanentUrl: string | null
   ) => {
-    console.log('🎯 [GENERATION] Opening modal with validation:', {
+    console.log('🎯 [GENERATION] Opening modal immediately:', {
       hasTemporaryUrl: !!temporaryUrl,
       hasPermanentUrl: !!permanentUrl,
       temporaryUrl: temporaryUrl?.substring(0, 50) + '...',
       permanentUrl: permanentUrl?.substring(0, 50) + '...'
     })
-    
-    let urlToUse: string | null = null
-    
-    // Tentar URL temporária primeiro
-    if (temporaryUrl) {
-      console.log('🔍 [GENERATION] Validating temporary URL...')
-      const isValid = await validateImageUrl(temporaryUrl)
-      if (isValid) {
-        urlToUse = temporaryUrl
-        console.log('✅ [GENERATION] Temporary URL validated and will be used')
-      } else {
-        console.warn('⚠️ [GENERATION] Temporary URL validation failed, will try permanent URL')
-      }
-    }
-    
-    // Fallback para URL permanente
-    if (!urlToUse && permanentUrl) {
-      console.log('🔍 [GENERATION] Validating permanent URL...')
-      const isValid = await validateImageUrl(permanentUrl)
-      if (isValid) {
-        urlToUse = permanentUrl
-        console.log('✅ [GENERATION] Permanent URL validated and will be used')
-      } else {
-        console.error('❌ [GENERATION] Both URLs failed validation')
-      }
-    }
-    
+
+    // Preferir URL temporária (mais rápida), fallback para permanente
+    const urlToUse = temporaryUrl || permanentUrl
+
     if (urlToUse) {
-      console.log('✅ [GENERATION] Opening modal with validated URL:', urlToUse.substring(0, 50) + '...')
+      console.log('✅ [GENERATION] Opening modal with URL:', urlToUse.substring(0, 50) + '...')
       setSuccessImageUrl(urlToUse)
       setShowSuccessModal(true)
     } else {
-      console.error('❌ [GENERATION] No valid URL available')
+      console.error('❌ [GENERATION] No URL available')
       addToast({
         type: 'warning',
         title: 'Aviso',
@@ -214,7 +191,7 @@ export function GenerationInterface({
         duration: 6000
       })
     }
-  }, [validateImageUrl, addToast])
+  }, [addToast])
 
   // Real-time updates for generation status
   useRealtimeUpdates({

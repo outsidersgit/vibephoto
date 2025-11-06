@@ -137,93 +137,56 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     return false
   }, [])
 
-  // Função para abrir modal com validação de URL
+  // Função para abrir modal imediatamente (modal tem retry logic interno)
   const openModalWithValidation = useCallback(async (
     temporaryUrl: string | null,
     permanentUrl: string | null
   ) => {
-    console.log('🎯 [IMAGE_EDITOR] Opening modal with validation:', {
+    console.log('🎯 [IMAGE_EDITOR] Opening modal immediately:', {
       hasTemporaryUrl: !!temporaryUrl,
       hasPermanentUrl: !!permanentUrl,
       temporaryUrl: temporaryUrl?.substring(0, 50) + '...',
       permanentUrl: permanentUrl?.substring(0, 50) + '...'
     })
-    
-    let urlToUse: string | null = null
-    
-    // Tentar URL temporária primeiro
-    if (temporaryUrl) {
-      console.log('🔍 [IMAGE_EDITOR] Validating temporary URL...')
-      const isValid = await validateImageUrl(temporaryUrl)
-      if (isValid) {
-        urlToUse = temporaryUrl
-        console.log('✅ [IMAGE_EDITOR] Temporary URL validated and will be used')
-        console.log('✅ [IMAGE_EDITOR] Temporary URL (FULL):', temporaryUrl)
-        console.log('✅ [IMAGE_EDITOR] Temporary URL length:', temporaryUrl.length)
-      } else {
-        console.warn('⚠️ [IMAGE_EDITOR] Temporary URL validation failed, will try permanent URL')
-      }
-    }
-    
-    // Fallback para URL permanente
-    if (!urlToUse && permanentUrl) {
-      console.log('🔍 [IMAGE_EDITOR] Validating permanent URL...')
-      const isValid = await validateImageUrl(permanentUrl)
-      if (isValid) {
-        urlToUse = permanentUrl
-        console.log('✅ [IMAGE_EDITOR] Permanent URL validated and will be used')
-      } else {
-        console.error('❌ [IMAGE_EDITOR] Both URLs failed validation')
-      }
-    }
-    
+
+    // Preferir URL temporária (mais rápida), fallback para permanente
+    const urlToUse = temporaryUrl || permanentUrl
+
     if (urlToUse) {
-      // CRITICAL: Log FULL URL to verify it's not truncated
-      console.log('✅ [IMAGE_EDITOR] Opening modal with validated URL (FULL):', urlToUse)
-      console.log('✅ [IMAGE_EDITOR] URL length:', urlToUse.length)
-      console.log('✅ [IMAGE_EDITOR] URL preview:', urlToUse.substring(0, 100) + '...')
-      
-      // CRITICAL: Verify URL is complete before setting
-      if (urlToUse.length < 50) {
-        console.error('❌ [IMAGE_EDITOR] WARNING: URL seems truncated! Length:', urlToUse.length)
-      }
-      
+      console.log('✅ [IMAGE_EDITOR] Opening modal with URL:', urlToUse.substring(0, 50) + '...')
+
       setResult(urlToUse)
-      console.log('✅ [IMAGE_EDITOR] Result state set to (will be):', urlToUse.substring(0, 100) + '...')
-      console.log('✅ [IMAGE_EDITOR] Result state set to (FULL):', urlToUse)
       setShowResultModal(true)
-      console.log('✅ [IMAGE_EDITOR] showResultModal set to true')
       setCurrentEditId(null)
       currentEditIdRef.current = null
-      
-      // Clear loading state after a small delay to ensure modal is visible
+
+      // Clear loading state and form after modal opens
       setTimeout(() => {
         setLoading(false)
         loadingRef.current = false
-        console.log('✅ [IMAGE_EDITOR] Modal opened and loading cleared')
+        clearForm() // Limpar campos após modal abrir
+        console.log('✅ [IMAGE_EDITOR] Modal opened, loading cleared, and form cleared')
       }, 300)
-      
+
       addToast({
         title: "Sucesso!",
         description: "Imagem processada e salva com sucesso",
         type: "success"
       })
-      
-      console.log('✅ [IMAGE_EDITOR] Toast de sucesso enviado')
     } else {
       console.error('❌ [IMAGE_EDITOR] No valid URL available')
       setCurrentEditId(null)
       currentEditIdRef.current = null
       setLoading(false)
       loadingRef.current = false
-      
+
       addToast({
         title: "Aviso",
         description: "Imagem processada mas ainda não disponível. Verifique a galeria em alguns instantes.",
         type: "warning"
       })
     }
-  }, [validateImageUrl, addToast])
+  }, [addToast])
 
   // Monitor async processing via SSE - use useCallback to ensure stable reference
   const handleGenerationStatusChange = useCallback((generationId: string, status: string, data: any) => {

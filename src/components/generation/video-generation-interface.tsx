@@ -115,50 +115,27 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
     return false
   }, [])
 
-  // Função para abrir modal com validação de URL de vídeo
+  // Função para abrir modal imediatamente (modal tem retry logic interno)
   const openModalWithValidation = useCallback(async (
     temporaryUrl: string | null,
     permanentUrl: string | null
   ) => {
-    console.log('🎯 [VIDEO_GENERATION] Opening modal with validation:', {
+    console.log('🎯 [VIDEO_GENERATION] Opening modal immediately:', {
       hasTemporaryUrl: !!temporaryUrl,
       hasPermanentUrl: !!permanentUrl,
       temporaryUrl: temporaryUrl?.substring(0, 50) + '...',
       permanentUrl: permanentUrl?.substring(0, 50) + '...'
     })
-    
-    let urlToUse: string | null = null
-    
-    // Tentar URL temporária primeiro
-    if (temporaryUrl) {
-      console.log('🔍 [VIDEO_GENERATION] Validating temporary URL...')
-      const isValid = await validateVideoUrl(temporaryUrl)
-      if (isValid) {
-        urlToUse = temporaryUrl
-        console.log('✅ [VIDEO_GENERATION] Temporary URL validated and will be used')
-      } else {
-        console.warn('⚠️ [VIDEO_GENERATION] Temporary URL validation failed, will try permanent URL')
-      }
-    }
-    
-    // Fallback para URL permanente
-    if (!urlToUse && permanentUrl) {
-      console.log('🔍 [VIDEO_GENERATION] Validating permanent URL...')
-      const isValid = await validateVideoUrl(permanentUrl)
-      if (isValid) {
-        urlToUse = permanentUrl
-        console.log('✅ [VIDEO_GENERATION] Permanent URL validated and will be used')
-      } else {
-        console.error('❌ [VIDEO_GENERATION] Both URLs failed validation')
-      }
-    }
-    
+
+    // Preferir URL temporária (mais rápida), fallback para permanente
+    const urlToUse = temporaryUrl || permanentUrl
+
     if (urlToUse) {
-      console.log('✅ [VIDEO_GENERATION] Opening modal with validated URL:', urlToUse.substring(0, 50) + '...')
+      console.log('✅ [VIDEO_GENERATION] Opening modal with URL:', urlToUse.substring(0, 50) + '...')
       setSuccessVideoUrl(urlToUse)
       setShowSuccessModal(true)
       setMonitoringVideoId(null)
-      
+
       addToast({
         type: 'success',
         title: "🎉 Vídeo pronto!",
@@ -173,7 +150,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         description: 'Vídeo processado mas ainda não disponível. Verifique a galeria em alguns instantes.',
       })
     }
-  }, [validateVideoUrl, addToast])
+  }, [addToast])
   
   // Monitor video generation status and open modal when completed
   const monitorVideoGeneration = (videoId: string) => {
