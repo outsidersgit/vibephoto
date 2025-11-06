@@ -180,10 +180,9 @@ export class NanoBananaProvider {
    * Edit image with text prompt
    */
   async editWithPrompt(imageUrl: string, prompt: string, outputFormat: 'jpg' | 'png' = 'jpg', aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string): Promise<NanoBananaEditResponse> {
-    const enhancedPrompt = `Edit this image: ${prompt}. Make high-quality, precise changes while maintaining the overall composition and style.`
-    
+    // Use prompt directly without adding prefix - user's prompt should be used as-is
     return this.editImage({
-      prompt: enhancedPrompt,
+      prompt: prompt,
       imageInput: [imageUrl],
       outputFormat,
       aspectRatio,

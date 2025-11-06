@@ -194,6 +194,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     console.log('🔔 [IMAGE_EDITOR] SSE event received:', {
       generationId,
       status,
+      statusType: typeof status,
       currentEditId: currentEditIdRef.current,
       dataEditHistoryId: data.editHistoryId,
       dataGenerationId: data.generationId,
@@ -201,7 +202,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       hasTemporaryUrls: !!(data.temporaryUrls && data.temporaryUrls.length > 0),
       currentLoadingState: loadingRef.current,
       allDataKeys: Object.keys(data || {}),
-      fullData: data
+      fullData: JSON.stringify(data, null, 2)
     })
     
     // Check if this is our edit (by editHistoryId or generationId matching currentEditId)
@@ -243,25 +244,31 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             temporaryUrls: data.temporaryUrls
           })
           
-          // Accept multiple status formats: 'COMPLETED', 'COMPLETE', 'succeeded', 'completed'
-          // Normalize status to uppercase for comparison
+          // Accept multiple status formats from different sources:
+          // - Replicate webhook: 'succeeded' (lowercase)
+          // - Backend/database: 'COMPLETED', 'COMPLETE' (uppercase)
           const normalizedStatus = (status || '').toUpperCase()
-          const isCompleted = normalizedStatus === 'COMPLETED' || 
-                             normalizedStatus === 'COMPLETE' || 
+          const isCompleted = normalizedStatus === 'COMPLETED' ||
+                             normalizedStatus === 'COMPLETE' ||
                              normalizedStatus === 'SUCCEEDED' ||
-                             status === 'succeeded' ||
-                             status === 'completed'
-          
-          console.log('🔍 [IMAGE_EDITOR] Checking completion status:', {
+                             status === 'succeeded' || // Replicate format
+                             status === 'completed' ||
+                             status === 'COMPLETED'
+
+          console.log('🔍 [IMAGE_EDITOR] ===== CHECKING COMPLETION STATUS =====')
+          console.log('🔍 [IMAGE_EDITOR] Status check details:', {
             originalStatus: status,
+            statusType: typeof status,
             normalizedStatus,
             isCompleted,
             hasImageUrls: !!(data.imageUrls && data.imageUrls.length > 0),
             hasTemporaryUrls: !!(data.temporaryUrls && data.temporaryUrls.length > 0),
             imageUrlsCount: data.imageUrls?.length || 0,
-            temporaryUrlsCount: data.temporaryUrls?.length || 0
+            temporaryUrlsCount: data.temporaryUrls?.length || 0,
+            willOpenModal: isCompleted && (data.imageUrls || data.temporaryUrls)
           })
-          
+          console.log('🔍 [IMAGE_EDITOR] ===================================')
+
           if (isCompleted && (data.imageUrls || data.temporaryUrls)) {
             // Extract URLs: temporary for quick display, permanent as fallback
             const temporaryUrl = data.temporaryUrls && data.temporaryUrls.length > 0
