@@ -133,24 +133,22 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 hasResult: !!modalImageUrl
               })
               
-              // Set result URL first, then open modal
+              // CRITICAL: Set result URL first, then open modal synchronously
+              // Don't use requestAnimationFrame or setTimeout - set states immediately
               setResult(modalImageUrl)
+              setShowResultModal(true)
+              setCurrentEditId(null) // Clear monitoring
               
-              // Use requestAnimationFrame to ensure DOM updates are batched correctly
-              requestAnimationFrame(() => {
-                setShowResultModal(true)
-                setCurrentEditId(null) // Clear monitoring
-                
-                // Clear loading state after a small delay to ensure modal is visible
-                setTimeout(() => {
-                  setLoading(false)
-                  console.log('✅ [IMAGE_EDITOR] Modal opened and loading cleared:', {
-                    showResultModal: true,
-                    loading: false,
-                    hasResult: !!modalImageUrl
-                  })
-                }, 100)
-              })
+              // Clear loading state after a small delay to ensure modal is visible
+              setTimeout(() => {
+                setLoading(false)
+                console.log('✅ [IMAGE_EDITOR] Modal opened and loading cleared:', {
+                  showResultModal: true,
+                  loading: false,
+                  hasResult: !!modalImageUrl,
+                  resultValue: modalImageUrl.substring(0, 50) + '...'
+                })
+              }, 200)
               
               addToast({
                 title: "Sucesso!",
