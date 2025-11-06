@@ -849,21 +849,26 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
                 }
               })
               
-              // Also create/update generation record for gallery
-              const { createGeneration } = await import('@/lib/db/generations')
-              await createGeneration({
-                userId: editHistory.userId,
-                modelId: null,
-                prompt: editHistory.prompt,
-                imageUrls: [permanentUrl],
-                thumbnailUrls: [thumbnailUrl],
-                status: 'COMPLETED',
-                jobId: payload.id,
-                metadata: {
-                  source: 'editor',
-                  editHistoryId: editHistory.id,
-                  operation: editHistory.operation,
-                  webhook: true
+              // Also create generation record for gallery (créditos já foram deduzidos na criação do edit_history)
+              // Não usar createGeneration() pois ela deduz créditos novamente
+              await prisma.generation.create({
+                data: {
+                  userId: editHistory.userId,
+                  modelId: null,
+                  prompt: editHistory.prompt,
+                  imageUrls: [permanentUrl],
+                  thumbnailUrls: [thumbnailUrl],
+                  status: 'COMPLETED',
+                  jobId: payload.id,
+                  metadata: {
+                    source: 'editor',
+                    editHistoryId: editHistory.id,
+                    operation: editHistory.operation,
+                    webhook: true
+                  },
+                  estimatedCost: 10, // Custo padrão para edições
+                  aiProvider: 'hybrid',
+                  completedAt: new Date()
                 }
               })
               
