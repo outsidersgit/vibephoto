@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { GenerationResultModal } from '@/components/ui/generation-result-modal'
 import {
   Edit3,
   Plus,
@@ -44,17 +43,9 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
-  const [showResultModal, setShowResultModal] = useState(false)
   const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3' | '3:4' | '9:16' | '16:9'>('1:1')
   const router = useRouter()
   
-  // Auto-open modal when result is available
-  useEffect(() => {
-    if (result && !showResultModal) {
-      console.log('🎯 [IMAGE_EDITOR] Auto-opening modal with result:', result.substring(0, 100))
-      setShowResultModal(true)
-    }
-  }, [result, showResultModal])
   
   // Detect mobile on mount and resize
   useEffect(() => {
@@ -186,9 +177,9 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         throw new Error('URL da imagem não foi retornada pela API')
       }
       
-      // Set result - useEffect will auto-open modal
+      // Set result - will be displayed directly on page
       setResult(resultUrl)
-      console.log('✅ [IMAGE_EDITOR] Result URL set, modal will open automatically')
+      console.log('✅ [IMAGE_EDITOR] Result URL set, image will be displayed on page')
 
       addToast({
         title: "Sucesso!",
@@ -374,16 +365,45 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 </p>
               </div>
             )}
-          </div>
 
-          {/* Result Modal */}
-          <GenerationResultModal
-            open={showResultModal}
-            onOpenChange={setShowResultModal}
-            imageUrl={result}
-            title="Imagem Processada"
-            type="image"
-          />
+            {/* Result Display - Show image directly on page */}
+            {result && (
+              <div className="mt-4 space-y-3">
+                <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                    Imagem Processada
+                  </h3>
+                  <div className="flex items-center justify-center bg-white rounded-lg p-4 border border-gray-200">
+                    <img
+                      src={result}
+                      alt="Resultado processado"
+                      className="max-w-full max-h-[500px] object-contain rounded-lg shadow-lg"
+                    />
+                  </div>
+                  <div className="flex gap-3 mt-4">
+                    <Button
+                      asChild
+                      className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 text-white font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                    >
+                      <a href={result} download={`imagem-editada-${Date.now()}.jpg`}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Baixar
+                      </a>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        router.push('/gallery?tab=generated')
+                      }}
+                      className="flex-1 border-2 border-gray-200 hover:border-[#667EEA] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                    >
+                      Ver na galeria
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     )

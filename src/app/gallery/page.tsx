@@ -2,7 +2,6 @@ import { requireAuth } from '@/lib/auth'
 import { getGenerationsByUserId, searchGenerations } from '@/lib/db/generations'
 import { getModelsByUserId } from '@/lib/db/models'
 import { getVideoGenerationsByUserId, getVideoGenerationStats } from '@/lib/db/videos'
-import { getEditHistoryByUserId, searchEditHistory } from '@/lib/db/edit-history'
 import { AutoSyncGalleryInterface } from '@/components/gallery/auto-sync-gallery-interface'
 import { prisma } from '@/lib/db'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
@@ -38,8 +37,8 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const videoQuality = params.quality
 
   // Otimização: Buscar modelos e gerações em paralelo para reduzir latência (Fase 2 - Performance)
-  let models = []
-  let generationsData = { generations: [], totalCount: 0 }
+  let models: any[] = []
+  let generationsData: { generations: any[]; totalCount: number } = { generations: [], totalCount: 0 }
   
   try {
     // Executar todas as queries em paralelo com Promise.all
@@ -59,13 +58,13 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
         })
       }
 
-      // Query paralela: models + generations + edit_history + counts
-      // Fetch all data first, then combine and paginate
-      const [modelsResult, allGenerations, allEditHistory, generationCount, editHistoryCount] = await Promise.all([
+      // Query paralela: models + generations (only generations, no edit_history)
+      const [modelsResult, generationsResult, generationCount] = await Promise.all([
         getModelsByUserId(userId),
         prisma.generation.findMany({
           where,
-          // Don't paginate here - fetch all to combine with edit_history
+          skip,
+          take: limit,
           orderBy: { createdAt: 'desc' },
           include: { 
             model: {
@@ -80,117 +79,23 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
             }
           }
         }),
-        // Fetch all edit history entries (no pagination yet)
-        searchQuery 
-          ? searchEditHistory(userId, searchQuery, 1, 10000) // Get all for search
-          : getEditHistoryByUserId(userId, 1, 10000), // Get all for regular view
-        prisma.generation.count({ where }),
-        prisma.editHistory.count({ 
-          where: searchQuery ? {
-            userId,
-            prompt: { contains: searchQuery, mode: 'insensitive' as any }
-          } : { userId }
-        })
+        prisma.generation.count({ where })
       ])
 
-      // Transform edit_history entries to match generations format
-      const transformedEditHistory = allEditHistory.editHistory.map(edit => ({
-        id: edit.id,
-        userId: edit.userId,
-        modelId: null,
-        model: {
-          id: 'editor',
-          name: `Editor IA - ${edit.operation}`,
-          class: 'EDITOR'
-        },
-        prompt: `[EDITOR] ${edit.prompt}`,
-        status: 'COMPLETED' as any,
-        imageUrls: [edit.editedImageUrl],
-        thumbnailUrls: [edit.thumbnailUrl || edit.editedImageUrl],
-        createdAt: edit.createdAt,
-        updatedAt: edit.updatedAt,
-        completedAt: edit.createdAt,
-        metadata: {
-          ...edit.metadata,
-          source: 'edit_history',
-          operation: edit.operation,
-          originalImageUrl: edit.originalImageUrl
-        },
-        // Add fields for compatibility
-        aspectRatio: '1:1',
-        resolution: '1024x1024',
-        estimatedCost: 15,
-        aiProvider: 'nano-banana',
-        packageId: null,
-        userPackage: null
-      }))
-
-      // Combine generations and transformed edit history, then sort by date
-      const allPhotos = [...allGenerations, ...transformedEditHistory].sort((a, b) => {
-        const dateA = new Date(a.createdAt).getTime()
-        const dateB = new Date(b.createdAt).getTime()
-        return dateB - dateA // Newest first
-      })
-
-      // Apply pagination to combined results
-      const paginatedPhotos = allPhotos.slice(skip, skip + limit)
-      const totalCount = generationCount + editHistoryCount
-
       models = modelsResult
-      generationsData = { generations: paginatedPhotos, totalCount }
+      generationsData = { generations: generationsResult, totalCount: generationCount }
     } else if (searchQuery && activeTab === 'generated') {
-      // Query paralela: models + search (both generations and edit_history)
-      const [modelsResult, generationSearchResult, editHistorySearchResult] = await Promise.all([
+      // Query paralela: models + search (only generations, no edit_history)
+      const [modelsResult, generationSearchResult] = await Promise.all([
         getModelsByUserId(userId),
-        searchGenerations(userId, searchQuery, page, limit),
-        searchEditHistory(userId, searchQuery, page, limit)
+        searchGenerations(userId, searchQuery, page, limit)
       ])
       
-      // Transform edit_history search results
-      const transformedEditHistory = editHistorySearchResult.editHistory.map(edit => ({
-        id: edit.id,
-        userId: edit.userId,
-        modelId: null,
-        model: {
-          id: 'editor',
-          name: `Editor IA - ${edit.operation}`,
-          class: 'EDITOR'
-        },
-        prompt: `[EDITOR] ${edit.prompt}`,
-        status: 'COMPLETED' as any,
-        imageUrls: [edit.editedImageUrl],
-        thumbnailUrls: [edit.thumbnailUrl || edit.editedImageUrl],
-        createdAt: edit.createdAt,
-        updatedAt: edit.updatedAt,
-        completedAt: edit.createdAt,
-        metadata: {
-          ...edit.metadata,
-          source: 'edit_history',
-          operation: edit.operation,
-          originalImageUrl: edit.originalImageUrl
-        },
-        aspectRatio: '1:1',
-        resolution: '1024x1024',
-        estimatedCost: 15,
-        aiProvider: 'nano-banana',
-        packageId: null,
-        userPackage: null
-      }))
-      
-      // Combine and sort search results
-      const allSearchResults = [...generationSearchResult.generations, ...transformedEditHistory].sort((a, b) => {
-        const dateA = new Date(a.createdAt).getTime()
-        const dateB = new Date(b.createdAt).getTime()
-        return dateB - dateA
-      })
-      
-      // Apply pagination to combined results
-      const searchSkip = (page - 1) * limit
-      const paginatedResults = allSearchResults.slice(searchSkip, searchSkip + limit)
-      const totalSearchCount = generationSearchResult.totalCount + editHistorySearchResult.totalCount
-      
       models = modelsResult
-      generationsData = { generations: paginatedResults, totalCount: totalSearchCount }
+      generationsData = { 
+        generations: generationSearchResult.generations, 
+        totalCount: generationSearchResult.pagination.total 
+      }
     }
   } catch (error) {
     console.error('Database error:', error)
@@ -199,8 +104,8 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   }
 
   // Get video data if on videos tab
-  let videosData = { videos: [], totalCount: 0 }
-  let videoStats = null
+  let videosData: { videos: any[]; totalCount: number } = { videos: [], totalCount: 0 }
+  let videoStats: { totalVideos: number; completedVideos: number; processingVideos: number; failedVideos: number; totalCreditsUsed: number } | undefined = undefined
   
   if (activeTab === 'videos') {
     try {
@@ -210,17 +115,19 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
         videosData = await searchVideoGenerations(userId, searchQuery, page, limit)
       } else {
         // Get videos with status and quality filters
-        videosData = await getVideoGenerationsByUserId(
+        const videoResult = await getVideoGenerationsByUserId(
           userId, 
           page, 
           limit, 
           videoStatus as any,
           videoQuality as any
         )
+        videosData = { videos: videoResult.videos, totalCount: videoResult.totalCount }
       }
       
       // Get video stats
-      videoStats = await getVideoGenerationStats(userId)
+      const statsResult = await getVideoGenerationStats(userId)
+      videoStats = statsResult || undefined
     } catch (error) {
       console.error('Database error fetching videos:', error)
       videosData = { videos: [], totalCount: 0 }
@@ -240,19 +147,16 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
 
   try {
     // Uma única query agregada com groupBy por status
-    // Include all photos in "Fotos Geradas" tab (generations + edit_history)
-    const [statsAgg, editHistoryCount] = await Promise.all([
-      prisma.generation.groupBy({
-        by: ['status'],
-        where: { userId },
-        _count: { status: true }
-      }),
-      prisma.editHistory.count({ where: { userId } })
-    ])
+    // Only count generations (edit_history is just for records)
+    const statsAgg = await prisma.generation.groupBy({
+      by: ['status'],
+      where: { userId },
+      _count: { status: true }
+    })
     
     const generationCompleted = statsAgg.find(s => s.status === 'COMPLETED')?._count.status || 0
-    totalCount = statsAgg.reduce((sum, stat) => sum + stat._count.status, 0) + editHistoryCount
-    completedCount = generationCompleted + editHistoryCount
+    totalCount = statsAgg.reduce((sum, stat) => sum + stat._count.status, 0)
+    completedCount = generationCompleted
   } catch (error) {
     console.error('Database error in gallery stats:', error)
     // Use fallback stats from generationsData
