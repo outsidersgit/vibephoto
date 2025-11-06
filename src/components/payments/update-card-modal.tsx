@@ -133,201 +133,211 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
           </div>
         </div>
 
-        {/* Conteúdo sem scroll */}
-        <div className="flex-1 px-3 sm:px-4 overflow-y-auto">
-          <form onSubmit={handleSubmit} className="py-2 sm:py-2.5 space-y-2 sm:space-y-2.5">
+        {/* Conteúdo sem scroll - Desktop: duas colunas, Mobile: uma coluna */}
+        <div className="flex-1 px-3 sm:px-4 md:px-6 overflow-y-auto md:overflow-y-visible">
+          <form onSubmit={handleSubmit} className="py-2 sm:py-2.5 md:py-3 space-y-2 sm:space-y-3">
+            {/* Desktop: Grid de 2 colunas, Mobile: uma coluna */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+              {/* Coluna Esquerda - Dados do Cartão */}
+              <div className="space-y-1 sm:space-y-1.5">
+                <h3 className="text-xs sm:text-sm font-semibold text-white border-b border-slate-600/30 pb-0.5 sm:pb-1">Dados do Novo Cartão</h3>
 
-          {/* Dados do Cartão */}
-          <div className="space-y-1 sm:space-y-1.5">
-            <h3 className="text-xs sm:text-sm font-semibold text-white border-b border-slate-600/30 pb-0.5 sm:pb-1">Dados do Novo Cartão</h3>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <div>
+                    <Label className="text-white/80 text-[10px] sm:text-xs">Nome no Cartão</Label>
+                    <Input
+                      type="text"
+                      value={cardData.holderName}
+                      onChange={(e) => setCardData({ ...cardData, holderName: e.target.value.toUpperCase() })}
+                      required
+                      className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
+                      placeholder="NOME COMPLETO"
+                    />
+                  </div>
 
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-              <div className="col-span-2">
-                <Label className="text-white/80 text-[10px] sm:text-xs">Nome no Cartão</Label>
-                <Input
-                  type="text"
-                  value={cardData.holderName}
-                  onChange={(e) => setCardData({ ...cardData, holderName: e.target.value.toUpperCase() })}
-                  required
-                  className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
-                  placeholder="NOME COMPLETO"
-                />
-              </div>
+                  <div>
+                    <Label className="text-white/80 text-[10px] sm:text-xs">Número do Cartão</Label>
+                    <Input
+                      type="text"
+                      value={formatCardNumber(cardData.number)}
+                      onChange={(e) => setCardData({ ...cardData, number: e.target.value.replace(/\s/g, '') })}
+                      required
+                      maxLength={19}
+                      className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
+                      placeholder="1234 5678 9012 3456"
+                    />
+                  </div>
 
-              <div className="col-span-2">
-                <Label className="text-white/80 text-[10px] sm:text-xs">Número do Cartão</Label>
-                <Input
-                  type="text"
-                  value={formatCardNumber(cardData.number)}
-                  onChange={(e) => setCardData({ ...cardData, number: e.target.value.replace(/\s/g, '') })}
-                  required
-                  maxLength={19}
-                  className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
-                  placeholder="1234 5678 9012 3456"
-                />
-              </div>
+                  <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                    <div>
+                      <Label className="text-white/80 text-[10px] sm:text-xs">Validade (MM/AAAA)</Label>
+                      <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                        <Input
+                          type="text"
+                          value={cardData.expiryMonth}
+                          onChange={(e) => setCardData({ ...cardData, expiryMonth: e.target.value.replace(/\D/g, '').slice(0, 2) })}
+                          required
+                          maxLength={2}
+                          className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
+                          placeholder="MM"
+                        />
+                        <Input
+                          type="text"
+                          value={cardData.expiryYear}
+                          onChange={(e) => setCardData({ ...cardData, expiryYear: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                          required
+                          maxLength={4}
+                          className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
+                          placeholder="AAAA"
+                        />
+                      </div>
+                    </div>
 
-              <div className="col-span-2 sm:col-span-1">
-                <Label className="text-white/80 text-[10px] sm:text-xs">Validade (MM/AAAA)</Label>
-                <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-                  <Input
-                    type="text"
-                    value={cardData.expiryMonth}
-                    onChange={(e) => setCardData({ ...cardData, expiryMonth: e.target.value.replace(/\D/g, '').slice(0, 2) })}
-                    required
-                    maxLength={2}
-                    className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
-                    placeholder="MM"
-                  />
-                  <Input
-                    type="text"
-                    value={cardData.expiryYear}
-                    onChange={(e) => setCardData({ ...cardData, expiryYear: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                    required
-                    maxLength={4}
-                    className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
-                    placeholder="AAAA"
-                  />
+                    <div>
+                      <Label className="text-white/80 text-[10px] sm:text-xs">CVV</Label>
+                      <Input
+                        type="text"
+                        value={cardData.ccv}
+                        onChange={(e) => setCardData({ ...cardData, ccv: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                        required
+                        maxLength={4}
+                        className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
+                        placeholder="123"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="col-span-2 sm:col-span-1">
-                <Label className="text-white/80 text-[10px] sm:text-xs">CVV</Label>
-                <Input
-                  type="text"
-                  value={cardData.ccv}
-                  onChange={(e) => setCardData({ ...cardData, ccv: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                  required
-                  maxLength={4}
-                  className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
-                  placeholder="123"
-                />
+              {/* Coluna Direita - Dados do Titular */}
+              <div className="space-y-1 sm:space-y-1.5">
+                <h3 className="text-xs sm:text-sm font-semibold text-white border-b border-slate-600/30 pb-0.5 sm:pb-1">Dados do Titular</h3>
+
+                <div className="space-y-1.5 sm:space-y-2">
+                  <div>
+                    <Label className="text-white/80 text-[10px] sm:text-xs">Nome Completo</Label>
+                    <Input
+                      type="text"
+                      value={holderInfo.name}
+                      onChange={(e) => setHolderInfo({ ...holderInfo, name: e.target.value })}
+                      required
+                      className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label className="text-white/80 text-[10px] sm:text-xs">Email</Label>
+                    <Input
+                      type="email"
+                      value={holderInfo.email}
+                      onChange={(e) => setHolderInfo({ ...holderInfo, email: e.target.value })}
+                      required
+                      className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                    <div>
+                      <Label className="text-white/80 text-[10px] sm:text-xs">CPF/CNPJ</Label>
+                      <Input
+                        type="text"
+                        value={formatCPF(holderInfo.cpfCnpj)}
+                        onChange={(e) => setHolderInfo({ ...holderInfo, cpfCnpj: e.target.value.replace(/\D/g, '') })}
+                        required
+                        maxLength={14}
+                        className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
+                        placeholder="000.000.000-00"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-white/80 text-[10px] sm:text-xs">Telefone</Label>
+                      <Input
+                        type="text"
+                        value={formatPhone(holderInfo.phone)}
+                        onChange={(e) => setHolderInfo({ ...holderInfo, phone: e.target.value.replace(/\D/g, '') })}
+                        required
+                        maxLength={15}
+                        className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
+                        placeholder="(00) 00000-0000"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                    <div>
+                      <Label className="text-white/80 text-[10px] sm:text-xs">CEP</Label>
+                      <Input
+                        type="text"
+                        value={formatCEP(holderInfo.postalCode)}
+                        onChange={(e) => setHolderInfo({ ...holderInfo, postalCode: e.target.value.replace(/\D/g, '') })}
+                        required
+                        maxLength={9}
+                        className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
+                        placeholder="00000-000"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                      <div>
+                        <Label className="text-white/80 text-[10px] sm:text-xs">Nº</Label>
+                        <Input
+                          type="text"
+                          value={holderInfo.addressNumber}
+                          onChange={(e) => setHolderInfo({ ...holderInfo, addressNumber: e.target.value })}
+                          required
+                          className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-white/80 text-[10px] sm:text-xs">Compl.</Label>
+                        <Input
+                          type="text"
+                          value={holderInfo.complement}
+                          onChange={(e) => setHolderInfo({ ...holderInfo, complement: e.target.value })}
+                          className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
+                          placeholder="Apto"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-white/80 text-[10px] sm:text-xs">Bairro</Label>
+                    <Input
+                      type="text"
+                      value={holderInfo.province}
+                      onChange={(e) => setHolderInfo({ ...holderInfo, province: e.target.value })}
+                      required
+                      className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                    <div className="col-span-2">
+                      <Label className="text-white/80 text-[10px] sm:text-xs">Cidade</Label>
+                      <Input
+                        type="text"
+                        value={holderInfo.city}
+                        onChange={(e) => setHolderInfo({ ...holderInfo, city: e.target.value })}
+                        required
+                        className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-white/80 text-[10px] sm:text-xs">UF</Label>
+                      <Input
+                        type="text"
+                        value={holderInfo.state}
+                        onChange={(e) => setHolderInfo({ ...holderInfo, state: e.target.value.toUpperCase() })}
+                        required
+                        maxLength={2}
+                        className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
+                        placeholder="SP"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* Dados do Titular */}
-          <div className="space-y-1 sm:space-y-1.5">
-            <h3 className="text-xs sm:text-sm font-semibold text-white border-b border-slate-600/30 pb-0.5 sm:pb-1">Dados do Titular</h3>
-
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-              <div className="col-span-2">
-                <Label className="text-white/80 text-[10px] sm:text-xs">Nome Completo</Label>
-                <Input
-                  type="text"
-                  value={holderInfo.name}
-                  onChange={(e) => setHolderInfo({ ...holderInfo, name: e.target.value })}
-                  required
-                  className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
-                />
-              </div>
-              <div className="col-span-2">
-                <Label className="text-white/80 text-[10px] sm:text-xs">Email</Label>
-                <Input
-                  type="email"
-                  value={holderInfo.email}
-                  onChange={(e) => setHolderInfo({ ...holderInfo, email: e.target.value })}
-                  required
-                  className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
-                />
-              </div>
-
-              <div>
-                <Label className="text-white/80 text-[10px] sm:text-xs">CPF/CNPJ</Label>
-                <Input
-                  type="text"
-                  value={formatCPF(holderInfo.cpfCnpj)}
-                  onChange={(e) => setHolderInfo({ ...holderInfo, cpfCnpj: e.target.value.replace(/\D/g, '') })}
-                  required
-                  maxLength={14}
-                  className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
-                  placeholder="000.000.000-00"
-                />
-              </div>
-              <div>
-                <Label className="text-white/80 text-[10px] sm:text-xs">Telefone</Label>
-                <Input
-                  type="text"
-                  value={formatPhone(holderInfo.phone)}
-                  onChange={(e) => setHolderInfo({ ...holderInfo, phone: e.target.value.replace(/\D/g, '') })}
-                  required
-                  maxLength={15}
-                  className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
-                  placeholder="(00) 00000-0000"
-                />
-              </div>
-
-              <div>
-                <Label className="text-white/80 text-[10px] sm:text-xs">CEP</Label>
-                <Input
-                  type="text"
-                  value={formatCEP(holderInfo.postalCode)}
-                  onChange={(e) => setHolderInfo({ ...holderInfo, postalCode: e.target.value.replace(/\D/g, '') })}
-                  required
-                  maxLength={9}
-                  className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
-                  placeholder="00000-000"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-                <div>
-                  <Label className="text-white/80 text-[10px] sm:text-xs">Nº</Label>
-                  <Input
-                    type="text"
-                    value={holderInfo.addressNumber}
-                    onChange={(e) => setHolderInfo({ ...holderInfo, addressNumber: e.target.value })}
-                    required
-                    className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-white/80 text-[10px] sm:text-xs">Compl.</Label>
-                  <Input
-                    type="text"
-                    value={holderInfo.complement}
-                    onChange={(e) => setHolderInfo({ ...holderInfo, complement: e.target.value })}
-                    className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
-                    placeholder="Apto"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-white/80 text-[10px] sm:text-xs">Bairro</Label>
-                <Input
-                  type="text"
-                  value={holderInfo.province}
-                  onChange={(e) => setHolderInfo({ ...holderInfo, province: e.target.value })}
-                  required
-                  className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-                <div className="col-span-2">
-                  <Label className="text-white/80 text-[10px] sm:text-xs">Cidade</Label>
-                  <Input
-                    type="text"
-                    value={holderInfo.city}
-                    onChange={(e) => setHolderInfo({ ...holderInfo, city: e.target.value })}
-                    required
-                    className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-white/80 text-[10px] sm:text-xs">UF</Label>
-                  <Input
-                    type="text"
-                    value={holderInfo.state}
-                    onChange={(e) => setHolderInfo({ ...holderInfo, state: e.target.value.toUpperCase() })}
-                    required
-                    maxLength={2}
-                    className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
-                    placeholder="SP"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
 
           {error && (
             <div className="bg-red-500/20 border border-red-500 rounded-lg p-1.5 sm:p-2 text-red-300 text-[10px] sm:text-xs">
