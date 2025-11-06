@@ -40,12 +40,17 @@ export async function GET(
       )
     }
 
+    // Extract temporary URLs from metadata if available (for modal display)
+    const metadata = generation.metadata as any || {}
+    const temporaryUrls = metadata.temporaryUrls || metadata.originalUrls || []
+    
     // Retornar dados completos para polling
     return NextResponse.json({
       id: generation.id,
       status: generation.status,
-      imageUrls: generation.imageUrls || [],
+      imageUrls: generation.imageUrls || [], // Permanent URLs for gallery
       thumbnailUrls: generation.thumbnailUrls || [],
+      temporaryUrls: temporaryUrls, // Temporary URLs for immediate modal display
       processingTime: generation.processingTime,
       errorMessage: generation.errorMessage,
       completedAt: generation.completedAt,

@@ -68,9 +68,18 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         
         const data = await response.json()
         
-        if (data.status === 'COMPLETED' && data.videoUrl) {
+        // Use temporary URL for modal if available, otherwise use permanent URL
+        const modalVideoUrl = data.temporaryVideoUrl || data.videoUrl
+        
+        if (data.status === 'COMPLETED' && modalVideoUrl) {
           // Video completed - open modal
-          setSuccessVideoUrl(data.videoUrl)
+          console.log('🎯 [VIDEO_GENERATION] Opening modal with URL:', {
+            hasTemporary: !!data.temporaryVideoUrl,
+            hasPermanent: !!data.videoUrl,
+            modalUrl: modalVideoUrl.substring(0, 100) + '...',
+            videoId
+          })
+          setSuccessVideoUrl(modalVideoUrl)
           setShowSuccessModal(true)
           setMonitoringVideoId(null)
           

@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
                 ...updateData.metadata,
                 s3Keys: s3Keys,
                 originalUrls: temporaryUrls,
+                temporaryUrls: temporaryUrls, // Also save as temporaryUrls for consistency
                 processedAt: new Date().toISOString(),
                 storageProvider: 'aws',
                 storageType: 'private'
@@ -167,6 +168,7 @@ export async function POST(request: NextRequest) {
                 ...updateData.metadata,
                 s3Keys: s3Keys,
                 originalUrls: temporaryUrls,
+                temporaryUrls: temporaryUrls, // Also save as temporaryUrls for consistency
                 processedAt: new Date().toISOString(),
                 storageProvider: 'legacy',
                 permanentUrls: storageResult.permanentUrls
@@ -252,14 +254,20 @@ export async function POST(request: NextRequest) {
       await updatePackageProgress(generation.packageId, payload.status)
     }
 
+    // Extract temporary URLs from metadata for modal display
+    const metadata = updateData.metadata as any || {}
+    const temporaryUrls = metadata.temporaryUrls || metadata.originalUrls || []
+    
     // Broadcast real-time status change to user
     await broadcastGenerationStatusChange(
       generation.id,
       generation.userId,
       payload.status,
       {
-        imageUrls: updateData.imageUrls || [],
+        imageUrls: updateData.imageUrls || [], // Permanent URLs for gallery
         thumbnailUrls: updateData.thumbnailUrls || [],
+        temporaryUrls: temporaryUrls, // Temporary URLs for immediate modal display
+        permanentUrls: updateData.imageUrls || [], // Same as imageUrls (permanent)
         s3Keys: updateData.metadata?.s3Keys || [],
         storageProvider: updateData.storageProvider,
         processingTime: updateData.processingTime,

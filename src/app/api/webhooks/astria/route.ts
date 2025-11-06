@@ -376,6 +376,15 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
       }
     }
 
+    // Store temporary URLs in metadata for modal display
+    const existingMetadata = (generation.metadata as any) || {}
+    const updatedMetadata = {
+      ...existingMetadata,
+      temporaryUrls: imageUrls.length > 0 ? imageUrls : existingMetadata.temporaryUrls || [],
+      permanentUrls: finalImageUrls.length > 0 ? finalImageUrls : existingMetadata.permanentUrls || [],
+      originalUrls: imageUrls.length > 0 ? imageUrls : existingMetadata.originalUrls || []
+    }
+    
     // Update the generation with the new status and final image URLs
     const updatedGeneration = await prisma.generation.update({
       where: { id: generation.id },
@@ -385,9 +394,20 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
         completedAt: payload.completed_at ? new Date(payload.completed_at) : undefined,
         processingTime: processingTime,
         errorMessage: payload.error_message || undefined,
+        metadata: updatedMetadata as any, // Store temporary URLs for modal
         // Update seed if provided
         seed: payload.seed || generation.seed
       }
+    })
+    
+    // CRITICAL: Log for debugging modal opening
+    console.log(`📊 [ASTRIA_WEBHOOK] Generation updated:`, {
+      generationId: updatedGeneration.id,
+      status: internalStatus,
+      hasTemporaryUrls: updatedMetadata.temporaryUrls.length > 0,
+      hasPermanentUrls: updatedMetadata.permanentUrls.length > 0,
+      temporaryUrlsCount: updatedMetadata.temporaryUrls.length,
+      permanentUrlsCount: updatedMetadata.permanentUrls.length
     })
 
     console.log(`✅ Astria prompt ${payload.id} updated to status: ${internalStatus}`)
@@ -402,9 +422,13 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
       const { broadcastGenerationStatusChange } = await import('@/lib/services/realtime-service')
       
       // Ensure we always send imageUrls, even if empty (frontend needs to know status)
+      // CRITICAL: Include both temporary (for modal) and permanent (for gallery) URLs
       const broadcastData = {
         imageUrls: finalImageUrls.length > 0 ? finalImageUrls : (updatedGeneration.imageUrls as any || []),
         thumbnailUrls: finalImageUrls.length > 0 ? finalImageUrls : (updatedGeneration.imageUrls as any || []),
+        // Include temporary URLs for immediate modal display (before S3 upload completes)
+        temporaryUrls: imageUrls.length > 0 ? imageUrls : (updatedGeneration.metadata as any)?.temporaryUrls || [],
+        permanentUrls: finalImageUrls.length > 0 ? finalImageUrls : [],
         processingTime: processingTime,
         errorMessage: payload.error_message || undefined,
         webhook: true,

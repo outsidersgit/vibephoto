@@ -247,12 +247,14 @@ export async function POST(request: NextRequest) {
       data: {
         id: result.id,
         status: result.status,
-        resultImage: permanentImageUrl, // Return permanent S3 URL
+        resultImage: permanentImageUrl, // Permanent S3 URL for gallery
+        temporaryUrl: result.resultImage, // Temporary Replicate URL for immediate modal display
         metadata: result.metadata,
         editHistoryId: editHistoryEntry?.id,
         generationId: generationRecord?.id
       },
-      resultUrl: permanentImageUrl // Return permanent S3 URL
+      resultUrl: permanentImageUrl, // Permanent S3 URL for gallery
+      temporaryUrl: result.resultImage // Temporary Replicate URL for immediate modal display
     })
 
   } catch (error) {

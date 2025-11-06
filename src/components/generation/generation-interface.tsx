@@ -125,9 +125,13 @@ export function GenerationInterface({
           errorMessage: data.errorMessage || prev.errorMessage
         }))
 
-        // If completed successfully, show success message and redirect
+        // If completed successfully, show success message and open modal
         // CRITICAL: Verificar se já mostramos feedback para evitar duplicação
-        if (status === 'COMPLETED' && data.imageUrls && data.imageUrls.length > 0) {
+        // Accept either temporaryUrls (for modal) or imageUrls (permanent for gallery)
+        const hasAnyImageUrls = (data.temporaryUrls && data.temporaryUrls.length > 0) || 
+                               (data.imageUrls && data.imageUrls.length > 0)
+        
+        if (status === 'COMPLETED' && hasAnyImageUrls) {
           // Evitar feedback duplicado
           if (completedGenerationIds.has(generationId)) {
             console.log(`⚠️ Feedback já mostrado para generation ${generationId}, ignorando duplicação`)
@@ -140,21 +144,40 @@ export function GenerationInterface({
           setCompletedGenerationIds((prev) => new Set([...prev, generationId]))
           
           // Show success message immediately (webhook guarantees DB is updated)
+          const imageCount = (data.imageUrls?.length || data.temporaryUrls?.length || 0)
           addToast({
             type: 'success',
             title: '🎉 Sua imagem está pronta!',
-            description: `${data.imageUrls.length} imagem${data.imageUrls.length > 1 ? 's' : ''} disponível${data.imageUrls.length > 1 ? 'eis' : ''} na galeria`,
+            description: `${imageCount} imagem${imageCount > 1 ? 's' : ''} disponível${imageCount > 1 ? 'eis' : ''} na galeria`,
             duration: 4000
           })
 
-          // Show success modal - validar que imageUrls existe e tem elementos
-          if (data.imageUrls && data.imageUrls.length > 0) {
-            setSuccessImageUrl(data.imageUrls[0])
+          // Show success modal - use temporary URL for immediate display, permanent for gallery
+          const modalImageUrl = data.temporaryUrls && data.temporaryUrls.length > 0 
+            ? data.temporaryUrls[0] 
+            : (data.imageUrls && data.imageUrls.length > 0 ? data.imageUrls[0] : null)
+          
+          if (modalImageUrl) {
+            console.log('🎯 [GENERATION_SSE] Opening modal with URL:', {
+              hasTemporary: !!(data.temporaryUrls && data.temporaryUrls.length > 0),
+              hasPermanent: !!(data.imageUrls && data.imageUrls.length > 0),
+              modalUrl: modalImageUrl.substring(0, 100) + '...',
+              generationId,
+              status
+            })
+            setSuccessImageUrl(modalImageUrl)
             setShowSuccessModal(true)
+            // Clear form after successful generation
+            clearFormAfterSuccess()
+          } else {
+            console.warn('⚠️ [GENERATION_SSE] No image URL available for modal:', {
+              hasImageUrls: !!(data.imageUrls && data.imageUrls.length > 0),
+              hasTemporaryUrls: !!(data.temporaryUrls && data.temporaryUrls.length > 0),
+              dataKeys: Object.keys(data),
+              generationId,
+              status
+            })
           }
-
-          // Clear form after successful generation
-          clearFormAfterSuccess()
         }
 
         // Show error message if failed
@@ -233,7 +256,11 @@ export function GenerationInterface({
 
         // Se completou via polling, mostrar feedback mesmo se SSE falhou
         // CRITICAL: Verificar se já mostramos feedback para evitar duplicação
-        if (pollingStatus === 'COMPLETED' && pollingData.imageUrls && pollingData.imageUrls.length > 0) {
+        // Accept either temporaryUrls (for modal) or imageUrls (permanent for gallery)
+        const pollingHasAnyImageUrls = (pollingData.temporaryUrls && pollingData.temporaryUrls.length > 0) || 
+                                      (pollingData.imageUrls && pollingData.imageUrls.length > 0)
+        
+        if (pollingStatus === 'COMPLETED' && pollingHasAnyImageUrls) {
           // Evitar feedback duplicado se SSE já mostrou
           if (completedGenerationIds.has(currentGeneration.id)) {
             console.log(`⚠️ Feedback já mostrado para generation ${currentGeneration.id} (via SSE), ignorando polling`)
@@ -245,19 +272,31 @@ export function GenerationInterface({
           // Marcar como completado para evitar duplicação
           setCompletedGenerationIds((prev) => new Set([...prev, currentGeneration.id]))
           
+          const pollingImageCount = (pollingData.imageUrls?.length || pollingData.temporaryUrls?.length || 0)
           addToast({
             type: 'success',
             title: '🎉 Sua imagem está pronta!',
-            description: `${pollingData.imageUrls.length} imagem${pollingData.imageUrls.length > 1 ? 's' : ''} disponível${pollingData.imageUrls.length > 1 ? 'eis' : ''} na galeria`,
+            description: `${pollingImageCount} imagem${pollingImageCount > 1 ? 's' : ''} disponível${pollingImageCount > 1 ? 'eis' : ''} na galeria`,
             duration: 4000
           })
 
-          // Validar que imageUrls existe antes de usar
-          if (pollingData.imageUrls && pollingData.imageUrls.length > 0) {
-            setSuccessImageUrl(pollingData.imageUrls[0])
+          // Use temporary URL for modal if available, otherwise use permanent URL
+          const modalImageUrl = pollingData.temporaryUrls && pollingData.temporaryUrls.length > 0
+            ? pollingData.temporaryUrls[0]
+            : (pollingData.imageUrls && pollingData.imageUrls.length > 0 ? pollingData.imageUrls[0] : null)
+          
+          if (modalImageUrl) {
+            console.log('🎯 [GENERATION_POLLING] Opening modal with URL:', {
+              hasTemporary: !!(pollingData.temporaryUrls && pollingData.temporaryUrls.length > 0),
+              hasPermanent: !!(pollingData.imageUrls && pollingData.imageUrls.length > 0),
+              modalUrl: modalImageUrl.substring(0, 100) + '...'
+            })
+            setSuccessImageUrl(modalImageUrl)
             setShowSuccessModal(true)
             // Clear form after successful generation
             clearFormAfterSuccess()
+          } else {
+            console.warn('⚠️ [GENERATION_POLLING] No image URL available for modal')
           }
         }
 

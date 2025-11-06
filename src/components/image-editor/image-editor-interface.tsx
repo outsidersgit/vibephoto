@@ -179,22 +179,29 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       }
 
       const data = await response.json()
-      const resultUrl = data.resultUrl || data.data?.resultImage || data.resultImage
+      // Use temporary URL for modal (faster display), permanent URL for gallery
+      const temporaryUrl = data.temporaryUrl || data.data?.temporaryUrl || data.resultImage
+      const permanentUrl = data.resultUrl || data.data?.resultImage || data.resultImage
       
       console.log('✅ [IMAGE_EDITOR] Image processed successfully:', {
-        hasResultUrl: !!resultUrl,
-        resultUrl: resultUrl?.substring(0, 100) + '...',
+        hasTemporaryUrl: !!temporaryUrl,
+        hasPermanentUrl: !!permanentUrl,
+        temporaryUrl: temporaryUrl?.substring(0, 100) + '...',
+        permanentUrl: permanentUrl?.substring(0, 100) + '...',
         fullResponse: data
       })
       
-      if (!resultUrl) {
+      // Use temporary URL for modal (faster), fallback to permanent if no temporary
+      const modalUrl = temporaryUrl || permanentUrl
+      
+      if (!modalUrl) {
         throw new Error('URL da imagem não foi retornada pela API')
       }
       
-      // Set result and open modal automatically
-      setResult(resultUrl)
+      // Set result and open modal automatically with temporary URL
+      setResult(modalUrl)
       setShowResultModal(true)
-      console.log('✅ [IMAGE_EDITOR] Result URL set, opening modal automatically')
+      console.log('✅ [IMAGE_EDITOR] Result URL set, opening modal automatically with', temporaryUrl ? 'temporary URL' : 'permanent URL')
 
       addToast({
         title: "Sucesso!",

@@ -174,6 +174,7 @@ export async function POST(request: NextRequest) {
             const s3Key = `generated/${updatedVideo.user.id}/${updatedVideo.id}/0.mp4`
 
             // Update video with metadata containing s3_key instead of storing URL directly
+            // CRITICAL: Store temporary URL for modal display
             await updateVideoGenerationByJobId(
               jobId,
               VideoStatus.COMPLETED,
@@ -183,6 +184,7 @@ export async function POST(request: NextRequest) {
               {
                 s3Key: s3Key,
                 originalUrl: videoUrl,
+                temporaryVideoUrl: videoUrl, // Store temporary URL for modal
                 storageProvider: 'aws',
                 storageType: 'private',
                 processedAt: new Date().toISOString(),

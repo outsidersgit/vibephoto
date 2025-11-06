@@ -46,11 +46,16 @@ export async function GET(
 
     // If video is completed or failed, return current status
     if ([VideoStatus.COMPLETED, VideoStatus.FAILED, VideoStatus.CANCELLED].includes(videoGeneration.status as VideoStatus)) {
+      // Extract temporary URL from metadata for modal display
+      const metadata = videoGeneration.metadata as any || {}
+      const temporaryVideoUrl = metadata.temporaryVideoUrl || metadata.originalUrl || null
+      
       return NextResponse.json({
         id: videoGeneration.id,
         status: videoGeneration.status,
         progress: videoGeneration.progress,
-        videoUrl: videoGeneration.videoUrl,
+        videoUrl: videoGeneration.videoUrl, // Permanent URL for gallery
+        temporaryVideoUrl: temporaryVideoUrl, // Temporary URL for modal
         thumbnailUrl: videoGeneration.thumbnailUrl,
         errorMessage: videoGeneration.errorMessage,
         duration: videoGeneration.duration,
