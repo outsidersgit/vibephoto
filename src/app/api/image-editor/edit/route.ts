@@ -66,9 +66,14 @@ export async function POST(request: NextRequest) {
       ? (aspectRatio as typeof validAspectRatios[number])
       : undefined
     
+    // Create a temporary edit history record to track the async operation
+    // We'll use this ID in the webhook URL
+    const tempEditId = `temp_edit_${Date.now()}_${session.user.id}`
+    
     // Configure webhook URL for async processing (production only)
+    // Pass the prediction ID as 'id' parameter - webhook will use jobId to find the edit_history
     const webhookUrl = process.env.NEXTAUTH_URL?.startsWith('https://')
-      ? `${process.env.NEXTAUTH_URL}/api/webhooks/replicate?type=edit&id=${session.user.id}&userId=${session.user.id}`
+      ? `${process.env.NEXTAUTH_URL}/api/webhooks/replicate?type=edit&userId=${session.user.id}`
       : undefined
     
     let result
@@ -81,18 +86,45 @@ export async function POST(request: NextRequest) {
     }
 
     // If webhook is enabled, result might not have resultImage yet (async processing)
-    // In this case, return the prediction ID and let webhook handle completion
+    // Create edit_history record with PROCESSING status so webhook can update it
     if (webhookUrl && result.status === 'processing' && !result.resultImage) {
-      console.log('📡 Editor using async webhook processing, returning prediction ID:', result.id)
+      console.log('📡 Editor using async webhook processing, creating edit_history record:', result.id)
+      
+      // Get original image URL from form data or create a placeholder
+      const originalImageUrl = image 
+        ? (formData.get('originalUrl') as string || `data:${image.type};base64,original`)
+        : 'generated-from-scratch'
+      
+      // Create edit_history with PROCESSING status - webhook will update when complete
+      const editHistoryEntry = await createEditHistory({
+        userId: session.user.id,
+        originalImageUrl: originalImageUrl,
+        editedImageUrl: '', // Will be updated by webhook
+        thumbnailUrl: '', // Will be updated by webhook
+        operation: image ? 'nano_banana_edit' : 'nano_banana_generate',
+        prompt: prompt,
+        metadata: {
+          replicateId: result.id,
+          status: 'PROCESSING',
+          generatedFromScratch: !image,
+          webhookEnabled: true,
+          async: true
+        }
+      })
+      
+      console.log('✅ Edit history created for async processing:', editHistoryEntry.id)
+      
       return NextResponse.json({
         success: true,
         data: {
           id: result.id,
           status: result.status,
           async: true,
+          editHistoryId: editHistoryEntry.id,
           message: 'Processing started, webhook will handle completion'
         },
-        predictionId: result.id
+        predictionId: result.id,
+        temporaryUrl: undefined // No URL yet - webhook will provide
       })
     }
 

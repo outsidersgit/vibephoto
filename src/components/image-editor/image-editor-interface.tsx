@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { GenerationResultModal } from '@/components/ui/generation-result-modal'
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 
 interface ImageEditorInterfaceProps {
   preloadedImageUrl?: string
@@ -46,6 +47,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   const [isMobile, setIsMobile] = useState(false)
   const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3' | '3:4' | '9:16' | '16:9'>('1:1')
   const [showResultModal, setShowResultModal] = useState(false)
+  const [currentEditId, setCurrentEditId] = useState<string | null>(null)
   const router = useRouter()
   
   // Função para limpar todos os campos após geração bem-sucedida
@@ -54,6 +56,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     setImages([])
     setError(null)
     setResult(null)
+    setCurrentEditId(null) // Clear edit monitoring
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
@@ -61,6 +64,50 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   }
   
   
+  // Monitor async processing via SSE
+  useRealtimeUpdates({
+    onGenerationStatusChange: (generationId, status, data) => {
+      // Check if this is our edit (by editHistoryId or generationId matching currentEditId)
+      if (currentEditId && (generationId === currentEditId || data.editHistoryId === currentEditId)) {
+        console.log('🎯 [IMAGE_EDITOR] SSE update received for edit:', {
+          generationId,
+          status,
+          hasImageUrls: !!(data.imageUrls && data.imageUrls.length > 0),
+          hasTemporaryUrls: !!(data.temporaryUrls && data.temporaryUrls.length > 0),
+          editHistoryId: data.editHistoryId
+        })
+        
+        if (status === 'COMPLETED' && (data.imageUrls || data.temporaryUrls)) {
+          // Use temporary URL for modal, permanent for gallery
+          const modalImageUrl = data.temporaryUrls && data.temporaryUrls.length > 0
+            ? data.temporaryUrls[0]
+            : (data.imageUrls && data.imageUrls.length > 0 ? data.imageUrls[0] : null)
+          
+          if (modalImageUrl) {
+            console.log('✅ [IMAGE_EDITOR] Opening modal from SSE update:', modalImageUrl.substring(0, 100) + '...')
+            setResult(modalImageUrl)
+            setShowResultModal(true)
+            setCurrentEditId(null) // Clear monitoring
+            
+            addToast({
+              title: "Sucesso!",
+              description: "Imagem processada e salva com sucesso",
+              type: "success"
+            })
+          }
+        } else if (status === 'FAILED') {
+          setError(data.errorMessage || 'Erro ao processar imagem')
+          setCurrentEditId(null)
+          addToast({
+            title: "Erro",
+            description: data.errorMessage || 'Erro ao processar imagem',
+            type: "error"
+          })
+        }
+      }
+    }
+  })
+
   // Detect mobile on mount and resize
   useEffect(() => {
     const checkMobile = () => {
@@ -179,6 +226,30 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       }
 
       const data = await response.json()
+      
+      // Check if processing is async (webhook-enabled)
+      if (data.async && data.data?.status === 'processing') {
+        console.log('📡 [IMAGE_EDITOR] Async processing started, waiting for webhook:', {
+          predictionId: data.predictionId,
+          editHistoryId: data.data?.editHistoryId
+        })
+        
+        addToast({
+          title: "Processando...",
+          description: "Sua imagem está sendo processada, você será notificado quando estiver pronta",
+          type: "info"
+        })
+        
+        // Store editHistoryId to monitor via SSE
+        if (data.data?.editHistoryId) {
+          setCurrentEditId(data.data.editHistoryId)
+        }
+        
+        // Don't clear form yet - will be cleared when webhook completes
+        return
+      }
+      
+      // Synchronous processing (no webhook or completed immediately)
       // Use temporary URL for modal (faster display), permanent URL for gallery
       const temporaryUrl = data.temporaryUrl || data.data?.temporaryUrl || data.resultImage
       const permanentUrl = data.resultUrl || data.data?.resultImage || data.resultImage

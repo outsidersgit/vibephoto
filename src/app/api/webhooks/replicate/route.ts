@@ -42,7 +42,13 @@ export async function POST(request: NextRequest) {
 
       try {
         // Usar validação oficial do Replicate
-        const isValid = Replicate.validateWebhook(body, signature || '', webhookSecret)
+        // IMPORTANT: validateWebhook precisa do body como string e signature
+        if (!signature) {
+          console.log('❌ Replicate webhook: Missing signature header')
+          return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
+        }
+
+        const isValid = Replicate.validateWebhook(body, signature, webhookSecret)
 
         if (!isValid) {
           console.log('❌ Replicate webhook: Invalid signature (using official validation)')
@@ -53,6 +59,11 @@ export async function POST(request: NextRequest) {
         console.log('✅ Webhook signature validated successfully')
       } catch (validationError) {
         console.error('❌ Webhook validation error:', validationError)
+        console.error('❌ Validation error details:', {
+          error: validationError instanceof Error ? validationError.message : String(validationError),
+          hasSignature: !!signature,
+          bodyLength: body.length
+        })
         return NextResponse.json({ error: 'Webhook validation failed' }, { status: 401 })
       }
     } else {
@@ -105,6 +116,9 @@ export async function POST(request: NextRequest) {
         break
       case 'training':
         result = await processTrainingWebhook(payload, jobType.record)
+        break
+      case 'edit':
+        result = await processEditWebhook(payload, jobType.record)
         break
       default:
         throw new Error(`Unknown job type: ${jobType.type}`)
@@ -195,6 +209,29 @@ async function getJobByParameters(type: string, recordId: string, userId?: strin
       }
     }
 
+    if (type === 'edit') {
+      // For edits, we need to find by jobId (Replicate prediction ID) in edit_history
+      // Since we don't have the recordId yet, we'll search by jobId from payload
+      // But first, let's try to find by userId's recent edit_history entries
+      const editHistory = await prisma.editHistory.findFirst({
+        where: {
+          userId: userId || undefined,
+          // We'll match by jobId in the detectJobType fallback
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        take: 1
+      })
+
+      if (editHistory) {
+        return {
+          type: 'edit',
+          record: editHistory
+        }
+      }
+    }
+
     if (type === 'training') {
       const model = await prisma.aIModel.findFirst({
         where: {
@@ -247,6 +284,40 @@ async function detectJobType(jobId: string) {
     return {
       type: isUpscale ? 'upscale' : 'generation',
       record: generation
+    }
+  }
+  
+  // Verificar se é uma edição (edit_history com replicateId no metadata)
+  // Prisma não suporta query direta em JSON, então buscamos recentes e filtramos
+  const recentEdits = await prisma.editHistory.findMany({
+    where: {
+      createdAt: {
+        gte: new Date(Date.now() - 10 * 60 * 1000) // Últimos 10 minutos
+      }
+    },
+    select: {
+      id: true,
+      userId: true,
+      prompt: true,
+      createdAt: true,
+      metadata: true
+    },
+    orderBy: {
+      createdAt: 'desc'
+    },
+    take: 10 // Limitar busca
+  })
+  
+  // Filtrar por replicateId no metadata
+  const editHistory = recentEdits.find((edit: any) => {
+    const metadata = edit.metadata as any
+    return metadata?.replicateId === jobId
+  })
+  
+  if (editHistory) {
+    return {
+      type: 'edit',
+      record: editHistory
     }
   }
   
@@ -589,6 +660,179 @@ async function processTrainingWebhook(payload: WebhookPayload, model: any) {
   }
 
   return { success: true, type: 'training', updated: !!Object.keys(updateData).length }
+}
+
+/**
+ * Processa webhook de edição de imagens (Nano Banana)
+ */
+async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
+  console.log(`🎨 Processing edit webhook for ${editHistory.id}`)
+  
+  const updateData: any = {}
+  let creditRefund = false
+
+  switch (payload.status) {
+    case 'starting':
+    case 'processing':
+      // Update metadata to reflect processing status
+      await prisma.editHistory.update({
+        where: { id: editHistory.id },
+        data: {
+          metadata: {
+            ...(editHistory.metadata || {}),
+            status: 'PROCESSING',
+            replicateId: payload.id,
+            webhook: true,
+            lastUpdate: new Date().toISOString()
+          }
+        }
+      })
+      break
+
+    case 'succeeded':
+      if (payload.output) {
+        // Extract image URL from output
+        const imageUrl = typeof payload.output === 'string' ? payload.output : payload.output[0]
+        
+        if (imageUrl) {
+          try {
+            // Store image permanently
+            const { processAndStoreReplicateImages } = await import('@/lib/services/auto-image-storage')
+            
+            const storageResults = await processAndStoreReplicateImages(
+              [imageUrl],
+              editHistory.id,
+              editHistory.userId
+            )
+            
+            if (storageResults && storageResults.length > 0) {
+              const permanentUrl = storageResults[0].url
+              const thumbnailUrl = storageResults[0].thumbnailUrl || permanentUrl
+              
+              // Update edit_history with permanent URLs
+              await prisma.editHistory.update({
+                where: { id: editHistory.id },
+                data: {
+                  editedImageUrl: permanentUrl,
+                  thumbnailUrl: thumbnailUrl,
+                  metadata: {
+                    ...(editHistory.metadata || {}),
+                    status: 'COMPLETED',
+                    replicateId: payload.id,
+                    permanentUrl: permanentUrl,
+                    temporaryUrl: imageUrl,
+                    webhook: true,
+                    processingTime: payload.metrics?.total_time ? Math.round(payload.metrics.total_time * 1000) : undefined,
+                    completedAt: new Date().toISOString()
+                  }
+                }
+              })
+              
+              // Also create/update generation record for gallery
+              const { createGeneration } = await import('@/lib/db/generations')
+              await createGeneration({
+                userId: editHistory.userId,
+                modelId: null,
+                prompt: editHistory.prompt,
+                imageUrls: [permanentUrl],
+                thumbnailUrls: [thumbnailUrl],
+                status: 'COMPLETED',
+                jobId: payload.id,
+                metadata: {
+                  source: 'editor',
+                  editHistoryId: editHistory.id,
+                  operation: editHistory.operation,
+                  webhook: true
+                }
+              })
+              
+              // Broadcast completion - use editHistoryId as generationId for SSE compatibility
+              const { broadcastGenerationStatusChange } = await import('@/lib/services/realtime-service')
+              await broadcastGenerationStatusChange(
+                editHistory.id, // Use editHistory.id as generationId for SSE
+                editHistory.userId,
+                'COMPLETED',
+                {
+                  imageUrls: [permanentUrl],
+                  thumbnailUrls: [thumbnailUrl],
+                  temporaryUrls: [imageUrl],
+                  permanentUrls: [permanentUrl],
+                  editHistoryId: editHistory.id,
+                  generationId: editHistory.id, // Also include as generationId for compatibility
+                  webhook: true,
+                  timestamp: new Date().toISOString(),
+                  source: 'editor'
+                }
+              )
+              
+              console.log(`✅ Edit ${editHistory.id} completed and stored permanently`)
+            } else {
+              throw new Error('Storage returned no results')
+            }
+          } catch (storageError) {
+            console.error(`❌ Edit ${editHistory.id}: Storage failed -`, storageError)
+            // Update with temporary URL as fallback
+            await prisma.editHistory.update({
+              where: { id: editHistory.id },
+              data: {
+                editedImageUrl: imageUrl,
+                metadata: {
+                  ...(editHistory.metadata || {}),
+                  status: 'COMPLETED',
+                  replicateId: payload.id,
+                  temporaryUrl: imageUrl,
+                  storageError: String(storageError),
+                  webhook: true,
+                  completedAt: new Date().toISOString()
+                }
+              }
+            })
+          }
+        } else {
+          updateData.status = 'FAILED'
+          updateData.errorMessage = 'No image URL in output'
+          creditRefund = true
+        }
+      } else {
+        updateData.status = 'FAILED'
+        updateData.errorMessage = 'No output provided by Replicate'
+        creditRefund = true
+      }
+      break
+
+    case 'failed':
+    case 'canceled':
+      await prisma.editHistory.update({
+        where: { id: editHistory.id },
+        data: {
+          metadata: {
+            ...(editHistory.metadata || {}),
+            status: 'FAILED',
+            replicateId: payload.id,
+            errorMessage: payload.error || 'Processing failed',
+            webhook: true,
+            completedAt: new Date().toISOString()
+          }
+        }
+      })
+      creditRefund = true
+      
+      // Broadcast failure
+      const { broadcastGenerationStatusChange } = await import('@/lib/services/realtime-service')
+      await broadcastGenerationStatusChange(
+        editHistory.id,
+        editHistory.userId,
+        'FAILED',
+        {
+          errorMessage: payload.error || 'Processing failed',
+          webhook: true,
+          timestamp: new Date().toISOString()
+        }
+      )
+      break
+  }
+
+  return { success: true, type: 'edit', updated: true }
 }
 
 /**
