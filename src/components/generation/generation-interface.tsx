@@ -143,7 +143,7 @@ export function GenerationInterface({
           addToast({
             type: 'success',
             title: '🎉 Sua imagem está pronta!',
-            description: `${data.imageUrls.length} imagem${data.imageUrls.length > 1 ? 's' : ''} disponível${data.imageUrls.length > 1 ? 'eis' : ''} na galeria • Redirecionando em instantes...`,
+            description: `${data.imageUrls.length} imagem${data.imageUrls.length > 1 ? 's' : ''} disponível${data.imageUrls.length > 1 ? 'eis' : ''} na galeria`,
             duration: 4000
           })
 
@@ -153,11 +153,8 @@ export function GenerationInterface({
             setShowSuccessModal(true)
           }
 
-          // Redirect to gallery after 2 seconds
-          setTimeout(() => {
-            console.log('🚀 Redirecting to gallery...')
-            window.location.href = '/gallery'
-          }, 2000)
+          // Clear form after successful generation
+          clearFormAfterSuccess()
         }
 
         // Show error message if failed
@@ -251,7 +248,7 @@ export function GenerationInterface({
           addToast({
             type: 'success',
             title: '🎉 Sua imagem está pronta!',
-            description: `${pollingData.imageUrls.length} imagem${pollingData.imageUrls.length > 1 ? 's' : ''} disponível${pollingData.imageUrls.length > 1 ? 'eis' : ''} na galeria • Redirecionando em instantes...`,
+            description: `${pollingData.imageUrls.length} imagem${pollingData.imageUrls.length > 1 ? 's' : ''} disponível${pollingData.imageUrls.length > 1 ? 'eis' : ''} na galeria`,
             duration: 4000
           })
 
@@ -259,12 +256,9 @@ export function GenerationInterface({
           if (pollingData.imageUrls && pollingData.imageUrls.length > 0) {
             setSuccessImageUrl(pollingData.imageUrls[0])
             setShowSuccessModal(true)
+            // Clear form after successful generation
+            clearFormAfterSuccess()
           }
-
-          setTimeout(() => {
-            console.log('🚀 Redirecting to gallery (via polling)...')
-            window.location.href = '/gallery'
-          }, 2000)
         }
 
         // Se falhou via polling
@@ -352,6 +346,37 @@ export function GenerationInterface({
   }
 
   const selectedModelData = models.find(m => m.id === selectedModel)
+
+  // Função para limpar todos os campos após geração bem-sucedida
+  const clearFormAfterSuccess = () => {
+    setPrompt('')
+    setNegativePrompt('')
+    setIsLastBlockSelected(false)
+    setIsGuidedMode(false)
+    setCurrentGeneration(null)
+    // Reset settings to defaults
+    setSettings({
+      aspectRatio: '1:1',
+      resolution: '1024x1024',
+      variations: 1,
+      strength: 0.8,
+      seed: undefined,
+      style: 'photographic',
+      steps: undefined,
+      guidance_scale: undefined,
+      raw_mode: false,
+      output_quality: 95,
+      safety_tolerance: 2,
+      output_format: 'jpg',
+      aiProvider: 'replicate',
+      astria_super_resolution: true,
+      astria_inpaint_faces: true,
+      astria_face_correct: true,
+      astria_face_swap: true,
+      astria_hires_fix: true,
+      astria_model_type: 'faceid'
+    })
+  }
 
   const handleGenerate = async () => {
     if (!prompt.trim() || !canUseCredits) return

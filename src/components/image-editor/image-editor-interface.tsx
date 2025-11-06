@@ -21,6 +21,7 @@ import {
   Copy
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { GenerationResultModal } from '@/components/ui/generation-result-modal'
 
 interface ImageEditorInterfaceProps {
   preloadedImageUrl?: string
@@ -44,7 +45,20 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   const [error, setError] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3' | '3:4' | '9:16' | '16:9'>('1:1')
+  const [showResultModal, setShowResultModal] = useState(false)
   const router = useRouter()
+  
+  // Função para limpar todos os campos após geração bem-sucedida
+  const clearForm = () => {
+    setPrompt('')
+    setImages([])
+    setError(null)
+    setResult(null)
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
   
   
   // Detect mobile on mount and resize
@@ -177,15 +191,19 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         throw new Error('URL da imagem não foi retornada pela API')
       }
       
-      // Set result - will be displayed directly on page
+      // Set result and open modal automatically
       setResult(resultUrl)
-      console.log('✅ [IMAGE_EDITOR] Result URL set, image will be displayed on page')
+      setShowResultModal(true)
+      console.log('✅ [IMAGE_EDITOR] Result URL set, opening modal automatically')
 
       addToast({
         title: "Sucesso!",
         description: "Imagem processada e salva com sucesso",
         type: "success"
       })
+      
+      // Clear form after successful generation
+      clearForm()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido'
       setError(errorMessage)
@@ -365,45 +383,19 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 </p>
               </div>
             )}
-
-            {/* Result Display - Show image directly on page */}
-            {result && (
-              <div className="mt-4 space-y-3">
-                <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                    Imagem Processada
-                  </h3>
-                  <div className="flex items-center justify-center bg-white rounded-lg p-4 border border-gray-200">
-                    <img
-                      src={result}
-                      alt="Resultado processado"
-                      className="max-w-full max-h-[500px] object-contain rounded-lg shadow-lg"
-                    />
-                  </div>
-                  <div className="flex gap-3 mt-4">
-                    <Button
-                      asChild
-                      className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 text-white font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-                    >
-                      <a href={result} download={`imagem-editada-${Date.now()}.jpg`}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Baixar
-                      </a>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        router.push('/gallery?tab=generated')
-                      }}
-                      className="flex-1 border-2 border-gray-200 hover:border-[#667EEA] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-                    >
-                      Ver na galeria
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
+
+          {/* Result Modal - Auto-opens when generation completes */}
+          <GenerationResultModal
+            open={showResultModal}
+            onOpenChange={(open) => {
+              setShowResultModal(open)
+              if (!open) setResult(null)
+            }}
+            imageUrl={result}
+            title="Imagem Processada"
+            type="image"
+          />
         </div>
       </div>
     )

@@ -48,6 +48,59 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   const [errors, setErrors] = useState<string[]>([])
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [successVideoUrl, setSuccessVideoUrl] = useState<string | null>(null)
+  const [monitoringVideoId, setMonitoringVideoId] = useState<string | null>(null)
+  
+  // Monitor video generation status and open modal when completed
+  const monitorVideoGeneration = (videoId: string) => {
+    setMonitoringVideoId(videoId)
+    
+    const checkStatus = async () => {
+      try {
+        // Fetch video status from API
+        const response = await fetch(`/api/video/status/${videoId}`)
+        if (!response.ok) {
+          // If endpoint doesn't exist, try alternative approach
+          console.log('⚠️ Video status endpoint not found, trying alternative...')
+          // Continue monitoring - will check via polling
+          setTimeout(checkStatus, 5000)
+          return
+        }
+        
+        const data = await response.json()
+        
+        if (data.status === 'COMPLETED' && data.videoUrl) {
+          // Video completed - open modal
+          setSuccessVideoUrl(data.videoUrl)
+          setShowSuccessModal(true)
+          setMonitoringVideoId(null)
+          
+          addToast({
+            type: 'success',
+            title: "🎉 Vídeo pronto!",
+            description: "Seu vídeo foi gerado com sucesso!",
+          })
+        } else if (data.status === 'FAILED' || data.status === 'CANCELLED') {
+          // Video failed - stop monitoring
+          setMonitoringVideoId(null)
+          addToast({
+            type: 'error',
+            title: "Erro na geração",
+            description: data.errorMessage || "Falha ao gerar o vídeo",
+          })
+        } else {
+          // Still processing - check again in 5 seconds
+          setTimeout(checkStatus, 5000)
+        }
+      } catch (error) {
+        console.error('Error checking video status:', error)
+        // Retry after 5 seconds
+        setTimeout(checkStatus, 5000)
+      }
+    }
+    
+    // Start checking after 10 seconds (videos take longer)
+    setTimeout(checkStatus, 10000)
+  }
 
   // Detect mobile
   useEffect(() => {
@@ -177,18 +230,20 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
       const result = await response.json()
       console.log('✅ [VIDEO-GENERATION] Video generation started:', result)
 
+      // Store video generation ID for monitoring
+      const videoGenerationId = result.videoGenerationId || result.videoGeneration?.id || result.id
+      
+      if (!videoGenerationId) {
+        throw new Error('ID da geração de vídeo não foi retornado')
+      }
+      
       addToast({
         type: 'success',
         title: "Vídeo em processamento",
-        description: `Tempo estimado: ${formatProcessingTime(getEstimatedProcessingTime(formData.duration, 'pro'))}. Você pode acompanhar o progresso na galeria.`,
+        description: `Tempo estimado: ${formatProcessingTime(getEstimatedProcessingTime(formData.duration, 'pro'))}. O modal abrirá automaticamente quando estiver pronto.`,
       })
 
-      // Redirect to gallery to view video progress
-      setTimeout(() => {
-        router.push('/gallery?tab=videos')
-      }, 2000)
-
-      // Reset form
+      // Clear form immediately after starting generation
       setFormData({
         prompt: '',
         negativePrompt: VIDEO_CONFIG.defaults.negativePrompt,
@@ -198,6 +253,10 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
       })
       setUploadedImage(null)
       setSelectedTemplate(null)
+      setActiveMode('text-to-video')
+
+      // Monitor video status and open modal when completed
+      monitorVideoGeneration(videoGenerationId)
 
     } catch (error) {
       console.error('❌ [VIDEO-GENERATION] Error:', error)
