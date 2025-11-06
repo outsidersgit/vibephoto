@@ -213,6 +213,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
 
   // Monitor async processing via SSE - use useCallback to ensure stable reference
   const handleGenerationStatusChange = useCallback((generationId: string, status: string, data: any) => {
+    console.log('🔔 [IMAGE_EDITOR] ========== SSE EVENT RECEIVED ==========')
     console.log('🔔 [IMAGE_EDITOR] SSE event received:', {
       generationId,
       status,
@@ -221,7 +222,9 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       dataGenerationId: data.generationId,
       hasImageUrls: !!(data.imageUrls && data.imageUrls.length > 0),
       hasTemporaryUrls: !!(data.temporaryUrls && data.temporaryUrls.length > 0),
-      currentLoadingState: loadingRef.current
+      currentLoadingState: loadingRef.current,
+      allDataKeys: Object.keys(data || {}),
+      fullData: data
     })
     
     // Check if this is our edit (by editHistoryId or generationId matching currentEditId)
@@ -263,8 +266,24 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             temporaryUrls: data.temporaryUrls
           })
           
-          // Accept both 'COMPLETE' and 'COMPLETED' status (some systems use different formats)
-          const isCompleted = status === 'COMPLETED' || status === 'COMPLETE' || status === 'succeeded'
+          // Accept multiple status formats: 'COMPLETED', 'COMPLETE', 'succeeded', 'completed'
+          // Normalize status to uppercase for comparison
+          const normalizedStatus = (status || '').toUpperCase()
+          const isCompleted = normalizedStatus === 'COMPLETED' || 
+                             normalizedStatus === 'COMPLETE' || 
+                             normalizedStatus === 'SUCCEEDED' ||
+                             status === 'succeeded' ||
+                             status === 'completed'
+          
+          console.log('🔍 [IMAGE_EDITOR] Checking completion status:', {
+            originalStatus: status,
+            normalizedStatus,
+            isCompleted,
+            hasImageUrls: !!(data.imageUrls && data.imageUrls.length > 0),
+            hasTemporaryUrls: !!(data.temporaryUrls && data.temporaryUrls.length > 0),
+            imageUrlsCount: data.imageUrls?.length || 0,
+            temporaryUrlsCount: data.temporaryUrls?.length || 0
+          })
           
           if (isCompleted && (data.imageUrls || data.temporaryUrls)) {
             // Extract URLs: temporary for quick display, permanent as fallback
@@ -283,8 +302,11 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             })
             
             if (temporaryUrl || permanentUrl) {
+              console.log('🚀 [IMAGE_EDITOR] Calling openModalWithValidation...')
               // Use validation function to open modal (async, fire and forget)
-              openModalWithValidation(temporaryUrl, permanentUrl).catch((error) => {
+              openModalWithValidation(temporaryUrl, permanentUrl).then(() => {
+                console.log('✅ [IMAGE_EDITOR] Modal opened successfully')
+              }).catch((error) => {
                 console.error('❌ [IMAGE_EDITOR] Error opening modal with validation:', error)
                 setLoading(false)
                 loadingRef.current = false
@@ -306,7 +328,17 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               type: "error"
             })
           } else {
-            console.log(`⏳ [IMAGE_EDITOR] Status ${status} - waiting for completion...`)
+            const normalizedStatus = (status || '').toUpperCase()
+            const isCompleted = normalizedStatus === 'COMPLETED' || 
+                               normalizedStatus === 'COMPLETE' || 
+                               normalizedStatus === 'SUCCEEDED' ||
+                               status === 'succeeded' ||
+                               status === 'completed'
+            console.log(`⏳ [IMAGE_EDITOR] Status ${status} (normalized: ${normalizedStatus}) - NOT completed or no URLs yet`, {
+              isCompleted,
+              hasImageUrls: !!(data.imageUrls && data.imageUrls.length > 0),
+              hasTemporaryUrls: !!(data.temporaryUrls && data.temporaryUrls.length > 0)
+            })
           }
         } else {
           console.log('⏭️ [IMAGE_EDITOR] SSE event not for our edit, ignoring', {
@@ -419,9 +451,14 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       return
     }
 
+    // CRITICAL: Set loading state BEFORE async operation
+    console.log('🚀 [IMAGE_EDITOR] Starting submit, setting loading to true')
     setLoading(true)
     loadingRef.current = true
     setError(null)
+    
+    // Force a small delay to ensure state is updated
+    await new Promise(resolve => setTimeout(resolve, 0))
 
     try {
       const response = await fetch('/api/ai/image-editor', {
@@ -451,10 +488,16 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           status: data.data?.status,
           async: data.async,
           fullResponse: data,
-          currentLoadingState: loading
+          currentLoadingState: loading,
+          loadingRefState: loadingRef.current
         })
         
-        // CRITICAL: Ensure loading state is true
+        // CRITICAL: Ensure loading state is true (double-check)
+        if (!loadingRef.current) {
+          console.warn('⚠️ [IMAGE_EDITOR] Loading ref was false, setting to true')
+          setLoading(true)
+          loadingRef.current = true
+        }
         if (!loading) {
           console.warn('⚠️ [IMAGE_EDITOR] Loading state was false, setting to true')
           setLoading(true)
