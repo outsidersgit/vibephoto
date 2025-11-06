@@ -38,30 +38,75 @@ export async function POST(request: NextRequest) {
 
     if (webhookSecret) {
       const signature = request.headers.get('webhook-signature')
+      const webhookId = request.headers.get('webhook-id')
+      const webhookTimestamp = request.headers.get('webhook-timestamp')
       const body = await request.text()
 
       try {
-        // Validação manual usando crypto (mesma abordagem dos outros webhooks)
+        // Validação usando formato Svix (usado pelo Replicate)
         if (!signature) {
           console.log('❌ Replicate webhook: Missing signature header')
           return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
         }
 
-        // Replicate envia signature como 'sha256=<hex>'
-        const signatureHash = signature.replace('sha256=', '')
-        const expectedSignature = crypto
-          .createHmac('sha256', webhookSecret)
-          .update(body)
-          .digest('hex')
+        // Replicate usa Svix para webhooks
+        // Formato: v1,<signature_base64>
+        // Conteúdo assinado: <webhook-id>.<webhook-timestamp>.<raw-body>
+        if (!signature.startsWith('v1,')) {
+          console.log('❌ Replicate webhook: Invalid signature format (expected v1, format)')
+          return NextResponse.json({ error: 'Invalid signature format' }, { status: 401 })
+        }
 
-        if (signatureHash !== expectedSignature) {
+        // Extrair assinatura do formato v1,<signature>
+        const receivedSignature = signature.replace('v1,', '')
+        
+        // Construir conteúdo assinado: webhook-id.webhook-timestamp.body
+        if (!webhookId || !webhookTimestamp) {
+          console.log('❌ Replicate webhook: Missing webhook-id or webhook-timestamp headers')
+          return NextResponse.json({ error: 'Missing required headers' }, { status: 401 })
+        }
+
+        const signedContent = `${webhookId}.${webhookTimestamp}.${body}`
+        
+        // Remover prefixo whsec_ da chave secreta se presente
+        const secretKey = webhookSecret.startsWith('whsec_') 
+          ? webhookSecret.replace('whsec_', '')
+          : webhookSecret
+        
+        // Calcular assinatura esperada usando HMAC-SHA256 e converter para base64
+        const expectedSignature = crypto
+          .createHmac('sha256', secretKey)
+          .update(signedContent, 'utf8')
+          .digest('base64')
+
+        // Comparar assinaturas usando timing-safe comparison
+        const isValid = crypto.timingSafeEqual(
+          Buffer.from(receivedSignature),
+          Buffer.from(expectedSignature)
+        )
+
+        if (!isValid) {
           console.log('❌ Replicate webhook: Invalid signature')
           console.log('❌ Signature details:', {
-            received: signatureHash.substring(0, 20) + '...',
-            expected: expectedSignature.substring(0, 20) + '...',
-            bodyLength: body.length
+            webhookId,
+            webhookTimestamp,
+            receivedSignatureLength: receivedSignature.length,
+            expectedSignatureLength: expectedSignature.length,
+            bodyLength: body.length,
+            signedContentLength: signedContent.length
           })
           return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+        }
+
+        // Verificar timestamp para prevenir replay attacks (opcional, mas recomendado)
+        const timestamp = parseInt(webhookTimestamp, 10)
+        const currentTime = Math.floor(Date.now() / 1000)
+        const timeDifference = Math.abs(currentTime - timestamp)
+        
+        // Permitir diferença de até 5 minutos
+        if (timeDifference > 300) {
+          console.log('❌ Replicate webhook: Timestamp too old or too far in future')
+          return NextResponse.json({ error: 'Invalid timestamp' }, { status: 401 })
         }
 
         payload = JSON.parse(body)
@@ -71,6 +116,8 @@ export async function POST(request: NextRequest) {
         console.error('❌ Validation error details:', {
           error: validationError instanceof Error ? validationError.message : String(validationError),
           hasSignature: !!signature,
+          hasWebhookId: !!webhookId,
+          hasWebhookTimestamp: !!webhookTimestamp,
           bodyLength: body.length
         })
         return NextResponse.json({ error: 'Webhook validation failed' }, { status: 401 })
