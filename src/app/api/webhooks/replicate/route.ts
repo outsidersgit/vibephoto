@@ -41,17 +41,26 @@ export async function POST(request: NextRequest) {
       const body = await request.text()
 
       try {
-        // Usar validação oficial do Replicate
-        // IMPORTANT: validateWebhook precisa do body como string e signature
+        // Validação manual usando crypto (mesma abordagem dos outros webhooks)
         if (!signature) {
           console.log('❌ Replicate webhook: Missing signature header')
           return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
         }
 
-        const isValid = Replicate.validateWebhook(body, signature, webhookSecret)
+        // Replicate envia signature como 'sha256=<hex>'
+        const signatureHash = signature.replace('sha256=', '')
+        const expectedSignature = crypto
+          .createHmac('sha256', webhookSecret)
+          .update(body)
+          .digest('hex')
 
-        if (!isValid) {
-          console.log('❌ Replicate webhook: Invalid signature (using official validation)')
+        if (signatureHash !== expectedSignature) {
+          console.log('❌ Replicate webhook: Invalid signature')
+          console.log('❌ Signature details:', {
+            received: signatureHash.substring(0, 20) + '...',
+            expected: expectedSignature.substring(0, 20) + '...',
+            bodyLength: body.length
+          })
           return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
         }
 
