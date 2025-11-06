@@ -37,6 +37,8 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   const { data: session, status } = useSession()
   const { addToast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const currentEditIdRef = useRef<string | null>(null)
+  const loadingRef = useRef<boolean>(false)
 
   const [operation] = useState<Operation>('edit')
   const [prompt, setPrompt] = useState('')
@@ -49,6 +51,15 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   const [showResultModal, setShowResultModal] = useState(false)
   const [currentEditId, setCurrentEditId] = useState<string | null>(null)
   const router = useRouter()
+  
+  // Sync refs with state
+  useEffect(() => {
+    currentEditIdRef.current = currentEditId
+  }, [currentEditId])
+  
+  useEffect(() => {
+    loadingRef.current = loading
+  }, [loading])
   
   // Função para limpar todos os campos após geração bem-sucedida
   const clearForm = () => {
@@ -64,48 +75,48 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   }
   
   
-  // Monitor async processing via SSE
-  useRealtimeUpdates({
-    onGenerationStatusChange: (generationId, status, data) => {
-      console.log('🔔 [IMAGE_EDITOR] SSE event received:', {
-        generationId,
-        status,
-        currentEditId,
-        dataEditHistoryId: data.editHistoryId,
-        dataGenerationId: data.generationId,
-        hasImageUrls: !!(data.imageUrls && data.imageUrls.length > 0),
-        hasTemporaryUrls: !!(data.temporaryUrls && data.temporaryUrls.length > 0)
-      })
-      
-      // Check if this is our edit (by editHistoryId or generationId matching currentEditId)
-      // IMPORTANT: The webhook broadcasts with editHistory.id as generationId, so we need to match on that
-      // But the generation created might also broadcast with its own ID, so we check metadata.editHistoryId too
-      const isOurEdit = currentEditId && (
-        generationId === currentEditId || 
-        data.editHistoryId === currentEditId ||
-        data.generationId === currentEditId ||
-        // Check if metadata contains editHistoryId
-        (data.metadata && typeof data.metadata === 'object' && 'editHistoryId' in data.metadata && data.metadata.editHistoryId === currentEditId) ||
-        // Also check if the generationId in the SSE matches the editHistoryId we're monitoring (for backwards compatibility)
-        (typeof generationId === 'string' && generationId.includes(currentEditId)) ||
-        (typeof data.generationId === 'string' && data.generationId.includes(currentEditId))
-      )
-      
-      console.log('🔍 [IMAGE_EDITOR] Matching check:', {
-        currentEditId,
-        generationId,
-        dataEditHistoryId: data.editHistoryId,
-        dataGenerationId: data.generationId,
-        metadataEditHistoryId: data.metadata?.editHistoryId,
-        matchGenerationId: generationId === currentEditId,
-        matchEditHistoryId: data.editHistoryId === currentEditId,
-        matchDataGenerationId: data.generationId === currentEditId,
-        matchMetadataEditHistoryId: data.metadata?.editHistoryId === currentEditId,
-        isOurEdit,
-        fullData: data
-      })
-      
-      if (isOurEdit) {
+  // Monitor async processing via SSE - use useCallback to ensure stable reference
+  const handleGenerationStatusChange = useCallback((generationId: string, status: string, data: any) => {
+    console.log('🔔 [IMAGE_EDITOR] SSE event received:', {
+      generationId,
+      status,
+      currentEditId: currentEditIdRef.current,
+      dataEditHistoryId: data.editHistoryId,
+      dataGenerationId: data.generationId,
+      hasImageUrls: !!(data.imageUrls && data.imageUrls.length > 0),
+      hasTemporaryUrls: !!(data.temporaryUrls && data.temporaryUrls.length > 0),
+      currentLoadingState: loadingRef.current
+    })
+    
+    // Check if this is our edit (by editHistoryId or generationId matching currentEditId)
+    // IMPORTANT: The webhook broadcasts with editHistory.id as generationId, so we need to match on that
+    // But the generation created might also broadcast with its own ID, so we check metadata.editHistoryId too
+    const isOurEdit = currentEditIdRef.current && (
+      generationId === currentEditIdRef.current || 
+      data.editHistoryId === currentEditIdRef.current ||
+      data.generationId === currentEditIdRef.current ||
+      // Check if metadata contains editHistoryId
+      (data.metadata && typeof data.metadata === 'object' && 'editHistoryId' in data.metadata && data.metadata.editHistoryId === currentEditIdRef.current) ||
+      // Also check if the generationId in the SSE matches the editHistoryId we're monitoring (for backwards compatibility)
+      (typeof generationId === 'string' && generationId.includes(currentEditIdRef.current)) ||
+      (typeof data.generationId === 'string' && data.generationId.includes(currentEditIdRef.current))
+    )
+    
+    console.log('🔍 [IMAGE_EDITOR] Matching check:', {
+      currentEditId: currentEditIdRef.current,
+      generationId,
+      dataEditHistoryId: data.editHistoryId,
+      dataGenerationId: data.generationId,
+      metadataEditHistoryId: data.metadata?.editHistoryId,
+      matchGenerationId: generationId === currentEditIdRef.current,
+      matchEditHistoryId: data.editHistoryId === currentEditIdRef.current,
+      matchDataGenerationId: data.generationId === currentEditIdRef.current,
+      matchMetadataEditHistoryId: data.metadata?.editHistoryId === currentEditIdRef.current,
+      isOurEdit,
+      currentLoadingState: loadingRef.current
+    })
+    
+    if (isOurEdit) {
           console.log('🎯 [IMAGE_EDITOR] SSE update matched our edit:', {
             generationId,
             status,
@@ -131,17 +142,19 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 showResultModal: true,
                 result: modalImageUrl.substring(0, 50) + '...',
                 hasResult: !!modalImageUrl,
-                currentLoadingState: loading
+                currentLoadingState: loadingRef.current
               })
               
               // CRITICAL: Set result URL first, then open modal synchronously
               setResult(modalImageUrl)
               setShowResultModal(true)
               setCurrentEditId(null) // Clear monitoring
+              currentEditIdRef.current = null
               
               // Clear loading state after a small delay to ensure modal is visible
               setTimeout(() => {
                 setLoading(false)
+                loadingRef.current = false
                 console.log('✅ [IMAGE_EDITOR] Modal opened and loading cleared:', {
                   showResultModal: true,
                   loading: false,
@@ -160,11 +173,14 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             } else {
               console.warn('⚠️ [IMAGE_EDITOR] SSE update has COMPLETED status but no image URLs')
               setLoading(false) // Clear loading even if no URL
+              loadingRef.current = false
             }
           } else if (status === 'FAILED' || status === 'failed') {
             setError(data.errorMessage || 'Erro ao processar imagem')
             setCurrentEditId(null)
+            currentEditIdRef.current = null
             setLoading(false) // Clear loading state
+            loadingRef.current = false
             addToast({
               title: "Erro",
               description: data.errorMessage || 'Erro ao processar imagem',
@@ -176,12 +192,15 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         } else {
           console.log('⏭️ [IMAGE_EDITOR] SSE event not for our edit, ignoring', {
             generationId,
-            currentEditId,
+            currentEditId: currentEditIdRef.current,
             dataEditHistoryId: data.editHistoryId,
             dataGenerationId: data.generationId
           })
         }
-    }
+  }, [addToast])
+  
+  useRealtimeUpdates({
+    onGenerationStatusChange: handleGenerationStatusChange
   })
 
   // Detect mobile on mount and resize
@@ -282,6 +301,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     }
 
     setLoading(true)
+    loadingRef.current = true
     setError(null)
 
     try {
@@ -319,6 +339,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         if (!loading) {
           console.warn('⚠️ [IMAGE_EDITOR] Loading state was false, setting to true')
           setLoading(true)
+          loadingRef.current = true
         }
         
         addToast({
@@ -330,6 +351,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         // Store editHistoryId to monitor via SSE
         if (data.data?.editHistoryId) {
           setCurrentEditId(data.data.editHistoryId)
+          currentEditIdRef.current = data.data.editHistoryId
           console.log('✅ [IMAGE_EDITOR] Monitoring editHistoryId via SSE:', data.data.editHistoryId)
           console.log('✅ [IMAGE_EDITOR] Will match SSE events where:', {
             generationId: `=== ${data.data.editHistoryId}`,
@@ -341,6 +363,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         } else {
           console.warn('⚠️ [IMAGE_EDITOR] No editHistoryId in response, cannot monitor via SSE')
           setLoading(false) // Only clear loading if we can't monitor
+          loadingRef.current = false
         }
         
         // Don't clear form yet - will be cleared when webhook completes

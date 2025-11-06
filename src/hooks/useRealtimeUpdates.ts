@@ -164,11 +164,24 @@ export function useRealtimeUpdates(options: UseRealtimeUpdatesOptions = {}) {
             break
 
           case 'generation_status_changed':
-            optionsRef.current.onGenerationStatusChange?.(
-              eventData.data.generationId,
-              eventData.data.status,
-              eventData.data
-            )
+            console.log('🎯 [useRealtimeUpdates] Processing generation_status_changed:', {
+              generationId: eventData.data.generationId,
+              status: eventData.data.status,
+              hasHandler: !!optionsRef.current.onGenerationStatusChange,
+              dataKeys: Object.keys(eventData.data || {})
+            })
+            
+            if (optionsRef.current.onGenerationStatusChange) {
+              console.log('✅ [useRealtimeUpdates] Calling onGenerationStatusChange handler')
+              optionsRef.current.onGenerationStatusChange(
+                eventData.data.generationId,
+                eventData.data.status,
+                eventData.data
+              )
+              console.log('✅ [useRealtimeUpdates] Handler called successfully')
+            } else {
+              console.warn('⚠️ [useRealtimeUpdates] No onGenerationStatusChange handler registered')
+            }
             break
 
           case 'training_progress':
