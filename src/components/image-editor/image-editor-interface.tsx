@@ -438,6 +438,16 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
+  // Cleanup fallback timer on unmount
+  useEffect(() => {
+    return () => {
+      if (editFallbackTimerRef.current) {
+        clearTimeout(editFallbackTimerRef.current)
+        editFallbackTimerRef.current = null
+      }
+    }
+  }, [])
+
   // CRITICAL: useCallback DEVE vir ANTES de qualquer early return
   const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
@@ -1090,12 +1100,3 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     </div>
   )
 }
-
-useEffect(() => {
-  return () => {
-    if (editFallbackTimerRef.current) {
-      clearTimeout(editFallbackTimerRef.current)
-      editFallbackTimerRef.current = null
-    }
-  }
-}, [])
