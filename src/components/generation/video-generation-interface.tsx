@@ -10,7 +10,7 @@ import { Image as ImageIcon, Video, Upload, X, Loader2, Copy } from 'lucide-reac
 import { VIDEO_CONFIG, VideoGenerationRequest, VideoTemplate } from '@/lib/ai/video/config'
 import { calculateVideoCredits, validatePrompt, getEstimatedProcessingTime, formatProcessingTime } from '@/lib/ai/video/utils'
 import { useToast } from '@/hooks/use-toast'
-import { GenerationResultModal } from '@/components/ui/generation-result-modal'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useRouter } from 'next/navigation'
 
 interface VideoGenerationInterfaceProps {
@@ -46,9 +46,25 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   const [loading, setLoading] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [errors, setErrors] = useState<string[]>([])
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [successVideoUrl, setSuccessVideoUrl] = useState<string | null>(null)
+  const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'video' } | null>(null)
+  const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
   const [monitoringVideoId, setMonitoringVideoId] = useState<string | null>(null)
+
+  const resetFormAfterSuccess = useCallback(() => {
+    setFormData({
+      prompt: '',
+      negativePrompt: VIDEO_CONFIG.defaults.negativePrompt,
+      duration: VIDEO_CONFIG.defaults.duration as 5 | 10,
+      aspectRatio: VIDEO_CONFIG.defaults.aspectRatio as '16:9' | '9:16' | '1:1',
+      quality: 'pro'
+    })
+    setSelectedTemplate(null)
+    setUploadedImage(null)
+    setErrors([])
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }, [])
   
   // Função para validar se uma URL de vídeo está acessível
   const validateVideoUrl = useCallback(async (url: string, maxRetries = 3): Promise<boolean> => {
@@ -149,8 +165,8 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
     }
 
     if (urlToUse) {
-      setSuccessVideoUrl(urlToUse)
-      setShowSuccessModal(true)
+      setPreviewMedia({ url: urlToUse, type: 'video' })
+      setIsPreviewLightboxOpen(false)
       setMonitoringVideoId(null)
 
       addToast({
@@ -158,6 +174,8 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         title: "🎉 Vídeo pronto!",
         description: "Seu vídeo foi gerado com sucesso!",
       })
+
+      resetFormAfterSuccess()
     } else {
       console.error('❌ [VIDEO_GENERATION] No valid URL')
       setMonitoringVideoId(null)
@@ -167,7 +185,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         description: 'Vídeo processado mas ainda não disponível. Verifique a galeria em alguns instantes.',
       })
     }
-  }, [addToast, testVideoUrl])
+  }, [addToast, testVideoUrl, resetFormAfterSuccess])
   
   // Monitor video generation status and open modal when completed
   const monitorVideoGeneration = (videoId: string) => {
@@ -820,17 +838,38 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         </div>
       </div>
 
-      {/* Success Modal for Video */}
-      <GenerationResultModal
-        open={showSuccessModal}
-        onOpenChange={(open) => {
-          setShowSuccessModal(open)
-          if (!open) setSuccessVideoUrl(null)
-        }}
-        videoUrl={successVideoUrl}
-        title="Vídeo Gerado"
-        type="video"
-      />
+      {previewMedia && (
+        <Card className="mt-6 border-gray-200 bg-white rounded-lg shadow-lg">
+          <CardContent className="p-4">
+            <h3 className="text-base font-semibold text-gray-900 mb-3 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+              Vídeo gerado recentemente
+            </h3>
+            <div
+              className="relative group cursor-pointer rounded-2xl overflow-hidden border border-gray-200 bg-black"
+              onClick={() => setIsPreviewLightboxOpen(true)}
+            >
+              <video
+                src={previewMedia.url}
+                className="w-full h-auto max-h-[24rem] object-cover"
+                controls
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="px-4 py-2 bg-white/90 text-gray-900 text-sm font-semibold rounded-full">
+                  Tocar em tela cheia
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={isPreviewLightboxOpen} onOpenChange={setIsPreviewLightboxOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden p-0 bg-black">
+          {previewMedia?.type === 'video' && (
+            <video src={previewMedia.url} className="w-full h-auto max-h-[85vh]" controls autoPlay />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

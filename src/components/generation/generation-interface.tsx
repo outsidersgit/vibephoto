@@ -22,7 +22,7 @@ import { GenerationSettings } from './generation-settings'
 import { ResultsGallery } from './results-gallery'
 import { PromptExamples } from './prompt-examples'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { GenerationResultModal } from '@/components/ui/generation-result-modal'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 
 interface GenerationInterfaceProps {
   models: Array<{
@@ -64,9 +64,9 @@ export function GenerationInterface({
   const [currentGeneration, setCurrentGeneration] = useState<any>(null)
   const [showExamples, setShowExamples] = useState(false)
 
-  // Success modal states
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [successImageUrl, setSuccessImageUrl] = useState<string | null>(null)
+  // Inline preview state
+  const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' } | null>(null)
+  const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
   // Flag para evitar toasts duplicados
   const [completedGenerationIds, setCompletedGenerationIds] = useState<Set<string>>(new Set())
 
@@ -197,8 +197,9 @@ export function GenerationInterface({
     }
 
     if (urlToUse) {
-      setSuccessImageUrl(urlToUse)
-      setShowSuccessModal(true)
+      setPreviewMedia({ url: urlToUse, type: 'image' })
+      setIsPreviewLightboxOpen(false)
+      // clearFormAfterSuccess() // This is now handled by the validation helper
     } else {
       console.error('❌ [GENERATION] No valid URL')
       addToast({
@@ -208,7 +209,7 @@ export function GenerationInterface({
         duration: 6000
       })
     }
-  }, [addToast, testImageUrl])
+  }, [addToast, testImageUrl, clearFormAfterSuccess])
 
   // Real-time updates for generation status
   useRealtimeUpdates({
@@ -276,10 +277,7 @@ export function GenerationInterface({
               status
             })
             // Use validation function to open modal (async, fire and forget)
-            openModalWithValidation(temporaryUrl, permanentUrl).then(() => {
-              // Clear form after successful generation
-              clearFormAfterSuccess()
-            }).catch((error) => {
+            openModalWithValidation(temporaryUrl, permanentUrl).catch((error) => {
               console.error('❌ [GENERATION] Error opening modal with validation:', error)
             })
           } else {
@@ -411,10 +409,7 @@ export function GenerationInterface({
               status: pollingData.status
             })
             // Use validation function to open modal (async, fire and forget)
-            openModalWithValidation(temporaryUrl, permanentUrl).then(() => {
-              // Clear form after successful generation
-              clearFormAfterSuccess()
-            }).catch((error) => {
+            openModalWithValidation(temporaryUrl, permanentUrl).catch((error) => {
               console.error('❌ [GENERATION] Error opening modal with validation:', error)
             })
           } else {
@@ -515,6 +510,8 @@ export function GenerationInterface({
     setIsLastBlockSelected(false)
     setIsGuidedMode(false)
     setCurrentGeneration(null)
+    setPreviewMedia(null)
+    setIsPreviewLightboxOpen(false)
     // Reset settings to defaults
     setSettings({
       aspectRatio: '1:1',
@@ -553,8 +550,8 @@ export function GenerationInterface({
 
     // Limpar estado anterior antes de iniciar nova geração
     setCurrentGeneration(null)
-    setSuccessImageUrl(null)
-    setShowSuccessModal(false)
+    setPreviewMedia(null)
+    setIsPreviewLightboxOpen(false)
 
     try {
       const generation = await generateImage.mutateAsync({
@@ -589,8 +586,8 @@ export function GenerationInterface({
       
       // CRITICAL: Limpar estado após erro para resetar o botão
       setCurrentGeneration(null)
-      setSuccessImageUrl(null)
-      setShowSuccessModal(false)
+      setPreviewMedia(null)
+      setIsPreviewLightboxOpen(false)
       
       // Extrair mensagem de erro
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
@@ -896,6 +893,38 @@ export function GenerationInterface({
         </div>
       </div>
 
+      {/* Inline preview */}
+      {previewMedia && (
+        <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center text-base font-semibold text-gray-900">
+              <Image className="w-5 h-5 mr-2" />
+              Resultado recente
+            </CardTitle>
+            <CardDescription className="text-sm text-gray-500">
+              Clique na imagem para visualizar em tela cheia
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div
+              className="relative group cursor-pointer rounded-2xl overflow-hidden border border-gray-200 bg-white"
+              onClick={() => setIsPreviewLightboxOpen(true)}
+            >
+              <img
+                src={previewMedia.url}
+                alt="Resultado gerado"
+                className="w-full h-auto max-h-[28rem] object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="px-4 py-2 bg-white/85 text-gray-900 text-sm font-semibold rounded-full">
+                  Ver em tela cheia
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Recent Results */}
       {generationResults.length > 0 && (
         <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
@@ -911,17 +940,17 @@ export function GenerationInterface({
         </Card>
       )}
 
-      {/* Success Modal */}
-      <GenerationResultModal
-        open={showSuccessModal}
-        onOpenChange={(open) => {
-          setShowSuccessModal(open)
-          if (!open) setSuccessImageUrl(null)
-        }}
-        imageUrl={successImageUrl}
-        title="Imagem Gerada"
-        type="image"
-      />
+      <Dialog open={isPreviewLightboxOpen} onOpenChange={setIsPreviewLightboxOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden p-0">
+          {previewMedia?.type === 'image' && (
+            <img
+              src={previewMedia.url}
+              alt="Resultado gerado"
+              className="w-full h-auto max-h-[85vh] object-contain"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

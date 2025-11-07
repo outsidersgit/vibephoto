@@ -21,7 +21,7 @@ import {
   Copy
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { GenerationResultModal } from '@/components/ui/generation-result-modal'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 
 interface ImageEditorInterfaceProps {
@@ -43,24 +43,14 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   const [operation] = useState<Operation>('edit')
   const [prompt, setPrompt] = useState('')
   const [images, setImages] = useState<string[]>(preloadedImageUrl ? [preloadedImageUrl] : [])
-  const [result, setResult] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3' | '3:4' | '9:16' | '16:9'>('1:1')
-  const [showResultModal, setShowResultModal] = useState(false)
+  const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' } | null>(null)
+  const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
   const [currentEditId, setCurrentEditId] = useState<string | null>(null)
   const router = useRouter()
-
-  // DEBUG: Monitor showResultModal state changes
-  useEffect(() => {
-    console.log('🔍 [IMAGE_EDITOR] showResultModal state changed:', {
-      showResultModal,
-      result,
-      hasResult: !!result,
-      timestamp: new Date().toISOString()
-    })
-  }, [showResultModal, result])
 
   // Sync refs with state
   useEffect(() => {
@@ -76,7 +66,6 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     setPrompt('')
     setImages([])
     setError(null)
-    setResult(null)
     setCurrentEditId(null) // Clear edit monitoring
     // Reset file input
     if (fileInputRef.current) {
@@ -215,8 +204,8 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
 
     // 3. Open modal with validated URL
     if (urlToUse) {
-      console.log(`✅ [IMAGE_EDITOR] Opening with ${urlType} URL`)
-      console.log(`✅ [IMAGE_EDITOR] Full URL:`, urlToUse)
+      console.log(`✅ [IMAGE_EDITOR] Preparing inline preview with ${urlType} URL`)
+      console.log(`✅ [IMAGE_EDITOR] Preview URL:`, urlToUse)
 
       // Stop loading
       setLoading(false)
@@ -226,18 +215,21 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       setCurrentEditId(null)
       currentEditIdRef.current = null
 
-      // Set result and open modal
-      setResult(urlToUse)
-      setShowResultModal(true)
+      // Update preview state and ensure lightbox starts closed
+      setPreviewMedia({ url: urlToUse, type: 'image' })
+      setIsPreviewLightboxOpen(false)
 
-      // Success toast
+      // Show success toast
       addToast({
         title: "Sucesso!",
         description: "Imagem processada e salva com sucesso",
         type: "success"
       })
 
-      console.log('✅ [IMAGE_EDITOR] Modal opened successfully')
+      // Clear form inputs after storing result
+      clearForm()
+
+      console.log('✅ [IMAGE_EDITOR] Preview updated successfully')
     } else {
       console.error('❌ [IMAGE_EDITOR] NO VALID URL')
       setCurrentEditId(null)
@@ -437,7 +429,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
 
       const reader = new FileReader()
       reader.onload = (e) => {
-        const result = e.target?.result as string
+        const base64Image = e.target?.result as string
         setImages(prev => {
           if (prev.length >= 3) {
             addToast({
@@ -448,7 +440,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             return prev
           }
 
-          return [...prev, result]
+          return [...prev, base64Image]
         })
       }
       reader.readAsDataURL(file)
@@ -613,24 +605,18 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         throw new Error('URL da imagem não foi retornada pela API')
       }
       
-      // Set result and open modal automatically with temporary URL
-      setResult(modalUrl)
-      setShowResultModal(true)
-      console.log('✅ [IMAGE_EDITOR] Result URL set, opening modal automatically with', temporaryUrl ? 'temporary URL' : 'permanent URL')
-      console.log('🎯 [IMAGE_EDITOR] Modal state:', {
-        result: modalUrl?.substring(0, 100) + '...',
-        showResultModal: true,
-        hasResult: !!modalUrl
-      })
+      setPreviewMedia({ url: modalUrl, type: 'image' })
+      setIsPreviewLightboxOpen(false)
+
+      console.log('✅ [IMAGE_EDITOR] Inline preview updated with', temporaryUrl ? 'temporary URL' : 'permanent URL')
 
       addToast({
         title: "Sucesso!",
         description: "Imagem processada e salva com sucesso",
         type: "success"
       })
-      
-      // DON'T clear form immediately - modal needs the result URL
-      // Form will be cleared when modal is closed (see onOpenChange handler)
+
+      clearForm()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido'
       setError(errorMessage)
@@ -812,26 +798,41 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             )}
           </div>
 
-          {/* Result Modal - Auto-opens when generation completes */}
-          {console.log('🎨 [IMAGE_EDITOR] Rendering GenerationResultModal component:', {
-            showResultModal,
-            result: result?.substring(0, 100),
-            hasResult: !!result
-          })}
-          <GenerationResultModal
-            open={showResultModal}
-            onOpenChange={(open) => {
-              console.log('🎨 [IMAGE_EDITOR] Modal onOpenChange called:', open)
-              setShowResultModal(open)
-              if (!open) {
-                // Clear form ONLY when modal is closed
-                clearForm()
-              }
-            }}
-            imageUrl={result}
-            title="Imagem Processada"
-            type="image"
-          />
+          {/* Preview inline */}
+          {previewMedia && (
+            <div className="mt-6">
+              <h3 className="text-base font-semibold text-gray-800 mb-3 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                Resultado recente
+              </h3>
+              <div
+                className="relative group cursor-pointer rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm"
+                onClick={() => setIsPreviewLightboxOpen(true)}
+              >
+                <img
+                  src={previewMedia.url}
+                  alt="Resultado gerado"
+                  className="w-full h-auto object-cover max-h-72"
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="px-3 py-1 bg-white/85 text-gray-900 text-xs font-semibold rounded-full">
+                    Clique para ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <Dialog open={isPreviewLightboxOpen} onOpenChange={setIsPreviewLightboxOpen}>
+            <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden p-0">
+              {previewMedia?.type === 'image' && (
+                <img
+                  src={previewMedia.url}
+                  alt="Resultado gerado"
+                  className="w-full h-auto max-h-[80vh] object-contain"
+                />
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     )
@@ -1000,6 +1001,41 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               </p>
             </div>
           )}
+
+          {previewMedia && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                Resultado recente
+              </h3>
+              <div
+                className="relative group cursor-pointer rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-md max-w-2xl"
+                onClick={() => setIsPreviewLightboxOpen(true)}
+              >
+                <img
+                  src={previewMedia.url}
+                  alt="Resultado gerado"
+                  className="w-full h-auto object-cover max-h-96"
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="px-4 py-2 bg-white/85 text-gray-900 text-sm font-semibold rounded-full">
+                    Clique para ver em tela cheia
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <Dialog open={isPreviewLightboxOpen} onOpenChange={setIsPreviewLightboxOpen}>
+            <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden p-0">
+              {previewMedia?.type === 'image' && (
+                <img
+                  src={previewMedia.url}
+                  alt="Resultado gerado"
+                  className="w-full h-auto max-h-[85vh] object-contain"
+                />
+              )}
+            </DialogContent>
+          </Dialog>
 
         </div>
       </div>
