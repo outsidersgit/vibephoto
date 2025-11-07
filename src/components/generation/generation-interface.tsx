@@ -64,6 +64,7 @@ export function GenerationInterface({
   const [currentGeneration, setCurrentGeneration] = useState<any>(null)
   const [showExamples, setShowExamples] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [isButtonLocked, setIsButtonLocked] = useState(false)
 
   // Inline preview state
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' } | null>(null)
@@ -115,7 +116,8 @@ export function GenerationInterface({
   // Botão deve permanecer em loading enquanto:
   // - Requisição HTTP está em andamento OU
   // - Geração está processando (aguardando webhook)
-  const isGenerating = generateImage.isPending || currentGeneration?.status === 'PROCESSING'
+  const requestInFlight = generateImage.isPending || currentGeneration?.status === 'PROCESSING'
+  const isGenerating = isButtonLocked || requestInFlight
 
   // Função para validar se uma URL de imagem está acessível
   const validateImageUrl = useCallback(async (url: string, maxRetries = 3): Promise<boolean> => {
@@ -212,6 +214,7 @@ export function GenerationInterface({
     if (urlToUse) {
       setPreviewMedia({ url: urlToUse, type: 'image' })
       setIsPreviewLightboxOpen(false)
+      setIsButtonLocked(false)
       // clearFormAfterSuccess() // This is now handled by the validation helper
     } else {
       console.error('❌ [GENERATION] No valid URL')
@@ -221,8 +224,9 @@ export function GenerationInterface({
         description: 'Imagem processada mas ainda não disponível. Verifique a galeria em alguns instantes.',
         duration: 6000
       })
+      setIsButtonLocked(false)
     }
-  }, [addToast, testImageUrl])
+  }, [addToast, testImageUrl, setIsButtonLocked])
 
   // Real-time updates for generation status
   useRealtimeUpdates({
@@ -292,6 +296,7 @@ export function GenerationInterface({
             // Use validation function to open modal (async, fire and forget)
             openModalWithValidation(temporaryUrl, permanentUrl).catch((error) => {
               console.error('❌ [GENERATION] Error opening modal with validation:', error)
+              setIsButtonLocked(false)
             })
           } else {
             console.warn('⚠️ [GENERATION_SSE] No image URL available for modal:', {
@@ -301,6 +306,7 @@ export function GenerationInterface({
               generationId,
               status
             })
+            setIsButtonLocked(false)
           }
         }
 
@@ -313,6 +319,7 @@ export function GenerationInterface({
             description: errorMessage,
             duration: 6000
           })
+          setIsButtonLocked(false)
         }
       }
     },
@@ -424,9 +431,11 @@ export function GenerationInterface({
             // Use validation function to open modal (async, fire and forget)
             openModalWithValidation(temporaryUrl, permanentUrl).catch((error) => {
               console.error('❌ [GENERATION] Error opening modal with validation:', error)
+              setIsButtonLocked(false)
             })
           } else {
             console.warn('⚠️ [GENERATION_POLLING] No image URL available for modal')
+            setIsButtonLocked(false)
           }
         }
 
@@ -439,6 +448,7 @@ export function GenerationInterface({
             description: errorMessage,
             duration: 6000
           })
+          setIsButtonLocked(false)
         }
       } else {
         // Log quando não há mudança para debug
@@ -458,7 +468,7 @@ export function GenerationInterface({
         pollingStatus: generationPolling.data.status
       })
     }
-  }, [generationPolling.data, generationPolling.isLoading, currentGeneration?.id, currentGeneration?.status, currentGeneration?.imageUrls, completedGenerationIds])
+  }, [generationPolling.data, generationPolling.isLoading, currentGeneration?.id, currentGeneration?.status, currentGeneration?.imageUrls, completedGenerationIds, setIsButtonLocked])
   
   const [settings, setSettings] = useState({
     aspectRatio: '1:1',
@@ -551,6 +561,8 @@ export function GenerationInterface({
 
   const handleGenerate = async () => {
     if (!prompt.trim() || !canUseCredits) return
+
+    setIsButtonLocked(true)
 
     // Log do prompt que será enviado
     console.log('🚀 [GENERATION] Starting generation with prompt:', {
@@ -939,22 +951,22 @@ export function GenerationInterface({
             </div>
           </CardContent>
         </Card>
-      )}
+        )}
 
-      {/* Recent Results */}
-      {generationResults.length > 0 && (
+        {/* Recent Results */}
+        {generationResults.length > 0 && (
         <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
-          <CardHeader>
+            <CardHeader>
             <CardTitle className="flex items-center text-base font-semibold text-gray-900">
-              <Image className="w-5 h-5 mr-2" />
-              Resultados Recentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResultsGallery generations={generationResults.slice(0, 6)} />
-          </CardContent>
-        </Card>
-      )}
+                <Image className="w-5 h-5 mr-2" />
+                Resultados Recentes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResultsGallery generations={generationResults.slice(0, 6)} />
+            </CardContent>
+          </Card>
+        )}
 
       <Dialog open={isPreviewLightboxOpen} onOpenChange={setIsPreviewLightboxOpen}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden p-0">

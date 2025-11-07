@@ -188,6 +188,7 @@ export default function CreateModelPage() {
           description: 'Algumas fotos não passaram na validação. Verifique e tente novamente.',
           type: 'error'
         })
+        setIsSubmitting(false)
         return
       }
 
@@ -233,6 +234,7 @@ export default function CreateModelPage() {
             }
           })
 
+          setIsSubmitting(false)
           return
         }
 
@@ -257,7 +259,6 @@ export default function CreateModelPage() {
         description: errorMessage,
         type: "error"
       })
-    } finally {
       setIsSubmitting(false)
     }
   }

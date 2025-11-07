@@ -784,7 +784,7 @@ const MarqueeCarousel = ({ items, hoveredIndex, onHoverChange, onImageClick }: M
                     <div className="text-sm font-medium tracking-wide uppercase text-gray-300 mb-3">
                       PROMPT
                     </div>
-                    <p className="text-sm leading-relaxed text-gray-100 line-clamp-4">
+                    <p className="text-sm leading-relaxed text-gray-100">
                       {item.prompt}
                     </p>
                   </div>
@@ -1028,7 +1028,7 @@ const AIToolsShowcase = () => {
 
               {/* Prompt Overlay - Mobile optimized: smaller and more transparent */}
               <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 bg-black bg-opacity-60 md:bg-opacity-80 text-white px-2 py-1.5 md:px-3 md:py-2 rounded-lg max-w-[calc(100%-1rem)] md:max-w-xs">
-                <p className="text-[10px] md:text-xs font-light leading-relaxed line-clamp-2 md:line-clamp-none">
+                <p className="text-[10px] md:text-xs font-light leading-relaxed">
                   "Coloque os óculos escuros e troque o terno por uma polo bege com golas levantadas."
                 </p>
               </div>
@@ -1051,7 +1051,7 @@ const AIToolsShowcase = () => {
                   />
                   {/* Prompt Overlay - Mobile optimized: smaller and more transparent */}
                   <div className="absolute bottom-2 left-2 right-2 md:bottom-4 md:left-4 md:right-auto bg-black bg-opacity-60 md:bg-opacity-80 text-white px-2 py-1.5 md:px-3 md:py-2 rounded-lg max-w-[calc(100%-1rem)] md:max-w-xs">
-                    <p className="text-[10px] md:text-xs font-light leading-relaxed line-clamp-2 md:line-clamp-none">
+                    <p className="text-[10px] md:text-xs font-light leading-relaxed">
                       Prompt: Coloque os óculos escuros e troque o terno por uma polo bege com gola alta.
                     </p>
                   </div>
@@ -1316,7 +1316,7 @@ function NavigationSteps() {
 
               {/* Description */}
               <motion.p
-                className="text-base md:text-lg text-white/80 mb-6 max-w-2xl mx-auto leading-relaxed line-clamp-4"
+                className="text-base md:text-lg text-white/80 mb-8 max-w-2xl mx-auto leading-relaxed"
                 style={{
                   fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
                   textShadow: '0 2px 10px rgba(0, 0, 0, 0.2)'

@@ -31,6 +31,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   const { addToast } = useToast()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const loadingRef = useRef(false)
   
   const [isMobile, setIsMobile] = useState(false)
   const [activeMode, setActiveMode] = useState<'text-to-video' | 'image-to-video'>('text-to-video')
@@ -176,6 +177,8 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
       })
 
       resetFormAfterSuccess()
+      loadingRef.current = false
+      setLoading(false)
     } else {
       console.error('❌ [VIDEO_GENERATION] No valid URL')
       setMonitoringVideoId(null)
@@ -184,6 +187,8 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         title: 'Aviso',
         description: 'Vídeo processado mas ainda não disponível. Verifique a galeria em alguns instantes.',
       })
+      loadingRef.current = false
+      setLoading(false)
     }
   }, [addToast, testVideoUrl, resetFormAfterSuccess])
   
@@ -226,6 +231,8 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         } else if (data.status === 'FAILED' || data.status === 'CANCELLED') {
           // Video failed - stop monitoring
           setMonitoringVideoId(null)
+          loadingRef.current = false
+          setLoading(false)
           addToast({
             type: 'error',
             title: "Erro na geração",
@@ -318,6 +325,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
 
   const handleSubmit = async () => {
     setLoading(true)
+    loadingRef.current = true
     setErrors([])
 
     try {
@@ -331,6 +339,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         })
         setErrors([promptValidation.reason || 'Prompt inválido'])
         setLoading(false)
+        loadingRef.current = false
         return
       }
 
@@ -347,6 +356,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         })
         setErrors([`Você precisa de ${requiredCredits} créditos, mas tem apenas ${remainingCredits}`])
         setLoading(false)
+        loadingRef.current = false
         return
       }
 
@@ -410,8 +420,11 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         description: error instanceof Error ? error.message : 'Erro desconhecido',
       })
       setErrors([error instanceof Error ? error.message : 'Erro desconhecido'])
+      loadingRef.current = false
     } finally {
-      setLoading(false)
+      if (!loadingRef.current) {
+        setLoading(false)
+      }
     }
   }
 
@@ -571,7 +584,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={loading}
-                className="flex-1 border border-gray-900 hover:border-[#667EEA] hover:bg-[#667EEA]/5 bg-gray-200 text-gray-900 rounded-lg py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                className="flex-1 border border-gray-900 bg-white hover:border-[#667EEA] hover:bg-[#667EEA]/5 text-gray-900 rounded-lg px-4 py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               >
                 <ImageIcon className="w-3 h-3 mr-1.5" />
                 {uploadedImage ? 'Imagem adicionada' : 'Adicionar'}
@@ -579,7 +592,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
               <Button
                 onClick={handleSubmit}
                 disabled={!canProcess}
-                className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               >
                 {loading ? (
                   <>
@@ -775,7 +788,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={loading}
-                className="flex-1 border border-gray-900 hover:border-[#667EEA] hover:bg-[#667EEA]/5 bg-gray-200 text-gray-900 rounded-lg py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                className="flex-1 border border-gray-900 bg-white hover:border-[#667EEA] hover:bg-[#667EEA]/5 text-gray-900 rounded-lg px-4 py-3 text-sm font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               >
                 <ImageIcon className="w-3 h-3 mr-1.5" />
                 {uploadedImage ? 'Imagem adicionada' : 'Adicionar imagem'}
@@ -783,7 +796,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
               <Button
                 onClick={handleSubmit}
                 disabled={!canProcess}
-                className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white px-6 py-3 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               >
                 {loading ? (
                   <>

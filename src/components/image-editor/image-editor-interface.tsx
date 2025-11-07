@@ -620,16 +620,22 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       })
 
       clearForm()
+
+      setLoading(false)
+      loadingRef.current = false
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido'
       setError(errorMessage)
+      loadingRef.current = false
       addToast({
         title: "Erro",
         description: errorMessage,
         type: "error"
       })
     } finally {
-      setLoading(false)
+      if (!loadingRef.current) {
+        setLoading(false)
+      }
     }
   }
 
@@ -739,7 +745,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 type="button"
                 variant="outline"
                 disabled={images.length >= 3 || loading}
-                className="flex-1 border border-gray-900 hover:border-[#667EEA] hover:bg-[#667EEA]/5 bg-gray-200 text-gray-900 rounded-lg py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                className="flex-1 border border-gray-900 bg-white hover:border-[#667EEA] hover:bg-[#667EEA]/5 text-gray-900 rounded-lg px-4 py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               >
                 <label htmlFor={fileInputId} className="flex items-center justify-center w-full cursor-pointer">
                   <ImageIcon className="w-3 h-3 mr-1.5" />
@@ -750,7 +756,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 type="button"
                 onClick={handleSubmit}
                 disabled={!canProcess || loading}
-                className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               >
                 {loading ? (
                   <>
@@ -948,7 +954,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               type="button"
               variant="outline"
               disabled={images.length >= 3 || loading}
-              className="flex items-center gap-2 border border-gray-300 hover:border-[#667EEA] hover:bg-[#667EEA]/5 bg-white text-gray-900 rounded-xl px-4 py-3 text-sm font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              className="flex items-center gap-2 border border-gray-900 bg-white hover:border-[#667EEA] hover:bg-[#667EEA]/5 text-gray-900 rounded-lg px-4 py-3 text-sm font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
             >
               <label htmlFor={fileInputId} className="flex items-center gap-2 cursor-pointer">
                 <ImageIcon className="w-4 h-4" />
@@ -959,7 +965,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               type="button"
               onClick={handleSubmit}
               disabled={!canProcess || loading}
-              className="flex-1 sm:flex-none sm:w-auto bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white px-6 py-3 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              className="flex-1 sm:flex-none sm:w-auto bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white px-6 py-3 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
             >
               {loading ? (
                 <>
