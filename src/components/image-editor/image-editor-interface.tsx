@@ -217,39 +217,27 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     if (urlToUse) {
       console.log(`✅ [IMAGE_EDITOR] Opening with ${urlType} URL`)
       console.log(`✅ [IMAGE_EDITOR] Full URL:`, urlToUse)
-      console.log('🚀 [IMAGE_EDITOR] Applying state updates synchronously...')
 
-      // CRITICAL: Update states synchronously - React 18 batches them automatically
-      // Clear loading and edit tracking FIRST
+      // Stop loading
       setLoading(false)
       loadingRef.current = false
+
+      // Clear edit tracking
       setCurrentEditId(null)
       currentEditIdRef.current = null
 
-      // Set the result URL
+      // Set result and open modal
       setResult(urlToUse)
-
-      // Open modal LAST - this ensures result is already set
       setShowResultModal(true)
 
-      console.log('✅ [IMAGE_EDITOR] States updated:', {
-        loading: false,
-        hasResult: true,
-        showResultModal: true,
-        resultUrl: urlToUse.substring(0, 100)
-      })
-
-      // Clear form after a brief delay to ensure modal is rendered
-      setTimeout(() => {
-        clearForm()
-        console.log('✅ [IMAGE_EDITOR] Form cleared')
-      }, 100)
-
+      // Success toast
       addToast({
         title: "Sucesso!",
         description: "Imagem processada e salva com sucesso",
         type: "success"
       })
+
+      console.log('✅ [IMAGE_EDITOR] Modal opened successfully')
     } else {
       console.error('❌ [IMAGE_EDITOR] NO VALID URL')
       setCurrentEditId(null)
