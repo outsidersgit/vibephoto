@@ -51,7 +51,17 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   const [showResultModal, setShowResultModal] = useState(false)
   const [currentEditId, setCurrentEditId] = useState<string | null>(null)
   const router = useRouter()
-  
+
+  // DEBUG: Monitor showResultModal state changes
+  useEffect(() => {
+    console.log('🔍 [IMAGE_EDITOR] showResultModal state changed:', {
+      showResultModal,
+      result,
+      hasResult: !!result,
+      timestamp: new Date().toISOString()
+    })
+  }, [showResultModal, result])
+
   // Sync refs with state
   useEffect(() => {
     currentEditIdRef.current = currentEditId
@@ -206,18 +216,30 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     // 3. Open modal with validated URL
     if (urlToUse) {
       console.log(`✅ [IMAGE_EDITOR] Opening with ${urlType} URL`)
+      console.log(`✅ [IMAGE_EDITOR] Full URL:`, urlToUse)
 
-      setResult(urlToUse)
-      setShowResultModal(true)
-      setCurrentEditId(null)
-      currentEditIdRef.current = null
+      // CRITICAL: Batch all state updates together
+      // This ensures React processes them in a single render cycle
+      Promise.resolve().then(() => {
+        console.log('🚀 [IMAGE_EDITOR] Applying state updates...')
 
-      setTimeout(() => {
+        // First set the result URL
+        setResult(urlToUse)
+
+        // Then immediately open modal (React will batch these)
+        setShowResultModal(true)
+
+        // Clear loading and edit tracking
         setLoading(false)
         loadingRef.current = false
+        setCurrentEditId(null)
+        currentEditIdRef.current = null
+
+        // Clear form
         clearForm()
-        console.log('✅ [IMAGE_EDITOR] Modal opened, cleared')
-      }, 300)
+
+        console.log('✅ [IMAGE_EDITOR] All states updated - modal should be visible now')
+      })
 
       addToast({
         title: "Sucesso!",
