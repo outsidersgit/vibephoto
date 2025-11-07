@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Image as ImageIcon, Video, Upload, X, Loader2, Copy } from 'lucide-react'
+import { Image as ImageIcon, Video, Upload, X, Loader2, Copy, Download } from 'lucide-react'
 import { VIDEO_CONFIG, VideoGenerationRequest, VideoTemplate } from '@/lib/ai/video/config'
 import { calculateVideoCredits, validatePrompt, getEstimatedProcessingTime, formatProcessingTime } from '@/lib/ai/video/utils'
 import { useToast } from '@/hooks/use-toast'
@@ -427,6 +427,51 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
       }
     }
   }
+
+  const handleDownloadPreview = useCallback(async () => {
+    if (!previewMedia?.url) return
+
+    try {
+      const response = await fetch(previewMedia.url)
+      if (!response.ok) {
+        throw new Error(`Failed to download preview: ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      let extension = 'mp4'
+
+      try {
+        const urlObj = new URL(previewMedia.url)
+        const urlExt = urlObj.pathname.split('.').pop()
+        if (urlExt && urlExt.length <= 5) {
+          extension = urlExt
+        }
+      } catch {
+        const cleanUrl = previewMedia.url.split('?')[0]
+        const urlExt = cleanUrl.split('.').pop()
+        if (urlExt && urlExt.length <= 5) {
+          extension = urlExt
+        }
+      }
+
+      const downloadUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+      link.href = downloadUrl
+      link.download = `vibephoto-video-${timestamp}.${extension}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(downloadUrl)
+    } catch (error) {
+      console.error('❌ [VIDEO_GENERATION] Failed to download preview:', error)
+      addToast({
+        type: 'error',
+        title: 'Falha no download',
+        description: 'Não foi possível baixar o vídeo gerado. Tente novamente.'
+      })
+    }
+  }, [previewMedia, addToast])
 
   const requiredCredits = calculateVideoCredits(formData.duration, 'pro')
   const remainingCredits = (user.creditsLimit || 0) - (user.creditsUsed || 0) + ((user as any).creditsBalance || 0)
@@ -879,7 +924,17 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
       <Dialog open={isPreviewLightboxOpen} onOpenChange={setIsPreviewLightboxOpen}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden p-0 bg-black">
           {previewMedia?.type === 'video' && (
-            <video src={previewMedia.url} className="w-full h-auto max-h-[85vh]" controls autoPlay />
+            <>
+              <button
+                type="button"
+                onClick={handleDownloadPreview}
+                className="absolute right-12 top-3 inline-flex items-center gap-1 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-gray-900 shadow hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#667EEA]"
+              >
+                <Download className="w-3 h-3" />
+                Baixar
+              </button>
+              <video src={previewMedia.url} className="w-full h-auto max-h-[85vh]" controls autoPlay />
+            </>
           )}
         </DialogContent>
       </Dialog>

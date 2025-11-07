@@ -15,7 +15,8 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
-  X
+  X,
+  Download
 } from 'lucide-react'
 import { PromptInput } from './prompt-input'
 import { GenerationSettings } from './generation-settings'
@@ -778,6 +779,51 @@ export function GenerationInterface({
     }
   }, [addToast, clearGenerationLock, manualSync, openModalWithValidation])
 
+  const handleDownloadPreview = useCallback(async () => {
+    if (!previewMedia?.url) return
+
+    try {
+      const response = await fetch(previewMedia.url)
+      if (!response.ok) {
+        throw new Error(`Failed to download preview: ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      let extension = 'jpg'
+
+      try {
+        const urlObj = new URL(previewMedia.url)
+        const urlExt = urlObj.pathname.split('.').pop()
+        if (urlExt && urlExt.length <= 5) {
+          extension = urlExt
+        }
+      } catch {
+        const cleanUrl = previewMedia.url.split('?')[0]
+        const urlExt = cleanUrl.split('.').pop()
+        if (urlExt && urlExt.length <= 5) {
+          extension = urlExt
+        }
+      }
+
+      const downloadUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+      link.href = downloadUrl
+      link.download = `vibephoto-preview-${timestamp}.${extension}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(downloadUrl)
+    } catch (error) {
+      console.error('❌ [GENERATION] Failed to download preview:', error)
+      addToast({
+        type: 'error',
+        title: 'Falha no download',
+        description: 'Não foi possível baixar a imagem gerada. Tente novamente.'
+      })
+    }
+  }, [previewMedia, addToast])
+
   useEffect(() => {
     return () => {
       if (buttonFallbackTimerRef.current) {
@@ -1042,13 +1088,23 @@ export function GenerationInterface({
         )}
 
       <Dialog open={isPreviewLightboxOpen} onOpenChange={setIsPreviewLightboxOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden p-0">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden p-0">
           {previewMedia?.type === 'image' && (
-            <img
-              src={previewMedia.url}
-              alt="Resultado gerado"
-              className="w-full h-auto max-h-[85vh] object-contain"
-            />
+            <>
+              <button
+                type="button"
+                onClick={handleDownloadPreview}
+                className="absolute right-12 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-medium text-gray-900 shadow hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#667EEA]"
+              >
+                <Download className="w-3 h-3" />
+                Baixar
+              </button>
+              <img
+                src={previewMedia.url}
+                alt="Resultado gerado"
+                className="w-full h-auto max-h-[80vh] object-contain"
+              />
+            </>
           )}
         </DialogContent>
       </Dialog>
