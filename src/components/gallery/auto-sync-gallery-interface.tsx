@@ -250,17 +250,42 @@ export function AutoSyncGalleryInterface({
   // CRITICAL: Fazer merge inteligente para preservar atualizações locais recentes
   useEffect(() => {
     if (galleryData?.generations) {
+      const sortedServerGenerations = [...galleryData.generations].sort((a: any, b: any) => {
+        const aDate = new Date(a.createdAt).getTime()
+        const bDate = new Date(b.createdAt).getTime()
+        return bDate - aDate
+      })
+
+      console.log('🖼️ [Gallery] Applying server generations update', {
+        serverCount: galleryData.generations.length,
+        sortedServerCount: sortedServerGenerations.length,
+        firstServerId: sortedServerGenerations[0]?.id,
+        firstServerDate: sortedServerGenerations[0]?.createdAt
+      })
+
       setLocalGenerations((prevLocal) => {
+        const sortedPrev = [...prevLocal].sort((a: any, b: any) => {
+          const aDate = new Date(a.createdAt).getTime()
+          const bDate = new Date(b.createdAt).getTime()
+          return bDate - aDate
+        })
+
+        if (sortedPrev.length === 0) {
+          console.log('🖼️ [Gallery] Local state empty, applying sorted server data')
+          return sortedServerGenerations
+        }
+        
         // Se não há dados locais, usar dados do React Query
         if (prevLocal.length === 0) {
-          return galleryData.generations
+          console.log('🖼️ [Gallery] Local state empty, applying sorted server data')
+          return sortedServerGenerations
         }
         
         // Criar mapa de gerações locais por ID para merge rápido
-        const localMap = new Map(prevLocal.map((g: any) => [g.id, g]))
+        const localMap = new Map(sortedPrev.map((g: any) => [g.id, g]))
         
         // Merge: priorizar estado local se for mais recente ou se estiver COMPLETED
-        const merged = galleryData.generations.map((serverGen: any) => {
+        const merged = sortedServerGenerations.map((serverGen: any) => {
           const localGen = localMap.get(serverGen.id)
           
           // Se existe localmente e está COMPLETED, priorizar local (evita flash)
@@ -279,12 +304,23 @@ export function AutoSyncGalleryInterface({
         })
         
         // Adicionar novas gerações locais que não estão no servidor ainda
-        const serverIds = new Set(galleryData.generations.map((g: any) => g.id))
-        const newLocalGenerations = prevLocal.filter((g: any) => 
+        const serverIds = new Set(sortedServerGenerations.map((g: any) => g.id))
+        const newLocalGenerations = sortedPrev.filter((g: any) => 
           !serverIds.has(g.id) && g.status === 'COMPLETED'
         )
         
-        return [...newLocalGenerations, ...merged]
+        const result = [...newLocalGenerations, ...merged]
+        result.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+        console.log('🖼️ [Gallery] Local merge complete', {
+          localBefore: prevLocal.length,
+          localAfter: result.length,
+          newLocalGenerations: newLocalGenerations.length,
+          firstItemId: result[0]?.id,
+          firstItemDate: result[0]?.createdAt
+        })
+
+        return result
       })
     }
     if (galleryData?.editHistory) {
@@ -296,7 +332,7 @@ export function AutoSyncGalleryInterface({
   }, [galleryData])
   
   // Usar estado local (que sempre tem dados) em vez de dados diretos do React Query
-  const generations = localGenerations
+  const generations = [...localGenerations].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   const editHistory = localEditHistory
   const videos = localVideos
   const stats = galleryData?.stats ?? initialStats
