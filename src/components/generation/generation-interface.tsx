@@ -712,6 +712,9 @@ export function GenerationInterface({
   // Formula: credits_available = (credits_limit - credits_used) + credits_balance
   const creditsRemaining = (user.creditsLimit || 0) - (user.creditsUsed || 0) + ((user as any).creditsBalance || 0)
   const creditsNeeded = settings.variations * 10
+  const variationLabel = settings.variations === 1 ? 'foto' : 'fotos'
+  const desktopButtonLabel = `Gerar ${settings.variations} ${variationLabel} (${creditsNeeded} créditos)`
+  const mobileButtonLabel = desktopButtonLabel
   
   // Check if we're in guided mode by checking if last block (environment) was selected
   // In guided mode, require last block (environment) to be selected AND prompt to be filled
@@ -830,7 +833,7 @@ export function GenerationInterface({
                   ) : (
                     <>
                       <Play className="w-4 h-4 mr-2" />
-                      {isMobile ? `Gerar (${creditsNeeded} créditos)` : `Gerar Foto (${creditsNeeded} créditos)`}
+                      {isMobile ? mobileButtonLabel : desktopButtonLabel}
                     </>
                   )}
                 </Button>
