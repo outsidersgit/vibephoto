@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
@@ -65,6 +65,8 @@ export function GenerationInterface({
   const [showExamples, setShowExamples] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isButtonLocked, setIsButtonLocked] = useState(false)
+  const buttonFallbackTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const pendingGenerationIdRef = useRef<string | null>(null)
 
   // Inline preview state
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' } | null>(null)
@@ -193,6 +195,15 @@ export function GenerationInterface({
     }
   }, [])
 
+  const clearGenerationLock = useCallback(() => {
+    if (buttonFallbackTimerRef.current) {
+      clearTimeout(buttonFallbackTimerRef.current)
+      buttonFallbackTimerRef.current = null
+    }
+    pendingGenerationIdRef.current = null
+    setIsButtonLocked(false)
+  }, [])
+
   // Função para abrir modal com validação de URL
   const openModalWithValidation = useCallback(async (
     temporaryUrl: string | null,
@@ -214,7 +225,7 @@ export function GenerationInterface({
     if (urlToUse) {
       setPreviewMedia({ url: urlToUse, type: 'image' })
       setIsPreviewLightboxOpen(false)
-      setIsButtonLocked(false)
+      clearGenerationLock()
       // clearFormAfterSuccess() // This is now handled by the validation helper
     } else {
       console.error('❌ [GENERATION] No valid URL')
@@ -224,9 +235,9 @@ export function GenerationInterface({
         description: 'Imagem processada mas ainda não disponível. Verifique a galeria em alguns instantes.',
         duration: 6000
       })
-      setIsButtonLocked(false)
+      clearGenerationLock()
     }
-  }, [addToast, testImageUrl, setIsButtonLocked])
+  }, [addToast, testImageUrl, clearGenerationLock])
 
   // Real-time updates for generation status
   useRealtimeUpdates({
@@ -296,7 +307,7 @@ export function GenerationInterface({
             // Use validation function to open modal (async, fire and forget)
             openModalWithValidation(temporaryUrl, permanentUrl).catch((error) => {
               console.error('❌ [GENERATION] Error opening modal with validation:', error)
-              setIsButtonLocked(false)
+              clearGenerationLock()
             })
           } else {
             console.warn('⚠️ [GENERATION_SSE] No image URL available for modal:', {
@@ -306,7 +317,7 @@ export function GenerationInterface({
               generationId,
               status
             })
-            setIsButtonLocked(false)
+            clearGenerationLock()
           }
         }
 
@@ -319,7 +330,7 @@ export function GenerationInterface({
             description: errorMessage,
             duration: 6000
           })
-          setIsButtonLocked(false)
+          clearGenerationLock()
         }
       }
     },
@@ -431,11 +442,11 @@ export function GenerationInterface({
             // Use validation function to open modal (async, fire and forget)
             openModalWithValidation(temporaryUrl, permanentUrl).catch((error) => {
               console.error('❌ [GENERATION] Error opening modal with validation:', error)
-              setIsButtonLocked(false)
+              clearGenerationLock()
             })
           } else {
             console.warn('⚠️ [GENERATION_POLLING] No image URL available for modal')
-            setIsButtonLocked(false)
+            clearGenerationLock()
           }
         }
 
@@ -448,7 +459,7 @@ export function GenerationInterface({
             description: errorMessage,
             duration: 6000
           })
-          setIsButtonLocked(false)
+          clearGenerationLock()
         }
       } else {
         // Log quando não há mudança para debug
@@ -468,7 +479,7 @@ export function GenerationInterface({
         pollingStatus: generationPolling.data.status
       })
     }
-  }, [generationPolling.data, generationPolling.isLoading, currentGeneration?.id, currentGeneration?.status, currentGeneration?.imageUrls, completedGenerationIds, setIsButtonLocked])
+  }, [generationPolling.data, generationPolling.isLoading, currentGeneration?.id, currentGeneration?.status, currentGeneration?.imageUrls, completedGenerationIds, clearGenerationLock])
   
   const [settings, setSettings] = useState({
     aspectRatio: '1:1',
@@ -557,6 +568,8 @@ export function GenerationInterface({
       astria_hires_fix: true,
       astria_model_type: 'faceid'
     })
+
+    clearGenerationLock()
   }
 
   const handleGenerate = async () => {
@@ -602,6 +615,15 @@ export function GenerationInterface({
         ...generation,
         status: generation.status || 'PROCESSING' // Garantir PROCESSING se não veio no response
       })
+      pendingGenerationIdRef.current = generation.id
+      if (buttonFallbackTimerRef.current) {
+        clearTimeout(buttonFallbackTimerRef.current)
+      }
+      buttonFallbackTimerRef.current = setTimeout(() => {
+        if (!pendingGenerationIdRef.current) return
+        console.warn('⏱️ [GENERATION] Fallback timer triggered, forcing manual sync')
+        handleManualSync(pendingGenerationIdRef.current)
+      }, 15000)
       console.log('🚀 Generation started, waiting for real-time updates...', {
         generationId: generation.id,
         status: generation.status || 'PROCESSING'
@@ -613,6 +635,7 @@ export function GenerationInterface({
       setCurrentGeneration(null)
       setPreviewMedia(null)
       setIsPreviewLightboxOpen(false)
+      clearGenerationLock()
       
       // Extrair mensagem de erro
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
@@ -652,6 +675,7 @@ export function GenerationInterface({
         description: userFriendlyMessage,
         duration: 8000 // 8 segundos para ler mensagem completa
       })
+      clearGenerationLock()
     }
   }
 
@@ -678,7 +702,7 @@ export function GenerationInterface({
     }, 100)
   }
 
-  const handleManualSync = async (generationId: string) => {
+  const handleManualSync = useCallback(async (generationId: string) => {
     try {
       const data = await manualSync.mutateAsync(generationId)
 
@@ -700,6 +724,37 @@ export function GenerationInterface({
               }
               return prev
             })
+
+            let fallbackTempUrl = statusData.generation.temporaryUrls?.[0] || null
+            let fallbackPermanentUrl = statusData.generation.imageUrls?.[0] || null
+
+            if (!fallbackPermanentUrl) {
+              try {
+                console.warn('⚠️ [GENERATION] Manual sync missing URLs, fetching latest gallery data...')
+                const galleryResponse = await fetch('/api/gallery/data?tab=generated&page=1&sort=newest')
+                if (galleryResponse.ok) {
+                  const galleryData = await galleryResponse.json()
+                  const matchingGeneration = galleryData.generations?.find((g: any) => g.id === generationId)
+                  const latestGeneration = matchingGeneration || galleryData.generations?.[0]
+                  fallbackPermanentUrl = latestGeneration?.imageUrls?.[0] || null
+                  fallbackTempUrl = latestGeneration?.temporaryUrls?.[0] || fallbackTempUrl
+                } else {
+                  console.error('❌ [GENERATION] Failed to fetch gallery fallback:', await galleryResponse.text())
+                }
+              } catch (galleryError) {
+                console.error('❌ [GENERATION] Gallery fallback error:', galleryError)
+              }
+            }
+
+            if (fallbackTempUrl || fallbackPermanentUrl) {
+              console.log('✅ [GENERATION] Manual sync found URLs, opening preview')
+              await openModalWithValidation(fallbackTempUrl, fallbackPermanentUrl)
+            } else {
+              console.warn('⚠️ [GENERATION] Manual sync completed but no URLs returned after fallback')
+              clearGenerationLock()
+            }
+          } else {
+            clearGenerationLock()
           }
 
           addToast({
@@ -710,6 +765,7 @@ export function GenerationInterface({
         }
       } else {
         alert(data.error || 'Falha ao sincronizar status da geração')
+        clearGenerationLock()
       }
     } catch (error) {
       console.error('Error syncing generation:', error)
@@ -718,8 +774,25 @@ export function GenerationInterface({
         title: 'Falha ao sincronizar',
         description: error instanceof Error ? error.message : 'Erro desconhecido'
       })
+      clearGenerationLock()
     }
-  }
+  }, [addToast, clearGenerationLock, manualSync, openModalWithValidation])
+
+  useEffect(() => {
+    return () => {
+      if (buttonFallbackTimerRef.current) {
+        clearTimeout(buttonFallbackTimerRef.current)
+        buttonFallbackTimerRef.current = null
+      }
+      pendingGenerationIdRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (previewMedia) {
+      clearGenerationLock()
+    }
+  }, [previewMedia, clearGenerationLock])
 
   // Formula: credits_available = (credits_limit - credits_used) + credits_balance
   const creditsRemaining = (user.creditsLimit || 0) - (user.creditsUsed || 0) + ((user as any).creditsBalance || 0)

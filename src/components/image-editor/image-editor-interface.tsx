@@ -41,6 +41,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   const fileInputRef = useRef<HTMLInputElement>(null)
   const currentEditIdRef = useRef<string | null>(null)
   const loadingRef = useRef<boolean>(false)
+  const editFallbackTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const [operation] = useState<Operation>('edit')
   const [prompt, setPrompt] = useState('')
@@ -173,6 +174,45 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     }
   }, [])
 
+  const clearEditProcessingState = useCallback(() => {
+    if (editFallbackTimerRef.current) {
+      clearTimeout(editFallbackTimerRef.current)
+      editFallbackTimerRef.current = null
+    }
+    setLoading(false)
+    loadingRef.current = false
+    setCurrentEditId(null)
+    currentEditIdRef.current = null
+  }, [])
+
+  const triggerEditFallback = useCallback(async (editId: string) => {
+    console.warn('⏱️ [IMAGE_EDITOR] Fallback triggered to force preview display', { editId })
+    try {
+      const galleryResponse = await fetch('/api/gallery/data?tab=edited&page=1&sort=newest')
+      if (!galleryResponse.ok) {
+        console.error('❌ [IMAGE_EDITOR] Failed to fetch gallery fallback:', await galleryResponse.text())
+        clearEditProcessingState()
+        return
+      }
+
+      const galleryData = await galleryResponse.json()
+      const matchingEdit = galleryData.generations?.find((item: any) => item.id === editId)
+      const latestEdit = matchingEdit || galleryData.generations?.[0]
+      const fallbackUrl = latestEdit?.imageUrls?.[0] || null
+
+      if (fallbackUrl) {
+        console.log('✅ [IMAGE_EDITOR] Fallback located image URL, opening preview now')
+        await openModalWithValidation(fallbackUrl, fallbackUrl)
+      } else {
+        console.warn('⚠️ [IMAGE_EDITOR] Gallery fallback did not find any image URLs')
+        clearEditProcessingState()
+      }
+    } catch (error) {
+      console.error('❌ [IMAGE_EDITOR] Error during fallback handling:', error)
+      clearEditProcessingState()
+    }
+  }, [clearEditProcessingState, openModalWithValidation])
+
   // Função para abrir modal com validação robusta de URL
   const openModalWithValidation = useCallback(async (
     temporaryUrl: string | null,
@@ -207,16 +247,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
 
     // 3. Open modal with validated URL
     if (urlToUse) {
-      console.log(`✅ [IMAGE_EDITOR] Preparing inline preview with ${urlType} URL`)
-      console.log(`✅ [IMAGE_EDITOR] Preview URL:`, urlToUse)
-
-      // Stop loading
-      setLoading(false)
-      loadingRef.current = false
-
-      // Clear edit tracking
-      setCurrentEditId(null)
-      currentEditIdRef.current = null
+      clearEditProcessingState()
 
       // Update preview state and ensure lightbox starts closed
       setPreviewMedia({ url: urlToUse, type: 'image' })
@@ -235,10 +266,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       console.log('✅ [IMAGE_EDITOR] Preview updated successfully')
     } else {
       console.error('❌ [IMAGE_EDITOR] NO VALID URL')
-      setCurrentEditId(null)
-      currentEditIdRef.current = null
-      setLoading(false)
-      loadingRef.current = false
+      clearEditProcessingState()
 
       addToast({
         title: "Aviso",
@@ -246,7 +274,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         type: "warning"
       })
     }
-  }, [addToast, testUrlAccessibility, clearForm])
+  }, [addToast, testUrlAccessibility, clearForm, clearEditProcessingState])
 
   // Monitor async processing via SSE - use useCallback to ensure stable reference
   const handleGenerationStatusChange = useCallback((generationId: string, status: string, data: any) => {
@@ -359,20 +387,15 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 console.log('✅ [IMAGE_EDITOR] Modal opened successfully')
               }).catch((error) => {
                 console.error('❌ [IMAGE_EDITOR] Error opening modal with validation:', error)
-                setLoading(false)
-                loadingRef.current = false
+                clearEditProcessingState()
               })
             } else {
               console.warn('⚠️ [IMAGE_EDITOR] SSE update has COMPLETED status but no image URLs')
-              setLoading(false)
-              loadingRef.current = false
+              clearEditProcessingState()
             }
           } else if (status === 'FAILED' || status === 'failed') {
             setError(data.errorMessage || 'Erro ao processar imagem')
-            setCurrentEditId(null)
-            currentEditIdRef.current = null
-            setLoading(false) // Clear loading state
-            loadingRef.current = false
+            clearEditProcessingState() // Clear loading state
             addToast({
               title: "Erro",
               description: data.errorMessage || 'Erro ao processar imagem',
@@ -399,7 +422,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             dataGenerationId: data.generationId
           })
         }
-  }, [addToast, openModalWithValidation])
+  }, [addToast, openModalWithValidation, clearEditProcessingState])
   
   useRealtimeUpdates({
     onGenerationStatusChange: handleGenerationStatusChange
@@ -566,6 +589,13 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           const editId = data.data.editHistoryId
           setCurrentEditId(editId)
           currentEditIdRef.current = editId
+          if (editFallbackTimerRef.current) {
+            clearTimeout(editFallbackTimerRef.current)
+          }
+          editFallbackTimerRef.current = setTimeout(() => {
+            if (!currentEditIdRef.current) return
+            triggerEditFallback(currentEditIdRef.current)
+          }, 15000)
           console.log('✅ [IMAGE_EDITOR] ===== MONITORING EDIT VIA SSE =====')
           console.log('✅ [IMAGE_EDITOR] Edit History ID:', editId)
           console.log('✅ [IMAGE_EDITOR] ID Length:', editId.length)
@@ -579,7 +609,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           console.log('⏳ [IMAGE_EDITOR] Keeping loading state active until SSE completion')
         } else {
           console.warn('⚠️ [IMAGE_EDITOR] No editHistoryId in response, cannot monitor via SSE')
-          setLoading(false) // Only clear loading if we can't monitor
+          clearEditProcessingState() // Only clear loading if we can't monitor
           loadingRef.current = false
         }
         
@@ -621,11 +651,12 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
 
       clearForm()
 
-      setLoading(false)
+      clearEditProcessingState()
       loadingRef.current = false
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido'
       setError(errorMessage)
+      clearEditProcessingState()
       loadingRef.current = false
       addToast({
         title: "Erro",
@@ -634,7 +665,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       })
     } finally {
       if (!loadingRef.current) {
-        setLoading(false)
+        clearEditProcessingState()
       }
     }
   }
@@ -1059,3 +1090,12 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     </div>
   )
 }
+
+useEffect(() => {
+  return () => {
+    if (editFallbackTimerRef.current) {
+      clearTimeout(editFallbackTimerRef.current)
+      editFallbackTimerRef.current = null
+    }
+  }
+}, [])
