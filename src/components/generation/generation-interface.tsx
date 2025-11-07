@@ -726,32 +726,49 @@ export function GenerationInterface({
               return prev
             })
 
-            let fallbackTempUrl = statusData.generation.temporaryUrls?.[0] || null
-            let fallbackPermanentUrl = statusData.generation.imageUrls?.[0] || null
+            const fetchGenerationWithRetry = async (attempts = 5): Promise<{ temp: string | null; perm: string | null }> => {
+              for (let attempt = 1; attempt <= attempts; attempt++) {
+                try {
+                  const response = await fetch(`/api/generations/${generationId}`)
+                  if (response.ok) {
+                    const generationDetails = await response.json()
+                    const tempUrl = generationDetails.temporaryUrls?.[0] || null
+                    const permUrl = generationDetails.imageUrls?.[0] || null
 
-            if (!fallbackPermanentUrl) {
-              try {
-                console.warn('⚠️ [GENERATION] Manual sync missing URLs, fetching latest gallery data...')
-                const galleryResponse = await fetch('/api/gallery/data?tab=generated&page=1&sort=newest')
-                if (galleryResponse.ok) {
-                  const galleryData = await galleryResponse.json()
-                  const matchingGeneration = galleryData.generations?.find((g: any) => g.id === generationId)
-                  const latestGeneration = matchingGeneration || galleryData.generations?.[0]
-                  fallbackPermanentUrl = latestGeneration?.imageUrls?.[0] || null
-                  fallbackTempUrl = latestGeneration?.temporaryUrls?.[0] || fallbackTempUrl
-                } else {
-                  console.error('❌ [GENERATION] Failed to fetch gallery fallback:', await galleryResponse.text())
+                    if (permUrl || tempUrl) {
+                      return { temp: tempUrl, perm: permUrl }
+                    }
+                  } else {
+                    console.warn(`⚠️ [GENERATION] Retry ${attempt} failed with status ${response.status}`)
+                  }
+                } catch (error) {
+                  console.error(`❌ [GENERATION] Retry ${attempt} error:`, error)
                 }
-              } catch (galleryError) {
-                console.error('❌ [GENERATION] Gallery fallback error:', galleryError)
+
+                const backoff = attempt * 1500
+                await new Promise(resolve => setTimeout(resolve, backoff))
               }
+
+              return { temp: null, perm: null }
+            }
+
+            let { temp: fallbackTempUrl, perm: fallbackPermanentUrl } = {
+              temp: statusData.generation.temporaryUrls?.[0] || null,
+              perm: statusData.generation.imageUrls?.[0] || null
+            }
+
+            if (!fallbackPermanentUrl && !fallbackTempUrl) {
+              console.warn('⚠️ [GENERATION] Manual sync missing URLs, retrying generation fetch...')
+              const retryResult = await fetchGenerationWithRetry()
+              fallbackTempUrl = retryResult.temp
+              fallbackPermanentUrl = retryResult.perm
             }
 
             if (fallbackTempUrl || fallbackPermanentUrl) {
-              console.log('✅ [GENERATION] Manual sync found URLs, opening preview')
+              console.log('✅ [GENERATION] Manual sync located URLs after retry, opening preview')
               await openModalWithValidation(fallbackTempUrl, fallbackPermanentUrl)
             } else {
-              console.warn('⚠️ [GENERATION] Manual sync completed but no URLs returned after fallback')
+              console.warn('⚠️ [GENERATION] Manual sync completed but no URLs available after retries')
               clearGenerationLock()
             }
           } else {

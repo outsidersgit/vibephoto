@@ -250,24 +250,38 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
 
   const triggerEditFallback = useCallback(async (editId: string) => {
     console.warn('⏱️ [IMAGE_EDITOR] Fallback triggered to force preview display', { editId })
-    try {
-      const galleryResponse = await fetch('/api/gallery/data?tab=edited&page=1&sort=newest')
-      if (!galleryResponse.ok) {
-        console.error('❌ [IMAGE_EDITOR] Failed to fetch gallery fallback:', await galleryResponse.text())
-        clearEditProcessingState()
-        return
+
+    const fetchEditHistoryWithRetry = async (attempts = 5): Promise<string | null> => {
+      for (let attempt = 1; attempt <= attempts; attempt++) {
+        try {
+          const response = await fetch(`/api/edit-history/${editId}`)
+          if (response.ok) {
+            const payload = await response.json()
+            const editedUrl = payload?.editHistory?.editedImageUrl || null
+            if (editedUrl) {
+              return editedUrl
+            }
+          } else {
+            console.warn(`⚠️ [IMAGE_EDITOR] Retry ${attempt} failed with status ${response.status}`)
+          }
+        } catch (error) {
+          console.error(`❌ [IMAGE_EDITOR] Retry ${attempt} error:`, error)
+        }
+
+        const backoff = attempt * 1500
+        await new Promise(resolve => setTimeout(resolve, backoff))
       }
 
-      const galleryData = await galleryResponse.json()
-      const matchingEdit = galleryData.generations?.find((item: any) => item.id === editId)
-      const latestEdit = matchingEdit || galleryData.generations?.[0]
-      const fallbackUrl = latestEdit?.imageUrls?.[0] || null
+      return null
+    }
 
+    try {
+      const fallbackUrl = await fetchEditHistoryWithRetry()
       if (fallbackUrl) {
-        console.log('✅ [IMAGE_EDITOR] Fallback located image URL, opening preview now')
+        console.log('✅ [IMAGE_EDITOR] Fallback located edit URL, opening preview now')
         await openModalWithValidation(fallbackUrl, fallbackUrl)
       } else {
-        console.warn('⚠️ [IMAGE_EDITOR] Gallery fallback did not find any image URLs')
+        console.warn('⚠️ [IMAGE_EDITOR] Fallback could not retrieve edited image URL after retries')
         clearEditProcessingState()
       }
     } catch (error) {
