@@ -217,29 +217,33 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     if (urlToUse) {
       console.log(`✅ [IMAGE_EDITOR] Opening with ${urlType} URL`)
       console.log(`✅ [IMAGE_EDITOR] Full URL:`, urlToUse)
+      console.log('🚀 [IMAGE_EDITOR] Applying state updates synchronously...')
 
-      // CRITICAL: Batch all state updates together
-      // This ensures React processes them in a single render cycle
-      Promise.resolve().then(() => {
-        console.log('🚀 [IMAGE_EDITOR] Applying state updates...')
+      // CRITICAL: Update states synchronously - React 18 batches them automatically
+      // Clear loading and edit tracking FIRST
+      setLoading(false)
+      loadingRef.current = false
+      setCurrentEditId(null)
+      currentEditIdRef.current = null
 
-        // First set the result URL
-        setResult(urlToUse)
+      // Set the result URL
+      setResult(urlToUse)
 
-        // Then immediately open modal (React will batch these)
-        setShowResultModal(true)
+      // Open modal LAST - this ensures result is already set
+      setShowResultModal(true)
 
-        // Clear loading and edit tracking
-        setLoading(false)
-        loadingRef.current = false
-        setCurrentEditId(null)
-        currentEditIdRef.current = null
-
-        // Clear form
-        clearForm()
-
-        console.log('✅ [IMAGE_EDITOR] All states updated - modal should be visible now')
+      console.log('✅ [IMAGE_EDITOR] States updated:', {
+        loading: false,
+        hasResult: true,
+        showResultModal: true,
+        resultUrl: urlToUse.substring(0, 100)
       })
+
+      // Clear form after a brief delay to ensure modal is rendered
+      setTimeout(() => {
+        clearForm()
+        console.log('✅ [IMAGE_EDITOR] Form cleared')
+      }, 100)
 
       addToast({
         title: "Sucesso!",
