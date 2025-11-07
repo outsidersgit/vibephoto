@@ -185,34 +185,6 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
     currentEditIdRef.current = null
   }, [])
 
-  const triggerEditFallback = useCallback(async (editId: string) => {
-    console.warn('⏱️ [IMAGE_EDITOR] Fallback triggered to force preview display', { editId })
-    try {
-      const galleryResponse = await fetch('/api/gallery/data?tab=edited&page=1&sort=newest')
-      if (!galleryResponse.ok) {
-        console.error('❌ [IMAGE_EDITOR] Failed to fetch gallery fallback:', await galleryResponse.text())
-        clearEditProcessingState()
-        return
-      }
-
-      const galleryData = await galleryResponse.json()
-      const matchingEdit = galleryData.generations?.find((item: any) => item.id === editId)
-      const latestEdit = matchingEdit || galleryData.generations?.[0]
-      const fallbackUrl = latestEdit?.imageUrls?.[0] || null
-
-      if (fallbackUrl) {
-        console.log('✅ [IMAGE_EDITOR] Fallback located image URL, opening preview now')
-        await openModalWithValidation(fallbackUrl, fallbackUrl)
-      } else {
-        console.warn('⚠️ [IMAGE_EDITOR] Gallery fallback did not find any image URLs')
-        clearEditProcessingState()
-      }
-    } catch (error) {
-      console.error('❌ [IMAGE_EDITOR] Error during fallback handling:', error)
-      clearEditProcessingState()
-    }
-  }, [clearEditProcessingState, openModalWithValidation])
-
   // Função para abrir modal com validação robusta de URL
   const openModalWithValidation = useCallback(async (
     temporaryUrl: string | null,
@@ -275,6 +247,34 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       })
     }
   }, [addToast, testUrlAccessibility, clearForm, clearEditProcessingState])
+
+  const triggerEditFallback = useCallback(async (editId: string) => {
+    console.warn('⏱️ [IMAGE_EDITOR] Fallback triggered to force preview display', { editId })
+    try {
+      const galleryResponse = await fetch('/api/gallery/data?tab=edited&page=1&sort=newest')
+      if (!galleryResponse.ok) {
+        console.error('❌ [IMAGE_EDITOR] Failed to fetch gallery fallback:', await galleryResponse.text())
+        clearEditProcessingState()
+        return
+      }
+
+      const galleryData = await galleryResponse.json()
+      const matchingEdit = galleryData.generations?.find((item: any) => item.id === editId)
+      const latestEdit = matchingEdit || galleryData.generations?.[0]
+      const fallbackUrl = latestEdit?.imageUrls?.[0] || null
+
+      if (fallbackUrl) {
+        console.log('✅ [IMAGE_EDITOR] Fallback located image URL, opening preview now')
+        await openModalWithValidation(fallbackUrl, fallbackUrl)
+      } else {
+        console.warn('⚠️ [IMAGE_EDITOR] Gallery fallback did not find any image URLs')
+        clearEditProcessingState()
+      }
+    } catch (error) {
+      console.error('❌ [IMAGE_EDITOR] Error during fallback handling:', error)
+      clearEditProcessingState()
+    }
+  }, [clearEditProcessingState, openModalWithValidation])
 
   // Monitor async processing via SSE - use useCallback to ensure stable reference
   const handleGenerationStatusChange = useCallback((generationId: string, status: string, data: any) => {
