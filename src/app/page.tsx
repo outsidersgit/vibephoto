@@ -544,7 +544,7 @@ const MobileStackingCard = ({ step, index }: {
             
             {/* Descrição - alinhada exatamente com o título */}
             <p 
-              className="text-xs sm:text-sm leading-relaxed line-clamp-3"
+              className="text-xs sm:text-sm leading-relaxed"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
                 fontWeight: 400,

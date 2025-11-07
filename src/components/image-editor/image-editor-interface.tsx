@@ -757,7 +757,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                   </>
                 ) : (
                   <>
-                    Processar (15 créditos)
+                    Gerar imagem (15 créditos)
                   </>
                 )}
               </Button>
@@ -966,7 +966,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 </>
               ) : (
                 <>
-                  Processar (15 créditos)
+                  Gerar imagem (15 créditos)
                 </>
               )}
             </Button>

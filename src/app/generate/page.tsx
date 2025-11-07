@@ -28,22 +28,22 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
     qualityScore: model.qualityScore ?? undefined
   }))
 
+  const params = searchParams ?? {}
+  const activeTab = params.tab === 'video' ? 'video' : 'image'
+  const sourceImage = params.sourceImage ? decodeURIComponent(params.sourceImage) : undefined
+
   // Check if user has any ready models
-  if (models.length === 0) {
+  if (models.length === 0 && activeTab !== 'video') {
     redirect('/models?error=no-ready-models')
   }
 
   // Check if user has enough credits
   const canUseCredits = await canUserUseCredits(userId, 1)
 
-  const params = searchParams ?? {}
-  const activeTab = params.tab === 'video' ? 'video' : 'image'
-  const sourceImage = params.sourceImage ? decodeURIComponent(params.sourceImage) : undefined
-
   // Select model (from URL param or first available)
-  const selectedModelId = params.model && models.find(m => m.id === params.model)
+  const selectedModelId = models.length > 0 && params.model && models.find(m => m.id === params.model)
     ? params.model
-    : models[0].id
+    : (models[0]?.id ?? '')
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
