@@ -1,8 +1,6 @@
 import { requireActiveSubscription } from '@/lib/subscription'
 import { canUserUseCredits } from '@/lib/db/users'
 import { ImageEditorInterface } from '@/components/image-editor/image-editor-interface'
-import { imageEditor } from '@/lib/ai/image-editor'
-import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 
 interface ImageEditorPageProps {
   searchParams: Promise<{
@@ -22,7 +20,6 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
 
   return (
     <>
-      <ProtectedPageScript />
       <div className="min-h-screen bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
         {/* Header */}
         <header className="bg-white border-b border-gray-200">
