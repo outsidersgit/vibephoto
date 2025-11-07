@@ -62,11 +62,32 @@ export function GenerationResultModal({
   // CRITICAL: Always render Dialog when open, even without mediaUrl (for loading state)
   // This ensures the modal appears immediately
   if (open) {
+    console.log('🔥 [MODAL] ===== MODAL OPEN BLOCK ENTERED =====')
+    console.log('🔥 [MODAL] Props:', { open, hasImageUrl: !!imageUrl, hasVideoUrl: !!videoUrl, mediaUrl: !!mediaUrl })
+
     if (!mediaUrl) {
       console.log('⏳ [MODAL] Modal open but no mediaUrl yet, showing loading state')
       return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="sm:max-w-4xl">
+          <DialogContent
+            className="sm:max-w-4xl"
+            ref={(el) => {
+              if (el) {
+                console.log('🔍 [MODAL-LOADING] DOM Element mounted:', {
+                  display: window.getComputedStyle(el).display,
+                  visibility: window.getComputedStyle(el).visibility,
+                  opacity: window.getComputedStyle(el).opacity,
+                  zIndex: window.getComputedStyle(el).zIndex,
+                  position: window.getComputedStyle(el).position,
+                  width: el.offsetWidth,
+                  height: el.offsetHeight,
+                  boundingRect: el.getBoundingClientRect()
+                })
+              } else {
+                console.error('❌ [MODAL-LOADING] Element is NULL')
+              }
+            }}
+          >
             <DialogTitle>Carregando imagem...</DialogTitle>
             <div className="flex items-center justify-center p-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
@@ -79,10 +100,34 @@ export function GenerationResultModal({
     console.log('✅ [MODAL] Rendering modal with media (FULL URL):', mediaUrl)
     console.log('✅ [MODAL] Media URL length:', mediaUrl?.length || 0)
     console.log('✅ [MODAL] Media URL preview:', mediaUrl?.substring(0, 100) + '...')
-    
+
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <DialogContent
+          className="sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0"
+          ref={(el) => {
+            if (el) {
+              const styles = window.getComputedStyle(el)
+              console.log('🔍 [MODAL-CONTENT] DOM Element mounted:', {
+                display: styles.display,
+                visibility: styles.visibility,
+                opacity: styles.opacity,
+                zIndex: styles.zIndex,
+                position: styles.position,
+                top: styles.top,
+                left: styles.left,
+                transform: styles.transform,
+                width: el.offsetWidth,
+                height: el.offsetHeight,
+                boundingRect: el.getBoundingClientRect(),
+                isConnected: el.isConnected,
+                parentElement: el.parentElement?.tagName
+              })
+            } else {
+              console.error('❌ [MODAL-CONTENT] Element is NULL')
+            }
+          }}
+        >
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
             <DialogTitle className="font-[system-ui,-apple-system,'SF Pro Display',sans-serif] text-lg font-semibold">
               {title}

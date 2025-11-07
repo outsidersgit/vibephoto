@@ -825,9 +825,15 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           </div>
 
           {/* Result Modal - Auto-opens when generation completes */}
+          {console.log('🎨 [IMAGE_EDITOR] Rendering GenerationResultModal component:', {
+            showResultModal,
+            result: result?.substring(0, 100),
+            hasResult: !!result
+          })}
           <GenerationResultModal
             open={showResultModal}
             onOpenChange={(open) => {
+              console.log('🎨 [IMAGE_EDITOR] Modal onOpenChange called:', open)
               setShowResultModal(open)
               if (!open) {
                 // Clear form ONLY when modal is closed
