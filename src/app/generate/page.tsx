@@ -4,7 +4,6 @@ import { canUserUseCredits } from '@/lib/db/users'
 import { redirect } from 'next/navigation'
 import { GenerationInterface } from '@/components/generation/generation-interface'
 import { VideoGenerationInterface } from '@/components/generation/video-generation-interface'
-import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -47,9 +46,7 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
     : models[0].id
 
   return (
-    <>
-      <ProtectedPageScript />
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
         {/* Header */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -104,6 +101,5 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
         )}
       </div>
     </div>
-    </>
   )
 }
