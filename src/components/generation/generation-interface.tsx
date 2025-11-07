@@ -209,7 +209,7 @@ export function GenerationInterface({
         duration: 6000
       })
     }
-  }, [addToast, testImageUrl, clearFormAfterSuccess])
+  }, [addToast, testImageUrl])
 
   // Real-time updates for generation status
   useRealtimeUpdates({

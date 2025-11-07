@@ -50,7 +50,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
   const [monitoringVideoId, setMonitoringVideoId] = useState<string | null>(null)
 
-  const resetFormAfterSuccess = useCallback(() => {
+  const resetFormAfterSuccess = () => {
     setFormData({
       prompt: '',
       negativePrompt: VIDEO_CONFIG.defaults.negativePrompt,
@@ -64,7 +64,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
-  }, [])
+  }
   
   // Função para validar se uma URL de vídeo está acessível
   const validateVideoUrl = useCallback(async (url: string, maxRetries = 3): Promise<boolean> => {
