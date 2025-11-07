@@ -5,21 +5,21 @@ import { redirect } from 'next/navigation'
 import { GenerationInterface } from '@/components/generation/generation-interface'
 import { VideoGenerationInterface } from '@/components/generation/video-generation-interface'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
-import { unstable_noStore as noStore } from 'next/cache'
+import { unstable_noStore } from 'next/cache'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 interface GeneratePageProps {
-  searchParams: Promise<{
+  searchParams?: {
     model?: string
     tab?: string
     sourceImage?: string
-  }>
+  }
 }
 
 export default async function GeneratePage({ searchParams }: GeneratePageProps) {
-  noStore()
+  unstable_noStore()
   const session = await requireActiveSubscription()
   const userId = session.user.id
 
@@ -39,7 +39,7 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
   // Check if user has enough credits
   const canUseCredits = await canUserUseCredits(userId, 1)
 
-  const params = await searchParams
+  const params = searchParams ?? {}
   const activeTab = params.tab === 'video' ? 'video' : 'image'
   const sourceImage = params.sourceImage ? decodeURIComponent(params.sourceImage) : undefined
 
