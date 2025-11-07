@@ -63,6 +63,7 @@ export function GenerationInterface({
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [currentGeneration, setCurrentGeneration] = useState<any>(null)
   const [showExamples, setShowExamples] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   // Inline preview state
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' } | null>(null)
@@ -74,6 +75,18 @@ export function GenerationInterface({
   const generateImage = useImageGeneration()
   const manualSync = useManualSync()
   
+  // Detect mobile for responsive labels
+  useEffect(() => {
+    const updateIsMobile = () => {
+      if (typeof window === 'undefined') return
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    updateIsMobile()
+    window.addEventListener('resize', updateIsMobile)
+    return () => window.removeEventListener('resize', updateIsMobile)
+  }, [])
+
   // Polling como fallback caso SSE falhe
   // CRITICAL: Habilitar polling se há uma geração em PROCESSING OU se SSE desconectou
   const shouldPoll = !!currentGeneration && (
@@ -817,7 +830,7 @@ export function GenerationInterface({
                   ) : (
                     <>
                       <Play className="w-4 h-4 mr-2" />
-                      Gerar {settings.variations} Foto{settings.variations > 1 ? 's' : ''} ({settings.variations * 10} créditos)
+                      {isMobile ? `Gerar (${creditsNeeded} créditos)` : `Gerar Foto (${creditsNeeded} créditos)`}
                     </>
                   )}
                 </Button>

@@ -24,6 +24,8 @@ import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 
+const IMAGE_EDITOR_CREDIT_COST = 15
+
 interface ImageEditorInterfaceProps {
   preloadedImageUrl?: string
   className?: string
@@ -757,7 +759,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                   </>
                 ) : (
                   <>
-                    Gerar imagem (15 créditos)
+                    {isMobile ? `Gerar (${IMAGE_EDITOR_CREDIT_COST} créditos)` : `Gerar Foto (${IMAGE_EDITOR_CREDIT_COST} créditos)`}
                   </>
                 )}
               </Button>
@@ -966,7 +968,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 </>
               ) : (
                 <>
-                  Gerar imagem (15 créditos)
+                  {isMobile ? `Gerar (${IMAGE_EDITOR_CREDIT_COST} créditos)` : `Gerar Foto (${IMAGE_EDITOR_CREDIT_COST} créditos)`}
                 </>
               )}
             </Button>
