@@ -312,8 +312,8 @@ model Generation {
   // Relations
   userId           String
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  modelId          String
-  model            AIModel           @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  modelId          String?
+  model            AIModel?          @relation(fields: [modelId], references: [id], onDelete: Cascade)
   videoGenerations VideoGeneration[] // Videos created from this generation
   userPackage      UserPackage?      @relation(fields: [packageId], references: [id], onDelete: SetNull)
   feedback         Feedback?         // User feedback for this generation

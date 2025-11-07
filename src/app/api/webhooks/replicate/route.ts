@@ -899,40 +899,10 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
             })
             
             // Also create generation record for gallery (créditos já foram deduzidos na criação do edit_history)
-            // Não usar createGeneration() pois ela deduz créditos novamente
-            // Precisamos de um modelId válido - buscar qualquer modelo do usuário ou criar um padrão
-            let defaultModelId = editHistory.metadata?.defaultModelId
-            if (!defaultModelId) {
-              // Buscar qualquer modelo do usuário
-              const userModel = await prisma.aIModel.findFirst({
-                where: {
-                  userId: editHistory.userId
-                },
-                select: { id: true },
-                orderBy: { createdAt: 'desc' }
-              })
-              
-              if (userModel) {
-                defaultModelId = userModel.id
-              } else {
-                // Se não tem modelo, criar um modelo padrão "Editor IA" para edições
-                const newModel = await prisma.aIModel.create({
-                  data: {
-                    userId: editHistory.userId,
-                    name: 'Editor IA',
-                    description: 'Modelo padrão para edições do editor',
-                    status: 'READY',
-                    isPublic: false
-                  }
-                })
-                defaultModelId = newModel.id
-              }
-            }
-            
             await prisma.generation.create({
               data: {
                 userId: editHistory.userId,
-                modelId: defaultModelId,
+                modelId: editHistory.metadata?.defaultModelId || null,
                 prompt: editHistory.prompt,
                 imageUrls: [permanentUrl],
                 thumbnailUrls: [thumbnailUrl],

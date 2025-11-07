@@ -249,54 +249,40 @@ export async function POST(request: NextRequest) {
     let generationRecord = null
     try {
       if (result.resultImage) {
-        // Get or create a default model for editor images
-        const defaultModel = await prisma.aIModel.findFirst({
-          where: { 
+        generationRecord = await prisma.generation.create({
+          data: {
             userId: session.user.id,
-            name: { contains: 'Editor', mode: 'insensitive' }
+            modelId: null,
+            prompt: image ? `[EDITOR] ${prompt}` : `[GERADO] ${prompt}`,
+            status: 'COMPLETED',
+            imageUrls: [permanentImageUrl], // Use permanent S3 URL
+            thumbnailUrls: [permanentThumbnailUrl], // Use permanent S3 URL
+            aspectRatio: aspectRatioValue || '1:1',
+            resolution: aspectRatioValue ? 
+              (aspectRatioValue === '1:1' ? '1024x1024' :
+               aspectRatioValue === '4:3' ? '1024x768' :
+               aspectRatioValue === '3:4' ? '768x1024' :
+               aspectRatioValue === '9:16' ? '720x1280' :
+               aspectRatioValue === '16:9' ? '1280x720' : '1024x1024') : '1024x1024',
+            estimatedCost: 15,
+            aiProvider: 'nano-banana',
+            storageProvider: 'aws',
+            metadata: {
+              source: image ? 'editor' : 'editor_generate',
+              editHistoryId: editHistoryEntry?.id,
+              replicateId: result.id,
+              generatedFromScratch: !image,
+              temporaryUrl: result.resultImage // Keep original for reference
+            }
+          },
+          include: {
+            model: {
+              select: { id: true, name: true, class: true }
+            }
           }
-        }) || await prisma.aIModel.findFirst({
-          where: { userId: session.user.id }
         })
 
-        if (defaultModel) {
-          generationRecord = await prisma.generation.create({
-            data: {
-              userId: session.user.id,
-              modelId: defaultModel.id,
-              prompt: image ? `[EDITOR] ${prompt}` : `[GERADO] ${prompt}`,
-              status: 'COMPLETED',
-              imageUrls: [permanentImageUrl], // Use permanent S3 URL
-              thumbnailUrls: [permanentThumbnailUrl], // Use permanent S3 URL
-              aspectRatio: aspectRatioValue || '1:1',
-              resolution: aspectRatioValue ? 
-                (aspectRatioValue === '1:1' ? '1024x1024' :
-                 aspectRatioValue === '4:3' ? '1024x768' :
-                 aspectRatioValue === '3:4' ? '768x1024' :
-                 aspectRatioValue === '9:16' ? '720x1280' :
-                 aspectRatioValue === '16:9' ? '1280x720' : '1024x1024') : '1024x1024',
-              estimatedCost: 15,
-              aiProvider: 'nano-banana',
-              storageProvider: 'aws',
-              metadata: {
-                source: image ? 'editor' : 'editor_generate',
-                editHistoryId: editHistoryEntry?.id,
-                replicateId: result.id,
-                generatedFromScratch: !image,
-                temporaryUrl: result.resultImage // Keep original for reference
-              }
-            },
-            include: {
-              model: {
-                select: { id: true, name: true, class: true }
-              }
-            }
-          })
-
-          console.log('✅ Generation record saved to gallery with permanent S3 URL:', generationRecord.id)
-        } else {
-          console.warn('⚠️ No model found to associate with editor generation')
-        }
+        console.log('✅ Generation record saved to gallery with permanent S3 URL:', generationRecord.id)
       }
     } catch (galleryError) {
       console.error('❌ Failed to save generation to gallery:', galleryError)
