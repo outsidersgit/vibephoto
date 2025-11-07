@@ -358,7 +358,7 @@ const ScrollStackingCard = ({ step, index, scrollYProgress, totalSteps }: {
             
             {/* Descrição - alinhada exatamente com o título */}
             <p 
-              className="text-sm line-clamp-2 leading-relaxed"
+              className="text-sm leading-relaxed"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
                 fontWeight: 400,
@@ -1154,7 +1154,7 @@ function NavigationSteps() {
     {
       id: 2,
       title: 'Gere imagens',
-      description: 'Depois, vá em Gerar Imagem e escolha o estilo que quiser. Se quiser aprimorar o resultado, use o botão de lupa nos botões de ação da imagem e aplique upscale — aumentando a resolução e deixando sua criação ainda mais nítida..',
+      description: 'Depois, vá em Gerar Imagem e escolha o estilo que quiser. Se quiser aprimorar o resultado, use o botão de lupa nos botões de ação da imagem e aplique upscale — aumentando a resolução e deixando sua criação ainda mais nítida.',
       action: 'Gerar Fotos',
       href: '/generate'
     },

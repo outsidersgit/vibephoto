@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useId } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -51,6 +51,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
   const [currentEditId, setCurrentEditId] = useState<string | null>(null)
   const router = useRouter()
+  const fileInputId = useId()
 
   // Sync refs with state
   useEffect(() => {
@@ -732,16 +733,19 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             {/* Upload and Process Buttons - Side by side, smaller */}
             <div className="flex flex-row items-center gap-2">
               <Button
+                asChild
                 type="button"
                 variant="outline"
-                onClick={() => fileInputRef.current?.click()}
                 disabled={images.length >= 3 || loading}
                 className="flex-1 border border-gray-900 hover:border-[#667EEA] hover:bg-[#667EEA]/5 bg-gray-200 text-gray-900 rounded-lg py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               >
-                <ImageIcon className="w-3 h-3 mr-1.5" />
-                {images.length > 0 ? `${images.length}/3` : 'Adicionar'}
+                <label htmlFor={fileInputId} className="flex items-center justify-center w-full cursor-pointer">
+                  <ImageIcon className="w-3 h-3 mr-1.5" />
+                  {images.length > 0 ? `${images.length}/3` : 'Adicionar'}
+                </label>
               </Button>
               <Button
+                type="button"
                 onClick={handleSubmit}
                 disabled={!canProcess || loading}
                 className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
@@ -760,11 +764,12 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             </div>
             <input
               ref={fileInputRef}
+              id={fileInputId}
               type="file"
               accept="image/*"
               multiple={true}
               onChange={handleImageUpload}
-              className="hidden"
+              className="sr-only"
             />
 
             {/* Uploaded Images Preview */}
@@ -935,25 +940,28 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           </div>
 
           {/* Upload and Process Buttons - Side by side, smaller */}
-          <div className="flex flex-row items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button
+              asChild
               type="button"
               variant="outline"
-              onClick={() => fileInputRef.current?.click()}
               disabled={images.length >= 3 || loading}
-              className="flex-1 border border-gray-900 hover:border-[#667EEA] hover:bg-[#667EEA]/5 bg-gray-200 text-gray-900 rounded-lg py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              className="flex items-center gap-2 border border-gray-300 hover:border-[#667EEA] hover:bg-[#667EEA]/5 bg-white text-gray-900 rounded-xl px-4 py-3 text-sm font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
             >
-              <ImageIcon className="w-3 h-3 mr-1.5" />
-              {images.length > 0 ? `${images.length}/3 imagens` : 'Adicionar imagem'}
+              <label htmlFor={fileInputId} className="flex items-center gap-2 cursor-pointer">
+                <ImageIcon className="w-4 h-4" />
+                {images.length > 0 ? `${images.length}/3 imagens` : 'Adicionar imagens'}
+              </label>
             </Button>
             <Button
+              type="button"
               onClick={handleSubmit}
               disabled={!canProcess || loading}
-              className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              className="flex-1 sm:flex-none sm:w-auto bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white px-6 py-3 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-xl font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Processando...
                 </>
               ) : (
@@ -965,11 +973,12 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           </div>
           <input
             ref={fileInputRef}
+            id={fileInputId}
             type="file"
             accept="image/*"
             multiple={true}
             onChange={handleImageUpload}
-            className="hidden"
+            className="sr-only"
           />
 
           {/* Uploaded Images Preview */}
