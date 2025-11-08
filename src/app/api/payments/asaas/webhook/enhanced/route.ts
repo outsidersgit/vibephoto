@@ -1327,6 +1327,20 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
       if (creditPurchase) {
         // Verificar se já foi confirmado antes para evitar adicionar créditos duplicados
         const needsCreditUpdate = creditPurchase.status === 'PENDING'
+        const packageFromDb = creditPurchase.packageId
+          ? await prisma.creditPackage.findUnique({
+              where: { id: creditPurchase.packageId }
+            })
+          : null
+
+        const packageName = packageFromDb?.name ?? creditPurchase.packageName
+        const creditsFromPackage =
+          packageFromDb
+            ? packageFromDb.creditAmount + packageFromDb.bonusCredits
+            : creditPurchase.creditAmount
+        const bonusCreditsFromPackage =
+          packageFromDb?.bonusCredits ?? creditPurchase.bonusCredits ?? 0
+        const packageValue = packageFromDb?.price ?? creditPurchase.value
         
         // Atualizar CreditPurchase existente
         await prisma.creditPurchase.update({
@@ -1334,7 +1348,12 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
           data: {
             asaasPaymentId: payment.id,
             status: 'CONFIRMED',
-            confirmedAt: new Date()
+            confirmedAt: new Date(),
+            packageName,
+            packageId: packageFromDb?.id ?? creditPurchase.packageId,
+            creditAmount: creditsFromPackage,
+            bonusCredits: bonusCreditsFromPackage,
+            value: packageValue
           }
         })
 
@@ -1350,7 +1369,7 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
           await prisma.user.update({
             where: { id: user.id },
             data: {
-              creditsBalance: { increment: creditPurchase.creditAmount }
+              creditsBalance: { increment: creditsFromPackage }
             }
           })
 
@@ -1365,22 +1384,24 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
               userId: user.id,
               type: 'EARNED',
               source: 'PURCHASE',
-              amount: creditPurchase.creditAmount,
-              description: `Compra de ${creditPurchase.packageName} - ${creditPurchase.creditAmount} créditos`,
+                amount: creditsFromPackage,
+                description: `Compra de ${packageName} - ${creditsFromPackage} créditos`,
               referenceId: payment.id,
               creditPurchaseId: creditPurchase.id,
               balanceAfter: (userForTransaction?.creditsBalance || 0),
               metadata: {
-                packageName: creditPurchase.packageName,
-                packageId: creditPurchase.packageId,
-                value: creditPurchase.value,
+                  packageName,
+                  packageId: packageFromDb?.id ?? creditPurchase.packageId,
+                  value: packageValue,
+                  bonusCredits: bonusCreditsFromPackage,
+                  creditsUsedFromRecord: creditPurchase.creditAmount,
                 asaasPaymentId: payment.id,
                 billingType: payment.billingType
               }
             }
           })
 
-          console.log(`✅ [WEBHOOK] Adicionados ${creditPurchase.creditAmount} créditos para usuário ${user.id}`)
+          console.log(`✅ [WEBHOOK] Adicionados ${creditsFromPackage} créditos para usuário ${user.id} (pacote: ${packageName})`)
 
           // CRÍTICO: Broadcast atualização em tempo real para frontend
           const userAfterUpdate = await prisma.user.findUnique({
@@ -1419,7 +1440,7 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
 
             console.log('✅ [WEBHOOK] Broadcast SSE enviado para compra de créditos:', {
               userId: user.id,
-              creditsAdded: creditPurchase.creditAmount,
+              creditsAdded: creditsFromPackage,
               creditsBalance: userAfterUpdate.creditsBalance
             })
           }

@@ -236,9 +236,10 @@ export async function createCreditPackageCheckout(
     data: {
       userId: user.id,
       asaasCheckoutId: checkout.id,
-      // packageId: creditPackage.id, // Removido - foreign key constraint issue
+      packageId: creditPackage.id,
       packageName: creditPackage.name,
       creditAmount: creditPackage.creditAmount + creditPackage.bonusCredits,
+      bonusCredits: creditPackage.bonusCredits,
       value: creditPackage.price,
       status: 'PENDING',
       validUntil: validUntilDate // Usar validityMonths do pacote do banco
