@@ -90,18 +90,39 @@ export class CreditManager {
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    // Get user info
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { creditsUsed: true, creditsLimit: true }
-    })
+    const [user, daySpent, monthSpent] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { creditsUsed: true, creditsLimit: true }
+      }),
+      prisma.creditTransaction.aggregate({
+        where: {
+          userId,
+          type: 'SPENT',
+          createdAt: { gte: startOfDay }
+        },
+        _sum: { amount: true }
+      }),
+      prisma.creditTransaction.aggregate({
+        where: {
+          userId,
+          type: 'SPENT',
+          createdAt: { gte: startOfMonth }
+        },
+        _sum: { amount: true }
+      })
+    ])
+
+    const dailySpent = Math.abs(daySpent._sum.amount || 0)
+    const monthlySpent = Math.abs(monthSpent._sum.amount || 0)
+    const remainingPlanCredits = Math.max(0, (user?.creditsLimit || 0) - (user?.creditsUsed || 0))
 
     return {
-      today: user?.creditsUsed || 0,
-      thisMonth: user?.creditsUsed || 0,
-      totalTraining: 0, // Would need separate tracking
-      totalGeneration: 0, // Would need separate tracking
-      remaining: (user?.creditsLimit || 0) - (user?.creditsUsed || 0)
+      today: dailySpent,
+      thisMonth: monthlySpent,
+      totalTraining: 0, // TODO: track specific training usage
+      totalGeneration: monthlySpent,
+      remaining: remainingPlanCredits
     }
   }
 

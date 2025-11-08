@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -11,7 +10,6 @@ import { VIDEO_CONFIG, VideoGenerationRequest, VideoTemplate } from '@/lib/ai/vi
 import { calculateVideoCredits, validatePrompt, getEstimatedProcessingTime, formatProcessingTime } from '@/lib/ai/video/utils'
 import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { useRouter } from 'next/navigation'
 import { useInvalidateCredits } from '@/hooks/useCredits'
 
 interface VideoGenerationInterfaceProps {
@@ -29,9 +27,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   console.log('🧭 [VIDEO_GENERATION_INTERFACE] render start')
   // CRITICAL: Todos os hooks DEVEM ser chamados ANTES de qualquer early return
   // Violar esta regra causa erro React #310 (can't set state on unmounted component)
-  const { data: session, status } = useSession()
   const { addToast } = useToast()
-  const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const loadingRef = useRef(false)
   
@@ -275,35 +271,6 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
       setFormData(prev => ({ ...prev, sourceImageUrl }))
     }
   }, [sourceImageUrl])
-  
-  // CRITICAL: AGORA sim podemos fazer early returns após todos os hooks
-  // Durante loading, mostrar loading state (não bloquear)
-  // A página server-side já garantiu que há sessão válida
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando...</p>
-        </div>
-      </div>
-    )
-  }
-  
-  // CRITICAL: Se não autenticado após loading, aguardar (página server-side já verificou)
-  // Retornar null só se realmente não autenticado (proteção extra)
-  if (status === 'unauthenticated' || !session?.user) {
-    // Em caso de perda de sessão, aguardar um momento antes de redirecionar
-    // (pode ser um problema temporário de hidratação)
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verificando autenticação...</p>
-        </div>
-      </div>
-    )
-  }
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -394,7 +361,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
       if (!videoGenerationId) {
         throw new Error('ID da geração de vídeo não foi retornado')
       }
-      
+
       addToast({
         type: 'success',
         title: "Vídeo em processamento",
@@ -427,7 +394,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
       loadingRef.current = false
     } finally {
       if (!loadingRef.current) {
-        setLoading(false)
+      setLoading(false)
       }
     }
   }
@@ -493,7 +460,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
 
   // Mobile Layout - Similar to editor
   if (isMobile) {
-    return (
+  return (
       <div className="w-full">
         <div className="max-w-4xl mx-auto px-4 py-0">
           {/* Mobile: Info Card */}
@@ -560,7 +527,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                       <SelectItem value="1:1">1:1 (Quadrado)</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
+                    </div>
 
                 {/* Quality Info */}
                 <div className="pt-3 border-t border-gray-200">
@@ -579,7 +546,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
                   Descrição
-                </label>
+                      </label>
                 <div className="flex items-center space-x-2">
                   <div className="text-xs text-gray-600">
                     {formData.prompt.length}/{VIDEO_CONFIG.options.maxPromptLength}
@@ -628,9 +595,9 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
 
             {/* Upload and Process Buttons - Side by side, smaller */}
             <div className="flex flex-row items-center gap-2">
-              <Button
+                            <Button
                 type="button"
-                variant="outline"
+                              variant="outline"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={loading}
                 className="flex-1 border border-gray-900 bg-white hover:border-[#667EEA] hover:bg-[#667EEA]/5 text-gray-900 rounded-lg px-4 py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
@@ -653,14 +620,14 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                     Gerar ({requiredCredits} créditos)
                   </>
                 )}
-              </Button>
-            </div>
-            <input
+                            </Button>
+                          </div>
+                            <input
               ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              className="hidden"
             />
 
             {/* Uploaded Image Preview */}
@@ -690,11 +657,11 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                     </p>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    </div>
     )
   }
 
@@ -720,7 +687,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                     <span>Descreva o movimento e a ação desejada no prompt para criar vídeos únicos</span>
                   </li>
                 </ul>
-              </div>
+                  </div>
             </CardContent>
           </Card>
         </div>
@@ -730,43 +697,43 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
           {/* Left Column - Settings (no card wrapper) */}
           <div className="lg:col-span-1 space-y-4">
             {/* Duration */}
-            <div>
+              <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Duração
-              </label>
-              <Select
-                value={formData.duration.toString()}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, duration: parseInt(value) as 5 | 10 }))}
-              >
+                  Duração
+                </label>
+                <Select
+                  value={formData.duration.toString()}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, duration: parseInt(value) as 5 | 10 }))}
+                >
                 <SelectTrigger className="w-full bg-gray-200 border-gray-900 text-gray-900">
-                  <SelectValue />
-                </SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="5">5 segundos</SelectItem>
                   <SelectItem value="10">10 segundos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                  </SelectContent>
+                </Select>
+              </div>
 
             {/* Aspect Ratio */}
-            <div>
+              <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Proporção
-              </label>
-              <Select
-                value={formData.aspectRatio}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, aspectRatio: value as '16:9' | '9:16' | '1:1' }))}
-              >
+                  Proporção
+                </label>
+                <Select
+                  value={formData.aspectRatio}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, aspectRatio: value as '16:9' | '9:16' | '1:1' }))}
+                >
                 <SelectTrigger className="w-full bg-gray-200 border-gray-900 text-gray-900">
-                  <SelectValue />
-                </SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="16:9">16:9 (Paisagem)</SelectItem>
                   <SelectItem value="9:16">9:16 (Retrato)</SelectItem>
                   <SelectItem value="1:1">1:1 (Quadrado)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                  </SelectContent>
+                </Select>
+              </div>
 
             {/* Quality Info */}
             <div className="pt-4 border-t border-gray-200">
@@ -783,7 +750,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
                   Descrição
-                </label>
+                    </label>
                 <div className="flex items-center space-x-2">
                   <div className="text-xs text-gray-600">
                     {formData.prompt.length}/{VIDEO_CONFIG.options.maxPromptLength}
@@ -842,22 +809,22 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                 <ImageIcon className="w-3 h-3 mr-1.5" />
                 {uploadedImage ? 'Imagem adicionada' : 'Adicionar imagem'}
               </Button>
-              <Button
-                onClick={handleSubmit}
+            <Button
+              onClick={handleSubmit}
                 disabled={!canProcess}
                 className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white px-6 py-3 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-              >
-                {loading ? (
-                  <>
+            >
+              {loading ? (
+                <>
                     <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                     Processando...
-                  </>
-                ) : (
-                  <>
-                    Gerar Vídeo ({requiredCredits} créditos)
-                  </>
-                )}
-              </Button>
+                </>
+              ) : (
+                <>
+                  Gerar Vídeo ({requiredCredits} créditos)
+                </>
+              )}
+            </Button>
             </div>
             <input
               ref={fileInputRef}
@@ -881,11 +848,11 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                 >
                   <X className="w-3 h-3" />
                 </button>
-              </div>
+          </div>
             )}
 
             {/* Error Display */}
-            {errors.length > 0 && (
+          {errors.length > 0 && (
               <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
                 <div className="space-y-2">
                   {errors.map((error, index) => (
@@ -898,14 +865,14 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
             )}
           </div>
         </div>
-      </div>
+                  </div>
 
       {previewMedia && (
         <Card className="mt-6 border-gray-200 bg-white rounded-lg shadow-lg">
           <CardContent className="p-4">
             <h3 className="text-base font-semibold text-gray-900 mb-3 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
               Vídeo gerado recentemente
-            </h3>
+                    </h3>
             <div
               className="relative group cursor-pointer rounded-2xl overflow-hidden border border-gray-200 bg-black"
               onClick={() => setIsPreviewLightboxOpen(true)}
@@ -920,9 +887,9 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                   Tocar em tela cheia
                 </span>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
       )}
 
       <Dialog open={isPreviewLightboxOpen} onOpenChange={setIsPreviewLightboxOpen}>
