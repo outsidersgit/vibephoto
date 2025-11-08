@@ -49,6 +49,7 @@ export interface CreditUsage {
   totalTraining: number
   totalGeneration: number
   remaining: number
+  purchasedCredits: number
 }
 
 export const PLAN_LIMITS: Record<Plan, CreditLimits> = {
@@ -93,7 +94,7 @@ export class CreditManager {
     const [user, daySpentResult, monthSpentResult] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
-        select: { creditsUsed: true, creditsLimit: true }
+        select: { creditsUsed: true, creditsLimit: true, creditsBalance: true }
       }),
       prisma.$queryRaw<{ total: bigint | number | null }[]>`
         SELECT COALESCE(SUM(amount), 0) AS total
@@ -117,13 +118,15 @@ export class CreditManager {
     const dailySpent = Math.abs(Number(dailySpentRaw))
     const monthlySpent = Math.abs(Number(monthlySpentRaw))
     const remainingPlanCredits = Math.max(0, (user?.creditsLimit || 0) - (user?.creditsUsed || 0))
+    const purchasedCredits = Math.max(0, user?.creditsBalance || 0)
 
     return {
       today: dailySpent,
       thisMonth: monthlySpent,
       totalTraining: 0, // TODO: track specific training usage
       totalGeneration: monthlySpent,
-      remaining: remainingPlanCredits
+      remaining: remainingPlanCredits,
+      purchasedCredits
     }
   }
 
@@ -146,9 +149,10 @@ export class CreditManager {
     }
 
     const limits = PLAN_LIMITS[userPlan]
+    const skipPlanLimitChecks = (usage.purchasedCredits || 0) >= amount
 
     // Check daily limit
-    if (usage.today + amount > limits.daily) {
+    if (!skipPlanLimitChecks && usage.today + amount > limits.daily) {
       return {
         canAfford: false,
         reason: `Daily limit exceeded. Would use ${usage.today + amount}/${limits.daily} credits`
@@ -156,7 +160,7 @@ export class CreditManager {
     }
 
     // Check monthly limit
-    if (usage.thisMonth + amount > limits.monthly) {
+    if (!skipPlanLimitChecks && usage.thisMonth + amount > limits.monthly) {
       return {
         canAfford: false,
         reason: `Monthly limit exceeded. Would use ${usage.thisMonth + amount}/${limits.monthly} credits`

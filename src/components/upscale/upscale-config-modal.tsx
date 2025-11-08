@@ -5,7 +5,8 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
-import { X, Sparkles } from 'lucide-react'
+import { X, Sparkles, Download } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 import { getUpscaleCost } from '@/lib/credits/pricing'
 
 interface UpscaleConfigModalProps {
@@ -31,6 +32,7 @@ export function UpscaleConfigModal({
   const afterImageMaskRef = useRef<HTMLDivElement | null>(null)
   const sliderRef = useRef<HTMLDivElement | null>(null)
   const pointerActiveRef = useRef(false)
+  const { addToast } = useToast()
 
   const applySliderPosition = useCallback((percentage: number) => {
     const clamped = Math.min(100, Math.max(0, percentage))
@@ -85,6 +87,51 @@ export function UpscaleConfigModal({
       document.body.style.userSelect = ''
     }
   }, [])
+
+  const handleDownloadResult = useCallback(async () => {
+    if (!resultImageUrl) {
+      return
+    }
+
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+      const response = await fetch('/api/download-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageUrl: resultImageUrl,
+          filename: `vibephoto-upscale-${timestamp}.png`
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`Download proxy returned ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      const downloadUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = `vibephoto-upscale-${timestamp}.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(downloadUrl)
+
+      addToast({
+        type: 'success',
+        title: 'Download iniciado',
+        description: 'A imagem em alta resolução foi baixada.'
+      })
+    } catch (error) {
+      console.error('❌ [UPSCALE_MODAL] Download failed:', error)
+      addToast({
+        type: 'error',
+        title: 'Erro no download',
+        description: 'Não foi possível baixar a imagem. Tente novamente.'
+      })
+    }
+  }, [resultImageUrl, addToast])
 
   const handleUpscale = () => {
     onUpscale(scaleFactor, objectDetection)
@@ -206,6 +253,24 @@ export function UpscaleConfigModal({
             </Card>
           </div>
         </div>
+
+        {resultImageUrl && (
+          <div className="mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-[#2C3E50] border border-[#4A5F7A] rounded-2xl px-4 py-3">
+              <p className="text-xs sm:text-sm text-gray-200 leading-relaxed">
+                A versão em alta resolução já está na sua galeria. Você também pode baixá-la agora.
+              </p>
+              <Button
+                type="button"
+                onClick={handleDownloadResult}
+                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 text-white text-xs font-semibold px-3 py-2 rounded-lg"
+              >
+                <Download className="w-4 h-4" />
+                Baixar imagem
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Controls */}
         <div className="grid grid-cols-2 gap-6 mb-6">
