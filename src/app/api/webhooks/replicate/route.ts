@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { WebhookPayload } from '@/lib/ai/base'
-import { downloadAndStoreImages } from '@/lib/storage/utils'
+import { downloadAndStoreImages, downloadAndStoreVideo } from '@/lib/storage/utils'
 import { broadcastGenerationStatusChange, broadcastModelStatusChange, broadcastNotification } from '@/lib/services/realtime-service'
+import { generateVideoThumbnail } from '@/lib/video/thumbnail-generator'
+import { VideoStatus } from '@/lib/ai/video/config'
 import Replicate from 'replicate'
 import crypto from 'crypto'
 
@@ -241,6 +243,9 @@ export async function POST(request: NextRequest) {
       case 'edit':
         result = await processEditWebhook(payload, jobType.record)
         break
+      case 'video':
+        result = await processVideoWebhook(payload, jobType.record)
+        break
       default:
         throw new Error(`Unknown job type: ${jobType.type}`)
     }
@@ -326,6 +331,32 @@ async function getJobByParameters(type: string, recordId: string, userId?: strin
         return {
           type: isUpscale ? 'upscale' : 'generation',
           record: generation
+        }
+      }
+    }
+
+    if (type === 'video') {
+      const videoGeneration = await prisma.videoGeneration.findFirst({
+        where: {
+          id: recordId,
+          ...(userId && { userId })
+        },
+        select: {
+          id: true,
+          userId: true,
+          jobId: true,
+          status: true,
+          metadata: true,
+          videoUrl: true,
+          thumbnailUrl: true,
+          createdAt: true
+        }
+      })
+
+      if (videoGeneration) {
+        return {
+          type: 'video',
+          record: videoGeneration
         }
       }
     }
@@ -457,6 +488,27 @@ async function detectJobType(jobId: string) {
     return {
       type: 'training',
       record: model
+    }
+  }
+
+  const videoGeneration = await prisma.videoGeneration.findFirst({
+    where: { jobId },
+    select: {
+      id: true,
+      userId: true,
+      jobId: true,
+      status: true,
+      metadata: true,
+      videoUrl: true,
+      thumbnailUrl: true,
+      createdAt: true
+    }
+  })
+
+  if (videoGeneration) {
+    return {
+      type: 'video',
+      record: videoGeneration
     }
   }
   
@@ -688,6 +740,162 @@ async function processUpscaleWebhook(payload: WebhookPayload, generation: any) {
   }
 
   return { success: true, type: 'upscale', updated: !!Object.keys(updateData).length }
+}
+
+/**
+ * Processa webhook de geração de vídeo
+ */
+async function processVideoWebhook(payload: WebhookPayload, videoGeneration: any) {
+  console.log(`🎬 Processing video webhook for ${videoGeneration.id}`, {
+    status: payload.status,
+    jobId: videoGeneration.jobId,
+    replicateId: payload.id
+  })
+
+  const jobId = videoGeneration.jobId || payload.id
+  if (!jobId) {
+    console.error(`❌ Video generation ${videoGeneration.id} has no jobId associated`)
+    return { success: false, type: 'video', error: 'Missing jobId' }
+  }
+
+  let status: VideoStatus
+  switch (payload.status) {
+    case 'starting':
+    case 'processing':
+      status = VideoStatus.PROCESSING
+      break
+    case 'succeeded':
+      status = VideoStatus.COMPLETED
+      break
+    case 'failed':
+      status = VideoStatus.FAILED
+      break
+    case 'canceled':
+      status = VideoStatus.CANCELLED
+      break
+    default:
+      status = VideoStatus.PROCESSING
+  }
+
+  let sourceVideoUrl: string | undefined
+  if (status === VideoStatus.COMPLETED && payload.output) {
+    if (typeof payload.output === 'string') {
+      sourceVideoUrl = payload.output
+    } else if (Array.isArray(payload.output) && payload.output.length > 0) {
+      sourceVideoUrl = payload.output[0]
+    } else if (typeof payload.output === 'object' && payload.output !== null && 'url' in payload.output) {
+      sourceVideoUrl = (payload.output as any).url
+    }
+  }
+
+  let errorMessage: string | undefined
+  if (status === VideoStatus.FAILED && payload.error) {
+    errorMessage = typeof payload.error === 'string'
+      ? payload.error
+      : JSON.stringify(payload.error)
+  }
+
+  const baseMetadata = (typeof videoGeneration.metadata === 'object' && videoGeneration.metadata !== null)
+    ? { ...videoGeneration.metadata }
+    : {}
+
+  const metadataUpdates: Record<string, any> = {
+    ...baseMetadata,
+    replicateStatus: payload.status,
+    replicateId: payload.id,
+    lastWebhookAt: new Date().toISOString()
+  }
+
+  let finalVideoUrl: string | null | undefined = videoGeneration.videoUrl
+  let finalThumbnailUrl: string | null | undefined = videoGeneration.thumbnailUrl
+
+  if (status === VideoStatus.COMPLETED && sourceVideoUrl) {
+    metadataUpdates.temporaryVideoUrl = sourceVideoUrl
+    metadataUpdates.originalUrl = sourceVideoUrl
+
+    try {
+      console.log(`🖼️ Generating thumbnail for video ${videoGeneration.id}`)
+      const thumbnailResult = await generateVideoThumbnail(sourceVideoUrl, videoGeneration.id, videoGeneration.userId)
+      if (thumbnailResult.success && thumbnailResult.thumbnailUrl) {
+        finalThumbnailUrl = thumbnailResult.thumbnailUrl
+        metadataUpdates.thumbnailUrl = thumbnailResult.thumbnailUrl
+      } else if (thumbnailResult.error) {
+        metadataUpdates.thumbnailError = thumbnailResult.error
+      }
+    } catch (thumbnailError) {
+      console.error(`❌ Thumbnail generation failed for ${videoGeneration.id}:`, thumbnailError)
+      metadataUpdates.thumbnailError = thumbnailError instanceof Error ? thumbnailError.message : String(thumbnailError)
+    }
+
+    try {
+      console.log(`📥 Downloading and storing video for ${videoGeneration.id}`)
+      const storageResult = await downloadAndStoreVideo(sourceVideoUrl, videoGeneration.id, videoGeneration.userId)
+      if (storageResult.success && storageResult.videoUrl) {
+        finalVideoUrl = storageResult.videoUrl
+        metadataUpdates.storageProvider = 'aws'
+        metadataUpdates.storageSuccess = true
+        metadataUpdates.storedUrl = storageResult.videoUrl
+      } else {
+        finalVideoUrl = sourceVideoUrl
+        metadataUpdates.storageSuccess = false
+        metadataUpdates.storageError = storageResult.error || 'Unknown storage error'
+        console.error(`❌ Failed to store video ${videoGeneration.id}:`, storageResult.error)
+      }
+    } catch (storageError) {
+      finalVideoUrl = sourceVideoUrl
+      metadataUpdates.storageSuccess = false
+      metadataUpdates.storageError = storageError instanceof Error ? storageError.message : String(storageError)
+      console.error(`❌ Error storing video ${videoGeneration.id}:`, storageError)
+    }
+  }
+
+  if (payload.metrics?.total_time) {
+    metadataUpdates.totalProcessingTime = payload.metrics.total_time
+  }
+
+  const updateData: any = {
+    status,
+    updatedAt: new Date(),
+    metadata: metadataUpdates
+  }
+
+  if (finalVideoUrl !== undefined) {
+    updateData.videoUrl = finalVideoUrl
+  }
+
+  if (finalThumbnailUrl !== undefined) {
+    updateData.thumbnailUrl = finalThumbnailUrl
+  }
+
+  if (errorMessage) {
+    updateData.errorMessage = errorMessage
+  }
+
+  if (payload.metrics?.total_time) {
+    updateData.processingTime = Math.round(payload.metrics.total_time * 1000)
+  }
+
+  if ([VideoStatus.COMPLETED, VideoStatus.FAILED, VideoStatus.CANCELLED].includes(status)) {
+    updateData.processingCompletedAt = new Date()
+    if (status === VideoStatus.COMPLETED) {
+      updateData.progress = 100
+    }
+  }
+
+  await prisma.videoGeneration.update({
+    where: { id: videoGeneration.id },
+    data: updateData
+  })
+
+  console.log(`✅ Video webhook processed for ${videoGeneration.id} -> ${status}`)
+
+  return {
+    success: true,
+    type: 'video',
+    updated: true,
+    storedUrl: finalVideoUrl,
+    thumbnailUrl: finalThumbnailUrl
+  }
 }
 
 /**
