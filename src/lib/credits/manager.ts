@@ -98,16 +98,16 @@ export class CreditManager {
       prisma.$queryRaw<{ total: bigint | number | null }[]>`
         SELECT COALESCE(SUM(amount), 0) AS total
         FROM credit_transactions
-        WHERE "user_id" = ${userId}
-          AND "type" = 'SPENT'
-          AND "created_at" >= ${startOfDay}
+        WHERE user_id = ${userId}
+          AND type = 'SPENT'
+          AND created_at >= ${startOfDay}
       `,
       prisma.$queryRaw<{ total: bigint | number | null }[]>`
         SELECT COALESCE(SUM(amount), 0) AS total
         FROM credit_transactions
-        WHERE "user_id" = ${userId}
-          AND "type" = 'SPENT'
-          AND "created_at" >= ${startOfMonth}
+        WHERE user_id = ${userId}
+          AND type = 'SPENT'
+          AND created_at >= ${startOfMonth}
       `
     ])
 
