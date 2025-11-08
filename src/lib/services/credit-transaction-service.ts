@@ -47,11 +47,11 @@ export async function createCreditTransaction(
     throw new Error('Usuário não encontrado')
   }
 
-  // Calcular novo saldo total
-  // Saldo = (creditsLimit - creditsUsed) + creditsBalance + amount
+  // Saldo atual após a operação já aplicada nas tabelas de usuário/pacotes
+  // (creditsLimit - creditsUsed) representa o que resta do plano,
+  // creditsBalance reflete os créditos avulsos após a dedução/adição.
   const planCreditsAvailable = Math.max(0, user.creditsLimit - user.creditsUsed)
-  const totalBalance = planCreditsAvailable + user.creditsBalance
-  const newBalance = totalBalance + amount
+  const newBalance = planCreditsAvailable + user.creditsBalance
 
   // Criar transação
   const transaction = await client.creditTransaction.create({
