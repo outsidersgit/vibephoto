@@ -54,6 +54,21 @@ export async function createCreditTransaction(
   const newBalance = planCreditsAvailable + user.creditsBalance
 
   // Criar transação
+  const transactions = await client.creditTransaction.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+    select: { balanceAfter: true }
+  })
+
+  let balanceBefore = newBalance
+  if (transactions.length > 0) {
+    const lastBalance = Number(transactions[0].balanceAfter) || 0
+    balanceBefore = lastBalance
+  }
+
+  const effectiveBalance = balanceBefore + amount
+
   const transaction = await client.creditTransaction.create({
     data: {
       userId,
@@ -64,7 +79,7 @@ export async function createCreditTransaction(
       referenceId,
       creditPurchaseId,
       metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : undefined,
-      balanceAfter: newBalance
+      balanceAfter: effectiveBalance
     }
   })
 
