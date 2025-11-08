@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { revalidateTag } from 'next/cache'
-import { Plan, Prisma } from '@prisma/client'
+import { Plan, Prisma, CreditTransactionType } from '@prisma/client'
 import {
   createCreditTransaction,
   recordImageGenerationCost,
@@ -98,7 +98,7 @@ export class CreditManager {
       prisma.creditTransaction.aggregate({
         where: {
           userId,
-          type: 'SPENT',
+          type: CreditTransactionType.SPENT,
           createdAt: { gte: startOfDay }
         },
         _sum: { amount: true }
@@ -106,7 +106,7 @@ export class CreditManager {
       prisma.creditTransaction.aggregate({
         where: {
           userId,
-          type: 'SPENT',
+          type: CreditTransactionType.SPENT,
           createdAt: { gte: startOfMonth }
         },
         _sum: { amount: true }
