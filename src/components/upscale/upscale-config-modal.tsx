@@ -1,6 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import {
+  useState,
+  useRef,
+  useCallback,
+  type PointerEvent as ReactPointerEvent,
+  type ChangeEvent
+} from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -27,6 +33,49 @@ export function UpscaleConfigModal({
 }: UpscaleConfigModalProps) {
   const [scaleFactor, setScaleFactor] = useState<string>('2x')
   const [objectDetection, setObjectDetection] = useState<string>('none')
+  const [comparisonValue, setComparisonValue] = useState<number>(50)
+  const comparisonContainerRef = useRef<HTMLDivElement | null>(null)
+  const pointerActiveRef = useRef(false)
+
+  const updateComparisonFromClientX = useCallback((clientX: number) => {
+    const container = comparisonContainerRef.current
+    if (!container) return
+
+    const rect = container.getBoundingClientRect()
+    if (rect.width === 0) return
+
+    const relativeX = ((clientX - rect.left) / rect.width) * 100
+    const clamped = Math.min(100, Math.max(0, relativeX))
+    setComparisonValue(clamped)
+  }, [])
+
+  const handlePointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    pointerActiveRef.current = true
+    event.currentTarget.setPointerCapture(event.pointerId)
+    updateComparisonFromClientX(event.clientX)
+  }, [updateComparisonFromClientX])
+
+  const handlePointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!pointerActiveRef.current) return
+    updateComparisonFromClientX(event.clientX)
+  }, [updateComparisonFromClientX])
+
+  const handlePointerUp = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    pointerActiveRef.current = false
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    } catch {
+      // ignore if capture was not set
+    }
+  }, [])
+
+  const handlePointerLeave = useCallback(() => {
+    pointerActiveRef.current = false
+  }, [])
+
+  const handleSliderChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setComparisonValue(Number(event.target.value))
+  }, [])
 
   const handleUpscale = () => {
     onUpscale(scaleFactor, objectDetection)
@@ -80,9 +129,6 @@ export function UpscaleConfigModal({
                 </div>
               )}
             </Card>
-            <div className="text-center text-xs text-gray-400">
-              2048x2048
-            </div>
           </div>
 
           {/* Result Image */}
@@ -92,22 +138,55 @@ export function UpscaleConfigModal({
             </h3>
             <Card className="bg-[#2C3E50] border-[#4A5F7A] p-3 rounded-xl h-64">
               {resultImageUrl ? (
-                <div className="w-full h-full relative">
+                <div
+                  ref={comparisonContainerRef}
+                  className="w-full h-full relative select-none touch-none"
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onPointerCancel={handlePointerUp}
+                  onPointerLeave={handlePointerLeave}
+                  role="presentation"
+                >
                   <img
                     src={resultImageUrl}
                     alt="Resultado do upscale"
-                    className="w-full h-full object-contain rounded-lg"
+                    className="absolute inset-0 w-full h-full object-contain rounded-lg"
                   />
+                  {imageUrl && (
+                    <img
+                      src={imageUrl}
+                      alt="Imagem original para comparação"
+                      className="absolute inset-0 w-full h-full object-contain rounded-lg"
+                      style={{
+                        clipPath: `inset(0 ${100 - comparisonValue}% 0 0)`
+                      }}
+                    />
+                  )}
+                  <div
+                    className="absolute inset-y-0 flex items-center pointer-events-none"
+                    style={{ left: `${comparisonValue}%` }}
+                  >
+                    <div className="w-0.5 h-full bg-white/70 backdrop-blur-sm -translate-x-1/2" />
+                    <div className="absolute left-1/2 -translate-x-1/2 w-8 h-8 bg-white text-[#2C3E50] rounded-full flex items-center justify-center shadow-lg">
+                      <div className="w-4 h-4 border-2 border-[#2C3E50]/40 rounded-full" />
+                    </div>
+                  </div>
+                  <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                    Antes
+                  </div>
                   <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
                     Depois
                   </div>
-                  {/* Slider overlay for comparison */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-0.5 h-full bg-white opacity-60"></div>
-                    <div className="absolute w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
-                      <div className="w-4 h-4 border-2 border-gray-400 rounded-full"></div>
-                    </div>
-                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={comparisonValue}
+                    onChange={handleSliderChange}
+                    className="absolute bottom-3 left-1/2 -translate-x-1/2 w-2/3 h-1.5 appearance-none bg-white/40 rounded-full cursor-pointer"
+                    aria-label="Comparar antes e depois"
+                  />
                 </div>
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -124,9 +203,6 @@ export function UpscaleConfigModal({
                 </div>
               )}
             </Card>
-            <div className="text-center text-xs text-gray-400">
-              {scaleFactor === '2x' ? '4096x4096' : scaleFactor === '4x' ? '8192x8192' : '2048x2048'}
-            </div>
           </div>
         </div>
 
