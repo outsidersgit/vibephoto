@@ -131,39 +131,16 @@ export class CreditManager {
   }
 
   static async canUserAfford(
-    userId: string, 
-    amount: number, 
-    userPlan: Plan
+    userId: string,
+    amount: number,
+    _userPlan: Plan
   ): Promise<{ canAfford: boolean; reason?: string }> {
-    const [currentCredits, usage] = await Promise.all([
-      this.getUserCredits(userId),
-      this.getUserUsage(userId)
-    ])
+    const currentCredits = await this.getUserCredits(userId)
 
-    // Check if user has enough credits
     if (currentCredits < amount) {
       return {
         canAfford: false,
-        reason: `Insufficient credits. Need ${amount}, have ${currentCredits}`
-      }
-    }
-
-    const limits = PLAN_LIMITS[userPlan]
-    const skipPlanLimitChecks = (usage.purchasedCredits || 0) >= amount
-
-    // Check daily limit
-    if (!skipPlanLimitChecks && usage.today + amount > limits.daily) {
-      return {
-        canAfford: false,
-        reason: `Daily limit exceeded. Would use ${usage.today + amount}/${limits.daily} credits`
-      }
-    }
-
-    // Check monthly limit
-    if (!skipPlanLimitChecks && usage.thisMonth + amount > limits.monthly) {
-      return {
-        canAfford: false,
-        reason: `Monthly limit exceeded. Would use ${usage.thisMonth + amount}/${limits.monthly} credits`
+        reason: `Créditos insuficientes. Necessário: ${amount}, disponível: ${currentCredits}`
       }
     }
 
