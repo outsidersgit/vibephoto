@@ -908,13 +908,15 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
                 thumbnailUrls: [thumbnailUrl],
                 status: 'COMPLETED',
                 jobId: payload.id,
+                operationType: 'edit',
                 metadata: {
                   source: 'editor',
                   editHistoryId: editHistory.id,
                   operation: editHistory.operation,
-                  webhook: true
+                  webhook: true,
+                  cost: 15
                 },
-                estimatedCost: 10, // Custo padrão para edições
+                estimatedCost: 15, // Custo de edições via editor
                 aiProvider: 'hybrid',
                 completedAt: new Date()
               }

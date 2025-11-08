@@ -197,6 +197,7 @@ export async function POST(request: NextRequest) {
           resolution: `${options.upscale_factor}`, // e.g., "2x", "4x", "6x"
           aspectRatio: '1:1', // Será atualizado
           style: 'upscale',
+          operationType: 'upscale',
           seed: options.seed || Math.floor(Math.random() * 1000000),
           variations: 1,
           modelId: await getDefaultModelId(userId),
@@ -204,7 +205,13 @@ export async function POST(request: NextRequest) {
           processingTime: synchronousResult ? 30000 : estimateProcessingTime(numericScaleFactor), // Sync is ~30s
           estimatedCost: Math.ceil(creditsNeeded / imageCount),
           completedAt: finalStatus === 'COMPLETED' ? new Date() : null,
-          errorMessage: finalStatus === 'FAILED' ? 'Failed to store upscaled images permanently' : null
+          errorMessage: finalStatus === 'FAILED' ? 'Failed to store upscaled images permanently' : null,
+          metadata: {
+            source: 'upscale',
+            upscaleFactor: options.upscale_factor,
+            enhanceModel: options.enhance_model || 'Standard V2',
+            cost: Math.ceil(creditsNeeded / imageCount)
+          }
         }
       })
 
