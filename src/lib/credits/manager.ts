@@ -90,31 +90,32 @@ export class CreditManager {
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    const [user, daySpent, monthSpent] = await Promise.all([
+    const [user, daySpentResult, monthSpentResult] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
         select: { creditsUsed: true, creditsLimit: true }
       }),
-      prisma.creditTransaction.aggregate({
-        where: {
-          userId,
-          type: 'SPENT',
-          createdAt: { gte: startOfDay }
-        },
-        _sum: { amount: true }
-      }),
-      prisma.creditTransaction.aggregate({
-        where: {
-          userId,
-          type: 'SPENT',
-          createdAt: { gte: startOfMonth }
-        },
-        _sum: { amount: true }
-      })
+      prisma.$queryRaw<{ total: bigint | number | null }[]>`
+        SELECT COALESCE(SUM(amount), 0) AS total
+        FROM credit_transactions
+        WHERE "user_id" = ${userId}
+          AND "type" = 'SPENT'
+          AND "created_at" >= ${startOfDay}
+      `,
+      prisma.$queryRaw<{ total: bigint | number | null }[]>`
+        SELECT COALESCE(SUM(amount), 0) AS total
+        FROM credit_transactions
+        WHERE "user_id" = ${userId}
+          AND "type" = 'SPENT'
+          AND "created_at" >= ${startOfMonth}
+      `
     ])
 
-    const dailySpent = Math.abs(daySpent._sum.amount || 0)
-    const monthlySpent = Math.abs(monthSpent._sum.amount || 0)
+    const dailySpentRaw = daySpentResult?.[0]?.total ?? 0
+    const monthlySpentRaw = monthSpentResult?.[0]?.total ?? 0
+
+    const dailySpent = Math.abs(Number(dailySpentRaw))
+    const monthlySpent = Math.abs(Number(monthlySpentRaw))
     const remainingPlanCredits = Math.max(0, (user?.creditsLimit || 0) - (user?.creditsUsed || 0))
 
     return {
