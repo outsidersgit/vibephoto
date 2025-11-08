@@ -1,12 +1,6 @@
 'use client'
 
-import {
-  useState,
-  useRef,
-  useCallback,
-  type PointerEvent as ReactPointerEvent,
-  type ChangeEvent
-} from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -33,48 +27,63 @@ export function UpscaleConfigModal({
 }: UpscaleConfigModalProps) {
   const [scaleFactor, setScaleFactor] = useState<string>('2x')
   const [objectDetection, setObjectDetection] = useState<string>('none')
-  const [comparisonValue, setComparisonValue] = useState<number>(50)
   const comparisonContainerRef = useRef<HTMLDivElement | null>(null)
+  const afterImageMaskRef = useRef<HTMLDivElement | null>(null)
+  const sliderRef = useRef<HTMLDivElement | null>(null)
   const pointerActiveRef = useRef(false)
 
-  const updateComparisonFromClientX = useCallback((clientX: number) => {
-    const container = comparisonContainerRef.current
-    if (!container) return
-
-    const rect = container.getBoundingClientRect()
-    if (rect.width === 0) return
-
-    const relativeX = ((clientX - rect.left) / rect.width) * 100
-    const clamped = Math.min(100, Math.max(0, relativeX))
-    setComparisonValue(clamped)
-  }, [])
-
-  const handlePointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    pointerActiveRef.current = true
-    event.currentTarget.setPointerCapture(event.pointerId)
-    updateComparisonFromClientX(event.clientX)
-  }, [updateComparisonFromClientX])
-
-  const handlePointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!pointerActiveRef.current) return
-    updateComparisonFromClientX(event.clientX)
-  }, [updateComparisonFromClientX])
-
-  const handlePointerUp = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    pointerActiveRef.current = false
-    try {
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    } catch {
-      // ignore if capture was not set
+  const applySliderPosition = useCallback((percentage: number) => {
+    const clamped = Math.min(100, Math.max(0, percentage))
+    if (afterImageMaskRef.current) {
+      afterImageMaskRef.current.style.clipPath = `polygon(${clamped}% 0, 100% 0, 100% 100%, ${clamped}% 100%)`
+    }
+    if (sliderRef.current) {
+      sliderRef.current.style.left = `${clamped}%`
     }
   }, [])
 
-  const handlePointerLeave = useCallback(() => {
+  const updateFromClientX = useCallback((clientX: number) => {
+    const container = comparisonContainerRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    if (rect.width === 0) return
+    const relative = ((clientX - rect.left) / rect.width) * 100
+    applySliderPosition(relative)
+  }, [applySliderPosition])
+
+  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    pointerActiveRef.current = true
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    document.body.style.userSelect = 'none'
+    updateFromClientX(event.clientX)
+  }, [updateFromClientX])
+
+  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!pointerActiveRef.current) return
+    event.preventDefault()
+    updateFromClientX(event.clientX)
+  }, [updateFromClientX])
+
+  const handlePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     pointerActiveRef.current = false
+    event.preventDefault()
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    } catch {
+      // ignore
+    }
+    document.body.style.userSelect = ''
   }, [])
 
-  const handleSliderChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setComparisonValue(Number(event.target.value))
+  useEffect(() => {
+    applySliderPosition(50)
+  }, [applySliderPosition, resultImageUrl, imageUrl])
+
+  useEffect(() => {
+    return () => {
+      document.body.style.userSelect = ''
+    }
   }, [])
 
   const handleUpscale = () => {
@@ -138,55 +147,47 @@ export function UpscaleConfigModal({
             </h3>
             <Card className="bg-[#2C3E50] border-[#4A5F7A] p-3 rounded-xl h-64">
               {resultImageUrl ? (
-                <div
-                  ref={comparisonContainerRef}
-                  className="w-full h-full relative select-none touch-none"
-                  onPointerDown={handlePointerDown}
-                  onPointerMove={handlePointerMove}
-                  onPointerUp={handlePointerUp}
-                  onPointerCancel={handlePointerUp}
-                  onPointerLeave={handlePointerLeave}
-                  role="presentation"
-                >
-                  <img
-                    src={resultImageUrl}
-                    alt="Resultado do upscale"
-                    className="absolute inset-0 w-full h-full object-contain rounded-lg"
-                  />
-                  {imageUrl && (
-                    <img
-                      src={imageUrl}
-                      alt="Imagem original para comparação"
-                      className="absolute inset-0 w-full h-full object-contain rounded-lg"
-                      style={{
-                        clipPath: `inset(0 ${100 - comparisonValue}% 0 0)`
-                      }}
-                    />
-                  )}
+                <div className="w-full h-full relative select-none touch-none">
                   <div
-                    className="absolute inset-y-0 flex items-center pointer-events-none"
-                    style={{ left: `${comparisonValue}%` }}
+                    ref={comparisonContainerRef}
+                    className="absolute inset-0 rounded-lg overflow-hidden cursor-ew-resize"
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
                   >
-                    <div className="w-0.5 h-full bg-white/70 backdrop-blur-sm -translate-x-1/2" />
-                    <div className="absolute left-1/2 -translate-x-1/2 w-8 h-8 bg-white text-[#2C3E50] rounded-full flex items-center justify-center shadow-lg">
-                      <div className="w-4 h-4 border-2 border-[#2C3E50]/40 rounded-full" />
+                    <img
+                      src={imageUrl || resultImageUrl}
+                      alt="Imagem original"
+                      className="absolute inset-0 w-full h-full object-contain"
+                    />
+                    <div
+                      ref={afterImageMaskRef}
+                      className="absolute inset-0"
+                      style={{ clipPath: 'polygon(50% 0, 100% 0, 100% 100%, 50% 100%)' }}
+                    >
+                      <img
+                        src={resultImageUrl}
+                        alt="Resultado do upscale"
+                        className="absolute inset-0 w-full h-full object-contain"
+                      />
+                    </div>
+                    <div
+                      ref={sliderRef}
+                      className="absolute top-0 bottom-0 w-0.5 bg-white shadow-md -translate-x-1/2 transition-colors duration-150 pointer-events-none"
+                      style={{ left: '50%' }}
+                    >
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/25 backdrop-blur-sm border border-white/40 shadow-lg flex items-center justify-center">
+                        <div className="w-1 h-6 bg-white rounded-full" />
+                      </div>
+                    </div>
+                    <div className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                      Antes
+                    </div>
+                    <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                      Depois
                     </div>
                   </div>
-                  <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                    Antes
-                  </div>
-                  <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                    Depois
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={comparisonValue}
-                    onChange={handleSliderChange}
-                    className="absolute bottom-3 left-1/2 -translate-x-1/2 w-2/3 h-1.5 appearance-none bg-white/40 rounded-full cursor-pointer"
-                    aria-label="Comparar antes e depois"
-                  />
                 </div>
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400">
