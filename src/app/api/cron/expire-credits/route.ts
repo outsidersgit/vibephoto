@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { recordCreditExpiration } from '@/lib/services/credit-transaction-service'
+import { broadcastCreditsUpdate } from '@/lib/services/realtime-service'
 
 /**
  * CRON Job: Expirar pacotes de créditos avulsos
@@ -47,53 +49,77 @@ export async function GET(request: NextRequest) {
     const results = []
 
     for (const pkg of expiredPackages) {
-      const remainingCredits = pkg.creditAmount - pkg.usedCredits
+      const remainingCredits = Math.max(0, pkg.creditAmount - pkg.usedCredits)
 
-      // Marca pacote como expirado
-      await prisma.creditPurchase.update({
-        where: { id: pkg.id },
-        data: { isExpired: true }
-      })
+      const transactionResult = await prisma.$transaction(async (tx) => {
+        await tx.creditPurchase.update({
+          where: { id: pkg.id },
+          data: { isExpired: true }
+        })
 
-      // Remove créditos restantes do balance do usuário
-      if (remainingCredits > 0) {
-        await prisma.user.update({
-          where: { id: pkg.userId },
+        let updatedUser = null
+        if (remainingCredits > 0) {
+          updatedUser = await tx.user.update({
+            where: { id: pkg.userId },
+            data: {
+              creditsBalance: { decrement: remainingCredits }
+            },
+            select: {
+              creditsUsed: true,
+              creditsLimit: true,
+              creditsBalance: true
+            }
+          })
+
+          await recordCreditExpiration(
+            pkg.userId,
+            remainingCredits,
+            pkg.id,
+            {
+              reason: 'Pacote de créditos expirado',
+              packageName: pkg.packageName
+            },
+            tx
+          )
+        } else {
+          updatedUser = await tx.user.findUnique({
+            where: { id: pkg.userId },
+            select: {
+              creditsUsed: true,
+              creditsLimit: true,
+              creditsBalance: true
+            }
+          })
+        }
+
+        await tx.usageLog.create({
           data: {
-            creditsBalance: { decrement: remainingCredits }
+            userId: pkg.userId,
+            action: 'CREDITS_EXPIRED',
+            creditsUsed: 0,
+            details: {
+              packageId: pkg.id,
+              packageName: pkg.packageName,
+              creditsExpired: remainingCredits,
+              totalCredits: pkg.creditAmount,
+              usedCredits: pkg.usedCredits,
+              validUntil: pkg.validUntil.toISOString()
+            }
           }
         })
+
+        return updatedUser
+      })
+
+      if (transactionResult) {
+        await broadcastCreditsUpdate(
+          pkg.userId,
+          transactionResult.creditsUsed,
+          transactionResult.creditsLimit,
+          'CREDITS_EXPIRED',
+          transactionResult.creditsBalance
+        )
       }
-
-      // Registra transação de expiração
-      await prisma.creditTransaction.create({
-        data: {
-          userId: pkg.userId,
-          type: 'EXPIRED',
-          source: 'EXPIRATION',
-          amount: -remainingCredits,
-          description: `Expiração do pacote: ${pkg.packageName}`,
-          creditPurchaseId: pkg.id,
-          balanceAfter: 0 // Will be calculated properly in production
-        }
-      })
-
-      // Log no sistema
-      await prisma.usageLog.create({
-        data: {
-          userId: pkg.userId,
-          action: 'CREDITS_EXPIRED',
-          creditsUsed: 0,
-          details: {
-            packageId: pkg.id,
-            packageName: pkg.packageName,
-            creditsExpired: remainingCredits,
-            totalCredits: pkg.creditAmount,
-            usedCredits: pkg.usedCredits,
-            validUntil: pkg.validUntil.toISOString()
-          }
-        }
-      })
 
       results.push({
         packageId: pkg.id,

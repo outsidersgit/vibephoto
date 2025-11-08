@@ -11,6 +11,8 @@ import {
   createCreditCardPayment
 } from '@/lib/payments/asaas'
 import { prisma } from '@/lib/db'
+import { recordCreditPurchase } from '@/lib/services/credit-transaction-service'
+import { broadcastCreditsUpdate } from '@/lib/services/realtime-service'
 
 export interface CreditPackage {
   id: keyof typeof CREDIT_PACKAGES
@@ -360,53 +362,111 @@ export class CreditService {
     creditsAdded?: number
   }> {
     try {
-      // Find the credit purchase
-      const purchase = await prisma.creditPurchase.findUnique({
-        where: { asaasPaymentId: paymentId },
-        include: { user: true }
-      })
+      const result = await prisma.$transaction(async (tx) => {
+        // Find the credit purchase
+        const purchase = await tx.creditPurchase.findUnique({
+          where: { asaasPaymentId: paymentId },
+          include: { user: true }
+        })
 
-      if (!purchase) {
-        return { success: false, error: 'Credit purchase not found' }
-      }
-
-      if (purchase.status === 'CONFIRMED') {
-        return { success: true, creditsAdded: purchase.creditAmount }
-      }
-
-      // Update purchase status
-      await prisma.creditPurchase.update({
-        where: { id: purchase.id },
-        data: {
-          status: 'CONFIRMED',
-          confirmedAt: new Date()
+        if (!purchase) {
+          return { error: 'Credit purchase not found' } as const
         }
-      })
 
-      // Add credits to user balance
-      await prisma.user.update({
-        where: { id: purchase.userId },
-        data: {
-          creditsBalance: { increment: purchase.creditAmount }
+        // If already confirmed, fetch latest user snapshot for broadcasting
+        if (purchase.status === 'CONFIRMED') {
+          const currentUser = await tx.user.findUnique({
+            where: { id: purchase.userId },
+            select: { creditsUsed: true, creditsLimit: true, creditsBalance: true }
+          })
+
+          return {
+            purchase,
+            updatedUser: currentUser,
+            alreadyConfirmed: true
+          } as const
         }
-      })
 
-      // Log the credit addition
-      await prisma.usageLog.create({
-        data: {
-          userId: purchase.userId,
-          action: 'CREDITS_PURCHASED',
-          creditsUsed: 0,
-          details: {
-            paymentId,
-            packageName: purchase.packageName,
-            creditsAdded: purchase.creditAmount,
-            value: purchase.value
+        const now = new Date()
+
+        const updatedPurchase = await tx.creditPurchase.update({
+          where: { id: purchase.id },
+          data: {
+            status: 'CONFIRMED',
+            confirmedAt: now
           }
-        }
+        })
+
+        const updatedUser = await tx.user.update({
+          where: { id: purchase.userId },
+          data: {
+            creditsBalance: { increment: purchase.creditAmount }
+          },
+          select: {
+            creditsUsed: true,
+            creditsLimit: true,
+            creditsBalance: true
+          }
+        })
+
+        await recordCreditPurchase(
+          purchase.userId,
+          purchase.id,
+          purchase.creditAmount,
+          {
+            packageId: purchase.packageId || undefined,
+            packageName: purchase.packageName
+          },
+          tx
+        )
+
+        await tx.payment.updateMany({
+          where: { asaasPaymentId: paymentId },
+          data: {
+            status: 'CONFIRMED',
+            confirmedAt: now
+          }
+        })
+
+        await tx.usageLog.create({
+          data: {
+            userId: purchase.userId,
+            action: 'CREDITS_PURCHASED',
+            creditsUsed: 0,
+            details: {
+              paymentId,
+              packageName: purchase.packageName,
+              creditsAdded: purchase.creditAmount,
+              value: purchase.value
+            }
+          }
+        })
+
+        return {
+          purchase: updatedPurchase,
+          updatedUser,
+          alreadyConfirmed: false
+        } as const
       })
 
-      return { success: true, creditsAdded: purchase.creditAmount }
+      if (!result || 'error' in result) {
+        return { success: false, error: result?.error || 'Credit purchase not found' }
+      }
+
+      if (result.updatedUser) {
+        await broadcastCreditsUpdate(
+          result.purchase.userId,
+          result.updatedUser.creditsUsed,
+          result.updatedUser.creditsLimit,
+          'CREDIT_PURCHASE',
+          result.updatedUser.creditsBalance
+        )
+      }
+
+      return {
+        success: true,
+        creditsAdded: result.purchase.creditAmount
+      }
 
     } catch (error: any) {
       console.error('Error confirming credit purchase:', error)

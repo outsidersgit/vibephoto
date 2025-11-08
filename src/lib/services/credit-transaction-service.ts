@@ -187,7 +187,8 @@ export async function recordVideoGenerationCost(
 export async function recordSubscriptionRenewal(
   userId: string,
   creditsReceived: number,
-  metadata?: { plan?: string; billingCycle?: string }
+  metadata?: { plan?: string; billingCycle?: string; reason?: string },
+  tx?: Prisma.TransactionClient
 ) {
   return createCreditTransaction({
     userId,
@@ -196,7 +197,7 @@ export async function recordSubscriptionRenewal(
     amount: Math.abs(creditsReceived), // Sempre positivo
     description: `Renovação de assinatura${metadata?.plan ? ` - ${metadata.plan}` : ''}`,
     metadata
-  })
+  }, tx)
 }
 
 /**
@@ -206,7 +207,8 @@ export async function recordCreditPurchase(
   userId: string,
   creditPurchaseId: string,
   creditsReceived: number,
-  metadata?: { packageId?: string; packageName?: string }
+  metadata?: { packageId?: string; packageName?: string },
+  tx?: Prisma.TransactionClient
 ) {
   return createCreditTransaction({
     userId,
@@ -216,7 +218,7 @@ export async function recordCreditPurchase(
     description: `Compra de pacote de créditos${metadata?.packageName ? `: ${metadata.packageName}` : ''}`,
     creditPurchaseId,
     metadata
-  })
+  }, tx)
 }
 
 /**
@@ -245,7 +247,8 @@ export async function recordCreditExpiration(
   userId: string,
   creditsExpired: number,
   creditPurchaseId?: string,
-  metadata?: { reason?: string }
+  metadata?: { reason?: string; packageName?: string },
+  tx?: Prisma.TransactionClient
 ) {
   return createCreditTransaction({
     userId,
@@ -255,7 +258,7 @@ export async function recordCreditExpiration(
     description: `Créditos expirados${metadata?.reason ? `: ${metadata.reason}` : ''}`,
     creditPurchaseId,
     metadata
-  })
+  }, tx)
 }
 
 /**

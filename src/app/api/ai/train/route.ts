@@ -6,6 +6,8 @@ import { ContentModerator } from '@/lib/security/content-moderator'
 import { RateLimiter } from '@/lib/security/rate-limiter'
 import { prisma } from '@/lib/db'
 import { z } from 'zod'
+import { CreditManager } from '@/lib/credits/manager'
+import { Plan } from '@prisma/client'
 
 /**
  * Schema for FLUX model training with maximum quality parameters
@@ -68,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     const { modelId, triggerWord, classWord, trainingParams } = validationResult.data
     const userId = session.user.id
-    const userPlan = session.user.plan || 'FREE'
+    const userPlan = ((session.user as any).plan || 'STARTER') as Plan
 
     // Check rate limits for training
     const trainingLimit = await RateLimiter.checkLimit(userId, 'training', userPlan)
@@ -184,7 +186,19 @@ export async function POST(request: NextRequest) {
     // Calculate estimated cost for maximum quality training
     // Higher quality parameters increase training time and cost
     const estimatedCost = calculateTrainingCost(finalParams)
-    const cost = 0 // Training remains free, but we track estimated cost
+    const cost = Math.max(1, estimatedCost)
+
+    if (cost > 0) {
+      const affordability = await CreditManager.canUserAfford(userId, cost, userPlan)
+      if (!affordability.canAfford) {
+        return NextResponse.json(
+          {
+            error: affordability.reason || `Insufficient credits. You need ${cost} credits to train this model.`
+          },
+          { status: 402 }
+        )
+      }
+    }
 
     // Get AI provider
     const aiProvider = getAIProvider()
@@ -214,6 +228,30 @@ export async function POST(request: NextRequest) {
     const trainingResponse = await aiProvider.startTraining(trainingRequest)
     console.log('🚀 TA AQUI: Training response...', trainingResponse)
     
+    let chargeResult: Awaited<ReturnType<typeof CreditManager.deductCredits>> | null = null
+    if (cost > 0) {
+      chargeResult = await CreditManager.deductCredits(
+        userId,
+        cost,
+        'Treinamento de modelo IA',
+        {
+          type: 'TRAINING',
+          modelId: model.id,
+          prompt: triggerWord || finalParams?.seed?.toString()
+        }
+      )
+
+      if (!chargeResult.success) {
+        console.error('❌ Failed to deduct credits for training:', chargeResult.error)
+        return NextResponse.json(
+          {
+            error: chargeResult.error || `Insufficient credits. You need ${cost} credits to train this model.`
+          },
+          { status: 402 }
+        )
+      }
+    }
+
 
     // Record the training attempt
     await RateLimiter.recordAttempt(userId, 'training', {
@@ -252,10 +290,10 @@ export async function POST(request: NextRequest) {
           details: {
             modelId: model.id,
             modelName: model.name,
-            cost: 0,
+            cost,
             trainingId: trainingResponse.id
           },
-          creditsUsed: 0
+          creditsUsed: cost
         }
       })
     })

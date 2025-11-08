@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db'
 import { Plan } from '@prisma/client'
 import { getCreditsLimitForPlan } from '@/lib/constants/plans'
+import { recordSubscriptionRenewal } from '@/lib/services/credit-transaction-service'
+import { broadcastCreditsUpdate } from '@/lib/services/realtime-service'
 
 export async function createSubscription(data: {
   userId: string
@@ -28,22 +30,58 @@ export async function createSubscription(data: {
     ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000) // + 1 ano
     : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // + 1 mês (30 dias)
 
-  return prisma.user.update({
-    where: { id: data.userId },
-    data: {
-      asaasCustomerId: data.asaasCustomerId,
-      plan: data.plan,
-      billingCycle: data.billingCycle,
-      subscriptionId: data.asaasSubscriptionId,
-      subscriptionStatus: data.status,
-      subscriptionEndsAt: data.currentPeriodEnd,
-      subscriptionStartedAt: now, // Salva data de início
-      lastCreditRenewalAt: now, // Primeira renovação é agora
-      creditsExpiresAt, // Expiração para planos anuais
-      creditsLimit: totalCredits, // YEARLY recebe 12x, mas só se ACTIVE
-      creditsUsed: 0 // Reset credits on new subscription
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedUser = await tx.user.update({
+      where: { id: data.userId },
+      data: {
+        asaasCustomerId: data.asaasCustomerId,
+        plan: data.plan,
+        billingCycle: data.billingCycle,
+        subscriptionId: data.asaasSubscriptionId,
+        subscriptionStatus: data.status,
+        subscriptionEndsAt: data.currentPeriodEnd,
+        subscriptionStartedAt: now,
+        lastCreditRenewalAt: now,
+        creditsExpiresAt,
+        creditsLimit: totalCredits,
+        creditsUsed: 0
+      }
+    })
+
+    if (data.status === 'ACTIVE' && totalCredits > 0) {
+      await recordSubscriptionRenewal(
+        data.userId,
+        totalCredits,
+        {
+          plan: data.plan,
+          billingCycle: data.billingCycle,
+          reason: 'ACTIVATION'
+        },
+        tx
+      )
+    }
+
+    return {
+      updatedUser,
+      snapshot: {
+        creditsUsed: updatedUser.creditsUsed,
+        creditsLimit: updatedUser.creditsLimit,
+        creditsBalance: updatedUser.creditsBalance ?? 0
+      }
     }
   })
+
+  if (data.status === 'ACTIVE' && result?.snapshot) {
+    await broadcastCreditsUpdate(
+      data.userId,
+      result.snapshot.creditsUsed,
+      result.snapshot.creditsLimit,
+      'SUBSCRIPTION_RENEWAL',
+      result.snapshot.creditsBalance
+    )
+  }
+
+  return result.updatedUser
 }
 
 export async function updateSubscriptionStatus(
@@ -126,10 +164,44 @@ export async function updateSubscriptionStatus(
       source: plan ? 'parameter' : 'user_record'
     })
 
-    return prisma.user.update({
-      where: { id: userId },
-      data: updateData
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: updateData
+      })
+
+      await recordSubscriptionRenewal(
+        userId,
+        totalCredits,
+        {
+          plan: finalPlan,
+          billingCycle: currentBillingCycle,
+          reason: 'STATUS_ACTIVE'
+        },
+        tx
+      )
+
+      return {
+        updatedUser,
+        snapshot: {
+          creditsUsed: updatedUser.creditsUsed,
+          creditsLimit: updatedUser.creditsLimit,
+          creditsBalance: updatedUser.creditsBalance ?? 0
+        }
+      }
     })
+
+    if (result?.snapshot) {
+      await broadcastCreditsUpdate(
+        userId,
+        result.snapshot.creditsUsed,
+        result.snapshot.creditsLimit,
+        'SUBSCRIPTION_RENEWAL',
+        result.snapshot.creditsBalance
+      )
+    }
+
+    return result.updatedUser
   }
 
   // CRITICAL: Do NOT downgrade plan on OVERDUE/CANCELLED/EXPIRED
@@ -137,16 +209,9 @@ export async function updateSubscriptionStatus(
   // Middleware will block access based on subscriptionStatus
 
   // Se não foi ACTIVE com plan, fazer update normal (sem increment de créditos)
-  if (!(status === 'ACTIVE' && plan)) {
-    return prisma.user.update({
-      where: { id: userId },
-      data: updateData
-    })
-  }
-
-  // Se foi ACTIVE com plan, já foi atualizado acima, apenas retornar
-  return prisma.user.findUnique({
-    where: { id: userId }
+  return prisma.user.update({
+    where: { id: userId },
+    data: updateData
   })
 }
 
@@ -278,26 +343,57 @@ export async function renewMonthlyCredits() {
     if (daysSinceLastRenewal >= 28 && currentDay >= dayOfMonth) {
       const creditsLimit = await getCreditsLimitForPlan(user.plan!)
 
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          creditsUsed: 0, // Reseta créditos usados
-          creditsLimit: creditsLimit, // Renova limite
-          lastCreditRenewalAt: now, // Atualiza data de renovação
-          creditsExpiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // Renova expiração (1 mês)
+      const result = await prisma.$transaction(async (tx) => {
+        const updatedUser = await tx.user.update({
+          where: { id: user.id },
+          data: {
+            creditsUsed: 0,
+            creditsLimit: creditsLimit,
+            lastCreditRenewalAt: now,
+            creditsExpiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+          }
+        })
+
+        await recordSubscriptionRenewal(
+          user.id,
+          creditsLimit,
+          {
+            plan: user.plan || undefined,
+            billingCycle: 'MONTHLY',
+            reason: 'MONTHLY_RENEWAL'
+          },
+          tx
+        )
+
+        await tx.usageLog.create({
+          data: {
+            userId: user.id,
+            action: 'MONTHLY_CREDIT_RENEWAL',
+            creditsUsed: 0,
+            details: {
+              plan: user.plan,
+              creditsRenewed: creditsLimit,
+              renewalDate: now.toISOString()
+            }
+          }
+        })
+
+        return {
+          creditsUsed: updatedUser.creditsUsed,
+          creditsLimit: updatedUser.creditsLimit,
+          creditsBalance: updatedUser.creditsBalance ?? 0
         }
       })
 
-      await logUsage({
-        userId: user.id,
-        action: 'MONTHLY_CREDIT_RENEWAL',
-        creditsUsed: 0,
-        details: {
-          plan: user.plan,
-          creditsRenewed: creditsLimit,
-          renewalDate: now.toISOString()
-        }
-      })
+      if (result) {
+        await broadcastCreditsUpdate(
+          user.id,
+          result.creditsUsed,
+          result.creditsLimit,
+          'SUBSCRIPTION_RENEWAL',
+          result.creditsBalance
+        )
+      }
 
       renewed.push(user.id)
     }
