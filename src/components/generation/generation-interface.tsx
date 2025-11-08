@@ -806,12 +806,8 @@ export function GenerationInterface({
     if (!previewMedia?.url) return
 
     try {
-      const response = await fetch(previewMedia.url)
-      if (!response.ok) {
-        throw new Error(`Failed to download preview: ${response.status}`)
-      }
-
-      const blob = await response.blob()
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+      const cleanUrl = previewMedia.url.split('?')[0]
       let extension = 'jpg'
 
       try {
@@ -821,16 +817,30 @@ export function GenerationInterface({
           extension = urlExt
         }
       } catch {
-        const cleanUrl = previewMedia.url.split('?')[0]
         const urlExt = cleanUrl.split('.').pop()
         if (urlExt && urlExt.length <= 5) {
           extension = urlExt
         }
       }
 
+      const proxyResponse = await fetch('/api/download-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          imageUrl: previewMedia.url,
+          filename: `vibephoto-preview-${timestamp}.${extension}`
+        })
+      })
+
+      if (!proxyResponse.ok) {
+        throw new Error(`Failed to download preview: ${proxyResponse.status}`)
+      }
+
+      const blob = await proxyResponse.blob()
       const downloadUrl = URL.createObjectURL(blob)
       const link = document.createElement('a')
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
       link.href = downloadUrl
       link.download = `vibephoto-preview-${timestamp}.${extension}`
       document.body.appendChild(link)

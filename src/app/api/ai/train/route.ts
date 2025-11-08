@@ -183,10 +183,19 @@ export async function POST(request: NextRequest) {
       seed: trainingParams?.seed
     }
 
-    // Calculate estimated cost for maximum quality training
-    // Higher quality parameters increase training time and cost
+    // Determine if user already consumed the free model slot
+    const otherModelsCount = await prisma.aIModel.count({
+      where: {
+        userId: userId,
+        id: { not: model.id },
+        status: {
+          in: ['READY', 'TRAINING', 'PROCESSING', 'ERROR', 'DELETED']
+        }
+      }
+    })
+
     const estimatedCost = calculateTrainingCost(finalParams)
-    const cost = Math.max(1, estimatedCost)
+    const cost = otherModelsCount > 0 ? 500 : 0
 
     if (cost > 0) {
       const affordability = await CreditManager.canUserAfford(userId, cost, userPlan)
