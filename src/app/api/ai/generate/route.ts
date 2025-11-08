@@ -161,8 +161,8 @@ export async function POST(request: NextRequest) {
     // Calculate generation cost (fixed cost per image)
     const creditsNeeded = getImageGenerationCost(variations)
 
-    const userPlan = (model.user.plan || 'STARTER') as Plan
-    const affordability = await CreditManager.canUserAfford(userId, creditsNeeded, userPlan)
+    const modelUserPlan = (model.user.plan || 'STARTER') as Plan
+    const affordability = await CreditManager.canUserAfford(userId, creditsNeeded, modelUserPlan)
     if (!affordability.canAfford) {
       return NextResponse.json(
         {
