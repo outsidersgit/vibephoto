@@ -427,6 +427,7 @@ async function getDefaultModelId(userId: string): Promise<string> {
         userId,
         name: 'Default Upscale Model',
         class: 'MAN', // Required field from ModelClass enum
+        classWord: 'person',
         status: 'READY',
         facePhotos: [],
         halfBodyPhotos: [],
