@@ -172,31 +172,24 @@ export class CreditPackageService {
    * Retorna um pacote específico por ID (do banco de dados)
    */
   static async getPackageById(id: string): Promise<CreditPackage | null> {
-    try {
-      const pkg = await prisma.creditPackage.findUnique({
-        where: { id, isActive: true }
-      })
+    const pkg = await prisma.creditPackage.findUnique({
+      where: { id }
+    })
 
-      if (pkg) {
-        return {
-          id: pkg.id,
-          name: pkg.name,
-          description: pkg.description || undefined,
-          creditAmount: pkg.creditAmount,
-          price: pkg.price,
-          bonusCredits: pkg.bonusCredits,
-          validityMonths: pkg.validityMonths,
-          isActive: pkg.isActive,
-          sortOrder: pkg.sortOrder
-        }
-      }
+    if (!pkg) {
+      return null
+    }
 
-      // Fallback para pacotes padrão
-      return DEFAULT_CREDIT_PACKAGES.find(pkg => pkg.id === id && pkg.isActive) || null
-    } catch (error) {
-      console.error('❌ [CreditPackageService] Erro ao buscar pacote do banco:', error)
-      // Fallback em caso de erro
-      return DEFAULT_CREDIT_PACKAGES.find(pkg => pkg.id === id && pkg.isActive) || null
+    return {
+      id: pkg.id,
+      name: pkg.name,
+      description: pkg.description || undefined,
+      creditAmount: pkg.creditAmount,
+      price: pkg.price,
+      bonusCredits: pkg.bonusCredits,
+      validityMonths: pkg.validityMonths,
+      isActive: pkg.isActive,
+      sortOrder: pkg.sortOrder
     }
   }
 

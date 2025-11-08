@@ -22,6 +22,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Package not found' }, { status: 404 })
     }
 
+    if (!creditPackage.isActive) {
+      return NextResponse.json({ error: 'Package is inactive' }, { status: 400 })
+    }
+
     // Buscar ou criar cliente no Asaas
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },

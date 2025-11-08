@@ -130,6 +130,10 @@ export async function createCreditPackageCheckout(
     throw new Error('Pacote de créditos não encontrado')
   }
 
+  if (!creditPackage.isActive) {
+    throw new Error('Pacote de créditos inativo')
+  }
+
   // Buscar usuário
   const user = await prisma.user.findUnique({
     where: { id: userId },
