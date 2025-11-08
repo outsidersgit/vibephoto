@@ -25,7 +25,7 @@ import {
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { MediaItem } from '@/types'
-import { calculateOperationCost, getCostDescription } from '@/lib/utils/cost-calculator'
+import { getGenerationCostDescription } from '@/lib/utils/gallery-cost'
 import Link from 'next/link'
 import { CompactVideoButton } from '@/components/video/video-button'
 import { FeedbackModal } from '@/components/feedback/feedback-modal'
@@ -668,17 +668,9 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
                 <div>
                   <div className="text-gray-300">Custo:</div>
                   <div className="text-white font-medium">
-                    {getCostDescription(
-                      currentImage.operationType === 'generated' && currentImage.generation?.prompt?.includes('[EDITED]')
-                        ? 'edited'
-                        : currentImage.operationType,
-                      {
-                        duration: currentImage.videoDuration,
-                        estimatedCost: currentImage.generation?.estimatedCost,
-                        variations: currentImage.generation?.variations,
-                        packageType: currentImage.generation?.style
-                      }
-                    )}
+                    {getGenerationCostDescription(currentImage.generation, {
+                      operationType: currentImage.operationType
+                    })}
                   </div>
                 </div>
               </>

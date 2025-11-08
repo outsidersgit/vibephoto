@@ -274,9 +274,6 @@ export async function POST(request: NextRequest) {
 
     if (!charge.success) {
       console.error('❌ Failed to debit credits for image edit:', charge.error)
-      if (generationRecord?.id) {
-        await prisma.generation.delete({ where: { id: generationRecord.id } })
-      }
       if (editHistoryEntry?.id) {
         await prisma.editHistory.delete({ where: { id: editHistoryEntry.id } })
       }
@@ -303,6 +300,17 @@ export async function POST(request: NextRequest) {
     let generationRecord = null
     try {
       if (result.resultImage) {
+        const generationMetadata = {
+          source: image ? 'editor' : 'editor_generate',
+          editHistoryId: editHistoryEntry?.id,
+          replicateId: result.id,
+          generatedFromScratch: !image,
+          temporaryUrl: result.resultImage,
+          permanentUrl: permanentImageUrl,
+          cost: creditsNeeded,
+          originalImageUrl: originalImageUrl || (image ? 'uploaded-image' : 'generated-from-scratch')
+        }
+
         generationRecord = await prisma.generation.create({
           data: {
             userId: session.user.id,
@@ -320,23 +328,10 @@ export async function POST(request: NextRequest) {
                aspectRatioValue === '16:9' ? '1280x720' : '1024x1024') : '1024x1024',
             estimatedCost: creditsNeeded,
             operationType: 'edit',
-            metadata: {
-              source: 'editor',
-              editHistoryId: editHistoryEntry?.id,
-              replicateId: result.id,
-              generatedFromScratch: !image,
-              temporaryUrl: result.resultImage,
-              cost: creditsNeeded
-            },
             aiProvider: 'nano-banana',
             storageProvider: 'aws',
-            metadata: {
-              source: image ? 'editor' : 'editor_generate',
-              editHistoryId: editHistoryEntry?.id,
-              replicateId: result.id,
-              generatedFromScratch: !image,
-              temporaryUrl: result.resultImage // Keep original for reference
-            }
+            storageContext: 'edited',
+            metadata: generationMetadata
           },
           include: {
             model: {

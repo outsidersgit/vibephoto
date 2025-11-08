@@ -26,7 +26,7 @@ import {
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { MediaItem } from '@/types'
-import { calculateOperationCost, getCostDescription } from '@/lib/utils/cost-calculator'
+import { getGenerationCostDescription } from '@/lib/utils/gallery-cost'
 import { CompactVideoButton } from '@/components/video/video-button'
 
 interface GalleryListProps {
@@ -229,14 +229,7 @@ export function GalleryList({
                     )}
                     <span>•</span>
                     <span className="text-gray-400 font-medium">
-                      {getCostDescription(
-                        generation.prompt?.includes('[EDITED]') ? 'edited' : 'generated',
-                        {
-                          packageType: generation.style,
-                          estimatedCost: generation.estimatedCost,
-                          variations: generation.variations
-                        }
-                      )}
+                      {getGenerationCostDescription(generation)}
                     </span>
                   </div>
 

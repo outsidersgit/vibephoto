@@ -27,7 +27,7 @@ import {
   Info
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { calculateOperationCost, getCostDescription } from '@/lib/utils/cost-calculator'
+import { getGenerationCostDescription, resolveOperationTypeFromGeneration } from '@/lib/utils/gallery-cost'
 import { CompactVideoButton } from '@/components/video/video-button'
 import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
 import { sharePhoto, SharePlatform } from '@/lib/utils/social-share'
@@ -125,12 +125,7 @@ export function GalleryGrid({
   }
 
   // Helper function to detect image operation type
-  const getOperationType = (generation: any) => {
-    if (generation.videoUrl) return 'video'
-    if (generation.isUpscaled || generation.prompt?.includes('[UPSCALED]')) return 'upscaled'
-    if (generation.isEdited || generation.originalImageUrl) return 'edited'
-    return 'generated'
-  }
+  const getOperationType = (generation: any) => resolveOperationTypeFromGeneration(generation)
 
   // Helper function to create MediaItem for modal
   const createMediaItem = (generation: any, imageUrl: string) => {
@@ -875,14 +870,7 @@ export function GalleryGrid({
                   <div>
                     <div className="text-xs font-medium text-gray-400 mb-1">Custo:</div>
                     <p className="text-sm text-gray-300 font-medium">
-                      {getCostDescription(
-                        generation.prompt?.includes('[EDITED]') ? 'edited' : 'generated',
-                        {
-                          packageType: generation.style,
-                          estimatedCost: generation.estimatedCost,
-                          variations: generation.variations
-                        }
-                      )}
+                      {getGenerationCostDescription(generation)}
                     </p>
                   </div>
                 </div>

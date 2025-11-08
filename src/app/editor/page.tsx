@@ -5,17 +5,16 @@ import { getImageEditCost } from '@/lib/credits/pricing'
 import { Plan } from '@prisma/client'
 
 interface ImageEditorPageProps {
-  searchParams: Promise<{
+  searchParams?: {
     image?: string
-  }>
+  }
 }
 
 export default async function ImageEditorPage({ searchParams }: ImageEditorPageProps) {
   const session = await requireActiveSubscription()
   const userId = session.user.id
 
-  const params = await searchParams
-  const preloadedImageUrl = params.image ? decodeURIComponent(params.image) : undefined
+  const preloadedImageUrl = searchParams?.image ? decodeURIComponent(searchParams.image) : undefined
 
   const creditsNeeded = getImageEditCost(1)
   const userPlan = ((session.user as any).plan || 'STARTER') as Plan
@@ -48,7 +47,7 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
                   Créditos Insuficientes
                 </h2>
                 <p className="text-red-600 mb-4">
-                  Você precisa de pelo menos 1 crédito para usar o Editor IA.
+                  Você precisa de pelo menos {creditsNeeded} créditos para usar o Editor IA.
                 </p>
                 <a
                   href="/credits"

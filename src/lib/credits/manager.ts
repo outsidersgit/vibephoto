@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db'
 import { revalidateTag } from 'next/cache'
 import { Plan, Prisma } from '@prisma/client'
 import {
+  createCreditTransaction,
   recordImageGenerationCost,
   recordModelTrainingCost,
   recordUpscaleCost,
