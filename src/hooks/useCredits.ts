@@ -93,6 +93,7 @@ export function useInvalidateCredits() {
     },
     invalidatePackages: () => {
       queryClient.invalidateQueries({ queryKey: ['credits', 'packages'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'credit-packages'] })
     },
     invalidateAll: () => {
       queryClient.invalidateQueries({ queryKey: ['credits'] })

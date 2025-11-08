@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Invalidar cache
-    // await revalidateTag('credit-packages')
+    await revalidateTag('credit-packages')
 
     return NextResponse.json({
       success: true,

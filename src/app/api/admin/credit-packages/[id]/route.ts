@@ -139,8 +139,7 @@ export async function PUT(
       data: updateData
     })
 
-    // Invalidar cache
-    // await revalidateTag('credit-packages')
+    await revalidateTag('credit-packages')
 
     return NextResponse.json({
       success: true,
@@ -205,7 +204,7 @@ export async function DELETE(
     })
 
     // Invalidar cache
-    // await revalidateTag('credit-packages')
+    await revalidateTag('credit-packages')
 
     return NextResponse.json({
       success: true,
