@@ -1,9 +1,11 @@
 import { requireActiveSubscription } from '@/lib/subscription'
 import { getReadyModelsByUserId } from '@/lib/db/models'
-import { canUserUseCredits } from '@/lib/db/users'
 import { redirect } from 'next/navigation'
 import { GenerationInterface } from '@/components/generation/generation-interface'
 import { VideoGenerationInterface } from '@/components/generation/video-generation-interface'
+import { CreditManager } from '@/lib/credits/manager'
+import { getImageGenerationCost, getVideoGenerationCost } from '@/lib/credits/pricing'
+import { Plan } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -66,8 +68,17 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
     )
   }
 
-  // Check if user has enough credits
-  const canUseCredits = await canUserUseCredits(userId, 1)
+  const userPlan = ((session.user as any).plan || 'STARTER') as Plan
+  const imageCreditsNeeded = getImageGenerationCost(1)
+  const videoCreditsNeeded = getVideoGenerationCost(5)
+
+  const [imageAffordability, videoAffordability] = await Promise.all([
+    CreditManager.canUserAfford(userId, imageCreditsNeeded, userPlan),
+    CreditManager.canUserAfford(userId, videoCreditsNeeded, userPlan)
+  ])
+
+  const canUseImageCredits = imageAffordability.canAfford
+  const canUseVideoCredits = videoAffordability.canAfford
 
   // Select model (from URL param or first available)
   const selectedModelId = models.length > 0 && params.model && models.find(m => m.id === params.model)
@@ -119,12 +130,12 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
             models={models}
             selectedModelId={selectedModelId}
             user={session.user}
-            canUseCredits={canUseCredits}
+            canUseCredits={canUseImageCredits}
           />
         ) : (
           <VideoGenerationInterface
             user={session.user}
-            canUseCredits={canUseCredits}
+            canUseCredits={canUseVideoCredits}
             sourceImageUrl={sourceImage}
           />
         )}

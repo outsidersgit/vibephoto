@@ -232,7 +232,9 @@ export function GalleryList({
                       {getCostDescription(
                         generation.prompt?.includes('[EDITED]') ? 'edited' : 'generated',
                         {
-                          packageType: generation.style
+                          packageType: generation.style,
+                          estimatedCost: generation.estimatedCost,
+                          variations: generation.variations
                         }
                       )}
                     </span>

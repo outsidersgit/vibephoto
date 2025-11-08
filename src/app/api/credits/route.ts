@@ -123,13 +123,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Add credits
-    const success = await CreditManager.addCredits(
+    const addResult = await CreditManager.addCredits(
       session.user.id,
       amount,
       reason || `Credits added: ${type}`
     )
 
-    if (!success) {
+    if (!addResult.success) {
       return NextResponse.json(
         { error: 'Failed to add credits' },
         { status: 500 }

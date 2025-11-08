@@ -1,4 +1,11 @@
 import { MediaOperationType } from '@/types'
+import {
+  CREDIT_COSTS,
+  getImageGenerationCost,
+  getImageEditCost,
+  getUpscaleCost,
+  getVideoGenerationCost
+} from '@/lib/credits/pricing'
 
 /**
  * Calculate the cost in credits for different media operations
@@ -8,9 +15,14 @@ export function calculateOperationCost(
   metadata?: {
     duration?: number
     packageType?: string
+    estimatedCost?: number
     [key: string]: any
   }
 ): number {
+  if (metadata?.estimatedCost && metadata.estimatedCost > 0) {
+    return metadata.estimatedCost
+  }
+
   switch (operationType) {
     case 'generated':
       // Regular generation: 10 créditos each
@@ -18,22 +30,22 @@ export function calculateOperationCost(
       if (metadata?.packageType) {
         return getPackageCost(metadata.packageType)
       }
-      return 10
+      return getImageGenerationCost(metadata?.variations || 1)
 
     case 'upscaled':
       // Upscale costs: 10 créditos
-      return 10
+      return getUpscaleCost(metadata?.imageCount || 1)
 
     case 'edited':
       // Edit costs: 15 créditos
-      return 15
+      return getImageEditCost(metadata?.imageCount || 1)
 
     case 'video':
       // Video costs based on duration
       if (metadata?.duration) {
-        return metadata.duration <= 5 ? 100 : 200
+        return getVideoGenerationCost(metadata.duration)
       }
-      return 100 // default to 5s cost
+      return getVideoGenerationCost(5) // default to 5s cost
 
     default:
       return 0
@@ -45,16 +57,16 @@ export function calculateOperationCost(
  */
 function getPackageCost(packageType: string): number {
   const packageCosts: Record<string, number> = {
-    'quiet-luxury': 10,
-    'mirror-selfie': 10,
-    'summer-vibes': 10,
+    'quiet-luxury': CREDIT_COSTS.IMAGE_GENERATION_PER_OUTPUT,
+    'mirror-selfie': CREDIT_COSTS.IMAGE_GENERATION_PER_OUTPUT,
+    'summer-vibes': CREDIT_COSTS.IMAGE_GENERATION_PER_OUTPUT,
     'business-professional': 12,
     'casual-lifestyle': 8,
-    'artistic-portrait': 15,
+    'artistic-portrait': CREDIT_COSTS.IMAGE_EDIT_PER_IMAGE,
     // Add more package types as needed
   }
 
-  return packageCosts[packageType] || 10 // default to 10 if package not found
+  return packageCosts[packageType] || CREDIT_COSTS.IMAGE_GENERATION_PER_OUTPUT // default to standard generation cost
 }
 
 /**

@@ -23,8 +23,10 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
+import { useInvalidateCredits } from '@/hooks/useCredits'
+import { CREDIT_COSTS } from '@/lib/credits/pricing'
 
-const IMAGE_EDITOR_CREDIT_COST = 15
+const IMAGE_EDITOR_CREDIT_COST = CREDIT_COSTS.IMAGE_EDIT_PER_IMAGE
 
 interface ImageEditorInterfaceProps {
   preloadedImageUrl?: string
@@ -42,6 +44,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   const currentEditIdRef = useRef<string | null>(null)
   const loadingRef = useRef<boolean>(false)
   const editFallbackTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const { invalidateBalance } = useInvalidateCredits()
 
   const [operation] = useState<Operation>('edit')
   const [prompt, setPrompt] = useState('')
@@ -225,15 +228,14 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       setPreviewMedia({ url: urlToUse, type: 'image' })
       setIsPreviewLightboxOpen(false)
 
-      // Show success toast
       addToast({
         title: "Sucesso!",
         description: "Imagem processada e salva com sucesso",
         type: "success"
       })
 
-      // Clear form inputs after storing result
       clearForm()
+      invalidateBalance()
 
       console.log('✅ [IMAGE_EDITOR] Preview updated successfully')
     } else {
@@ -246,7 +248,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         type: "warning"
       })
     }
-  }, [addToast, testUrlAccessibility, clearForm, clearEditProcessingState])
+  }, [addToast, testUrlAccessibility, clearForm, clearEditProcessingState, invalidateBalance])
 
   const triggerEditFallback = useCallback(async (editId: string) => {
     console.warn('⏱️ [IMAGE_EDITOR] Fallback triggered to force preview display', { editId })
@@ -280,6 +282,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       if (fallbackUrl) {
         console.log('✅ [IMAGE_EDITOR] Fallback located edit URL, opening preview now')
         await openModalWithValidation(fallbackUrl, fallbackUrl)
+        invalidateBalance()
       } else {
         console.warn('⚠️ [IMAGE_EDITOR] Fallback could not retrieve edited image URL after retries')
         clearEditProcessingState()
@@ -288,7 +291,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       console.error('❌ [IMAGE_EDITOR] Error during fallback handling:', error)
       clearEditProcessingState()
     }
-  }, [clearEditProcessingState, openModalWithValidation])
+  }, [clearEditProcessingState, openModalWithValidation, invalidateBalance])
 
   const handleDownloadPreview = useCallback(async () => {
     if (!previewMedia?.url) return

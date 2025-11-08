@@ -1,6 +1,8 @@
 import { requireActiveSubscription } from '@/lib/subscription'
-import { canUserUseCredits } from '@/lib/db/users'
 import { ImageEditorInterface } from '@/components/image-editor/image-editor-interface'
+import { CreditManager } from '@/lib/credits/manager'
+import { getImageEditCost } from '@/lib/credits/pricing'
+import { Plan } from '@prisma/client'
 
 interface ImageEditorPageProps {
   searchParams: Promise<{
@@ -15,8 +17,10 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
   const params = await searchParams
   const preloadedImageUrl = params.image ? decodeURIComponent(params.image) : undefined
 
-  // Check if user has enough credits for image editing
-  const canUseCredits = await canUserUseCredits(userId, 1)
+  const creditsNeeded = getImageEditCost(1)
+  const userPlan = ((session.user as any).plan || 'STARTER') as Plan
+  const affordability = await CreditManager.canUserAfford(userId, creditsNeeded, userPlan)
+  const canUseCredits = affordability.canAfford
 
   return (
     <>

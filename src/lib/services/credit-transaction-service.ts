@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 
 interface CreateCreditTransactionParams {
   userId: string
@@ -15,7 +16,10 @@ interface CreateCreditTransactionParams {
  * Cria uma transação de crédito e atualiza o saldo do usuário
  * IMPORTANTE: Este método SEMPRE deve ser chamado quando créditos são adicionados ou gastos
  */
-export async function createCreditTransaction(params: CreateCreditTransactionParams) {
+export async function createCreditTransaction(
+  params: CreateCreditTransactionParams,
+  tx?: Prisma.TransactionClient
+) {
   const {
     userId,
     type,
@@ -28,7 +32,9 @@ export async function createCreditTransaction(params: CreateCreditTransactionPar
   } = params
 
   // Buscar saldo atual do usuário
-  const user = await prisma.user.findUnique({
+  const client = tx ?? prisma
+
+  const user = await client.user.findUnique({
     where: { id: userId },
     select: {
       creditsLimit: true,
@@ -48,7 +54,7 @@ export async function createCreditTransaction(params: CreateCreditTransactionPar
   const newBalance = totalBalance + amount
 
   // Criar transação
-  const transaction = await prisma.creditTransaction.create({
+  const transaction = await client.creditTransaction.create({
     data: {
       userId,
       type,
@@ -72,7 +78,8 @@ export async function recordImageGenerationCost(
   userId: string,
   generationId: string,
   creditsUsed: number,
-  metadata?: { prompt?: string; variations?: number; resolution?: string }
+  metadata?: { prompt?: string; variations?: number; resolution?: string },
+  tx?: Prisma.TransactionClient
 ) {
   const count = metadata?.variations || 1
   const description = count === 1 ? 'Geração de 1 imagem' : `Geração de ${count} imagens`
@@ -85,7 +92,7 @@ export async function recordImageGenerationCost(
     description,
     referenceId: generationId,
     metadata
-  })
+  }, tx)
 }
 
 /**
@@ -95,7 +102,8 @@ export async function recordModelTrainingCost(
   userId: string,
   modelId: string,
   creditsUsed: number,
-  metadata?: { modelName?: string; photoCount?: number }
+  metadata?: { modelName?: string; photoCount?: number },
+  tx?: Prisma.TransactionClient
 ) {
   return createCreditTransaction({
     userId,
@@ -105,7 +113,7 @@ export async function recordModelTrainingCost(
     description: `Criação de modelo IA${metadata?.modelName ? `: ${metadata.modelName}` : ''}`,
     referenceId: modelId,
     metadata
-  })
+  }, tx)
 }
 
 /**
@@ -115,7 +123,8 @@ export async function recordUpscaleCost(
   userId: string,
   upscaleId: string,
   creditsUsed: number,
-  metadata?: { originalResolution?: string; targetResolution?: string }
+  metadata?: { originalResolution?: string; targetResolution?: string },
+  tx?: Prisma.TransactionClient
 ) {
   return createCreditTransaction({
     userId,
@@ -125,7 +134,7 @@ export async function recordUpscaleCost(
     description: 'Upscale de imagem',
     referenceId: upscaleId,
     metadata
-  })
+  }, tx)
 }
 
 /**
@@ -135,7 +144,8 @@ export async function recordImageEditCost(
   userId: string,
   editId: string,
   creditsUsed: number,
-  metadata?: { operation?: string; prompt?: string }
+  metadata?: { operation?: string; prompt?: string },
+  tx?: Prisma.TransactionClient
 ) {
   return createCreditTransaction({
     userId,
@@ -145,7 +155,7 @@ export async function recordImageEditCost(
     description: 'Edição de imagem',
     referenceId: editId,
     metadata
-  })
+  }, tx)
 }
 
 /**
@@ -155,7 +165,8 @@ export async function recordVideoGenerationCost(
   userId: string,
   videoId: string,
   creditsUsed: number,
-  metadata?: { duration?: number; resolution?: string }
+  metadata?: { duration?: number; resolution?: string },
+  tx?: Prisma.TransactionClient
 ) {
   const durationText = metadata?.duration ? ` (${metadata.duration}s)` : ''
 
@@ -167,7 +178,7 @@ export async function recordVideoGenerationCost(
     description: `Geração de vídeo${durationText}`,
     referenceId: videoId,
     metadata
-  })
+  }, tx)
 }
 
 /**

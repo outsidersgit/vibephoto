@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuthAPI } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { canUserUseCredits, updateUserCredits } from '@/lib/db/users'
 import { TopazUpscaler } from '@/lib/ai/upscale/topaz-upscaler'
 import { UPSCALE_CONFIG, UpscaleOptions } from '@/lib/ai/upscale/upscale-config'
 import {
@@ -13,6 +12,8 @@ import {
   monitorUrlExpiration
 } from '@/lib/ai/upscale/upscale-utils'
 import { downloadAndStoreImages } from '@/lib/storage/utils'
+import { CreditManager } from '@/lib/credits/manager'
+import { Plan } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     const session = await requireAuthAPI()
     const userId = session.user.id
-    const userPlan = (session.user as any).plan || 'STARTER'
+    const userPlan = ((session.user as any).plan || 'STARTER') as Plan
     
     const body = await request.json()
     const { 
@@ -123,12 +124,11 @@ export async function POST(request: NextRequest) {
 
     // Calcula créditos necessários
     const creditsNeeded = calculateUpscaleCredits(imageCount)
-    
-    // Verifica se usuário tem créditos suficientes
-    const hasCredits = await canUserUseCredits(userId, creditsNeeded)
-    if (!hasCredits) {
-      return NextResponse.json({ 
-        error: `Créditos insuficientes. Necessários: ${creditsNeeded}` 
+
+    const affordability = await CreditManager.canUserAfford(userId, creditsNeeded, userPlan as Plan)
+    if (!affordability.canAfford) {
+      return NextResponse.json({
+        error: affordability.reason || `Créditos insuficientes. Necessários: ${creditsNeeded}`
       }, { status: 402 })
     }
 
@@ -144,9 +144,6 @@ export async function POST(request: NextRequest) {
       console.log('🔍 Starting single upscale with synchronous preference')
       result = await upscaler.upscaleImage(imageUrl, options, true) // Prefer synchronous
     }
-
-    // Deduz créditos
-    await updateUserCredits(userId, creditsNeeded)
 
     // Salva jobs na base de dados para tracking
     const jobRecords = []
@@ -181,14 +178,10 @@ export async function POST(request: NextRequest) {
           } else {
             console.error('❌ CRITICAL: Failed to store synchronous upscale images permanently')
             finalStatus = 'FAILED'
-            // Don't charge user if storage fails
-            await updateUserCredits(userId, -creditsNeeded) // Refund
           }
         } catch (storageError) {
           console.error('❌ CRITICAL: Error storing synchronous upscale images:', storageError)
           finalStatus = 'FAILED'
-          // Don't charge user if storage fails
-          await updateUserCredits(userId, -creditsNeeded) // Refund
         }
       }
       
@@ -225,6 +218,48 @@ export async function POST(request: NextRequest) {
         thumbnailUrls: finalThumbnailUrls
       })
     }
+
+    const chargeResult = await CreditManager.deductCredits(
+      userId,
+      creditsNeeded,
+      'Upscale de imagem',
+      {
+        type: 'UPSCALE',
+        upscaleId: jobRecords[0]?.generationId,
+        prompt: options.prompt
+      }
+    )
+
+    if (!chargeResult.success) {
+      console.error('❌ [UPSCALE] Credit charge failed:', chargeResult.error)
+      for (const record of jobRecords) {
+        await prisma.generation.update({
+          where: { id: record.generationId },
+          data: {
+            status: 'FAILED',
+            errorMessage: chargeResult.error || 'Falha ao debitar créditos'
+          }
+        })
+      }
+
+      return NextResponse.json({
+        error: chargeResult.error || 'Créditos insuficientes',
+        success: false
+      }, { status: 402 })
+    }
+
+    await prisma.usageLog.create({
+      data: {
+        userId,
+        action: 'upscale',
+        details: {
+          generationIds: jobRecords.map((record) => record.generationId),
+          imageCount,
+          upscaleFactor: options.upscale_factor
+        },
+        creditsUsed: creditsNeeded
+      }
+    })
 
     // Start polling ONLY for async jobs (skip for completed synchronous jobs)
     const needsPolling = jobRecords.filter(record => record.status === 'PROCESSING')

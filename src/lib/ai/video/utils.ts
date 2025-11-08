@@ -1,15 +1,14 @@
 import { VIDEO_CONFIG, VideoDuration, VideoQuality, VideoAspectRatio, UserPlan, VideoGenerationRequest } from './config'
+import { getVideoGenerationCost } from '@/lib/credits/pricing'
 
 /**
  * Calculate credits needed for video generation
  */
 export function calculateVideoCredits(
   duration: VideoDuration,
-  quality: VideoQuality
+  _quality: VideoQuality
 ): number {
-  const baseCost = VIDEO_CONFIG.costs.base[duration]
-  const qualityMultiplier = VIDEO_CONFIG.costs.qualityMultiplier[quality]
-  return Math.ceil(baseCost * qualityMultiplier)
+  return getVideoGenerationCost(duration)
 }
 
 /**

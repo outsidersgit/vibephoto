@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db'
 import { GenerationStatus } from '@prisma/client'
+import { CreditManager } from '@/lib/credits/manager'
+import { getImageGenerationCost } from '@/lib/credits/pricing'
 
 export async function createGeneration(data: {
   userId: string
@@ -16,38 +18,11 @@ export async function createGeneration(data: {
   astriaEnhancements?: any
 }) {
   // Calculate credits needed (10 credits per image, variations determines how many images)
-  const creditsNeeded = (data.variations || 1) * 10
+  const creditsNeeded = getImageGenerationCost(data.variations || 1)
 
   // Start transaction to ensure atomicity
   return prisma.$transaction(async (tx) => {
-    // Check if user has enough credits
-    const user = await tx.user.findUnique({
-      where: { id: data.userId },
-      select: { creditsUsed: true, creditsLimit: true, creditsBalance: true }
-    })
-
-    if (!user) {
-      throw new Error('User not found')
-    }
-
-    const availableCredits = user.creditsLimit - user.creditsUsed + user.creditsBalance
-    if (availableCredits < creditsNeeded) {
-      throw new Error(`Insufficient credits. Need ${creditsNeeded} credits but only have ${availableCredits} available.`)
-    }
-
-    // Deduct credits from user
-    const updatedUser = await tx.user.update({
-      where: { id: data.userId },
-      data: {
-        creditsUsed: { increment: creditsNeeded }
-      },
-      select: { creditsUsed: true, creditsLimit: true, creditsBalance: true }
-    })
-
-    // Calculate balance AFTER debit
-    const balanceAfter = updatedUser.creditsLimit - updatedUser.creditsUsed + updatedUser.creditsBalance
-
-    // Create the generation
+    // Create the generation (credits will be debited after creation using same transaction)
     const generation = await tx.generation.create({
       data: {
         ...data,
@@ -55,6 +30,13 @@ export async function createGeneration(data: {
         imageUrls: [],
         thumbnailUrls: [],
         estimatedCost: creditsNeeded,
+        operationType: 'generation',
+        metadata: {
+          source: 'generation',
+          variations: data.variations || 1,
+          prompt: data.prompt,
+          aiProvider: data.aiProvider || 'hybrid'
+        },
         // Set AI provider based on current configuration
         aiProvider: data.aiProvider || 'hybrid',
         astriaEnhancements: data.astriaEnhancements
@@ -66,21 +48,35 @@ export async function createGeneration(data: {
       }
     })
 
-    // Create credit transaction record with correct balance
-    await tx.creditTransaction.create({
+    const chargeResult = await CreditManager.deductCredits(
+      data.userId,
+      creditsNeeded,
+      'Geração de imagem',
+      {
+        type: 'IMAGE_GENERATION',
+        generationId: generation.id,
+        prompt: data.prompt,
+        variations: data.variations,
+        resolution: data.resolution
+      },
+      tx
+    )
+
+    if (!chargeResult.success) {
+      throw new Error(chargeResult.error || 'Failed to deduct credits')
+    }
+
+    await tx.usageLog.create({
       data: {
         userId: data.userId,
-        type: 'SPENT',
-        source: 'GENERATION',
-        amount: -creditsNeeded,
-        description: `Geração de ${data.variations || 1} ${(data.variations || 1) === 1 ? 'imagem' : 'imagens'}`,
-        referenceId: generation.id,
-        balanceAfter: balanceAfter,
-        metadata: {
-          prompt: data.prompt?.substring(0, 200),
+        action: 'generation',
+        details: {
+          generationId: generation.id,
+          modelId: data.modelId,
           variations: data.variations,
           resolution: data.resolution
-        }
+        },
+        creditsUsed: creditsNeeded
       }
     })
 

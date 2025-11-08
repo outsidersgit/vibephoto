@@ -12,6 +12,7 @@ import { calculateVideoCredits, validatePrompt, getEstimatedProcessingTime, form
 import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useRouter } from 'next/navigation'
+import { useInvalidateCredits } from '@/hooks/useCredits'
 
 interface VideoGenerationInterfaceProps {
   user: {
@@ -25,6 +26,7 @@ interface VideoGenerationInterfaceProps {
 }
 
 export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }: VideoGenerationInterfaceProps) {
+  console.log('🧭 [VIDEO_GENERATION_INTERFACE] render start')
   // CRITICAL: Todos os hooks DEVEM ser chamados ANTES de qualquer early return
   // Violar esta regra causa erro React #310 (can't set state on unmounted component)
   const { data: session, status } = useSession()
@@ -50,6 +52,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'video' } | null>(null)
   const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
   const [monitoringVideoId, setMonitoringVideoId] = useState<string | null>(null)
+  const { invalidateBalance } = useInvalidateCredits()
 
   const resetFormAfterSuccess = () => {
     setFormData({
@@ -179,6 +182,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
       resetFormAfterSuccess()
       loadingRef.current = false
       setLoading(false)
+      invalidateBalance()
     } else {
       console.error('❌ [VIDEO_GENERATION] No valid URL')
       setMonitoringVideoId(null)
@@ -190,7 +194,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
       loadingRef.current = false
       setLoading(false)
     }
-  }, [addToast, testVideoUrl, resetFormAfterSuccess])
+  }, [addToast, testVideoUrl, resetFormAfterSuccess, invalidateBalance])
   
   // Monitor video generation status and open modal when completed
   const monitorVideoGeneration = (videoId: string) => {

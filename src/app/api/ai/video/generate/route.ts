@@ -3,8 +3,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { VideoGenerationRequest } from '@/lib/ai/video/config'
-import { calculateVideoCredits, validatePrompt } from '@/lib/ai/video/utils'
+import { validatePrompt } from '@/lib/ai/video/utils'
 import Replicate from 'replicate'
+import { CreditManager } from '@/lib/credits/manager'
+import { getVideoGenerationCost } from '@/lib/credits/pricing'
+import { Plan } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,15 +49,16 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Calculate credits
-    const requiredCredits = calculateVideoCredits(body.duration, 'pro')
-    const remainingCredits = user.creditsLimit - user.creditsUsed
+    const duration = body.duration || 5
+    const creditsNeeded = getVideoGenerationCost(duration)
+    const userPlan = (user.plan || 'STARTER') as Plan
+    const affordability = await CreditManager.canUserAfford(user.id, creditsNeeded, userPlan)
 
-    if (requiredCredits > remainingCredits) {
-      console.log('❌ [VIDEO-API] Insufficient credits:', { required: requiredCredits, remaining: remainingCredits })
+    if (!affordability.canAfford) {
+      console.log('❌ [VIDEO-API] Insufficient credits:', { required: creditsNeeded, plan: userPlan, reason: affordability.reason })
       return NextResponse.json({
-        error: `Créditos insuficientes. Necessário: ${requiredCredits}, Disponível: ${remainingCredits}`
-      }, { status: 400 })
+        error: affordability.reason || `Créditos insuficientes. Necessário: ${creditsNeeded}`
+      }, { status: 402 })
     }
 
     // Create video generation record in the correct table
@@ -71,20 +75,14 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Update user credits
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        creditsUsed: user.creditsUsed + requiredCredits
-      }
-    })
-
     console.log('✅ [VIDEO-API] Video generation created:', videoGeneration.id)
 
     // Initialize Replicate client
     const replicate = new Replicate({
       auth: process.env.REPLICATE_API_TOKEN
     })
+
+    let chargeResult: Awaited<ReturnType<typeof CreditManager.deductCredits>> | null = null
 
     try {
       // Prepare input for Kling v2.1 (based on official schema)
@@ -119,12 +117,43 @@ export async function POST(request: NextRequest) {
 
       console.log('✅ [VIDEO-API] Kling v2.1 prediction created:', prediction.id)
 
-      // Update video generation with prediction ID
-      await prisma.videoGeneration.update({
-        where: { id: videoGeneration.id },
+      chargeResult = await CreditManager.deductCredits(
+        user.id,
+        creditsNeeded,
+        'Geração de vídeo',
+        {
+          type: 'VIDEO_GENERATION',
+          videoId: videoGeneration.id,
+          duration,
+          resolution: body.aspectRatio
+        }
+      )
+
+      if (!chargeResult.success) {
+        console.error('❌ [VIDEO-API] Credit charge failed:', chargeResult.error)
+        await prisma.videoGeneration.update({
+          where: { id: videoGeneration.id },
+          data: {
+            status: 'FAILED',
+            errorMessage: chargeResult.error || 'Falha ao debitar créditos'
+          }
+        })
+
+        return NextResponse.json({
+          error: chargeResult.error || 'Créditos insuficientes'
+        }, { status: 402 })
+      }
+
+      await prisma.usageLog.create({
         data: {
-          jobId: prediction.id,
-          status: 'PROCESSING'
+          userId: user.id,
+          action: 'video_generation',
+          details: {
+            videoGenerationId: videoGeneration.id,
+            duration,
+            aspectRatio: body.aspectRatio
+          },
+          creditsUsed: creditsNeeded
         }
       })
 
@@ -154,14 +183,6 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // Refund credits since generation failed
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          creditsUsed: user.creditsUsed - requiredCredits
-        }
-      })
-
       return NextResponse.json({
         error: 'Falha na geração de vídeo',
         details: replicateError instanceof Error ? replicateError.message : 'Unknown error'
@@ -171,8 +192,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       videoGenerationId: videoGeneration.id,
-      creditsUsed: requiredCredits,
-      remainingCredits: remainingCredits - requiredCredits,
+      creditsUsed: creditsNeeded,
+      remainingCredits: chargeResult?.user
+        ? (chargeResult.user.creditsLimit - chargeResult.user.creditsUsed + chargeResult.user.creditsBalance)
+        : undefined,
       estimatedTime: body.duration === 5 ? '5 minutos' : '8 minutos'
     })
 

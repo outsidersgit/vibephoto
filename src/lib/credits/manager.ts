@@ -1,12 +1,38 @@
 import { prisma } from '@/lib/db'
-import { Plan } from '@prisma/client'
+import { revalidateTag } from 'next/cache'
+import { Plan, Prisma } from '@prisma/client'
 import {
   recordImageGenerationCost,
   recordModelTrainingCost,
   recordUpscaleCost,
   recordImageEditCost,
-  recordVideoGenerationCost
+  recordVideoGenerationCost,
+  recordPhotoPackagePurchase
 } from '@/lib/services/credit-transaction-service'
+import { broadcastCreditsUpdate } from '@/lib/services/realtime-service'
+
+type CreditChargeType =
+  | 'IMAGE_GENERATION'
+  | 'IMAGE_EDIT'
+  | 'VIDEO_GENERATION'
+  | 'UPSCALE'
+  | 'TRAINING'
+  | 'PHOTO_PACKAGE'
+
+interface DeductCreditsMetadata {
+  modelId?: string
+  generationId?: string
+  editId?: string
+  videoId?: string
+  upscaleId?: string
+  userPackageId?: string
+  packageName?: string
+  type?: CreditChargeType
+  prompt?: string
+  variations?: number
+  duration?: number
+  resolution?: string
+}
 
 export interface CreditLimits {
   daily: number
@@ -52,10 +78,10 @@ export class CreditManager {
   static async getUserCredits(userId: string): Promise<number> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { creditsUsed: true, creditsLimit: true }
+      select: { creditsUsed: true, creditsLimit: true, creditsBalance: true }
     })
     
-    return (user?.creditsLimit || 0) - (user?.creditsUsed || 0)
+    return (user?.creditsLimit || 0) - (user?.creditsUsed || 0) + (user?.creditsBalance || 0)
   }
 
   static async getUserUsage(userId: string): Promise<CreditUsage> {
@@ -121,16 +147,19 @@ export class CreditManager {
     userId: string,
     amount: number,
     description: string,
-    metadata?: {
-      modelId?: string
-      generationId?: string
-      type?: 'TRAINING' | 'GENERATION' | 'STORAGE' | 'OTHER'
-    }
-  ): Promise<boolean> {
+    metadata?: DeductCreditsMetadata,
+    tx?: Prisma.TransactionClient
+  ): Promise<{
+    success: boolean
+    user?: { creditsUsed: number; creditsLimit: number; creditsBalance: number }
+    error?: string
+  }> {
     try {
-      await prisma.$transaction(async (tx) => {
+      let updatedUserRecord: { creditsUsed: number; creditsLimit: number; creditsBalance: number } | null = null
+
+      const execute = async (client: Prisma.TransactionClient) => {
         // Busca informações do usuário
-        const user = await tx.user.findUnique({
+        const user = await client.user.findUnique({
           where: { id: userId },
           select: {
             creditsUsed: true,
@@ -160,27 +189,29 @@ export class CreditManager {
         // Usa créditos do plano primeiro
         if (planCreditsAvailable >= amount) {
           // Tem créditos suficientes no plano
-          await tx.user.update({
+          updatedUserRecord = await client.user.update({
             where: { id: userId },
             data: {
               creditsUsed: { increment: amount }
-            }
+            },
+            select: { creditsUsed: true, creditsLimit: true, creditsBalance: true }
           })
         } else {
           // Precisa usar créditos de pacotes avulsos também
           const creditsNeededFromPackages = amount - planCreditsAvailable
 
           // Busca pacotes de créditos válidos (não expirados)
-          const validPackages = await tx.creditPurchase.findMany({
+        const potentialPackages = await client.creditPurchase.findMany({
             where: {
               userId,
               status: 'CONFIRMED',
               isExpired: false,
               validUntil: { gte: new Date() },
-              usedCredits: { lt: tx.creditPurchase.fields.creditAmount }
             },
             orderBy: { validUntil: 'asc' } // Usa os que expiram primeiro
           })
+
+        const validPackages = potentialPackages.filter((pkg) => pkg.usedCredits < pkg.creditAmount)
 
           // Calcula total de créditos disponíveis em pacotes
           const totalPackageCredits = validPackages.reduce(
@@ -200,7 +231,7 @@ export class CreditManager {
             const available = pkg.creditAmount - pkg.usedCredits
             const toUse = Math.min(available, remaining)
 
-            await tx.creditPurchase.update({
+            await client.creditPurchase.update({
               where: { id: pkg.id },
               data: { usedCredits: { increment: toUse } }
             })
@@ -209,29 +240,73 @@ export class CreditManager {
           }
 
           // Usa todos os créditos do plano
-          await tx.user.update({
+          updatedUserRecord = await client.user.update({
             where: { id: userId },
             data: {
               creditsUsed: user.creditsLimit, // Usa todo o limite
               creditsBalance: { decrement: creditsNeededFromPackages }
-            }
+            },
+            select: { creditsUsed: true, creditsLimit: true, creditsBalance: true }
           })
         }
 
-      })
+        // Registrar transação de crédito após a dedução bem-sucedida
+        if (metadata?.type === 'IMAGE_GENERATION' && metadata.generationId) {
+          await recordImageGenerationCost(userId, metadata.generationId, amount, {
+            prompt: metadata.prompt,
+            variations: metadata.variations,
+            resolution: metadata.resolution
+          }, client)
+        } else if (metadata?.type === 'TRAINING' && metadata.modelId) {
+          await recordModelTrainingCost(userId, metadata.modelId, amount, undefined, client)
+        } else if (metadata?.type === 'IMAGE_EDIT' && metadata.editId) {
+          await recordImageEditCost(userId, metadata.editId, amount, {
+            prompt: metadata.prompt
+          }, client)
+        } else if (metadata?.type === 'VIDEO_GENERATION' && metadata.videoId) {
+          await recordVideoGenerationCost(userId, metadata.videoId, amount, {
+            duration: metadata.duration,
+            resolution: metadata.resolution
+          }, client)
+        } else if (metadata?.type === 'UPSCALE' && metadata.upscaleId) {
+          await recordUpscaleCost(userId, metadata.upscaleId, amount, undefined, client)
+        } else if (metadata?.type === 'PHOTO_PACKAGE' && metadata.userPackageId) {
+          await recordPhotoPackagePurchase(userId, metadata.userPackageId, amount, {
+            packageName: metadata.packageName
+          }, client)
+        }
 
-      // Registrar transação de crédito após a dedução bem-sucedida
-      // Usa os helpers específicos para cada tipo de operação
-      if (metadata?.type === 'GENERATION' && metadata.generationId) {
-        await recordImageGenerationCost(userId, metadata.generationId, amount)
-      } else if (metadata?.type === 'TRAINING' && metadata.modelId) {
-        await recordModelTrainingCost(userId, metadata.modelId, amount)
+        return updatedUserRecord
       }
 
-      return true
+      if (tx) {
+        await execute(tx)
+      } else {
+        await prisma.$transaction(async (transaction) => {
+          await execute(transaction)
+        })
+      }
+
+      if (updatedUserRecord) {
+        await broadcastCreditsUpdate(
+          userId,
+          updatedUserRecord.creditsUsed,
+          updatedUserRecord.creditsLimit,
+          metadata?.type || 'GENERATION',
+          updatedUserRecord.creditsBalance
+        )
+
+        try {
+          revalidateTag(`user-${userId}-credits`)
+        } catch (revalidateError) {
+          console.warn('⚠️ Failed to revalidate credit balance tag:', revalidateError)
+        }
+      }
+
+      return { success: true, user: updatedUserRecord || undefined }
     } catch (error) {
       console.error('Failed to deduct credits:', error)
-      return false
+      return { success: false, error: error instanceof Error ? error.message : undefined }
     }
   }
 
@@ -243,27 +318,59 @@ export class CreditManager {
       modelId?: string
       generationId?: string
       subscriptionId?: string
+      refundSource?: string
+      referenceId?: string
     }
-  ): Promise<boolean> {
+  ): Promise<{ success: boolean; user?: { creditsUsed: number; creditsLimit: number; creditsBalance: number }; error?: string }> {
     try {
-      await prisma.$transaction(async (tx) => {
-        // Add credits
-        await tx.user.update({
+      let updatedUser: { creditsUsed: number; creditsLimit: number; creditsBalance: number } | null = null
+
+      const execute = async (client: Prisma.TransactionClient) => {
+        updatedUser = await client.user.update({
           where: { id: userId },
           data: {
             creditsUsed: {
               decrement: amount
             }
-          }
+          },
+          select: { creditsUsed: true, creditsLimit: true, creditsBalance: true }
         })
 
-        // TODO: Log transaction when CreditTransaction model is added to schema
+        await createCreditTransaction({
+          userId,
+          type: 'REFUNDED',
+          source: metadata?.refundSource || 'REFUND',
+          amount: Math.abs(amount),
+          description,
+          referenceId: metadata?.referenceId || metadata?.generationId || metadata?.modelId || metadata?.subscriptionId,
+          metadata
+        }, client)
+      }
+
+      await prisma.$transaction(async (tx) => {
+        await execute(tx)
       })
 
-      return true
+      if (updatedUser) {
+        await broadcastCreditsUpdate(
+          userId,
+          updatedUser.creditsUsed,
+          updatedUser.creditsLimit,
+          'CREDIT_REFUND',
+          updatedUser.creditsBalance
+        )
+
+        try {
+          revalidateTag(`user-${userId}-credits`)
+        } catch (revalidateError) {
+          console.warn('⚠️ Failed to revalidate credit balance tag:', revalidateError)
+        }
+      }
+
+      return { success: true, user: updatedUser || undefined }
     } catch (error) {
       console.error('Failed to add credits:', error)
-      return false
+      return { success: false, error: error instanceof Error ? error.message : undefined }
     }
   }
 

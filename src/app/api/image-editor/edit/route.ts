@@ -4,10 +4,12 @@ import { authOptions } from '@/lib/auth'
 import { imageEditor } from '@/lib/ai/image-editor'
 import { AIError } from '@/lib/ai/base'
 import { createEditHistory } from '@/lib/db/edit-history'
-import { recordImageEditCost } from '@/lib/services/credit-transaction-service'
 import { prisma } from '@/lib/db'
 import { downloadAndStoreImages } from '@/lib/storage/utils'
 import { processAndStoreReplicateImages } from '@/lib/services/auto-image-storage'
+import { CreditManager } from '@/lib/credits/manager'
+import { getImageEditCost } from '@/lib/credits/pricing'
+import { Plan } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +19,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
+      )
+    }
+
+    const userPlan = ((session.user as any)?.plan || 'STARTER') as Plan
+    const creditsNeeded = getImageEditCost(1)
+    const affordability = await CreditManager.canUserAfford(session.user.id, creditsNeeded, userPlan)
+    if (!affordability.canAfford) {
+      return NextResponse.json(
+        { error: affordability.reason || `Créditos insuficientes. Necessário: ${creditsNeeded}` },
+        { status: 402 }
       )
     }
 
@@ -121,7 +133,36 @@ export async function POST(request: NextRequest) {
       })
       
       console.log('✅ Edit history created for async processing:', editHistoryEntry.id)
-      
+
+      const charge = await CreditManager.deductCredits(
+        session.user.id,
+        creditsNeeded,
+        'Edição de imagem',
+        {
+          type: 'IMAGE_EDIT',
+          editId: editHistoryEntry.id,
+          prompt
+        }
+      )
+
+      if (!charge.success) {
+        await prisma.editHistory.delete({ where: { id: editHistoryEntry.id } })
+        return NextResponse.json({ error: charge.error || 'Créditos insuficientes' }, { status: 402 })
+      }
+
+      await prisma.usageLog.create({
+        data: {
+          userId: session.user.id,
+          action: 'image_edit',
+          details: {
+            editId: editHistoryEntry.id,
+            operation: image ? 'nano_banana_edit' : 'nano_banana_generate',
+            prompt: prompt.substring(0, 200)
+          },
+          creditsUsed: creditsNeeded
+        }
+      })
+ 
       return NextResponse.json({
         success: true,
         data: {
@@ -220,30 +261,43 @@ export async function POST(request: NextRequest) {
       // Don't fail the whole request if DB save fails
     }
 
-    // Debit credits and register transaction for image edit
-    try {
-      const creditsUsed = 15 // Image edit cost
+    const charge = await CreditManager.deductCredits(
+      session.user.id,
+      creditsNeeded,
+      'Edição de imagem',
+      {
+        type: 'IMAGE_EDIT',
+        editId: editHistoryEntry?.id || result.id || 'unknown',
+        prompt
+      }
+    )
 
-      await prisma.user.update({
-        where: { id: session.user.id },
-        data: { creditsUsed: { increment: creditsUsed } }
-      })
-
-      await recordImageEditCost(
-        session.user.id,
-        editHistoryEntry?.id || result.id || 'unknown',
-        creditsUsed,
-        {
-          operation: image ? 'nano_banana_edit' : 'nano_banana_generate',
-          prompt: prompt.substring(0, 100)
-        }
+    if (!charge.success) {
+      console.error('❌ Failed to debit credits for image edit:', charge.error)
+      if (generationRecord?.id) {
+        await prisma.generation.delete({ where: { id: generationRecord.id } })
+      }
+      if (editHistoryEntry?.id) {
+        await prisma.editHistory.delete({ where: { id: editHistoryEntry.id } })
+      }
+      return NextResponse.json(
+        { error: charge.error || 'Falha ao debitar créditos' },
+        { status: 402 }
       )
-
-      console.log(`✅ Debited ${creditsUsed} credits for image edit`)
-    } catch (error) {
-      console.error(`❌ Failed to debit credits for image edit:`, error)
-      // Don't fail the whole request if credit deduction fails
     }
+
+    await prisma.usageLog.create({
+      data: {
+        userId: session.user.id,
+        action: 'image_edit',
+        details: {
+          editId: editHistoryEntry?.id || result.id || 'unknown',
+          operation: image ? 'nano_banana_edit' : 'nano_banana_generate',
+          prompt: prompt.substring(0, 200)
+        },
+        creditsUsed: creditsNeeded
+      }
+    })
 
     // Save to gallery automatically (create Generation record)
     let generationRecord = null
@@ -264,7 +318,16 @@ export async function POST(request: NextRequest) {
                aspectRatioValue === '3:4' ? '768x1024' :
                aspectRatioValue === '9:16' ? '720x1280' :
                aspectRatioValue === '16:9' ? '1280x720' : '1024x1024') : '1024x1024',
-            estimatedCost: 15,
+            estimatedCost: creditsNeeded,
+            operationType: 'edit',
+            metadata: {
+              source: 'editor',
+              editHistoryId: editHistoryEntry?.id,
+              replicateId: result.id,
+              generatedFromScratch: !image,
+              temporaryUrl: result.resultImage,
+              cost: creditsNeeded
+            },
             aiProvider: 'nano-banana',
             storageProvider: 'aws',
             metadata: {

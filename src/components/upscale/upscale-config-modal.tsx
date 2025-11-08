@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
 import { X, Sparkles } from 'lucide-react'
+import { getUpscaleCost } from '@/lib/credits/pricing'
 
 interface UpscaleConfigModalProps {
   isOpen: boolean
@@ -32,10 +33,7 @@ export function UpscaleConfigModal({
   }
 
   // Calcular custo de créditos
-  const getCreditCost = () => {
-    // Upscale custa 10 créditos
-    return 10
-  }
+  const getCreditCost = () => getUpscaleCost(1)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

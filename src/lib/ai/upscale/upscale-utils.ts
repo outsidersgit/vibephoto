@@ -1,4 +1,5 @@
-import { UPSCALE_CONFIG, UpscaleOptions, UpscalePlan } from './upscale-config'
+import { UPSCALE_CONFIG, UpscaleOptions, UpscalePlanLimits } from './upscale-config'
+import { getUpscaleCost } from '@/lib/credits/pricing'
 
 /**
  * Valida se um arquivo de imagem é adequado para upscale
@@ -126,13 +127,7 @@ export function canUserUpscale(userPlan: UpscalePlan, scaleFactor: number, daily
  * Calcula créditos necessários para upscale
  */
 export function calculateUpscaleCredits(imagesCount: number): number {
-  const { credits } = UPSCALE_CONFIG
-  
-  if (imagesCount >= credits.batchMinimum) {
-    return imagesCount * credits.batchDiscount
-  }
-  
-  return imagesCount * credits.baseUpscale
+  return getUpscaleCost(imagesCount)
 }
 
 /**

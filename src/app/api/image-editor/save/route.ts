@@ -3,8 +3,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { downloadImageBuffer, generateThumbnailBuffer } from '@/lib/storage/utils'
 import { getStorageProvider } from '@/lib/storage'
-import { canUserUseCredits, updateUserCredits } from '@/lib/db/users'
+import { prisma } from '@/lib/db'
 import { createEditHistory } from '@/lib/db/edit-history'
+import { CreditManager } from '@/lib/credits/manager'
+import { getImageEditCost } from '@/lib/credits/pricing'
+import { Plan } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,11 +39,12 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Check if user has enough credits
-    const canUseCredits = await canUserUseCredits(userId, 1)
-    if (!canUseCredits) {
+    const creditsNeeded = getImageEditCost(1)
+    const userPlan = ((session.user as any).plan || 'STARTER') as Plan
+    const affordability = await CreditManager.canUserAfford(userId, creditsNeeded, userPlan)
+    if (!affordability.canAfford) {
       return NextResponse.json({ 
-        error: 'Insufficient credits' 
+        error: affordability.reason || 'Insufficient credits' 
       }, { status: 402 })
     }
 
@@ -118,8 +122,34 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Deduct credits
-    await updateUserCredits(userId, 1)
+    const chargeResult = await CreditManager.deductCredits(
+      userId,
+      creditsNeeded,
+      'Salvar edição de imagem',
+      {
+        type: 'IMAGE_EDIT',
+        editId: editedImage.id,
+        prompt
+      }
+    )
+
+    if (!chargeResult.success) {
+      console.error('❌ Failed to debit credits during image save:', chargeResult.error)
+      return NextResponse.json({ error: chargeResult.error || 'Insufficient credits' }, { status: 402 })
+    }
+
+    await prisma.usageLog.create({
+      data: {
+        userId,
+        action: 'image_edit_manual_save',
+        details: {
+          editId: editedImage.id,
+          operation,
+          prompt: prompt.substring(0, 200)
+        },
+        creditsUsed: creditsNeeded
+      }
+    })
 
     console.log(`✅ Edited image saved successfully with ID: ${editedImage.id}`)
 

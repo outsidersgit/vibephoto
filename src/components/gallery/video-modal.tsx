@@ -781,7 +781,7 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
                   <div className="flex justify-between">
                     <span className="text-gray-300">Custo:</span>
                     <span className="font-medium text-white">
-                      {getCostDescription('video', { duration: video.duration })}
+                      {getCostDescription('video', { duration: video.duration, estimatedCost: video.creditsUsed })}
                     </span>
                   </div>
                 </div>

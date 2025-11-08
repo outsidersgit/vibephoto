@@ -24,6 +24,8 @@ import { ResultsGallery } from './results-gallery'
 import { PromptExamples } from './prompt-examples'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { useInvalidateCredits } from '@/hooks/useCredits'
+import { CREDIT_COSTS, getImageGenerationCost } from '@/lib/credits/pricing'
 
 interface GenerationInterfaceProps {
   models: Array<{
@@ -49,6 +51,7 @@ export function GenerationInterface({
   user,
   canUseCredits
 }: GenerationInterfaceProps) {
+  console.log('🧭 [GENERATION_INTERFACE] render start')
   // CRITICAL: Todos os hooks DEVEM ser chamados ANTES de qualquer early return
   // Violar esta regra causa erro React #310 (can't set state on unmounted component)
   const { data: session, status } = useSession()
@@ -78,6 +81,7 @@ export function GenerationInterface({
   // React Query hooks
   const generateImage = useImageGeneration()
   const manualSync = useManualSync()
+  const { invalidateBalance } = useInvalidateCredits()
   
   // Detect mobile for responsive labels
   useEffect(() => {
@@ -227,6 +231,7 @@ export function GenerationInterface({
       setPreviewMedia({ url: urlToUse, type: 'image' })
       setIsPreviewLightboxOpen(false)
       clearGenerationLock()
+      invalidateBalance()
       // clearFormAfterSuccess() // This is now handled by the validation helper
     } else {
       console.error('❌ [GENERATION] No valid URL')
@@ -238,7 +243,7 @@ export function GenerationInterface({
       })
       clearGenerationLock()
     }
-  }, [addToast, testImageUrl, clearGenerationLock])
+  }, [addToast, testImageUrl, clearGenerationLock, invalidateBalance])
 
   // Real-time updates for generation status
   useRealtimeUpdates({
@@ -480,7 +485,7 @@ export function GenerationInterface({
         pollingStatus: generationPolling.data.status
       })
     }
-  }, [generationPolling.data, generationPolling.isLoading, currentGeneration?.id, currentGeneration?.status, currentGeneration?.imageUrls, completedGenerationIds, clearGenerationLock])
+  }, [generationPolling.data, generationPolling.isLoading, currentGeneration?.id, currentGeneration?.status, currentGeneration?.imageUrls, completedGenerationIds, clearGenerationLock, invalidateBalance])
   
   const [settings, setSettings] = useState({
     aspectRatio: '1:1',
@@ -767,6 +772,7 @@ export function GenerationInterface({
             if (fallbackTempUrl || fallbackPermanentUrl) {
               console.log('✅ [GENERATION] Manual sync located URLs after retry, opening preview')
               await openModalWithValidation(fallbackTempUrl, fallbackPermanentUrl)
+              invalidateBalance()
             } else {
               console.warn('⚠️ [GENERATION] Manual sync completed but no URLs available after retries')
               clearGenerationLock()
@@ -794,7 +800,7 @@ export function GenerationInterface({
       })
       clearGenerationLock()
     }
-  }, [addToast, clearGenerationLock, manualSync, openModalWithValidation])
+  }, [addToast, clearGenerationLock, manualSync, openModalWithValidation, invalidateBalance])
 
   const handleDownloadPreview = useCallback(async () => {
     if (!previewMedia?.url) return
@@ -859,7 +865,7 @@ export function GenerationInterface({
 
   // Formula: credits_available = (credits_limit - credits_used) + credits_balance
   const creditsRemaining = (user.creditsLimit || 0) - (user.creditsUsed || 0) + ((user as any).creditsBalance || 0)
-  const creditsNeeded = settings.variations * 10
+  const creditsNeeded = getImageGenerationCost(settings.variations)
   const variationLabel = settings.variations === 1 ? 'foto' : 'fotos'
   const desktopButtonLabel = `Gerar ${settings.variations} ${variationLabel} (${creditsNeeded} créditos)`
   const mobileButtonLabel = desktopButtonLabel

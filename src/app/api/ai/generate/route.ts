@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getAIProvider, calculateGenerationCost, validatePrompt, sanitizePrompt } from '@/lib/ai'
+import { getAIProvider, validatePrompt, sanitizePrompt } from '@/lib/ai'
 import { ContentModerator } from '@/lib/security/content-moderator'
 import { RateLimiter } from '@/lib/security/rate-limiter'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { CreditManager } from '@/lib/credits/manager'
+import { getImageGenerationCost } from '@/lib/credits/pricing'
+import { createGeneration } from '@/lib/db/generations'
+import { Plan } from '@prisma/client'
 
 const generateImageSchema = z.object({
   modelId: z.string(),
@@ -154,17 +158,16 @@ export async function POST(request: NextRequest) {
       safety_checker: generationParams?.safety_checker ?? true
     }
 
-    // Calculate generation cost
-    const cost = calculateGenerationCost(finalParams.width, finalParams.height, finalParams.steps) * variations
+    // Calculate generation cost (fixed cost per image)
+    const creditsNeeded = getImageGenerationCost(variations)
 
-    // Check user credits
-    const availableCredits = model.user.creditsLimit - model.user.creditsUsed
-    if (availableCredits < cost) {
+    const userPlan = (model.user.plan || 'STARTER') as Plan
+    const affordability = await CreditManager.canUserAfford(userId, creditsNeeded, userPlan)
+    if (!affordability.canAfford) {
       return NextResponse.json(
-        { 
-          error: 'Insufficient credits',
-          required: cost,
-          available: availableCredits
+        {
+          error: affordability.reason || 'Insufficient credits',
+          required: creditsNeeded
         },
         { status: 402 }
       )
@@ -179,26 +182,33 @@ export async function POST(request: NextRequest) {
     // Get current AI provider name
     const currentProvider = process.env.AI_PROVIDER || 'replicate'
 
+    // Prepare Astria enhancements configuration when applicable
+    const astriaEnhancements = (currentProvider === 'astria' || currentProvider === 'hybrid') ? {
+      super_resolution: true,
+      inpaint_faces: true,
+      face_correct: true,
+      face_swap: true,
+      hires_fix: true,
+      model_type: 'flux-lora',
+      cfg_scale: finalParams.guidance_scale,
+      steps: finalParams.steps,
+      output_quality: 95
+    } : undefined
+
     // Create generation record in database first
-    const generation = await prisma.generation.create({
-      data: {
-        userId: session.user.id,
-        modelId: model.id,
-        prompt: finalPrompt,
-        negativePrompt: negativePrompt || '',
-        status: 'PROCESSING',
-        aspectRatio,
-        resolution: `${finalParams.width}x${finalParams.height}`,
-        style: style || 'default',
-        variations,
-        seed: finalParams.seed,
-        aiProvider: currentProvider,
-        metadata: {
-          provider: currentProvider,
-          timestamp: new Date().toISOString(),
-          source: 'api-generate'
-        }
-      }
+    const generation = await createGeneration({
+      userId: session.user.id,
+      modelId: model.id,
+      prompt: finalPrompt,
+      negativePrompt: negativePrompt || '',
+      aspectRatio,
+      resolution: `${finalParams.width}x${finalParams.height}`,
+      variations,
+      strength: undefined,
+      seed: finalParams.seed,
+      style: style || 'default',
+      aiProvider: currentProvider,
+      astriaEnhancements
     })
 
     // Prepare generation request
@@ -314,56 +324,29 @@ export async function POST(request: NextRequest) {
     await RateLimiter.recordAttempt(userId, 'generation', {
       modelId: model.id,
       generationId: generation.id,
-      cost,
+      cost: creditsNeeded, // Use the calculated creditsNeeded
       variations,
       jobId: generationResponse.id
     })
 
-    // Update generation with job ID and deduct credits
+    // Update generation with job ID and processing status
     console.log(`💾 About to update database with job ID: ${generationResponse.id}`)
-    await prisma.$transaction(async (tx) => {
-      // Update generation record with actual provider info
-      await tx.generation.update({
-        where: { id: generation.id },
-        data: {
-          jobId: String(generationResponse.id),
-          aiProvider: actualProvider, // Use actual provider, not hybrid
-          estimatedCompletionTime: generationResponse.estimatedTime ?
-            new Date(Date.now() + generationResponse.estimatedTime * 1000) : null,
-          metadata: {
-            provider: actualProvider,
-            originalProvider: currentProvider, // Keep track of what was requested
-            hybridRouting: generationResponse.metadata?.hybridRouting,
-            timestamp: new Date().toISOString(),
-            source: 'api-generate'
-          }
+    await prisma.generation.update({
+      where: { id: generation.id },
+      data: {
+        status: 'PROCESSING',
+        jobId: String(generationResponse.id),
+        aiProvider: actualProvider, // Use actual provider, not hybrid
+        estimatedCompletionTime: generationResponse.estimatedTime ?
+          new Date(Date.now() + generationResponse.estimatedTime * 1000) : null,
+        metadata: {
+          provider: actualProvider,
+          originalProvider: currentProvider, // Keep track of what was requested
+          hybridRouting: generationResponse.metadata?.hybridRouting,
+          timestamp: new Date().toISOString(),
+          source: 'api-generate'
         }
-      })
-
-      // Deduct credits from user
-      await tx.user.update({
-        where: { id: session.user.id },
-        data: {
-          creditsUsed: {
-            increment: cost
-          }
-        }
-      })
-
-      // Log the usage
-      await tx.usageLog.create({
-        data: {
-          userId: session.user.id,
-          action: 'generation',
-          details: {
-            generationId: generation.id,
-            modelId: model.id,
-            variations,
-            cost
-          },
-          creditsUsed: cost
-        }
-      })
+      }
     })
 
     return NextResponse.json({
@@ -372,7 +355,7 @@ export async function POST(request: NextRequest) {
         generationId: generation.id,
         jobId: generationResponse.id,
         estimatedTime: generationResponse.estimatedTime,
-        cost,
+        cost: creditsNeeded, // Use the calculated creditsNeeded
         status: generationResponse.status
       }
     })

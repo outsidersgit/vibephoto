@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createGeneration } from '@/lib/db/generations'
-import { canUserUseCredits, updateUserCredits } from '@/lib/db/users'
 import { getModelById } from '@/lib/db/models'
 import { getAIProvider } from '@/lib/ai'
 import { prisma } from '@/lib/db'
+import { CreditManager } from '@/lib/credits/manager'
+import { getImageGenerationCost } from '@/lib/credits/pricing'
+import { Plan } from '@prisma/client'
 
 // Helper functions for optimal generation parameters
 function calculateOptimalSteps(userPlan: string, megapixels: number, modelType: 'custom' | 'base'): number {
@@ -151,14 +153,14 @@ export async function POST(request: NextRequest) {
       provider: process.env.AI_PROVIDER || 'hybrid'
     })
 
-    // Check if user has enough credits (10 credits per image generated)
-    const creditsNeeded = variations * 10
-    const canUseCredits = await canUserUseCredits(session.user.id, creditsNeeded)
-    
-    if (!canUseCredits) {
+    const creditsNeeded = getImageGenerationCost(variations)
+    const userPlan = ((session.user as any)?.plan || 'STARTER') as Plan
+    const affordability = await CreditManager.canUserAfford(session.user.id, creditsNeeded, userPlan)
+
+    if (!affordability.canAfford) {
       return NextResponse.json(
-        { error: 'Insufficient credits. Upgrade your plan or wait for monthly reset.' },
-        { status: 403 }
+        { error: affordability.reason || 'Insufficient credits. Upgrade your plan ou adquira créditos adicionais.' },
+        { status: 402 }
       )
     }
 
@@ -435,7 +437,19 @@ export async function POST(request: NextRequest) {
       })
       
       // Refund credits since generation failed
-      await updateUserCredits(session.user.id, -creditsNeeded)
+      const refundResult = await CreditManager.addCredits(
+        session.user.id,
+        creditsNeeded,
+        'Reembolso por falha na geração',
+        {
+          refundSource: 'REFUND',
+          referenceId: generation.id
+        }
+      )
+
+      if (!refundResult.success) {
+        console.error('❌ Failed to refund credits after generation error:', refundResult.error)
+      }
       
       // Return specific error instead of generic one
       return NextResponse.json({

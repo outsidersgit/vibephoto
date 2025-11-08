@@ -1062,9 +1062,26 @@ function detectOperationContext(generation: any): {
   storageContext: string
 } {
   const prompt = generation.prompt || ''
+  const metadataSource = typeof generation.metadata === 'object'
+    ? (generation.metadata?.source || generation.metadata?.operationType)
+    : undefined
+  const declaredOperation = generation.operationType || metadataSource
   
+  if (declaredOperation === 'edit' || declaredOperation === 'edited' || metadataSource === 'editor') {
+    return { operationType: 'edit', storageContext: 'edited' }
+  }
+  if (declaredOperation === 'upscale' || metadataSource === 'upscale') {
+    return { operationType: 'upscale', storageContext: 'upscaled' }
+  }
+  if (declaredOperation === 'video' || metadataSource === 'video') {
+    return { operationType: 'video', storageContext: 'videos' }
+  }
+
   // Detectar por prefixo no prompt
   if (prompt.startsWith('[EDITED]')) {
+    return { operationType: 'edit', storageContext: 'edited' }
+  }
+  if (prompt.startsWith('[EDITOR]')) {
     return { operationType: 'edit', storageContext: 'edited' }
   }
   if (prompt.startsWith('[UPSCALED]')) {

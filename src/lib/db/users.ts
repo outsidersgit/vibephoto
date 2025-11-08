@@ -84,12 +84,14 @@ export async function updateUserCredits(userId: string, creditsUsed: number) {
 export async function canUserUseCredits(userId: string, creditsNeeded: number) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { creditsUsed: true, creditsLimit: true }
+    select: { creditsUsed: true, creditsLimit: true, creditsBalance: true }
   })
   
   if (!user) return false
   
-  return (user.creditsUsed + creditsNeeded) <= user.creditsLimit
+  const availablePlanCredits = user.creditsLimit - user.creditsUsed
+  const totalAvailable = availablePlanCredits + (user.creditsBalance || 0)
+  return totalAvailable >= creditsNeeded
 }
 
 export async function verifyPassword(password: string, hashedPassword: string) {

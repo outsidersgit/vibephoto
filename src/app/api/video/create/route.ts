@@ -5,7 +5,8 @@ import { KlingVideoProvider } from '@/lib/ai/providers/kling'
 import { createVideoGeneration, updateVideoGenerationJobId, getProcessingVideosCount } from '@/lib/db/videos'
 import { calculateVideoCredits, validateVideoGenerationRequest, validateUserVideoLimits, generateEnhancedPrompt, normalizeVideoGenerationRequest } from '@/lib/ai/video/utils'
 import { getVideoGenerationStats } from '@/lib/db/videos'
-import { debitCreditsForVideo } from '@/lib/video/credit-manager'
+import { CreditManager } from '@/lib/credits/manager'
+import { Plan } from '@prisma/client'
 import { AI_CONFIG } from '@/lib/ai/config'
 import type { VideoGenerationRequest, UserPlan } from '@/lib/ai/video/config'
 
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
     // Authenticate user
     const session = await requireAuthAPI()
     const userId = session.user.id
-    const userPlan = (session.user as any)?.plan || 'STARTER'
+    const userPlan = ((session.user as any)?.plan || 'STARTER') as Plan
     
     console.log('✅ Authentication successful:', { userId, userPlan })
 
@@ -87,20 +88,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Calculate credits needed
     const creditsNeeded = calculateVideoCredits(videoRequest.duration, videoRequest.quality)
-    
-    // Check user credit balance
-    const userCreditsUsed = (session.user as any)?.creditsUsed || 0
-    const userCreditsLimit = (session.user as any)?.creditsLimit || 500
-    const availableCredits = userCreditsLimit - userCreditsUsed
 
-    if (availableCredits < creditsNeeded) {
+    const affordability = await CreditManager.canUserAfford(userId, creditsNeeded, userPlan)
+
+    if (!affordability.canAfford) {
       return NextResponse.json(
-        { 
-          error: `Créditos insuficientes. Necessários: ${creditsNeeded}, Disponíveis: ${availableCredits}`,
-          creditsNeeded,
-          availableCredits
+        {
+          error: affordability.reason || `Créditos insuficientes. Necessários: ${creditsNeeded}`,
+          creditsNeeded
         },
         { status: 402 }
       )
@@ -192,25 +188,25 @@ export async function POST(request: NextRequest) {
 
       console.log(`✅ Video generation ${videoGeneration.id} submitted with job ${providerResponse.jobId}`)
 
-      // Debit credits from user account
-      try {
-        await debitCreditsForVideo(
-          userId,
-          videoGeneration.id,
-          creditsNeeded,
-          {
-            duration: videoRequest.duration,
-            quality: videoRequest.quality,
-            aspectRatio: videoRequest.aspectRatio,
-            prompt: enhancedPrompt
-          }
-        )
-        console.log(`💳 Credits debited for video ${videoGeneration.id}: ${creditsNeeded}`)
-      } catch (creditError) {
-        console.error('❌ Failed to debit credits:', creditError)
-        // Note: We don't fail the video creation if credit debit fails
-        // The video will still be created, but we log the error for manual review
+      const chargeResult = await CreditManager.deductCredits(
+        userId,
+        creditsNeeded,
+        'Geração de vídeo',
+        {
+          type: 'VIDEO_GENERATION',
+          videoId: videoGeneration.id,
+          duration: videoRequest.duration,
+          resolution: videoRequest.aspectRatio,
+          prompt: enhancedPrompt
+        }
+      )
+
+      if (!chargeResult.success) {
+        console.error('❌ Failed to debit credits:', chargeResult.error)
+        throw new Error(chargeResult.error || 'Failed to debit credits for video generation')
       }
+
+      console.log(`💳 Credits debited for video ${videoGeneration.id}: ${creditsNeeded}`)
 
       // Return success response with video info
       return NextResponse.json({

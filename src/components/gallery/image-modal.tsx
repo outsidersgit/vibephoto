@@ -31,6 +31,7 @@ import { CompactVideoButton } from '@/components/video/video-button'
 import { FeedbackModal } from '@/components/feedback/feedback-modal'
 import { useFeedback } from '@/hooks/useFeedback'
 import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
+import { CREDIT_COSTS, getVideoGenerationCost } from '@/lib/credits/pricing'
 
 // Lazy load VideoModal (Fase 2 - Otimização de Performance)
 const VideoModal = dynamic(() => import('@/components/video/video-modal').then(mod => ({ default: mod.VideoModal })), {
@@ -408,7 +409,7 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
                 className="text-white hover:bg-white hover:bg-opacity-20"
               >
                 <ZoomIn className="w-4 h-4 mr-1" />
-                Upscale (10 créditos)
+                Upscale ({CREDIT_COSTS.UPSCALE_PER_IMAGE} créditos)
               </Button>
             )}
 
@@ -421,7 +422,7 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
                   className="text-white hover:bg-white hover:bg-opacity-20"
                 >
                   <Edit2 className="w-4 h-4 mr-1" />
-                  Editar (15 créditos)
+                  Editar ({CREDIT_COSTS.IMAGE_EDIT_PER_IMAGE} créditos)
                 </Button>
               </Link>
             )}
@@ -434,7 +435,7 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
               className="text-white hover:bg-white hover:bg-opacity-20"
             >
               <Video className="w-4 h-4 mr-1" />
-              Vídeo (100 créditos)
+              Vídeo ({getVideoGenerationCost(5)} créditos)
             </Button>
 
             {/* Share Dropdown */}
@@ -672,7 +673,9 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
                         ? 'edited'
                         : currentImage.operationType,
                       {
-                        duration: currentImage.metadata?.duration,
+                        duration: currentImage.videoDuration,
+                        estimatedCost: currentImage.generation?.estimatedCost,
+                        variations: currentImage.generation?.variations,
                         packageType: currentImage.generation?.style
                       }
                     )}
