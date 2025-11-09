@@ -629,6 +629,7 @@ const MarqueeCarousel = ({ items, hoveredIndex, onHoverChange, onImageClick }: M
   const marqueeRef = useRef<HTMLDivElement>(null)
   const animationRef = useRef<number>(0)
   const translateXRef = useRef(0)
+  const resumeTimeoutRef = useRef<number | null>(null)
 
   // Check mobile on mount and resize
   useEffect(() => {
@@ -637,7 +638,13 @@ const MarqueeCarousel = ({ items, hoveredIndex, onHoverChange, onImageClick }: M
     }
     checkMobile()
     window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
+    return () => {
+      window.removeEventListener('resize', checkMobile)
+      if (resumeTimeoutRef.current) {
+        window.clearTimeout(resumeTimeoutRef.current)
+        resumeTimeoutRef.current = null
+      }
+    }
   }, [])
 
   // Duplicate items multiple times for seamless loop
@@ -692,28 +699,40 @@ const MarqueeCarousel = ({ items, hoveredIndex, onHoverChange, onImageClick }: M
     }
   }, [isPaused, isMobile, items.length])
 
-  const handleMouseEnter = (index: number) => {
-    setIsPaused(true)
+  const handleCardMouseEnter = (index: number) => {
     onHoverChange(index)
   }
 
-  const handleMouseLeave = () => {
-    // Delay resumo para suavizar a transição
-    setTimeout(() => {
-      setIsPaused(false)
-    }, 100)
+  const handleCardMouseLeave = () => {
     onHoverChange(null)
+  }
+
+  const pauseCarousel = () => {
+    if (isMobile) return
+    if (resumeTimeoutRef.current) {
+      window.clearTimeout(resumeTimeoutRef.current)
+      resumeTimeoutRef.current = null
+    }
+    setIsPaused(true)
+  }
+
+  const resumeCarousel = () => {
+    if (isMobile) return
+    if (resumeTimeoutRef.current) {
+      window.clearTimeout(resumeTimeoutRef.current)
+    }
+    resumeTimeoutRef.current = window.setTimeout(() => {
+      setIsPaused(false)
+      onHoverChange(null)
+      resumeTimeoutRef.current = null
+    }, 100)
   }
 
   return (
     <div
       className="relative w-full overflow-x-hidden"
-      onMouseEnter={() => !isMobile && setIsPaused(true)}
-      onMouseLeave={() => {
-        if (!isMobile) {
-          setTimeout(() => setIsPaused(false), 100)
-        }
-      }}
+      onMouseEnter={pauseCarousel}
+      onMouseLeave={resumeCarousel}
       onTouchStart={() => setIsPaused(true)}
       onTouchEnd={() => {
         setTimeout(() => setIsPaused(false), 300)
@@ -741,10 +760,10 @@ const MarqueeCarousel = ({ items, hoveredIndex, onHoverChange, onImageClick }: M
             <div
               key={`${item.id}-${index}`}
               className={`flex-shrink-0 ${isMobile ? 'w-72 snap-center' : 'w-80'} h-auto`}
-              onMouseEnter={() => !isMobile && handleMouseEnter(originalIndex)}
-              onMouseLeave={handleMouseLeave}
-              onFocus={() => !isMobile && handleMouseEnter(originalIndex)}
-              onBlur={handleMouseLeave}
+              onMouseEnter={() => !isMobile && handleCardMouseEnter(originalIndex)}
+              onMouseLeave={() => !isMobile && handleCardMouseLeave()}
+              onFocus={() => !isMobile && handleCardMouseEnter(originalIndex)}
+              onBlur={() => !isMobile && handleCardMouseLeave()}
               style={{ willChange: 'transform, filter, opacity' }}
             >
               <div
