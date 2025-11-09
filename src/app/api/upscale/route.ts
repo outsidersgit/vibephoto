@@ -200,7 +200,6 @@ export async function POST(request: NextRequest) {
           operationType: 'upscale',
           seed: options.seed || Math.floor(Math.random() * 1000000),
           variations: 1,
-          modelId: await getDefaultModelId(userId),
           jobId: jobId,
           processingTime: synchronousResult ? 30000 : estimateProcessingTime(numericScaleFactor), // Sync is ~30s
           estimatedCost: Math.ceil(creditsNeeded / imageCount),
@@ -408,35 +407,4 @@ export async function GET() {
     provider: 'Topaz Labs',
     limits: UPSCALE_CONFIG.planLimits
   })
-}
-
-// Helper para obter modelo padrão
-async function getDefaultModelId(userId: string): Promise<string> {
-  const defaultModel = await prisma.aIModel.findFirst({
-    where: { 
-      userId, 
-      status: 'READY'
-    },
-    orderBy: { createdAt: 'desc' }
-  })
-
-  if (!defaultModel) {
-    // Cria modelo padrão se não existir
-    const createdModel = await prisma.aIModel.create({
-      data: {
-        userId,
-        name: 'Default Upscale Model',
-        class: 'MAN', // Required field from ModelClass enum
-        classWord: 'person',
-        status: 'READY',
-        facePhotos: [],
-        halfBodyPhotos: [],
-        fullBodyPhotos: [],
-        sampleImages: []
-      }
-    })
-    return createdModel.id
-  }
-
-  return defaultModel.id
 }
