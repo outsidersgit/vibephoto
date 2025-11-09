@@ -131,57 +131,7 @@ const carouselStyles = [
     title: 'Executive Minimalist',
     description: 'Professional headshots with clean, sophisticated aesthetics',
     image: '/examples/card-executive-minimalista.jpg',
-    prompt: 'Homem elegante de terno preto e camisa branca, posando com confiança diante de uma janela com vista para a cidade ao entardecer.'
-  },
-  {
-    id: 'fitness',
-    title: 'Fitness Aesthetic',
-    description: 'Athletic portraits with dynamic energy and motivation',
-    image: '/examples/business-presentation.jpg',
-    prompt: 'Mulher atlética em conjunto fitness branco e boné vinho, alongando-se em uma pedra à beira-mar ao amanhecer, com tênis amarelo chamativo.'
-  },
-  {
-    id: 'luxury',
-    title: 'Quiet Luxury',
-    description: 'Elegant portraits with subtle luxury and refinement',
-    image: '/examples/professional-woman.jpg',
-    prompt: 'Mulher loira com cabelo solto ao vento, usando suéter bege e lenço de seda amarelo com estampa floral no pescoço, em deck de madeira à beira-mar com céu nublado e mar agitado.'
-  },
-  {
-    id: 'mirror',
-    title: 'Mirror Selfie',
-    description: 'Authentic casual moments with trendy styling',
-    image: '/examples/mirror-selfie.jpg',
-    prompt: 'Jovem estiloso tirando selfie no espelho de um elevador metálico, vestindo camisa social larga e calça de alfaiataria cinza.'
-  },
-  {
-    id: 'wanderlust',
-    title: 'Wanderlust',
-    description: 'Adventure portraits in exotic, inspiring locations',
-    image: '/examples/desert-adventure.png',
-    prompt: 'Mulher sentada de perna cruzada, usando um vestido listrado de linho bege, tomando vinho tinto em taça grande, num pátio europeu com chão de tijolos, plantas trepadeiras e mesas de ferro coloridas ao fundo.'
-  },
-  {
-      id: 'urban',
-    title: 'Urban',
-    description: 'Contemporary city life with street style edge',
-    image: '/examples/urban-style.jpg',
-    prompt: 'Mulher de cabelos longos soltos, usando camiseta verde de mangas longas, jeans largos e óculos escuros, andando pela rua segurando copo de café, vista aérea urbana com linhas marcantes.'
-  },
-  {
-    id: 'rebel',
-    title: 'Rebel',
-    description: 'Bold, edgy portraits with alternative fashion',
-    image: '/examples/rebel-style.jpg',
-    prompt: 'Jovem magro com cabelo bagunçado e óculos escuros grandes, usando camiseta cropped branca com estampa de sereia rosa, jeans preto desgastado e cinto cravejado de metal, cigarro na boca, posando com olhar desafiador em fundo urbano decadente.'
-  },
-  {
-    id: 'casual',
-    title: 'Wild Gallop',
-    description: 'Epic motion portraits with untamed desert energy',
-    image: '/examples/neo-casual.jpg',
-    prompt:
-      'Um cavalo selvagem galopando em alta velocidade através de um deserto dourado ao pôr do sol, com areia levantando em sua passagem e crina esvoaçante ao vento.'
+    prompt: 'Homem elegante de terno preto e camisa branca... Vista da cidade ao entardecer ao fundo.'
   },
   {
     id: 'art-odyssey',
@@ -189,7 +139,28 @@ const carouselStyles = [
     description: 'Dramatic fine art scenes with painterly depth',
     image: '/examples/card-art-odyssey.jpg',
     prompt:
-      'Retrato artístico estilo óleo sobre tela de uma mulher envolta em tecidos cintilantes, com fundo abstrato em espirais de luz dourada e pinceladas marcantes.'
+      'Obra-prima barroca estilo Caravaggio... Luz lateral dourada, composição triangular sacra e introspectiva.'
+  },
+  {
+    id: 'fitness',
+    title: 'Fitness Aesthetic',
+    description: 'Athletic portraits with dynamic energy and motivation',
+    image: '/examples/business-presentation.jpg',
+    prompt: 'Mulher atlética em conjunto fitness branco... Alongamento à beira-mar ao amanhecer.'
+  },
+  {
+    id: 'luxury',
+    title: 'Quiet Luxury',
+    description: 'Elegant portraits with subtle luxury and refinement',
+    image: '/examples/professional-woman.jpg',
+    prompt: 'Mulher loira com suéter bege e lenço de seda... Deck de madeira com mar nublado ao fundo.'
+  },
+  {
+    id: 'mirror',
+    title: 'Mirror Selfie',
+    description: 'Authentic casual moments with trendy styling',
+    image: '/examples/mirror-selfie.jpg',
+    prompt: 'Jovem estiloso tirando selfie no espelho... Elevador metálico com estética moderna.'
   },
   {
     id: 'ethereal-muse',
@@ -197,7 +168,14 @@ const carouselStyles = [
     description: 'Surreal dreamscapes with luminous color palettes',
     image: '/examples/card-ethereal-muse.jpg',
     prompt:
-      'Obra de arte etérea com figura feminina translúcida flutuando em nuvens coloridas, iluminação suave e detalhes brilhantes em estilo arte digital contemporânea.'
+      'Escultura helenística Laocoonte em 3D hiper-realista... Mármore translúcido com iluminação dramática lateral.'
+  },
+  {
+    id: 'wanderlust',
+    title: 'Wanderlust',
+    description: 'Adventure portraits in exotic, inspiring locations',
+    image: '/examples/desert-adventure.png',
+    prompt: 'Mulher em vestido listrado saboreando vinho... Pátio europeu com plantas trepadeiras coloridas.'
   },
   {
     id: 'future-drive',
@@ -205,7 +183,29 @@ const carouselStyles = [
     description: 'Automotive visions with neon cyberpunk atmospheres',
     image: '/examples/card-future-drive.jpg',
     prompt:
-      'Carro esportivo futurista com carroceria cromada refletindo luzes neon, deslizando por avenida cyberpunk sob chuva leve e fumaça azul ao redor.'
+      'Supercarro futurista em estúdio minimalista... Faróis LED neon e partículas de luz em alta velocidade.'
+  },
+  {
+    id: 'urban',
+    title: 'Urban',
+    description: 'Contemporary city life with street style edge',
+    image: '/examples/urban-style.jpg',
+    prompt: 'Mulher de cabelo longo e óculos escuros... Caminhando com café por ruas geométricas da cidade.'
+  },
+  {
+    id: 'rebel',
+    title: 'Rebel',
+    description: 'Bold, edgy portraits with alternative fashion',
+    image: '/examples/rebel-style.jpg',
+    prompt: 'Jovem magro de camiseta cropped branca... Cenário urbano decadente com atitude desafiadora.'
+  },
+  {
+    id: 'casual',
+    title: 'Wild Gallop',
+    description: 'Epic motion portraits with untamed desert energy',
+    image: '/examples/neo-casual.jpg',
+    prompt:
+      'Um cavalo selvagem galopando em deserto dourado... Crina esvoaçante ao entardecer com areia levantando.'
   }
 ]
 
