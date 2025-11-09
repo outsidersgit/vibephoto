@@ -142,11 +142,7 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
         state: data.uf ? data.uf.toUpperCase() : prev.state
       }))
 
-      addToast({
-        type: 'success',
-        title: 'Endereço localizado',
-        description: 'Preenchemos bairro, cidade e UF automaticamente.'
-      })
+      // Preenchimento automático silencioso (sem exibir toast de sucesso)
     } catch (err) {
       console.error('Erro ao buscar CEP:', err)
       addToast({
