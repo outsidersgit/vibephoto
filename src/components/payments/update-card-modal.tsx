@@ -5,7 +5,8 @@ import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { X, AlertCircle } from 'lucide-react'
+import { X } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 interface UpdateCardModalProps {
   onClose: () => void
@@ -16,6 +17,8 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
   const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [loadingCEP, setLoadingCEP] = useState(false)
+  const { addToast } = useToast()
 
   const [cardData, setCardData] = useState({
     holderName: '',
@@ -109,6 +112,68 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
       .replace(/\D/g, '')
       .replace(/(\d{2})(\d)/, '($1) $2')
       .replace(/(\d{5})(\d)/, '$1-$2')
+  }
+
+  const fetchAddressByCEP = async (cep: string) => {
+    const cleanCEP = cep.replace(/\D/g, '')
+    if (cleanCEP.length !== 8) {
+      return
+    }
+
+    setLoadingCEP(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`)
+      const data = await response.json()
+
+      if (data.erro || !data.logradouro) {
+        addToast({
+          type: 'error',
+          title: 'CEP não encontrado',
+          description: 'Verifique o CEP informado e tente novamente.'
+        })
+        return
+      }
+
+      setHolderInfo(prev => ({
+        ...prev,
+        postalCode: cleanCEP,
+        province: data.bairro || prev.province,
+        city: data.localidade || prev.city,
+        state: data.uf ? data.uf.toUpperCase() : prev.state
+      }))
+
+      addToast({
+        type: 'success',
+        title: 'Endereço localizado',
+        description: 'Preenchemos bairro, cidade e UF automaticamente.'
+      })
+    } catch (err) {
+      console.error('Erro ao buscar CEP:', err)
+      addToast({
+        type: 'error',
+        title: 'Erro ao buscar CEP',
+        description: 'Não foi possível obter o endereço. Tente novamente.'
+      })
+    } finally {
+      setLoadingCEP(false)
+    }
+  }
+
+  const handleCEPChange = (value: string) => {
+    const formatted = formatCEP(value)
+    const clean = formatted.replace(/\D/g, '')
+    setHolderInfo(prev => ({ ...prev, postalCode: clean }))
+
+    if (clean.length === 8) {
+      fetchAddressByCEP(clean)
+    }
+  }
+
+  const handleCEPBlur = () => {
+    const cleanCEP = holderInfo.postalCode.replace(/\D/g, '')
+    if (cleanCEP.length === 8) {
+      fetchAddressByCEP(cleanCEP)
+    }
   }
 
   return (
@@ -269,12 +334,16 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
                       <Input
                         type="text"
                         value={formatCEP(holderInfo.postalCode)}
-                        onChange={(e) => setHolderInfo({ ...holderInfo, postalCode: e.target.value.replace(/\D/g, '') })}
+                        onChange={(e) => handleCEPChange(e.target.value)}
+                        onBlur={handleCEPBlur}
                         required
                         maxLength={9}
                         className="bg-slate-700 border-slate-600 text-white h-8 sm:h-9 text-xs sm:text-sm"
                         placeholder="00000-000"
                       />
+                      {loadingCEP && (
+                        <p className="mt-1 text-[10px] text-blue-200">Buscando endereço...</p>
+                      )}
                     </div>
                     <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                       <div>
