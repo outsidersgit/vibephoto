@@ -1127,7 +1127,7 @@ export function GenerationInterface({
               <button
                 type="button"
                 onClick={handleDownloadPreview}
-                className="absolute right-12 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-medium text-gray-900 shadow hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#667EEA]"
+                className="absolute right-16 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-medium text-gray-900 shadow hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#667EEA]"
               >
                 <Download className="w-3 h-3" />
                 Baixar
