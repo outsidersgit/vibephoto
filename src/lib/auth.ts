@@ -240,18 +240,95 @@ export const authOptions: NextAuthOptions = {
       return session
     },
     async signIn({ user, account, profile }) {
-      // PrismaAdapter handles user creation automatically
-      // Don't interfere with PrismaAdapter's process
-      // Just ensure we allow signin to proceed
-      
-      // For OAuth providers, PrismaAdapter will:
-      // 1. Create User if email doesn't exist
-      // 2. Create Account linking OAuth to User
-      // 3. Link existing User if email exists
-      
-      // We don't need to do anything here except allow signin
-      // The JWT callback will handle fetching user data from DB
-      
+      if (account?.type === 'oauth' && account.provider && (profile as any)) {
+        const profileData = profile as Record<string, any>
+        const email = profileData.email || user.email
+        if (!email) {
+          console.warn(`⚠️ OAuth signin sem e-mail para provider ${account.provider}`)
+          return false
+        }
+
+        const existingUser = await prisma.user.findUnique({
+          where: { email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            avatar: true,
+            emailVerified: true
+          }
+        })
+
+        if (existingUser) {
+          const emailVerified =
+            profileData.email_verified === true ||
+            profileData.emailVerified === true ||
+            profileData.verified === true ||
+            user.emailVerified instanceof Date ||
+            !!existingUser.emailVerified ||
+            account.provider === 'github' // GitHub only returns verified emails
+
+          if (!emailVerified) {
+            console.warn(`⚠️ OAuth email não verificado para ${email}, bloqueando vínculo automático.`)
+            return '/auth/error?error=EmailNotVerified'
+          }
+
+          const providerAccountId = account.providerAccountId || account.providerAccountId?.toString() || ''
+
+          await prisma.account.upsert({
+            where: {
+              provider_providerAccountId: {
+                provider: account.provider,
+                providerAccountId
+              }
+            },
+            update: {
+              type: account.type,
+              refresh_token: account.refresh_token,
+              access_token: account.access_token,
+              expires_at: account.expires_at,
+              token_type: account.token_type,
+              scope: account.scope,
+              id_token: account.id_token,
+              session_state: account.session_state,
+              userId: existingUser.id
+            },
+            create: {
+              userId: existingUser.id,
+              type: account.type,
+              provider: account.provider,
+              providerAccountId,
+              refresh_token: account.refresh_token,
+              access_token: account.access_token,
+              expires_at: account.expires_at,
+              token_type: account.token_type,
+              scope: account.scope,
+              id_token: account.id_token,
+              session_state: account.session_state
+            }
+          })
+
+          await prisma.user.update({
+            where: { id: existingUser.id },
+            data: {
+              name: user.name ?? existingUser.name,
+              avatar: profileData.picture || profileData.image || existingUser.avatar || null,
+              emailVerified: existingUser.emailVerified ?? new Date()
+            }
+          })
+
+          if (user.id && user.id !== existingUser.id) {
+            await prisma.user.delete({ where: { id: user.id } }).catch(() => null)
+          }
+
+          user.id = existingUser.id
+          user.email = existingUser.email
+          user.name = user.name ?? existingUser.name ?? undefined
+
+          return true
+        }
+      }
+
       return true
     },
     async redirect({ url, baseUrl }) {
