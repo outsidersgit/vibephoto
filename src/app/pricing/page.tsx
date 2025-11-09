@@ -363,15 +363,15 @@ function PricingPageContent() {
                         displayFeature = feature.replace(/\d+[.,]?\d*\s*créditos\/mês/, `${yearlyCredits.toLocaleString('pt-BR')} créditos/ano`)
                       }
 
-                      if (/fotos\//i.test(feature) || feature.includes('fotos por')) {
-                        const match = feature.match(/(\d+[.,]?\d*)\s*fotos\s*(?:\/|por)/i)
-                        if (match) {
-                          const monthlyPhotos = parseInt(match[1].replace('.', '').replace(',', ''), 10)
-                          if (!Number.isNaN(monthlyPhotos)) {
-                            const yearlyPhotos = monthlyPhotos * 12
-                            displayFeature = feature.replace(match[0], `${yearlyPhotos.toLocaleString('pt-BR')} fotos por ano`)
+                      if (/fotos\//i.test(feature) || feature.toLowerCase().includes('fotos por')) {
+                        displayFeature = displayFeature.replace(/(\d+[.,]?\d*)\s*fotos\s*(?:\/|por)\s*m[eê]s/gi, (match, value) => {
+                          const monthlyPhotos = parseInt(String(value).replace(/\D/g, ''), 10)
+                          if (Number.isNaN(monthlyPhotos)) {
+                            return match
                           }
-                        }
+                          const yearlyPhotos = monthlyPhotos * 12
+                          return `${yearlyPhotos.toLocaleString('pt-BR')} fotos por ano`
+                        })
                       }
                     }
 
