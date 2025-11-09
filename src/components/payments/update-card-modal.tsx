@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,6 +40,7 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
     state: '',
     phone: ''
   })
+  const lastFetchedCepRef = useRef<string | null>(null)
 
   // Pre-fill user data
   useEffect(() => {
@@ -120,6 +121,15 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
       return
     }
 
+    if (lastFetchedCepRef.current === cleanCEP && loadingCEP) {
+      return
+    }
+
+    if (lastFetchedCepRef.current === cleanCEP) {
+      return
+    }
+
+    lastFetchedCepRef.current = cleanCEP
     setLoadingCEP(true)
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`)
@@ -131,6 +141,7 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
           title: 'CEP não encontrado',
           description: 'Verifique o CEP informado e tente novamente.'
         })
+        lastFetchedCepRef.current = null
         return
       }
 
@@ -142,7 +153,11 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
         state: data.uf ? data.uf.toUpperCase() : prev.state
       }))
 
-      // Preenchimento automático silencioso (sem exibir toast de sucesso)
+      addToast({
+        type: 'success',
+        title: 'Endereço localizado',
+        description: 'Bairro, cidade e UF preenchidos automaticamente.'
+      })
     } catch (err) {
       console.error('Erro ao buscar CEP:', err)
       addToast({
@@ -150,6 +165,7 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
         title: 'Erro ao buscar CEP',
         description: 'Não foi possível obter o endereço. Tente novamente.'
       })
+      lastFetchedCepRef.current = null
     } finally {
       setLoadingCEP(false)
     }
@@ -159,6 +175,10 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
     const formatted = formatCEP(value)
     const clean = formatted.replace(/\D/g, '')
     setHolderInfo(prev => ({ ...prev, postalCode: clean }))
+
+    if (clean.length < 8) {
+      lastFetchedCepRef.current = null
+    }
 
     if (clean.length === 8) {
       fetchAddressByCEP(clean)
@@ -197,6 +217,9 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
         {/* Conteúdo sem scroll - Desktop: duas colunas, Mobile: uma coluna */}
         <div className="flex-1 px-3 sm:px-4 md:px-6 overflow-y-auto md:overflow-y-visible">
           <form onSubmit={handleSubmit} className="py-2 sm:py-2.5 md:py-3 space-y-2 sm:space-y-3">
+            <p className="text-[10px] sm:text-xs text-slate-300">
+              Campos marcados com <span className="text-red-300">*</span> são obrigatórios.
+            </p>
             {/* Desktop: Grid de 2 colunas, Mobile: uma coluna */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               {/* Coluna Esquerda - Dados do Cartão */}
@@ -205,7 +228,9 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
 
                 <div className="space-y-1.5 sm:space-y-2">
                   <div>
-                    <Label className="text-white/80 text-[10px] sm:text-xs">Nome no Cartão</Label>
+                    <Label className="text-white/80 text-[10px] sm:text-xs">
+                      Nome no Cartão <span className="text-red-300">*</span>
+                    </Label>
                     <Input
                       type="text"
                       value={cardData.holderName}
@@ -217,7 +242,9 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
                   </div>
 
                   <div>
-                    <Label className="text-white/80 text-[10px] sm:text-xs">Número do Cartão</Label>
+                    <Label className="text-white/80 text-[10px] sm:text-xs">
+                      Número do Cartão <span className="text-red-300">*</span>
+                    </Label>
                     <Input
                       type="text"
                       value={formatCardNumber(cardData.number)}
@@ -231,7 +258,9 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
 
                   <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                     <div>
-                      <Label className="text-white/80 text-[10px] sm:text-xs">Validade (MM/AAAA)</Label>
+                      <Label className="text-white/80 text-[10px] sm:text-xs">
+                        Validade (MM/AAAA) <span className="text-red-300">*</span>
+                      </Label>
                       <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                         <Input
                           type="text"
@@ -255,7 +284,9 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
                     </div>
 
                     <div>
-                      <Label className="text-white/80 text-[10px] sm:text-xs">CVV</Label>
+                      <Label className="text-white/80 text-[10px] sm:text-xs">
+                        CVV <span className="text-red-300">*</span>
+                      </Label>
                       <Input
                         type="text"
                         value={cardData.ccv}
@@ -276,7 +307,9 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
 
                 <div className="space-y-1.5 sm:space-y-2">
                   <div>
-                    <Label className="text-white/80 text-[10px] sm:text-xs">Nome Completo</Label>
+                    <Label className="text-white/80 text-[10px] sm:text-xs">
+                      Nome Completo <span className="text-red-300">*</span>
+                    </Label>
                     <Input
                       type="text"
                       value={holderInfo.name}
@@ -287,7 +320,9 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
                   </div>
                   
                   <div>
-                    <Label className="text-white/80 text-[10px] sm:text-xs">Email</Label>
+                    <Label className="text-white/80 text-[10px] sm:text-xs">
+                      Email <span className="text-red-300">*</span>
+                    </Label>
                     <Input
                       type="email"
                       value={holderInfo.email}
@@ -299,7 +334,9 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
 
                   <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                     <div>
-                      <Label className="text-white/80 text-[10px] sm:text-xs">CPF/CNPJ</Label>
+                      <Label className="text-white/80 text-[10px] sm:text-xs">
+                        CPF/CNPJ <span className="text-red-300">*</span>
+                      </Label>
                       <Input
                         type="text"
                         value={formatCPF(holderInfo.cpfCnpj)}
@@ -311,7 +348,9 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
                       />
                     </div>
                     <div>
-                      <Label className="text-white/80 text-[10px] sm:text-xs">Telefone</Label>
+                      <Label className="text-white/80 text-[10px] sm:text-xs">
+                        Telefone <span className="text-red-300">*</span>
+                      </Label>
                       <Input
                         type="text"
                         value={formatPhone(holderInfo.phone)}
@@ -326,7 +365,9 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
 
                   <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                     <div>
-                      <Label className="text-white/80 text-[10px] sm:text-xs">CEP</Label>
+                      <Label className="text-white/80 text-[10px] sm:text-xs">
+                        CEP <span className="text-red-300">*</span>
+                      </Label>
                       <Input
                         type="text"
                         value={formatCEP(holderInfo.postalCode)}
@@ -343,7 +384,9 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
                     </div>
                     <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                       <div>
-                        <Label className="text-white/80 text-[10px] sm:text-xs">Nº</Label>
+                        <Label className="text-white/80 text-[10px] sm:text-xs">
+                          Nº <span className="text-red-300">*</span>
+                        </Label>
                         <Input
                           type="text"
                           value={holderInfo.addressNumber}
@@ -365,8 +408,10 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
                     </div>
                   </div>
 
-                  <div>
-                    <Label className="text-white/80 text-[10px] sm:text-xs">Bairro</Label>
+                    <div>
+                      <Label className="text-white/80 text-[10px] sm:text-xs">
+                        Bairro <span className="text-red-300">*</span>
+                      </Label>
                     <Input
                       type="text"
                       value={holderInfo.province}
@@ -378,7 +423,9 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
 
                   <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                     <div className="col-span-2">
-                      <Label className="text-white/80 text-[10px] sm:text-xs">Cidade</Label>
+                      <Label className="text-white/80 text-[10px] sm:text-xs">
+                        Cidade <span className="text-red-300">*</span>
+                      </Label>
                       <Input
                         type="text"
                         value={holderInfo.city}
@@ -388,7 +435,9 @@ export function UpdateCardModal({ onClose, onSuccess }: UpdateCardModalProps) {
                       />
                     </div>
                     <div>
-                      <Label className="text-white/80 text-[10px] sm:text-xs">UF</Label>
+                      <Label className="text-white/80 text-[10px] sm:text-xs">
+                        UF <span className="text-red-300">*</span>
+                      </Label>
                       <Input
                         type="text"
                         value={holderInfo.state}

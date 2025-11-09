@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useRef } from 'react'
 import type React from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -39,6 +39,7 @@ function ActivatePageContent() {
     city: '',
     state: ''
   })
+  const lastFetchedCepRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (session?.user) {
@@ -131,6 +132,15 @@ function ActivatePageContent() {
       return
     }
 
+    if (lastFetchedCepRef.current === cleanCEP && loadingCEP) {
+      return
+    }
+
+    if (lastFetchedCepRef.current === cleanCEP) {
+      return
+    }
+
+    lastFetchedCepRef.current = cleanCEP
     setLoadingCEP(true)
     
     try {
@@ -144,6 +154,7 @@ function ActivatePageContent() {
           title: 'CEP não encontrado',
           description: 'O CEP informado não foi encontrado. Verifique e tente novamente.'
         })
+        lastFetchedCepRef.current = null
         return
       }
 
@@ -168,6 +179,7 @@ function ActivatePageContent() {
         title: 'Erro ao buscar CEP',
         description: 'Não foi possível buscar o endereço. Tente novamente mais tarde.'
       })
+      lastFetchedCepRef.current = null
     } finally {
       setLoadingCEP(false)
     }
@@ -180,6 +192,9 @@ function ActivatePageContent() {
     
     // Se atingiu 8 dígitos, buscar automaticamente
     const cleanCEP = formattedCEP.replace(/\D/g, '')
+    if (cleanCEP.length < 8) {
+      lastFetchedCepRef.current = null
+    }
     if (cleanCEP.length === 8) {
       fetchAddressByCEP(formattedCEP)
     }
@@ -189,7 +204,7 @@ function ActivatePageContent() {
   const handleCEPBlur = () => {
     const cleanCEP = customerData.postalCode.replace(/\D/g, '')
     if (cleanCEP.length === 8) {
-      fetchAddressByCEP(customerData.postalCode)
+      fetchAddressByCEP(cleanCEP)
     }
   }
 
@@ -525,6 +540,9 @@ function ActivatePageContent() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <p className="text-xs text-slate-300">
+                Campos marcados com <span className="text-red-300">*</span> são obrigatórios.
+              </p>
               {/* Dados Básicos */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -562,12 +580,9 @@ function ActivatePageContent() {
                     value={customerData.cpfCnpj}
                     onChange={(e) => setCustomerData(prev => ({ ...prev, cpfCnpj: e.target.value.replace(/\D/g, '') }))}
                     className="w-full h-11 px-3 py-2 bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="11144477735 (apenas números)"
+                    placeholder="Digite apenas números"
                     required
                   />
-                  <p className="text-xs text-slate-400 mt-1">
-                    Para testes, use: 11144477735
-                  </p>
                 </div>
 
                 <div>
