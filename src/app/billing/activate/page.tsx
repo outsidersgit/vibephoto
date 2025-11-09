@@ -540,9 +540,6 @@ function ActivatePageContent() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-xs text-slate-300">
-                Campos marcados com <span className="text-red-300">*</span> são obrigatórios.
-              </p>
               {/* Dados Básicos */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -603,7 +600,6 @@ function ActivatePageContent() {
               {/* Endereço (Obrigatório) */}
               <div className="border-t border-slate-600 pt-6">
                 <h3 className="text-sm font-semibold text-white mb-4">Endereço *</h3>
-                <p className="text-xs text-slate-400 mb-4">Campos obrigatórios para criação do checkout</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-white mb-1">
