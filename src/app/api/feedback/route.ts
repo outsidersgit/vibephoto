@@ -4,7 +4,8 @@ import {
   createFeedback,
   getUserFeedbacks,
   shouldShowFeedbackModal,
-  hasFeedback
+  hasFeedback,
+  FeedbackEventType
 } from '@/lib/services/feedback-service'
 import { z } from 'zod'
 
@@ -79,9 +80,33 @@ export async function GET(request: NextRequest) {
     const generationId = searchParams.get('generationId')
     const limit = parseInt(searchParams.get('limit') || '10')
 
-    // Check if should show feedback modal for a generation
-    if (action === 'shouldShow' && generationId) {
-      const result = await shouldShowFeedbackModal(userId, generationId)
+    // Check if should show feedback badge/modal based on behavioural trigger
+    if (action === 'shouldShow') {
+      const rawEventType = searchParams.get('eventType')
+      const rawUsageCount = searchParams.get('usageCount')
+      const usageCountValue = rawUsageCount !== null ? Number(rawUsageCount) : undefined
+      const normalizedUsageCount =
+        typeof usageCountValue === 'number' && Number.isFinite(usageCountValue)
+          ? usageCountValue
+          : undefined
+      const metadataEntries = Array.from(searchParams.entries()).filter(([key]) => key.startsWith('meta_'))
+      const metadata =
+        metadataEntries.length > 0
+          ? Object.fromEntries(metadataEntries.map(([key, value]) => [key.replace('meta_', ''), value]))
+          : undefined
+
+      const allowedEventTypes: FeedbackEventType[] = ['generation_completed', 'download', 'share', 'feature_use']
+      const eventType = rawEventType && allowedEventTypes.includes(rawEventType as FeedbackEventType)
+        ? (rawEventType as FeedbackEventType)
+        : undefined
+
+      const result = await shouldShowFeedbackModal(userId, {
+        eventType,
+        usageCount: normalizedUsageCount,
+        generationId,
+        metadata
+      })
+
       return NextResponse.json({
         success: true,
         data: result

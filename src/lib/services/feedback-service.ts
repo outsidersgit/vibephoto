@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
+
+export type FeedbackEventType = 'generation_completed' | 'download' | 'share' | 'feature_use'
 
 export interface FeedbackData {
   userId: string
@@ -28,19 +29,38 @@ export interface FeedbackAnalytics {
   }[]
 }
 
-/**
- * Check if user should see feedback modal for a generation
- * Returns true if:
- * - User hasn't given feedback in last 3 generations, OR
- * - Generation is a retry/edit (same prompt/model in last hour), OR
- * - Generation uses a new model (not used in last 10 generations)
- */
-export async function shouldShowFeedbackModal(
+export interface FeedbackTriggerOptions {
+  eventType?: FeedbackEventType | null
+  usageCount?: number
+  generationId?: string | null
+  metadata?: Record<string, string>
+}
+
+export interface FeedbackTriggerResult {
+  shouldShow: boolean
+  reason?: string
+  milestone?: number | null
+  usageCount?: number
+}
+
+const FEEDBACK_EVENT_MILESTONES: Record<FeedbackEventType, number[]> = {
+  generation_completed: [5, 10, 20, 50, 100],
+  download: [3, 7, 15],
+  share: [2, 5, 10],
+  feature_use: [1, 3, 6]
+}
+
+const getNextMilestone = (eventType: FeedbackEventType, usageCount: number) => {
+  const milestones = FEEDBACK_EVENT_MILESTONES[eventType]
+  return milestones.find(milestone => milestone > usageCount) ?? null
+}
+
+const legacyShouldShowFeedbackModal = async (
   userId: string,
   generationId: string
-): Promise<{ shouldShow: boolean; reason?: string }> {
+): Promise<FeedbackTriggerResult> => {
+  // Legacy behaviour retained for backward compatibility
   try {
-    // Check if feedback already exists for this generation
     const existingFeedback = await prisma.feedback.findUnique({
       where: { generationId }
     })
@@ -49,7 +69,6 @@ export async function shouldShowFeedbackModal(
       return { shouldShow: false, reason: 'already_submitted' }
     }
 
-    // Get the current generation details
     const currentGeneration = await prisma.generation.findUnique({
       where: { id: generationId },
       select: {
@@ -64,7 +83,6 @@ export async function shouldShowFeedbackModal(
       return { shouldShow: false, reason: 'generation_not_found' }
     }
 
-    // Get user's last 10 generations
     const recentGenerations = await prisma.generation.findMany({
       where: {
         userId,
@@ -79,16 +97,13 @@ export async function shouldShowFeedbackModal(
       }
     })
 
-    // Count generations without feedback in last 3
     const last3Generations = recentGenerations.slice(0, 3)
     const feedbackCount = last3Generations.filter(g => g.feedback).length
 
-    // RULE 1: Show if no feedback in last 3 generations
     if (feedbackCount === 0 && last3Generations.length >= 3) {
       return { shouldShow: true, reason: 'no_recent_feedback' }
     }
 
-    // RULE 2: Check if it's a retry (same prompt in last hour)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
     const isRetry = recentGenerations.some(
       g =>
@@ -100,7 +115,6 @@ export async function shouldShowFeedbackModal(
       return { shouldShow: true, reason: 'retry_generation' }
     }
 
-    // RULE 3: Check if using a new model
     const modelUsedBefore = recentGenerations.some(
       g => g.modelId === currentGeneration.modelId
     )
@@ -109,11 +123,91 @@ export async function shouldShowFeedbackModal(
       return { shouldShow: true, reason: 'new_model' }
     }
 
-    // Don't show modal by default
     return { shouldShow: false, reason: 'default' }
   } catch (error) {
-    console.error('Error checking if feedback modal should show:', error)
+    console.error('Error checking legacy feedback modal rules:', error)
     return { shouldShow: false, reason: 'error' }
+  }
+}
+
+/**
+ * Evaluate if we should show the feedback badge/modal based on behavioural triggers.
+ */
+export async function shouldShowFeedbackModal(
+  userId: string,
+  { eventType, usageCount, generationId, metadata }: FeedbackTriggerOptions
+): Promise<FeedbackTriggerResult> {
+  if (!eventType) {
+    if (!generationId) {
+      return { shouldShow: false, reason: 'legacy_generation_missing' }
+    }
+    return legacyShouldShowFeedbackModal(userId, generationId)
+  }
+
+  switch (eventType) {
+    case 'generation_completed': {
+      const totalCompleted =
+        usageCount ?? await prisma.generation.count({
+          where: {
+            userId,
+            status: 'COMPLETED'
+          }
+        })
+
+      const milestones = FEEDBACK_EVENT_MILESTONES[eventType]
+      const hitMilestone = milestones.find(milestone => milestone === totalCompleted)
+
+      if (hitMilestone) {
+        return {
+          shouldShow: true,
+          reason: 'milestone_reached',
+          milestone: hitMilestone,
+          usageCount: totalCompleted
+        }
+      }
+
+      return {
+        shouldShow: false,
+        reason: 'milestone_not_reached',
+        milestone: getNextMilestone(eventType, totalCompleted),
+        usageCount: totalCompleted
+      }
+    }
+
+    case 'download':
+    case 'share':
+    case 'feature_use': {
+      if (typeof usageCount !== 'number') {
+        return { shouldShow: false, reason: 'usage_count_missing' }
+      }
+
+      const milestones = FEEDBACK_EVENT_MILESTONES[eventType]
+      const hitMilestone = milestones.find(milestone => milestone === usageCount)
+
+      if (hitMilestone) {
+        const detail =
+          eventType === 'feature_use' && metadata?.feature
+            ? `feature_${metadata.feature}`
+            : eventType
+
+        return {
+          shouldShow: true,
+          reason: `milestone_reached_${detail}`,
+          milestone: hitMilestone,
+          usageCount
+        }
+      }
+
+      return {
+        shouldShow: false,
+        reason: 'milestone_not_reached',
+        milestone: getNextMilestone(eventType, usageCount),
+        usageCount
+      }
+    }
+
+    default:
+      return { shouldShow: false, reason: 'event_not_supported' }
   }
 }
 

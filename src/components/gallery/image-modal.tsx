@@ -28,7 +28,7 @@ import { MediaItem } from '@/types'
 import { getGenerationCostDescription } from '@/lib/utils/gallery-cost'
 import Link from 'next/link'
 import { CompactVideoButton } from '@/components/video/video-button'
-import { FeedbackModal } from '@/components/feedback/feedback-modal'
+import { FeedbackBadge } from '@/components/feedback/feedback-badge'
 import { useFeedback } from '@/hooks/useFeedback'
 import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
 import { CREDIT_COSTS, getVideoGenerationCost } from '@/lib/credits/pricing'
@@ -56,22 +56,20 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
   const [showShareMenu, setShowShareMenu] = useState(false)
   const [showShareSubmenu, setShowShareSubmenu] = useState(false)
   const [showVideoModal, setShowVideoModal] = useState(false)
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
-
   const currentImage = allImages[currentImageIndex] || mediaItem
   const generationId = currentImage?.generation?.id
-  const { shouldShow: shouldShowFeedback, dismissModal: dismissFeedbackModal } = useFeedback(generationId)
+  const feedback = useFeedback({ generationId })
+  const { triggerFeedback, triggerEvent } = feedback
 
-  // Auto-trigger feedback after user views image for 3 seconds
   useEffect(() => {
     if (!generationId) return
 
-    const timer = setTimeout(() => {
-      setShowFeedbackModal(true)
-    }, 3000) // Show after 3 seconds of viewing
+    const timer = window.setTimeout(() => {
+      triggerFeedback('generation_completed')
+    }, 3000)
 
-    return () => clearTimeout(timer)
-  }, [currentImageIndex, generationId])
+    return () => window.clearTimeout(timer)
+  }, [generationId, currentImageIndex, triggerFeedback])
 
   useEffect(() => {
     // Find current image index in the array
@@ -142,6 +140,7 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
 
       // Clean up blob URL
       window.URL.revokeObjectURL(url)
+      triggerEvent('download')
     } catch (error) {
       console.error('Download failed:', error)
       // Fallback to simple download method
@@ -151,6 +150,7 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+      triggerEvent('download')
     }
   }
 
@@ -193,35 +193,43 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
     }
   }
 
-  const handleShare = async (platform: string) => {
+  const handleShare = async (platform?: string) => {
     const currentImage = allImages[currentImageIndex]
     if (!currentImage) return
 
     const promptText = currentImage.generation?.prompt || 'AI Generated Photo'
     const imageUrl = currentImage.url
 
+    let sharePerformed = false
+
     try {
       switch (platform) {
         case 'instagram':
           window.open(`https://www.instagram.com/create/story/?url=${encodeURIComponent(imageUrl)}`, '_blank')
+          sharePerformed = true
           break
         case 'tiktok':
           window.open(`https://www.tiktok.com/upload?url=${encodeURIComponent(imageUrl)}`, '_blank')
+          sharePerformed = true
           break
         case 'whatsapp':
           window.open(`https://wa.me/?text=${encodeURIComponent(`Olha essa foto incrível gerada por IA! ${imageUrl}`)}`, '_blank')
+          sharePerformed = true
           break
         case 'telegram':
           window.open(`https://t.me/share/url?url=${encodeURIComponent(imageUrl)}&text=${encodeURIComponent(promptText)}`, '_blank')
+          sharePerformed = true
           break
         case 'gmail':
           const gmailSubject = encodeURIComponent('Foto Incrível Gerada por IA')
           const gmailBody = encodeURIComponent(`Olha essa foto incrível que foi gerada por IA:\n\n${promptText}\n\n${imageUrl}`)
           window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${gmailSubject}&body=${gmailBody}`, '_blank')
+          sharePerformed = true
           break
         case 'copy':
           await navigator.clipboard.writeText(imageUrl)
           alert('Link copiado para a área de transferência!')
+          sharePerformed = true
           break
         default:
           if (navigator.share) {
@@ -230,9 +238,11 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
               text: promptText,
               url: imageUrl
             })
+            sharePerformed = true
           } else {
             await navigator.clipboard.writeText(imageUrl)
             alert('Image URL copied to clipboard!')
+            sharePerformed = true
           }
       }
     } catch (error) {
@@ -241,20 +251,40 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
       try {
         await navigator.clipboard.writeText(imageUrl)
         alert('Link copiado para a área de transferência!')
+        sharePerformed = true
       } catch (copyError) {
         console.error('Copy failed:', copyError)
       }
     }
+
+    if (sharePerformed) {
+      triggerEvent('share')
+    }
+
     setShowShareMenu(false)
     setShowShareSubmenu(false)
   }
 
+  const handleUpscaleClick = () => {
+    const currentImage = allImages[currentImageIndex]
+    if (!currentImage || !onUpscale) return
+
+    triggerEvent('feature_use', { metadata: { feature: 'upscale' } })
+    onUpscale(currentImage.url, currentImage.generation)
+  }
+
   const handleCopyPrompt = () => {
     const currentImage = allImages[currentImageIndex]
-    if (currentImage?.generation?.prompt) {
-      navigator.clipboard.writeText(currentImage.generation.prompt)
-      alert('Prompt copied to clipboard!')
+    if (!currentImage?.generation?.prompt) {
+      return
     }
+    navigator.clipboard.writeText(currentImage.generation.prompt)
+    alert('Prompt copiado para a área de transferência!')
+  }
+
+  const handleOpenVideoModal = () => {
+    triggerEvent('feature_use', { metadata: { feature: 'video' } })
+    setShowVideoModal(true)
   }
 
   if (!currentImage) return null
@@ -405,7 +435,7 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onUpscale(currentImage.url, currentImage.generation)}
+                onClick={handleUpscaleClick}
                 className="text-white hover:bg-white hover:bg-opacity-20"
               >
                 <ZoomIn className="w-4 h-4 mr-1" />
@@ -431,7 +461,7 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowVideoModal(true)}
+              onClick={handleOpenVideoModal}
               className="text-white hover:bg-white hover:bg-opacity-20"
             >
               <Video className="w-4 h-4 mr-1" />
@@ -696,21 +726,13 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
       )}
 
       {/* Feedback Modal */}
-      {generationId && showFeedbackModal && shouldShowFeedback && (
-        <FeedbackModal
-          isOpen={true}
-          onClose={() => {
-            setShowFeedbackModal(false)
-            dismissFeedbackModal()
-          }}
-          generationId={generationId}
-          generationPrompt={currentImage?.generation?.prompt}
-          onSuccess={() => {
-            console.log('✅ Feedback submitted from image modal!')
-            setShowFeedbackModal(false)
-          }}
-        />
-      )}
+      <FeedbackBadge
+        visible={feedback.isVisible}
+        onClose={feedback.dismiss}
+        onSubmit={({ rating, comment }) => feedback.submitFeedback({ rating, comment, generationId })}
+        isSubmitting={feedback.isSubmitting}
+        promptPreview={currentImage?.generation?.prompt}
+      />
     </div>
   )
 }

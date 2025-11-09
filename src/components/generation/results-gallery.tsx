@@ -1,13 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Download, Heart, Share2, Eye, MoreHorizontal, Clock, CheckCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
-import { FeedbackModal } from '@/components/feedback/feedback-modal'
-import { useFeedback } from '@/hooks/useFeedback'
 
 interface ResultsGalleryProps {
   generations: Array<{
@@ -23,25 +21,6 @@ interface ResultsGalleryProps {
 
 export function ResultsGallery({ generations }: ResultsGalleryProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [feedbackGenerationId, setFeedbackGenerationId] = useState<string | null>(null)
-  const { shouldShow, dismissModal } = useFeedback(feedbackGenerationId || undefined)
-
-  // Auto-trigger feedback modal for newly completed generation
-  useEffect(() => {
-    // Find the most recent completed generation
-    const completedGenerations = generations.filter(g => g.status === 'COMPLETED')
-
-    if (completedGenerations.length > 0) {
-      const latestCompleted = completedGenerations[0]
-
-      // Small delay before showing feedback modal
-      const timer = setTimeout(() => {
-        setFeedbackGenerationId(latestCompleted.id)
-      }, 2000) // 2 seconds after generation completes
-
-      return () => clearTimeout(timer)
-    }
-  }, [generations])
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -267,23 +246,6 @@ export function ResultsGallery({ generations }: ResultsGalleryProps) {
         </div>
       )}
 
-      {/* Feedback Modal */}
-      {feedbackGenerationId && shouldShow && (
-        <FeedbackModal
-          isOpen={true}
-          onClose={() => {
-            dismissModal()
-            setFeedbackGenerationId(null)
-          }}
-          generationId={feedbackGenerationId}
-          generationPrompt={
-            generations.find(g => g.id === feedbackGenerationId)?.prompt
-          }
-          onSuccess={() => {
-            console.log('✅ Feedback submitted successfully!')
-          }}
-        />
-      )}
     </div>
   )
 }
