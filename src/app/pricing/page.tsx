@@ -355,35 +355,48 @@ function PricingPageContent() {
               <CardContent>
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((feature, index) => {
-                    // Adjust credits display based on billing cycle
                     let displayFeature = feature
-                    if (billingCycle === 'annual' && feature.includes('créditos/mês')) {
-                      const yearlyCredits = plan.credits * 12
-                      displayFeature = feature.replace(/\d+\.?\d*\s*créditos\/mês/, `${yearlyCredits.toLocaleString('pt-BR')} créditos/ano`)
+
+                    if (billingCycle === 'annual') {
+                      if (feature.includes('créditos/mês')) {
+                        const yearlyCredits = (plan.credits || 0) * 12
+                        displayFeature = feature.replace(/\d+[.,]?\d*\s*créditos\/mês/, `${yearlyCredits.toLocaleString('pt-BR')} créditos/ano`)
+                      }
+
+                      if (/fotos\//i.test(feature) || feature.includes('fotos por')) {
+                        const match = feature.match(/(\d+[.,]?\d*)\s*fotos\s*(?:\/|por)/i)
+                        if (match) {
+                          const monthlyPhotos = parseInt(match[1].replace('.', '').replace(',', ''), 10)
+                          if (!Number.isNaN(monthlyPhotos)) {
+                            const yearlyPhotos = monthlyPhotos * 12
+                            displayFeature = feature.replace(match[0], `${yearlyPhotos.toLocaleString('pt-BR')} fotos por ano`)
+                          }
+                        }
+                      }
                     }
 
                     return (
-                    <li key={index} className="flex items-center text-sm">
-                      <div className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center mr-3">
-                        <Check className="w-3 h-3 text-gray-600" />
-                      </div>
-                      <span className="text-gray-700 flex items-center" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                        {displayFeature}
-                        {feature === '1 modelo de IA' && (
-                          <div className="relative ml-2 group">
-                            <button className="w-3 h-3 bg-gray-600 text-white rounded-full flex items-center justify-center text-xs hover:bg-gray-700 transition-colors">
-                              !
-                            </button>
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-10">
-                              <div className="text-center">
-                                Você pode criar modelos adicionais ao custo de 500 créditos cada.
+                      <li key={index} className="flex items-center text-sm">
+                        <div className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center mr-3">
+                          <Check className="w-3 h-3 text-gray-600" />
+                        </div>
+                        <span className="text-gray-700 flex items-center" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                          {displayFeature}
+                          {feature === '1 modelo de IA' && (
+                            <div className="relative ml-2 group">
+                              <button className="w-3 h-3 bg-gray-600 text-white rounded-full flex items-center justify-center text-xs hover:bg-gray-700 transition-colors">
+                                !
+                              </button>
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-10">
+                                <div className="text-center">
+                                  Você pode criar modelos adicionais ao custo de 500 créditos cada.
+                                </div>
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                               </div>
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                             </div>
-                          </div>
-                        )}
-                      </span>
-                    </li>
+                          )}
+                        </span>
+                      </li>
                     )
                   })}
                 </ul>

@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { CreditCard, Smartphone, FileText, Building2, ArrowLeft } from 'lucide-react'
+import { CreditCard, Smartphone, FileText, Building2, ArrowLeft, Check } from 'lucide-react'
 import Link from 'next/link'
 import { type Plan } from '@/config/pricing'
 import { useToast } from '@/hooks/use-toast'
@@ -468,14 +468,31 @@ function ActivatePageContent() {
                       <div className="text-sm text-gray-600 mb-3">{plan.description}</div>
                       <div className="space-y-1 text-sm">
                         {plan.features.map((feature, index) => {
-                          // Adjust credits display based on billing cycle
                           let displayFeature = feature
-                          if (billingCycle === 'annual' && feature.includes('créditos/mês')) {
-                            const yearlyCredits = plan.credits * 12
-                            displayFeature = feature.replace(/\d+\.?\d*\s*créditos\/mês/, `${yearlyCredits.toLocaleString('pt-BR')} créditos/ano`)
+
+                          if (billingCycle === 'annual') {
+                            if (feature.includes('créditos/mês')) {
+                              const yearlyCredits = (plan.credits || 0) * 12
+                              displayFeature = feature.replace(/\d+[.,]?\d*\s*créditos\/mês/, `${yearlyCredits.toLocaleString('pt-BR')} créditos/ano`)
+                            }
+
+                            if (/fotos\//i.test(feature) || feature.includes('fotos por')) {
+                              const match = feature.match(/(\d+[.,]?\d*)\s*fotos\s*(?:\/|por)/i)
+                              if (match) {
+                                const monthlyPhotos = parseInt(match[1].replace('.', '').replace(',', ''), 10)
+                                if (!Number.isNaN(monthlyPhotos)) {
+                                  const yearlyPhotos = monthlyPhotos * 12
+                                  displayFeature = feature.replace(match[0], `${yearlyPhotos.toLocaleString('pt-BR')} fotos por ano`)
+                                }
+                              }
+                            }
                           }
+
                           return (
-                          <div key={index}>✓ {displayFeature}</div>
+                            <div key={index} className="flex items-start gap-2">
+                              <Check className="h-4 w-4 mt-0.5 text-purple-500" />
+                              <span>{displayFeature}</span>
+                            </div>
                           )
                         })}
                       </div>
