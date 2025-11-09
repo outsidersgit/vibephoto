@@ -536,7 +536,7 @@ function ActivatePageContent() {
             <CardHeader>
               <CardTitle className="text-white text-lg">Informações Pessoais</CardTitle>
               <CardDescription className="text-slate-300">
-                Preencha seus dados para criar o checkout seguro
+                Campos marcados com <span className="text-red-300 text-xs align-middle">*</span> são obrigatórios.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -599,7 +599,7 @@ function ActivatePageContent() {
 
               {/* Endereço (Obrigatório) */}
               <div className="border-t border-slate-600 pt-6">
-                <h3 className="text-sm font-semibold text-white mb-4">Endereço *</h3>
+                <h3 className="text-sm font-semibold text-white mb-4">Endereço</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-white mb-1">
