@@ -40,6 +40,11 @@ const aiExamples = [
     image: "/examples/card-artisticas-conceituais.jpg"
   },
   {
+    title: "Filosofia em imagem",
+    description: "Ideias profundas ganham forma visual.",
+    image: "/examples/card-filosofia-imagem.jpg"
+  },
+  {
     title: "Fitness & Lifestyle",
     description: "Fotos motivacionais com energia e estilo.",
     image: "/examples/card-fitness-lifestyle.jpg"
