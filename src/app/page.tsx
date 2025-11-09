@@ -177,10 +177,35 @@ const carouselStyles = [
   },
   {
     id: 'casual',
-    title: 'Neo Casual',
-    description: 'Modern casual style with contemporary appeal',
+    title: 'Wild Gallop',
+    description: 'Epic motion portraits with untamed desert energy',
     image: '/examples/neo-casual.jpg',
-    prompt: 'Homem descalço usando roupa de linho bege, iluminado pelo sol dourado, em ambiente minimalista com vegetação tropical ao fundo.'
+    prompt:
+      'Um cavalo selvagem galopando em alta velocidade através de um deserto dourado ao pôr do sol, com areia levantando em sua passagem e crina esvoaçante ao vento.'
+  },
+  {
+    id: 'art-odyssey',
+    title: 'Art Odyssey',
+    description: 'Dramatic fine art scenes with painterly depth',
+    image: '/examples/card-art-odyssey.jpg',
+    prompt:
+      'Retrato artístico estilo óleo sobre tela de uma mulher envolta em tecidos cintilantes, com fundo abstrato em espirais de luz dourada e pinceladas marcantes.'
+  },
+  {
+    id: 'ethereal-muse',
+    title: 'Ethereal Muse',
+    description: 'Surreal dreamscapes with luminous color palettes',
+    image: '/examples/card-ethereal-muse.jpg',
+    prompt:
+      'Obra de arte etérea com figura feminina translúcida flutuando em nuvens coloridas, iluminação suave e detalhes brilhantes em estilo arte digital contemporânea.'
+  },
+  {
+    id: 'future-drive',
+    title: 'Future Drive',
+    description: 'Automotive visions with neon cyberpunk atmospheres',
+    image: '/examples/card-future-drive.jpg',
+    prompt:
+      'Carro esportivo futurista com carroceria cromada refletindo luzes neon, deslizando por avenida cyberpunk sob chuva leve e fumaça azul ao redor.'
   }
 ]
 
