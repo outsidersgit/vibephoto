@@ -121,7 +121,7 @@ async function getOrCreateAsaasCustomer(user: any): Promise<string> {
  */
 export async function createCreditPackageCheckout(
   packageId: string,
-  billingType: 'PIX' | 'CREDIT_CARD' | 'DEBIT_CARD',
+  billingType: 'PIX' | 'CREDIT_CARD',
   userId: string
 ): Promise<{ checkoutId: string; checkoutUrl: string }> {
   // Buscar pacote do banco de dados

@@ -30,7 +30,7 @@ interface PackageSelectorModalProps {
   onSuccess: () => void
 }
 
-type PaymentMethod = 'PIX' | 'CREDIT_CARD' | 'DEBIT_CARD'
+type PaymentMethod = 'PIX' | 'CREDIT_CARD'
 type Step = 'select-package' | 'select-method' | 'checkout'
 
 export function PackageSelectorModal({
@@ -117,6 +117,7 @@ export function PackageSelectorModal({
       setError(err.message || 'Erro ao processar pagamento')
     } finally {
       setLoading(false)
+      setSelectedMethod(null)
     }
   }
 
@@ -241,8 +242,14 @@ export function PackageSelectorModal({
 
       {/* Payment Method Selection Modal - Custom Style */}
       {step === 'select-method' && selectedPackage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+        <div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+          onClick={handleClose}
+        >
+          <div
+            className="fixed top-1/2 left-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-6 shadow-2xl mx-4"
+            onClick={(event) => event.stopPropagation()}
+          >
             <h3 className="text-2xl font-bold text-gray-900 mb-2" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
               Escolha o Método de Pagamento
             </h3>
@@ -275,20 +282,6 @@ export function PackageSelectorModal({
                   Cartão de Crédito
                 </div>
                 {loading && selectedMethod === 'CREDIT_CARD' && (
-                  <Loader2 className="w-5 h-5 text-gray-900 animate-spin mt-2" />
-                )}
-              </button>
-
-              {/* Debit Card Option */}
-              <button
-                onClick={() => !loading && handleMethodSelect('DEBIT_CARD')}
-                disabled={loading}
-                className="w-full p-6 border-2 border-gray-300 bg-gray-200 rounded-xl hover:shadow-lg transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="font-bold text-gray-900 text-lg" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                  Cartão de Débito
-                </div>
-                {loading && selectedMethod === 'DEBIT_CARD' && (
                   <Loader2 className="w-5 h-5 text-gray-900 animate-spin mt-2" />
                 )}
               </button>

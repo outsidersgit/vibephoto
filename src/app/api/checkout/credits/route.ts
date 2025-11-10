@@ -8,7 +8,7 @@ import { createCreditPackageCheckout } from '@/lib/services/asaas-checkout-servi
  *
  * Body: {
  *   packageId: string
- *   billingType: 'PIX' | 'CREDIT_CARD' | 'DEBIT_CARD'
+ *   billingType: 'PIX' | 'CREDIT_CARD'
  * }
  *
  * Returns: {
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validar billing type
-    const validBillingTypes = ['PIX', 'CREDIT_CARD', 'DEBIT_CARD']
+    const validBillingTypes = ['PIX', 'CREDIT_CARD']
     if (!validBillingTypes.includes(billingType)) {
       return NextResponse.json(
         { success: false, error: 'Billing type inválido' },

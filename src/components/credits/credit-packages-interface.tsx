@@ -54,7 +54,7 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
   const [purchasing, setPurchasing] = useState<string | null>(null)
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null)
   const [previousSelectedId, setPreviousSelectedId] = useState<string | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD' | 'DEBIT_CARD' | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD' | null>(null)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [checkoutUrl, setCheckoutUrl] = useState<string>('')
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
@@ -168,7 +168,7 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
     setShowPaymentModal(true)
   }
 
-  const handlePurchase = async (method: 'PIX' | 'CREDIT_CARD' | 'DEBIT_CARD') => {
+  const handlePurchase = async (method: 'PIX' | 'CREDIT_CARD') => {
     if (!selectedPackageId) return
 
     setPurchasing(selectedPackageId)
@@ -198,12 +198,15 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
       console.error('Erro ao processar compra:', error)
       alert('❌ Erro ao processar compra')
       setPurchasing(null)
+    } finally {
+      setPaymentMethod(null)
     }
   }
 
   const handleCheckoutSuccess = () => {
     setShowCheckoutModal(false)
     setPurchasing(null)
+    setPaymentMethod(null)
     setCheckoutUrl('')
 
     // Recarregar saldo
@@ -215,6 +218,7 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
   const handleCheckoutClose = () => {
     setShowCheckoutModal(false)
     setPurchasing(null)
+    setPaymentMethod(null)
     setCheckoutUrl('')
   }
 
@@ -320,8 +324,21 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
 
       {/* Payment Method Selection Modal */}
       {showPaymentModal && selectedPackage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+        <div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+          onClick={() => {
+            setShowPaymentModal(false)
+            setPurchasing(null)
+            if (previousSelectedId) {
+              setSelectedPackageId(previousSelectedId)
+            }
+            setPaymentMethod(null)
+          }}
+        >
+          <div
+            className="fixed top-1/2 left-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-6 shadow-2xl mx-4"
+            onClick={(event) => event.stopPropagation()}
+          >
             <h3 className="text-2xl font-bold text-gray-900 mb-2" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
               Escolha o Método de Pagamento
             </h3>
@@ -339,7 +356,7 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
                 <div className="font-bold text-gray-900 text-lg" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
                   PIX
                 </div>
-                {purchasing === 'PIX' && (
+                {paymentMethod === 'PIX' && purchasing === selectedPackage.id && (
                   <Loader2 className="w-5 h-5 text-gray-900 animate-spin mt-2" />
                 )}
               </button>
@@ -353,21 +370,7 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
                 <div className="font-bold text-gray-900 text-lg" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
                   Cartão de Crédito
                 </div>
-                {purchasing === 'CREDIT_CARD' && (
-                  <Loader2 className="w-5 h-5 text-gray-900 animate-spin mt-2" />
-                )}
-              </button>
-
-              {/* Debit Card Option */}
-              <button
-                onClick={() => handlePurchase('DEBIT_CARD')}
-                disabled={!!purchasing}
-                className="w-full p-6 border-2 border-gray-300 bg-gray-200 rounded-xl hover:shadow-lg transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="font-bold text-gray-900 text-lg" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                  Cartão de Débito
-                </div>
-                {purchasing === 'DEBIT_CARD' && (
+                {paymentMethod === 'CREDIT_CARD' && purchasing === selectedPackage.id && (
                   <Loader2 className="w-5 h-5 text-gray-900 animate-spin mt-2" />
                 )}
               </button>
@@ -376,10 +379,12 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
             <button
               onClick={() => {
                 setShowPaymentModal(false)
+                setPurchasing(null)
                 // Restaurar seleção anterior ao cancelar
                 if (previousSelectedId) {
                   setSelectedPackageId(previousSelectedId)
                 }
+                setPaymentMethod(null)
               }}
               disabled={!!purchasing}
               className="w-full py-2 text-gray-600 hover:text-gray-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed"

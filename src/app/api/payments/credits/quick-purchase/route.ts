@@ -7,10 +7,9 @@ import { getCreditPackageById } from '@/config/pricing'
  * API de Compra Rápida de Créditos
  * POST /api/payments/credits/quick-purchase
  *
- * Suporta 3 métodos:
+ * Suporta 2 métodos:
  * 1. CREDIT_CARD - Tokenização (cartão salvo ou novo)
  * 2. PIX - Geração de QR Code
- * 3. DEBIT_CARD - Processamento imediato
  */
 export async function POST(req: NextRequest) {
   try {
@@ -62,8 +61,7 @@ export async function POST(req: NextRequest) {
     // Processar baseado no método
     switch (paymentMethod) {
       case 'CREDIT_CARD':
-      case 'DEBIT_CARD':
-        return await processCardPayment(user, amount, description, cardToken, newCard, packageId, paymentMethod)
+        return await processCardPayment(user, amount, description, cardToken, newCard, packageId)
 
       case 'PIX':
         return await processPixPayment(user, amount, description, packageId)
@@ -93,8 +91,7 @@ async function processCardPayment(
   description: string,
   cardToken: string | undefined,
   newCard: any | undefined,
-  packageId: string,
-  billingType: 'CREDIT_CARD' | 'DEBIT_CARD'
+  packageId: string
 ) {
   let tokenToUse = cardToken
 
@@ -165,7 +162,7 @@ async function processCardPayment(
     },
     body: JSON.stringify({
       customer: user.asaasCustomerId,
-      billingType,
+      billingType: 'CREDIT_CARD',
       value: amount,
       dueDate: new Date().toISOString().split('T')[0],
       description,
