@@ -15,6 +15,16 @@ import { useAuthGuard } from '@/hooks/useAuthGuard'
 // Exemplos de uso da IA - Carrossel
 const aiExamples = [
   {
+    title: "Obras Reinventadas",
+    description: "Ícones visuais recriados com a força da IA.",
+    image: "/examples/card-obras-reinventadas.jpg"
+  },
+  {
+    title: "Visual Cinematográfico",
+    description: "Crie cenas que parecem saídas de um filme.",
+    image: "/examples/card-visual-cinematografico.jpg"
+  },
+  {
     title: "Redes Sociais",
     description: "Conteúdo profissional para destacar seu feed.",
     image: "/examples/card-instagram-redes-sociais.jpg"
@@ -38,11 +48,6 @@ const aiExamples = [
     title: "Artísticas & Conceituais",
     description: "Exploração criativa sem limites.",
     image: "/examples/card-artisticas-conceituais.jpg"
-  },
-  {
-    title: "Obras Reinventadas",
-    description: "Ícones visuais recriados com a força da IA.",
-    image: "/examples/card-obras-reinventadas.jpg"
   },
   {
     title: "Filosofia em imagem",
@@ -73,11 +78,6 @@ const aiExamples = [
     title: "Influência sob Medida",
     description: "O influenciador que você imagina, pronto para ganhar vida.",
     image: "/examples/card-influencer.jpg"
-  },
-  {
-    title: "Visual Cinematográfico",
-    description: "Crie cenas que parecem saídas de um filme.",
-    image: "/examples/card-visual-cinematografico.jpg"
   }
 ]
 

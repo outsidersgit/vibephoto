@@ -131,7 +131,7 @@ const carouselStyles = [
     title: 'Executive Minimalist',
     description: 'Professional headshots with clean, sophisticated aesthetics',
     image: '/examples/card-executive-minimalista.jpg',
-    prompt: 'Homem elegante de terno preto e camisa branca... Vista da cidade ao entardecer ao fundo.'
+    prompt: 'Foto elegante de terno preto e camisa branca... Vista da cidade ao entardecer ao fundo.'
   },
   {
     id: 'art-odyssey',
@@ -146,21 +146,21 @@ const carouselStyles = [
     title: 'Fitness Aesthetic',
     description: 'Athletic portraits with dynamic energy and motivation',
     image: '/examples/business-presentation.jpg',
-    prompt: 'Mulher atlética em conjunto fitness branco... Alongamento à beira-mar ao amanhecer.'
+    prompt: 'Alongando à beira-mar em conjunto fitness branco... ao amanhecer.'
   },
   {
     id: 'luxury',
     title: 'Quiet Luxury',
     description: 'Elegant portraits with subtle luxury and refinement',
     image: '/examples/professional-woman.jpg',
-    prompt: 'Mulher loira com suéter bege e lenço de seda... Deck de madeira com mar nublado ao fundo.'
+    prompt: 'Mulher loira com suéter bege e lenço de seda da Hermès... Deck de madeira com mar nublado ao fundo.'
   },
   {
     id: 'mirror',
     title: 'Mirror Selfie',
     description: 'Authentic casual moments with trendy styling',
     image: '/examples/mirror-selfie.jpg',
-    prompt: 'Jovem estiloso tirando selfie no espelho... Elevador metálico com estética moderna.'
+    prompt: 'Tirando uma selfie no espelho... Elevador metálico com estética moderna.'
   },
   {
     id: 'ethereal-muse',
@@ -191,7 +191,7 @@ const carouselStyles = [
     title: 'Urban',
     description: 'Contemporary city life with street style edge',
     image: '/examples/urban-style.jpg',
-    prompt: 'Mulher de cabelo longo e óculos escuros... Caminhando com café por ruas geométricas da cidade.'
+    prompt: 'Caminhando pela rua segurando um copo de café... Cabelos soltos e usando óculos escuros.'
   },
   {
     id: 'rebel',
@@ -206,7 +206,7 @@ const carouselStyles = [
     description: 'Aventuras cósmicas com detalhes astronômicos impressionantes',
     image: '/examples/card-pilares-criacao.jpg',
     prompt:
-      'Imagem astronômica em alta resolução dos Pilares da Criação na Nebulosa da Águia... Enormes torres de gás e poeira interestelar erguem-se diante de estrelas brilhantes... Paleta com azuis profundos, verdes esmeralda, toques dourados e nuances avermelhadas... Iluminação etérea e difusa com poeira brilhando sob luz de estrelas próximas... Estilo: realismo astrofotográfico NASA Hubble, escala cósmica, nitidez ultra-alta.'
+      'Imagem em alta resolução dos Pilares da Criação, capturada pelo Telescópio Hubble... Estilo: realismo astrofotográfico NASA Hubble, escala cósmica, nitidez ultra-alta.'
   },
   {
     id: 'casual',
@@ -214,7 +214,7 @@ const carouselStyles = [
     description: 'Epic motion portraits with untamed desert energy',
     image: '/examples/neo-casual.jpg',
     prompt:
-      'Um cavalo selvagem galopando em deserto dourado... Crina esvoaçante ao entardecer com areia levantando.'
+      'Um cavalo selvagem galopando pelo deserto dourado... com areia levantando e crina esvoaçante.'
   }
 ]
 
