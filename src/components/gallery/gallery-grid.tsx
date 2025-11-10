@@ -605,7 +605,7 @@ export function GalleryGrid({
 
                 {/* Hover Actions */}
                 {!bulkSelectMode && hoveredImage === currentImageUrl && (
-                  <React.Fragment>
+                  <div className="relative h-full w-full">
                     {/* Overlay com botões centrais */}
                     <div
                       className="absolute inset-0 bg-black bg-opacity-30 rounded-lg flex items-center justify-center px-2 z-10"
@@ -822,7 +822,7 @@ export function GalleryGrid({
                         <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
                       </Button>
                     )}
-                  </React.Fragment>
+                  </div>
                 )}
               </div>
             )

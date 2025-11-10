@@ -248,6 +248,7 @@ export function ImageModal({
   const handleCreateVideo = useCallback(() => {
     const currentImage = allImages[currentImageIndex]
     if (!currentImage) return
+    console.log('Criar vídeo clicado', currentImage.url)
     triggerEvent('feature_use', { metadata: { feature: 'video' } })
     router.push(`/generate?video=${encodeURIComponent(currentImage.url)}`)
   }, [allImages, currentImageIndex, router, triggerEvent])
@@ -404,6 +405,7 @@ export function ImageModal({
     if (!currentImage) return
 
     const imageUrl = currentImage.url
+    console.log('Compartilhar clicado', platform ?? 'menu', imageUrl)
 
     try {
       switch (platform) {
@@ -677,7 +679,10 @@ export function ImageModal({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowShareMenu(!showShareMenu)}
+                onClick={() => {
+                  console.log('Abrindo menu de compartilhamento', !showShareMenu)
+                  setShowShareMenu(!showShareMenu)
+                }}
                 className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 cursor-pointer"
                 title="Compartilhar"
               >
