@@ -122,39 +122,96 @@ export function ImageModal({
     if (!currentImage) return
 
     try {
-      // Fetch the image as blob to handle CORS and different domains
-      const response = await fetch(currentImage.url)
-      if (!response.ok) throw new Error('Failed to fetch image')
+      // Generate filename
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '')
+      const promptSlug = currentImage.generation?.prompt?.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_') || 'image'
+      const filename = `vibephoto_${promptSlug}_${timestamp}.jpg`
 
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
+      // Try different download methods
+      let downloadSuccess = false
 
-      // Create download link
-      const link = document.createElement('a')
-      link.href = url
-      const timestamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14)
-      const extension = blob.type.includes('video') ? 'mp4' : 'jpg'
-      link.download = `vibephoto_${timestamp}.${extension}`
+      // Method 1: Try proxy download through our API
+      try {
+        const proxyResponse = await fetch('/api/download-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl: currentImage.url, filename })
+        })
 
-      // Trigger download
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+        if (proxyResponse.ok) {
+          const blob = await proxyResponse.blob()
+          const url = window.URL.createObjectURL(blob)
 
-      // Clean up blob URL
-      window.URL.revokeObjectURL(url)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = filename
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(url)
+
+          downloadSuccess = true
+        }
+      } catch (proxyError) {
+        console.log('Proxy download failed, trying direct fetch:', proxyError)
+      }
+
+      // Method 2: Direct fetch with CORS mode
+      if (!downloadSuccess) {
+        try {
+          const response = await fetch(currentImage.url, {
+            mode: 'cors',
+            headers: {
+              'Accept': 'image/*'
+            }
+          })
+
+          if (!response.ok) throw new Error(`HTTP ${response.status}`)
+
+          const blob = await response.blob()
+          const url = window.URL.createObjectURL(blob)
+
+          const link = document.createElement('a')
+          link.href = url
+          link.download = filename
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(url)
+
+          downloadSuccess = true
+        } catch (directError) {
+          console.log('Direct fetch failed, trying fallback:', directError)
+        }
+      }
+
+      // Method 3: Fallback - force download attribute
+      if (!downloadSuccess) {
+        const link = document.createElement('a')
+        link.href = currentImage.url
+        link.download = filename
+        link.setAttribute('download', filename)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        downloadSuccess = true
+      }
+
+      // Show success feedback
+      showShareFeedback({
+        success: true,
+        method: 'download',
+        message: 'Download iniciado com sucesso!'
+      })
+
       triggerEvent('download')
     } catch (error) {
-      console.error('Download failed:', error)
-      const timestamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14)
-      const link = document.createElement('a')
-      link.href = currentImage.url
-      link.download = `vibephoto_${timestamp}.jpg`
-      link.rel = 'noopener'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      triggerEvent('download')
+      console.error('All download methods failed:', error)
+      showShareFeedback({
+        success: false,
+        method: 'download',
+        message: 'Erro ao baixar arquivo. Tente clicar com o botão direito e "Salvar imagem como".'
+      })
     }
   }
 
