@@ -246,15 +246,22 @@ export function ImageModal({
     }
   }
 
-  const handleCreateVideo = useCallback(() => {
-    const currentImage = allImages[currentImageIndex]
-    if (!currentImage) return
-    const videoSource = currentImage.originalUrl || currentImage.url
-    console.log('Criar vídeo clicado', videoSource)
-    triggerEvent('feature_use', { metadata: { feature: 'video' } })
-    onClose()
-    router.push(`/generate?video=${encodeURIComponent(videoSource)}`)
-  }, [allImages, currentImageIndex, onClose, router, triggerEvent])
+  const handleCreateVideo = useCallback(
+    (event?: React.MouseEvent<HTMLButtonElement>) => {
+      event?.stopPropagation()
+
+      const currentImage = allImages[currentImageIndex]
+      if (!currentImage) return
+
+      const videoSource = currentImage.originalUrl || currentImage.url
+      console.log('Criar vídeo clicado', videoSource)
+
+      triggerEvent('feature_use', { metadata: { feature: 'video' } })
+      onClose()
+      router.push(`/generate?video=${encodeURIComponent(videoSource)}`)
+    },
+    [allImages, currentImageIndex, onClose, router, triggerEvent]
+  )
 
   const renderShareMenu = () => {
     if (!showShareMenu) return null
@@ -667,11 +674,9 @@ export function ImageModal({
             <Button
               variant="ghost"
               size="sm"
-              onClick={(e) => {
-                e.stopPropagation()
-                handleCreateVideo()
-              }}
-              className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 cursor-pointer"
+              onClick={handleCreateVideo}
+              className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20"
+              type="button"
               title="Criar vídeo a partir desta imagem"
             >
               <Video className="w-4 h-4" />
