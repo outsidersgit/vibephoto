@@ -623,6 +623,7 @@ function ActivatePageContent() {
                   <div>
                     <label className="block text-sm font-medium text-white mb-1">
                       Logradouro/Rua <span className="text-red-300 text-xs align-middle">*</span>
+                    </label>
                     <input
                       type="text"
                       value={customerData.address}
