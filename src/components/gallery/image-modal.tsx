@@ -592,7 +592,10 @@ export function ImageModal({
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleDownload}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDownload()
+              }}
               className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20"
               title="Baixar imagem"
             >
@@ -603,7 +606,10 @@ export function ImageModal({
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleToggleFavorite}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleToggleFavorite()
+              }}
               className={`inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 ${isFavorite ? 'text-pink-300' : ''}`}
               title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
             >
@@ -614,7 +620,10 @@ export function ImageModal({
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleDelete}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDelete()
+              }}
               className="inline-flex items-center gap-1 px-3 py-2 text-red-400 hover:bg-red-500/20 hover:text-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isDeleting}
               title="Excluir imagem"
@@ -653,7 +662,10 @@ export function ImageModal({
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleCreateVideo}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleCreateVideo()
+              }}
               className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 cursor-pointer"
               title="Criar vídeo a partir desta imagem"
             >
