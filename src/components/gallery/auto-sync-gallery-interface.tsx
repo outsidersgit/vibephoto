@@ -806,7 +806,7 @@ export function AutoSyncGalleryInterface({
     try {
       await deleteGenerationMutation.mutateAsync(generationId)
 
-      setGenerations(prev => prev.filter(gen => gen.id !== generationId))
+      setLocalGenerations(prev => prev.filter(gen => gen.id !== generationId))
 
       addToast({
         title: 'Imagem excluída',
@@ -820,7 +820,7 @@ export function AutoSyncGalleryInterface({
       const message = error instanceof Error ? error.message : 'Não foi possível excluir a imagem.'
 
       if (message.toLowerCase().includes('not found')) {
-        setGenerations(prev => prev.filter(gen => gen.id !== generationId))
+        setLocalGenerations(prev => prev.filter(gen => gen.id !== generationId))
         addToast({
           title: 'Imagem já removida',
           description: 'Essa geração já não estava mais disponível na galeria.',

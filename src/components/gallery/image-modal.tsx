@@ -233,7 +233,7 @@ export function ImageModal({
 
     try {
       setIsDeleting(true)
-      const success = await onDeleteGeneration(currentImage.generation.id)
+      const success = await onDeleteGeneration(currentImage.generation.id, { confirm: false })
       if (success) {
         onClose()
       }
