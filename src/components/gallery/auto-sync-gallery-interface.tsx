@@ -793,10 +793,38 @@ export function AutoSyncGalleryInterface({
     setBulkSelectMode(false)
   }
 
-  const handleDeleteGeneration = (generationId: string) => {
-    // Remove from local state
-    setGenerations(prev => prev.filter(gen => gen.id !== generationId))
-  }
+  const handleDeleteGeneration = useCallback(async (generationId: string, options: { confirm?: boolean } = {}) => {
+    if (!generationId) return false
+
+    if (options.confirm !== false) {
+      const confirmed = confirm('Tem certeza que deseja excluir esta geração? Esta ação não pode ser desfeita.')
+      if (!confirmed) {
+        return false
+      }
+    }
+
+    try {
+      await deleteGenerationMutation.mutateAsync(generationId)
+
+      setGenerations(prev => prev.filter(gen => gen.id !== generationId))
+
+      addToast({
+        title: 'Imagem excluída',
+        description: 'A geração foi removida com sucesso.',
+        variant: 'default'
+      })
+
+      return true
+    } catch (error) {
+      console.error('❌ Erro ao excluir geração:', error)
+      addToast({
+        title: 'Erro ao excluir',
+        description: error instanceof Error ? error.message : 'Não foi possível excluir a imagem. Tente novamente.',
+        variant: 'destructive'
+      })
+      return false
+    }
+  }, [addToast, deleteGenerationMutation])
 
   const handleBulkDeleteVideos = async (videoIds: string[]) => {
     if (videoIds.length === 0) return
@@ -1894,7 +1922,7 @@ export function AutoSyncGalleryInterface({
             onClose={() => setSelectedImage(null)}
             allImages={allImages}
             onUpscale={handleOpenUpscale}
-            onDelete={handleDeleteGeneration}
+            onDeleteGeneration={handleDeleteGeneration}
             userPlan={user?.plan || 'FREE'}
           />
         )
