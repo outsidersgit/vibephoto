@@ -21,13 +21,13 @@ import {
   Edit2,
   ZoomIn,
   Video,
-  ChevronDown,
-  ChevronUp,
+  Info,
   Trash2
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { MediaItem } from '@/types'
 import { getGenerationCostDescription } from '@/lib/utils/gallery-cost'
+import { ImageDetailsDialog } from './image-details-dialog'
 
 interface GalleryListProps {
   mediaItems?: MediaItem[]
@@ -61,17 +61,8 @@ export function GalleryList({
   const router = useRouter()
   // Use mediaItems if provided, otherwise fall back to generations
   const items = mediaItems.length > 0 ? mediaItems : generations
-  const [expandedPrompts, setExpandedPrompts] = useState<Set<string>>(new Set())
+  const [infoGeneration, setInfoGeneration] = useState<any | null>(null)
 
-  const togglePromptExpansion = (itemId: string) => {
-    const newExpanded = new Set(expandedPrompts)
-    if (newExpanded.has(itemId)) {
-      newExpanded.delete(itemId)
-    } else {
-      newExpanded.add(itemId)
-    }
-    setExpandedPrompts(newExpanded)
-  }
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'PROCESSING':
@@ -184,8 +175,8 @@ export function GalleryList({
         const status = item.status || generation.status
         const prompt = generation.prompt || 'No prompt available'
         const itemId = item.id || generation.id
-        const isExpanded = expandedPrompts.has(itemId)
         const shouldTruncate = prompt.length > 100
+        const displayedPrompt = shouldTruncate ? `${prompt.substring(0, 100)}...` : prompt
 
         return (
         <Card key={item.id || generation.id} className="overflow-hidden hover:shadow-md transition-shadow duration-200 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
@@ -222,6 +213,20 @@ export function GalleryList({
                         {selectedImages.includes(imageUrl) && (
                           <Check className="w-3 h-3" />
                         )}
+                      </button>
+                    )}
+
+                    {!bulkSelectMode && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setInfoGeneration(generation)
+                        }}
+                        className="absolute bottom-2 right-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black/80"
+                        title="Ver detalhes da imagem"
+                      >
+                        <Info className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
@@ -264,29 +269,10 @@ export function GalleryList({
                   )}
                 </div>
 
-                {/* Prompt with expansion */}
+                {/* Prompt (resumo) */}
                 <div className="mb-3">
                   <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {shouldTruncate && !isExpanded
-                      ? prompt.substring(0, 100) + '...'
-                      : prompt
-                    }
-                    {shouldTruncate && (
-                      <button
-                        onClick={() => togglePromptExpansion(itemId)}
-                        className="ml-2 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                      >
-                        {isExpanded ? (
-                          <span className="inline-flex items-center gap-1">
-                            menos <ChevronUp className="w-3 h-3" />
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1">
-                            mais <ChevronDown className="w-3 h-3" />
-                          </span>
-                        )}
-                      </button>
-                    )}
+                    {displayedPrompt}
                   </h3>
                 </div>
 
@@ -435,6 +421,12 @@ export function GalleryList({
         </Card>
         )
       })}
+
+      <ImageDetailsDialog
+        generation={infoGeneration}
+        open={infoGeneration !== null}
+        onClose={() => setInfoGeneration(null)}
+      />
     </div>
   )
 }

@@ -19,8 +19,6 @@ import {
   ZoomIn,
   Edit,
   Video,
-  ChevronDown,
-  ChevronUp,
   ChevronLeft,
   ChevronRight,
   Copy,
@@ -32,6 +30,7 @@ import { getGenerationCostDescription, resolveOperationTypeFromGeneration } from
 import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
 import { sharePhoto, SharePlatform } from '@/lib/utils/social-share'
 import { OptimizedImage } from '@/components/ui/optimized-image'
+import { ImageDetailsDialog } from './image-details-dialog'
 
 // Lazy load modals pesados (Fase 2 - Otimização de Performance)
 const ComparisonModal = dynamic(() => import('./comparison-modal').then(mod => ({ default: mod.ComparisonModal })), {
@@ -80,8 +79,8 @@ export function GalleryGrid({
   const [hoveredImage, setHoveredImage] = useState<string | null>(null)
   const [shareDropdown, setShareDropdown] = useState<string | null>(null)
   const [shareSubmenu, setShareSubmenu] = useState<string | null>(null)
-  const [expandedDescription, setExpandedDescription] = useState<string | null>(null)
   const [currentVariations, setCurrentVariations] = useState<Record<string, number>>({})
+  const [infoGeneration, setInfoGeneration] = useState<any | null>(null)
   const [currentModal, setCurrentModal] = useState<{
     type: 'image' | 'comparison' | 'video' | null
     generation: any | null
@@ -516,6 +515,20 @@ export function GalleryGrid({
                   />
                 </div>
 
+                {!bulkSelectMode && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setInfoGeneration(generation)
+                    }}
+                    className="absolute bottom-2 right-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black/80"
+                    title="Ver detalhes da imagem"
+                  >
+                    <Info className="w-4 h-4" />
+                  </button>
+                )}
+
                 {/* Navigation Arrows - only show if multiple variations */}
                 {generation.imageUrls.length > 1 && (
                   <>
@@ -847,70 +860,6 @@ export function GalleryGrid({
             </CardContent>
           </Card>
         ) : null}
-
-        {/* Description Dropdown */}
-        {generation.status === 'COMPLETED' && (
-          <div className="bg-gray-800/80 rounded border border-gray-700/50">
-            <button
-              onClick={() => setExpandedDescription(expandedDescription === generation.id ? null : generation.id)}
-              className="w-full flex items-center justify-center py-1.5 px-2 text-left hover:bg-gray-700/50 transition-colors"
-            >
-              {expandedDescription === generation.id ? (
-                <ChevronUp className="w-3 h-3 text-gray-200" />
-              ) : (
-                <ChevronDown className="w-3 h-3 text-gray-200" />
-              )}
-            </button>
-
-            {expandedDescription === generation.id && (
-              <div className="px-3 pb-3 border-t border-gray-700/50">
-                <div className="space-y-2 pt-3">
-                  {/* Prompt */}
-                  <div>
-                    <div className="text-xs font-medium text-gray-400 mb-1">Prompt:</div>
-                    <p className="text-sm text-gray-200 leading-relaxed">{generation.prompt}</p>
-                  </div>
-
-                  {/* Model */}
-                  {generation.model && (
-                    <div>
-                      <div className="text-xs font-medium text-gray-400 mb-1">Modelo:</div>
-                      <p className="text-sm text-gray-300">{generation.model.name}</p>
-                    </div>
-                  )}
-
-                  {/* Date */}
-                  <div>
-                    <div className="text-xs font-medium text-gray-400 mb-1">Criado em:</div>
-                    <p className="text-sm text-gray-300">{formatDate(generation.createdAt)}</p>
-                  </div>
-
-                  {/* Images count */}
-                  <div>
-                    <div className="text-xs font-medium text-gray-400 mb-1">Imagens:</div>
-                    <p className="text-sm text-gray-300">{generation.imageUrls?.length || 0} gerada(s)</p>
-                  </div>
-
-                  {/* Cost Information */}
-                  <div>
-                    <div className="text-xs font-medium text-gray-400 mb-1">Custo:</div>
-                    <p className="text-sm text-gray-300 font-medium">
-                      {getGenerationCostDescription(generation)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    )
-  })
-
-  return (
-    <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {gridItems}
       </div>
 
       {/* Modals */}
@@ -928,6 +877,12 @@ export function GalleryGrid({
           onClose={closeModal}
         />
       )}
+
+      <ImageDetailsDialog
+        generation={infoGeneration}
+        open={infoGeneration !== null}
+        onClose={() => setInfoGeneration(null)}
+      />
     </>
   )
 }
