@@ -20,7 +20,7 @@ const faqData: FAQItem[] = [
   {
     category: 'geral',
     question: 'Como funciona o sistema de créditos?',
-    answer: 'Cada geração de foto consome créditos do seu plano. O plano Starter oferece 500 créditos/mês, Premium 1500 créditos/mês e Gold 3500 créditos/mês. Os créditos são renovados mensalmente e não acumulam entre os períodos. Você também pode comprar pacotes de créditos únicos que são válidos por 1 ano.'
+    answer: 'Cada geração de foto consome créditos do seu plano. O plano Starter oferece 500 créditos/mês, o Premium 1500 créditos/mês e o Gold 3500 créditos/mês. Nos planos anuais, os créditos são multiplicados por 12 e disponibilizados de uma só vez, com validade de 1 ano. Nos planos mensais, os créditos são renovados a cada mês e não acumulam entre os períodos. Você também pode comprar pacotes de créditos avulsos, válidos por 1 ano.'
   },
   {
     category: 'geral',
@@ -67,7 +67,7 @@ const faqData: FAQItem[] = [
   {
     category: 'funcionamento',
     question: 'Quantos créditos cada foto consome?',
-    answer: 'Cada foto gerada consome, por padrão, 10 créditos, independentemente do plano. Fotos criadas pelo Editor de IA custam 15 créditos por imagem. Alguns pacotes de fotos podem ter custo superior por imagem, conforme o nível de detalhamento ou exclusividade do pacote.'
+    answer: 'Cada foto gerada consome, por padrão, 10 créditos, independentemente do plano. Fotos criadas pelo Editor IA custam 15 créditos por imagem. Alguns pacotes de fotos podem ter custo superior por imagem, conforme o nível de detalhamento ou exclusividade do pacote.'
   },
   {
     category: 'funcionamento',
@@ -82,7 +82,7 @@ const faqData: FAQItem[] = [
   {
     category: 'funcionamento',
     question: 'Como funciona o Editor IA?',
-    answer: 'O Editor IA permite editar ou criar qualquer imagem — seja sua, gerada na plataforma ou totalmente nova. Você pode recriar fotos famosas, montar campanhas publicitárias ou dar vida a qualquer ideia usando comandos de texto simples. Modifique cenários, troque roupas, ajuste luz, remova objetos ou combine imagens com realismo total. Cada edição custa 15 créditos.'
+    answer: 'O Editor IA permite editar ou criar qualquer imagem — seja sua, gerada na plataforma ou totalmente nova. Você pode recriar fotos famosas, montar campanhas publicitárias ou dar vida a qualquer ideia usando comandos de texto simples. Modifique cenários, troque roupas, ajuste luz, remova objetos ou combine imagens com realismo total. Cada geração custa 15 créditos.'
   },
   {
     category: 'funcionamento',
