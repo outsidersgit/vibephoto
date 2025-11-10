@@ -755,17 +755,21 @@ export function AutoSyncGalleryInterface({
   // Funções para gerenciar favoritos
   const toggleFavorite = useCallback(async (imageUrl: string, generation?: any) => {
     const generationId = generation?.id
+    const isCurrentlyFavorite = favoriteImages.includes(imageUrl)
+
     if (!generationId) {
-      // Fallback: só alterna localmente
-      setFavoriteImages(prev =>
-        prev.includes(imageUrl)
-          ? prev.filter(url => url !== imageUrl)
-          : [...prev, imageUrl]
-      )
-      return prev.includes(imageUrl)
+      setFavoriteImages(prev => {
+        const set = new Set(prev)
+        if (isCurrentlyFavorite) {
+          set.delete(imageUrl)
+        } else {
+          set.add(imageUrl)
+        }
+        return Array.from(set)
+      })
+      return !isCurrentlyFavorite
     }
 
-    const isCurrentlyFavorite = favoriteImages.includes(imageUrl)
     const nextState = !isCurrentlyFavorite
 
     setFavoriteImages(prev => {

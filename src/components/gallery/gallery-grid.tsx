@@ -29,7 +29,6 @@ import {
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { getGenerationCostDescription, resolveOperationTypeFromGeneration } from '@/lib/utils/gallery-cost'
-import { CompactVideoButton } from '@/components/video/video-button'
 import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
 import { sharePhoto, SharePlatform } from '@/lib/utils/social-share'
 import { OptimizedImage } from '@/components/ui/optimized-image'
@@ -691,14 +690,19 @@ export function GalleryGrid({
                       )}
 
                       {/* Criar vídeo */}
-                      <CompactVideoButton
-                        imageUrl={currentImageUrl}
-                        mode="image-to-video"
-                        generation={generation}
-                        userPlan={userPlan || 'FREE'}
+                      <Button
+                        size="sm"
                         variant="secondary"
                         className="h-9 w-9 sm:h-7 sm:w-7 p-0"
-                      />
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const videoSource = generation?.originalImageUrl || currentImageUrl
+                          router.push(`/generate?video=${encodeURIComponent(videoSource)}`)
+                        }}
+                        title="Criar vídeo"
+                      >
+                        <Video className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                      </Button>
 
                       {/* Compartilhar */}
                       <div className="relative">
