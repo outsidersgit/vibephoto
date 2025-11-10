@@ -176,7 +176,7 @@ const carouselStyles = [
     description: 'Adventure portraits in exotic, inspiring locations',
     image: '/examples/desert-adventure.png',
     prompt:
-      'Recriação da icônica fotografia “Afghan Girl” de Steve McCurry... Jovem afegã de olhos verdes intensos sob lenço vermelho, encarando a câmera com olhar profundo... Luz lateral suave revela textura natural da pele... Fundo esverdeado desfocado contrasta com o calor do lenço... Estilo: fotojornalismo National Geographic, textura de filme Kodachrome, realismo emocional.'
+      'Recrie a icônica fotografia “Afghan Girl” de Steve McCurry... Estilo: fotojornalismo National Geographic, textura de filme Kodachrome, realismo emocional.'
   },
   {
     id: 'future-drive',
@@ -199,6 +199,14 @@ const carouselStyles = [
     description: 'Bold, edgy portraits with alternative fashion',
     image: '/examples/rebel-style.jpg',
     prompt: 'Jovem magro de camiseta cropped branca... Cenário urbano decadente com atitude desafiadora.'
+  },
+  {
+    id: 'cosmic-pillars',
+    title: 'Pilares da Criação',
+    description: 'Aventuras cósmicas com detalhes astronômicos impressionantes',
+    image: '/examples/card-pilares-criacao.jpg',
+    prompt:
+      'Imagem astronômica em alta resolução dos Pilares da Criação na Nebulosa da Águia... Enormes torres de gás e poeira interestelar erguem-se diante de estrelas brilhantes... Paleta com azuis profundos, verdes esmeralda, toques dourados e nuances avermelhadas... Iluminação etérea e difusa com poeira brilhando sob luz de estrelas próximas... Estilo: realismo astrofotográfico NASA Hubble, escala cósmica, nitidez ultra-alta.'
   },
   {
     id: 'casual',
