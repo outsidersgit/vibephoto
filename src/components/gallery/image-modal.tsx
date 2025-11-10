@@ -227,13 +227,20 @@ export function ImageModal({
   }, [allImages, currentImageIndex, onToggleFavorite])
 
   const handleDelete = async () => {
-    if (!currentImage.generation?.id || !onDeleteGeneration) return
+    if (!currentImage?.generation?.id || !onDeleteGeneration) return
+
+    const confirmed = confirm('Tem certeza que deseja excluir esta imagem? Esta ação não pode ser desfeita.')
+    if (!confirmed) return
+
     try {
       setIsDeleting(true)
       const success = await onDeleteGeneration(currentImage.generation.id)
       if (success) {
         onClose()
       }
+    } catch (error) {
+      console.error('Erro ao excluir:', error)
+      alert('Erro ao excluir imagem. Tente novamente.')
     } finally {
       setIsDeleting(false)
     }

@@ -605,7 +605,7 @@ export function GalleryGrid({
 
                 {/* Hover Actions */}
                 {!bulkSelectMode && hoveredImage === currentImageUrl && (
-                  <>
+                  <div className="relative w-full h-full">
                     {/* Botão Excluir - Canto Inferior Direito */}
                     {onDeleteGeneration && (
                       <Button
@@ -821,7 +821,7 @@ export function GalleryGrid({
                         )}
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             )
