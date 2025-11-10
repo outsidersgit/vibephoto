@@ -1793,7 +1793,10 @@ export default function HomePage() {
           {/* Coverflow Carousel Section */}
           <div id="gallery-section" className="py-20 w-full">
             <div className="text-center mb-16 px-4 md:px-6">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Explore toda sua imaginação</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">Explore toda sua imaginação</h2>
+              <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+                Além de gerar fotos realistas com seu modelo, você também pode criar imagens únicas usando nossas ferramentas de IA.
+              </p>
             </div>
 
             {/* Infinite Marquee Carousel - Full Width */}

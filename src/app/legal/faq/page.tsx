@@ -15,12 +15,12 @@ const faqData: FAQItem[] = [
   {
     category: 'geral',
     question: 'O que é o Vibe Photo?',
-    answer: 'O Vibe Photo é uma plataforma que utiliza inteligência artificial para gerar fotos profissionais personalizadas. Você envia suas selfies, nossa IA treina um modelo único baseado no seu rosto e depois pode gerar fotos suas em qualquer cenário, pose ou estilo que desejar.'
+    answer: 'O Vibe Photo é uma plataforma que utiliza inteligência artificial para gerar fotos profissionais personalizadas. Você envia suas selfies, nossa IA treina um modelo único baseado no seu rosto e, além de criar fotos suas em qualquer cenário, pose ou estilo, também pode fazer criações únicas — como cenas artísticas, campanhas, ou imagens totalmente originais.'
   },
   {
     category: 'geral',
     question: 'Como funciona o sistema de créditos?',
-    answer: 'Cada geração de foto consome créditos do seu plano. O plano Starter oferece 500 créditos/mês, Premium 1200 créditos/mês e Gold 2500 créditos/mês. Os créditos são renovados mensalmente e não acumulam entre os períodos. Você também pode comprar pacotes de créditos únicos que são válidos por 1 ano.'
+    answer: 'Cada geração de foto consome créditos do seu plano. O plano Starter oferece 500 créditos/mês, Premium 1500 créditos/mês e Gold 3500 créditos/mês. Os créditos são renovados mensalmente e não acumulam entre os períodos. Você também pode comprar pacotes de créditos únicos que são válidos por 1 ano.'
   },
   {
     category: 'geral',
@@ -35,7 +35,7 @@ const faqData: FAQItem[] = [
   {
     category: 'geral',
     question: 'Qual o melhor plano para iniciantes?',
-    answer: 'Para iniciantes, recomendamos o plano Premium (R$ 179/mês) que oferece 1200 créditos, 1 modelo de IA e processamento rápido.'
+    answer: 'Para iniciantes, recomendamos o plano Premium (R$ 179/mês) que oferece 1500 créditos, 1 modelo de IA e processamento rápido.'
   },
 
   // Funcionamento
@@ -67,7 +67,7 @@ const faqData: FAQItem[] = [
   {
     category: 'funcionamento',
     question: 'Quantos créditos cada foto consome?',
-    answer: 'Cada foto gerada consome, por padrão, 10 créditos, independentemente do plano. Alguns pacotes de fotos podem ter custo superior por imagem, conforme o nível de detalhamento ou exclusividade do pacote.'
+    answer: 'Cada foto gerada consome, por padrão, 10 créditos, independentemente do plano. Fotos criadas pelo Editor de IA custam 15 créditos por imagem. Alguns pacotes de fotos podem ter custo superior por imagem, conforme o nível de detalhamento ou exclusividade do pacote.'
   },
   {
     category: 'funcionamento',
@@ -94,7 +94,7 @@ const faqData: FAQItem[] = [
   {
     category: 'pagamento',
     question: 'Quais formas de pagamento vocês aceitam?',
-    answer: 'Aceitamos cartões de crédito e débito (Visa, Mastercard, Elo) e PIX através da nossa parceira Asaas. Todos os pagamentos são processados de forma segura e criptografada.'
+    answer: 'Aceitamos cartões de crédito (Visa, Mastercard, Elo) e PIX através da nossa parceira Asaas. Todos os pagamentos são processados de forma segura e criptografada.'
   },
   {
     category: 'pagamento',
@@ -109,7 +109,7 @@ const faqData: FAQItem[] = [
   {
     category: 'pagamento',
     question: 'O que acontece se eu ultrapassar meu limite de créditos?',
-    answer: 'Quando seus créditos acabarem, você não conseguirá gerar novas fotos até o próximo período de renovação ou upgrade de plano. Você pode fazer upgrade a qualquer momento ou comprar um pacote de créditos únicos para obter mais créditos imediatamente.'
+    answer: 'Quando seus créditos acabarem, você pode comprar pacotes adicionais a qualquer momento e continuar criando sem pausa. Seus créditos da assinatura renovam no próximo ciclo — e, se preferir, você pode fazer upgrade de plano quando quiser.'
   },
   {
     category: 'pagamento',
@@ -124,7 +124,7 @@ const faqData: FAQItem[] = [
   {
     category: 'pagamento',
     question: 'Posso combinar plano de assinatura com pacotes de créditos?',
-    answer: 'Sim! Você pode ter um plano de assinatura ativo e ainda comprar pacotes de créditos únicos quando necessário. Os créditos são consumidos primeiro dos pacotes únicos (por ordem de expiração) e depois dos créditos mensais da assinatura.'
+    answer: 'Sim! Você pode ter um plano de assinatura ativo e ainda comprar pacotes de créditos únicos quando quiser. Os créditos da assinatura são consumidos primeiro (pois expiram mais rápido) e, depois, os créditos dos pacotes avulsos, conforme a ordem de validade.'
   },
   {
     category: 'pagamento',
@@ -134,7 +134,7 @@ const faqData: FAQItem[] = [
   {
     category: 'pagamento',
     question: 'Qual é o valor dos pacotes de créditos únicos?',
-    answer: 'Oferecemos 4 opções: Pacote Essencial (R$ 89 - 350 créditos), Pacote Avançado (R$ 179 - 1000 créditos), Pacote Pro (R$ 359 - 2200 créditos) e Pacote Enterprise (R$ 899 - 5000 créditos). Todos são válidos por 1 ano.'
+    answer: 'Oferecemos 4 opções: Pacote 350 (R$ 79 - 350 créditos), Pacote 1000 (R$ 169 - 1000 créditos), Pacote 2000 (R$ 319 - 2000 créditos) e Pacote 5000 (R$ 789 - 5000 créditos). Todos são válidos por 1 ano.'
   },
 
   // Privacidade
@@ -151,7 +151,7 @@ const faqData: FAQItem[] = [
   {
     category: 'privacidade',
     question: 'Posso excluir meus dados e fotos?',
-    answer: 'Sim, você pode solicitar a exclusão completa de todos os seus dados, fotos e modelos a qualquer momento através de nossa área de privacidade ou entrando em contato conosco. O processo é irreversível e ocorre em até 30 dias.'
+    answer: 'Sim, você pode solicitar a exclusão completa de todos os seus dados, fotos e modelos a qualquer momento através de nossa área de privacidade ou entrando em contato conosco. O processo é irreversível.'
   },
   {
     category: 'privacidade',
