@@ -606,23 +606,6 @@ export function GalleryGrid({
                 {/* Hover Actions */}
                 {!bulkSelectMode && hoveredImage === currentImageUrl && (
                   <React.Fragment>
-                    {/* Botão Excluir - Canto Inferior Direito */}
-                    {onDeleteGeneration && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="absolute bottom-2 right-2 h-10 w-10 sm:h-8 sm:w-8 p-0 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg z-20"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleImageAction('delete', currentImageUrl, generation)
-                        }}
-                        title="Excluir imagem"
-                        disabled={deleting}
-                      >
-                        <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
-                      </Button>
-                    )}
-
                     {/* Overlay com botões centrais */}
                     <div
                       className="absolute inset-0 bg-black bg-opacity-30 rounded-lg flex items-center justify-center px-2 z-10"
@@ -822,6 +805,23 @@ export function GalleryGrid({
                       </div>
                     </div>
                   </div>
+
+                    {/* Botão Excluir - Canto Inferior Direito (DEPOIS do overlay para ter z-index correto) */}
+                    {onDeleteGeneration && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="absolute bottom-2 right-2 h-10 w-10 sm:h-8 sm:w-8 p-0 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg z-20"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleImageAction('delete', currentImageUrl, generation)
+                        }}
+                        title="Excluir imagem"
+                        disabled={deleting}
+                      >
+                        <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
+                      </Button>
+                    )}
                   </React.Fragment>
                 )}
               </div>
