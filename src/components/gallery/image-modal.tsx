@@ -24,7 +24,6 @@ import {
 import { formatDate } from '@/lib/utils'
 import { MediaItem } from '@/types'
 import { getGenerationCostDescription } from '@/lib/utils/gallery-cost'
-import Link from 'next/link'
 import { FeedbackBadge } from '@/components/feedback/feedback-badge'
 import { useFeedback } from '@/hooks/useFeedback'
 import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
@@ -257,7 +256,7 @@ export function ImageModal({
     if (!showShareMenu) return null
 
     return (
-      <div className="absolute bottom-full left-0 mb-2 bg-black bg-opacity-90 border border-gray-600 rounded-lg shadow-lg min-w-48">
+      <div className="absolute bottom-full left-0 mb-2 bg-black bg-opacity-90 border border-gray-600 rounded-lg shadow-lg min-w-48 z-50">
         <div className="py-1">
           <button
             onClick={() => handleShare('instagram')}
@@ -638,28 +637,28 @@ export function ImageModal({
             )}
 
             {currentImage.operationType === 'generated' && (
-              <Link href={`/editor?image=${encodeURIComponent(currentImage.url)}`}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20"
-                  title="Editar com IA"
-                >
-                  <Edit2 className="w-4 h-4" />
-                  Editar ({CREDIT_COSTS.IMAGE_EDIT_PER_IMAGE} créditos)
-                </Button>
-              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push(`/editor?image=${encodeURIComponent(currentImage.url)}`)}
+                className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 cursor-pointer"
+                title="Editar com IA"
+                asChild={false}
+              >
+                <Edit2 className="w-4 h-4" />
+                Editar ({CREDIT_COSTS.IMAGE_EDIT_PER_IMAGE} créditos)
+              </Button>
             )}
 
             <Button
               variant="ghost"
               size="sm"
               onClick={handleCreateVideo}
-              className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20"
+              className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 cursor-pointer"
               title="Criar vídeo a partir desta imagem"
             >
               <Video className="w-4 h-4" />
-              Criar vídeo ({getVideoGenerationCost(5)} créditos)
+              Criar vídeo
             </Button>
 
             <div className="relative">
@@ -667,7 +666,7 @@ export function ImageModal({
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowShareMenu(!showShareMenu)}
-                className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20"
+                className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 cursor-pointer"
                 title="Compartilhar"
               >
                 <Share2 className="w-4 h-4" />
