@@ -522,10 +522,10 @@ export function GalleryGrid({
                       e.stopPropagation()
                       setInfoGeneration(generation)
                     }}
-                    className="absolute bottom-2 right-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black/80"
+                    className="absolute bottom-2 right-2 z-20 flex h-7 w-7 items-center justify-center text-white transition hover:scale-110"
                     title="Ver detalhes da imagem"
                   >
-                    <Info className="w-4 h-4" />
+                    <Info className="w-4 h-4 drop-shadow-[0_0_6px_rgba(0,0,0,0.45)]" />
                   </button>
                 )}
 
