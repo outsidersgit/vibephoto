@@ -605,119 +605,122 @@ export function GalleryGrid({
 
                 {/* Hover Actions */}
                 {!bulkSelectMode && hoveredImage === currentImageUrl && (
-                  <div
-                    className="absolute inset-0 bg-black bg-opacity-30 rounded-lg flex items-center justify-center px-2 z-10"
-                    onClick={(e) => {
-                      // Allow clicks through the overlay to trigger card click
-                      // Buttons will still stopPropagation
-                      if (e.target === e.currentTarget) {
-                        e.stopPropagation()
-                        handleMediaClick(currentImageUrl, generation)
-                      }
-                    }}
-                  >
-                    <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-1 max-w-full">
-                      {/* Baixar imagem */}
+                  <>
+                    {/* Botão Excluir - Canto Inferior Direito */}
+                    {onDeleteGeneration && (
                       <Button
                         size="sm"
                         variant="secondary"
-                        className="h-9 w-9 sm:h-7 sm:w-7 p-0"
+                        className="absolute bottom-2 right-2 h-10 w-10 sm:h-8 sm:w-8 p-0 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg z-20"
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleImageAction('download', currentImageUrl, generation)
+                          handleImageAction('delete', currentImageUrl, generation)
                         }}
-                        title="Baixar imagem"
+                        title="Excluir imagem"
+                        disabled={deleting}
                       >
-                        <Download className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                        <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
                       </Button>
+                    )}
 
-                      {/* Favoritar */}
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className={`h-9 w-9 sm:h-7 sm:w-7 p-0 ${favoriteImages.includes(currentImageUrl) ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-[#667EEA]' : ''}`}
-                        onClick={(e) => {
+                    {/* Overlay com botões centrais */}
+                    <div
+                      className="absolute inset-0 bg-black bg-opacity-30 rounded-lg flex items-center justify-center px-2 z-10"
+                      onClick={(e) => {
+                        // Allow clicks through the overlay to trigger card click
+                        // Buttons will still stopPropagation
+                        if (e.target === e.currentTarget) {
                           e.stopPropagation()
-                          handleImageAction('favorite', currentImageUrl, generation)
-                        }}
-                        title={favoriteImages.includes(currentImageUrl) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-                      >
-                        <Heart className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${favoriteImages.includes(currentImageUrl) ? 'fill-current' : ''}`} />
-                      </Button>
-
-                      {/* Fazer upscale */}
-                      {onUpscale && (
+                          handleMediaClick(currentImageUrl, generation)
+                        }
+                      }}
+                    >
+                      <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-1 max-w-full">
+                        {/* Baixar imagem */}
                         <Button
                           size="sm"
                           variant="secondary"
                           className="h-9 w-9 sm:h-7 sm:w-7 p-0"
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleImageAction('upscale', currentImageUrl, generation)
+                            handleImageAction('download', currentImageUrl, generation)
                           }}
-                          title="Fazer upscale"
+                          title="Baixar imagem"
                         >
-                          <ZoomIn className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                          <Download className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                         </Button>
-                      )}
 
-                      {/* Editar imagem */}
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-9 w-9 sm:h-7 sm:w-7 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleImageAction('edit', currentImageUrl, generation)
-                        }}
-                        title="Editar imagem"
-                      >
-                        <Edit className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                      </Button>
-
-                      {onDeleteGeneration && (
+                        {/* Favoritar */}
                         <Button
                           size="sm"
                           variant="secondary"
-                          className="h-9 w-9 sm:h-7 sm:w-7 p-0 bg-white text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className={`h-9 w-9 sm:h-7 sm:w-7 p-0 ${favoriteImages.includes(currentImageUrl) ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-[#667EEA]' : ''}`}
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleImageAction('delete', currentImageUrl, generation)
+                            handleImageAction('favorite', currentImageUrl, generation)
                           }}
-                          title="Excluir imagem"
-                          disabled={deleting}
+                          title={favoriteImages.includes(currentImageUrl) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
                         >
-                          <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                          <Heart className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${favoriteImages.includes(currentImageUrl) ? 'fill-current' : ''}`} />
                         </Button>
-                      )}
 
-                      {/* Criar vídeo */}
-                      <CompactVideoButton
-                        imageUrl={currentImageUrl}
-                        mode="image-to-video"
-                        generation={generation}
-                        userPlan={userPlan || 'FREE'}
-                        variant="secondary"
-                        className="h-9 w-9 sm:h-7 sm:w-7 p-0"
-                      />
+                        {/* Fazer upscale */}
+                        {onUpscale && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="h-9 w-9 sm:h-7 sm:w-7 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleImageAction('upscale', currentImageUrl, generation)
+                            }}
+                            title="Fazer upscale"
+                          >
+                            <ZoomIn className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                          </Button>
+                        )}
 
-                      {/* Compartilhar */}
-                      <div className="relative">
+                        {/* Editar imagem */}
                         <Button
                           size="sm"
                           variant="secondary"
                           className="h-9 w-9 sm:h-7 sm:w-7 p-0"
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleImageAction('share-dropdown', currentImageUrl, generation)
+                            handleImageAction('edit', currentImageUrl, generation)
                           }}
-                          title="Compartilhar"
+                          title="Editar imagem"
                         >
-                          <Share2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                          <Edit className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                         </Button>
 
-                        {shareDropdown === currentImageUrl && (
-                          <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border p-2 min-w-[200px] sm:min-w-[180px] z-30">
+                        {/* Criar vídeo */}
+                        <CompactVideoButton
+                          imageUrl={currentImageUrl}
+                          mode="image-to-video"
+                          generation={generation}
+                          userPlan={userPlan || 'FREE'}
+                          variant="secondary"
+                          className="h-9 w-9 sm:h-7 sm:w-7 p-0"
+                        />
+
+                        {/* Compartilhar */}
+                        <div className="relative">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="h-9 w-9 sm:h-7 sm:w-7 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleImageAction('share-dropdown', currentImageUrl, generation)
+                            }}
+                            title="Compartilhar"
+                          >
+                            <Share2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                          </Button>
+
+                          {shareDropdown === currentImageUrl && (
+                            <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border p-2 min-w-[200px] sm:min-w-[180px] z-30">
                             <button
                               className="flex items-center space-x-2 w-full p-2 hover:bg-gray-100 rounded text-sm"
                               onClick={(e) => {
@@ -818,7 +821,7 @@ export function GalleryGrid({
                         )}
                       </div>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
             )
