@@ -817,9 +817,21 @@ export function AutoSyncGalleryInterface({
       return true
     } catch (error) {
       console.error('❌ Erro ao excluir geração:', error)
+      const message = error instanceof Error ? error.message : 'Não foi possível excluir a imagem.'
+
+      if (message.toLowerCase().includes('not found')) {
+        setGenerations(prev => prev.filter(gen => gen.id !== generationId))
+        addToast({
+          title: 'Imagem já removida',
+          description: 'Essa geração já não estava mais disponível na galeria.',
+          variant: 'default'
+        })
+        return true
+      }
+
       addToast({
         title: 'Erro ao excluir',
-        description: error instanceof Error ? error.message : 'Não foi possível excluir a imagem. Tente novamente.',
+        description: message,
         variant: 'destructive'
       })
       return false
