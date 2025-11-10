@@ -675,6 +675,22 @@ export function GalleryGrid({
                         <Edit className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                       </Button>
 
+                      {onDeleteGeneration && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-9 w-9 sm:h-7 sm:w-7 p-0 bg-white text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleImageAction('delete', currentImageUrl, generation)
+                          }}
+                          title="Excluir imagem"
+                          disabled={deleting}
+                        >
+                          <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                        </Button>
+                      )}
+
                       {/* Criar vídeo */}
                       <CompactVideoButton
                         imageUrl={currentImageUrl}
@@ -801,22 +817,6 @@ export function GalleryGrid({
                           </div>
                         )}
                       </div>
-
-                      {onDeleteGeneration && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="h-9 w-9 sm:h-7 sm:w-7 p-0 bg-white text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleImageAction('delete', currentImageUrl, generation)
-                          }}
-                          title="Excluir imagem"
-                          disabled={deleting}
-                        >
-                          <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                        </Button>
-                      )}
                     </div>
                   </div>
                 )}
