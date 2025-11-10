@@ -27,7 +27,7 @@ import { getGenerationCostDescription } from '@/lib/utils/gallery-cost'
 import { FeedbackBadge } from '@/components/feedback/feedback-badge'
 import { useFeedback } from '@/hooks/useFeedback'
 import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
-import { CREDIT_COSTS, getVideoGenerationCost } from '@/lib/credits/pricing'
+import { CREDIT_COSTS } from '@/lib/credits/pricing'
 import { sharePhoto, SharePlatform } from '@/lib/utils/social-share'
 import { useRouter } from 'next/navigation'
 
