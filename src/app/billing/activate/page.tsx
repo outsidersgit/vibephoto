@@ -544,7 +544,7 @@ function ActivatePageContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white mb-1">
-                    Nome Completo *
+                    Nome Completo <span className="text-red-300 text-xs align-middle">*</span>
                   </label>
                   <input
                     type="text"
@@ -557,7 +557,7 @@ function ActivatePageContent() {
 
                 <div>
                   <label className="block text-sm font-medium text-white mb-1">
-                    Email *
+                    Email <span className="text-red-300 text-xs align-middle">*</span>
                   </label>
                   <input
                     type="email"
@@ -570,7 +570,7 @@ function ActivatePageContent() {
 
                 <div>
                   <label className="block text-sm font-medium text-white mb-1">
-                    CPF/CNPJ *
+                    CPF/CNPJ <span className="text-red-300 text-xs align-middle">*</span>
                   </label>
                   <input
                     type="text"
@@ -584,7 +584,7 @@ function ActivatePageContent() {
 
                 <div>
                   <label className="block text-sm font-medium text-white mb-1">
-                    Telefone *
+                    Telefone <span className="text-red-300 text-xs align-middle">*</span>
                   </label>
                   <input
                     type="text"
@@ -599,11 +599,11 @@ function ActivatePageContent() {
 
               {/* Endereço (Obrigatório) */}
               <div className="border-t border-slate-600 pt-6">
-                <h3 className="text-sm font-semibold text-white mb-4">Endereço</h3>
+                <h3 className="text-base font-semibold text-white mb-4">Endereço</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-white mb-1">
-                      CEP *
+                      CEP <span className="text-red-300 text-xs align-middle">*</span>
                       {loadingCEP && (
                         <span className="ml-2 text-xs text-slate-400">Buscando...</span>
                       )}
@@ -621,7 +621,8 @@ function ActivatePageContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-white mb-1">Logradouro/Rua *</label>
+                    <label className="block text-sm font-medium text-white mb-1">
+                      Logradouro/Rua <span className="text-red-300 text-xs align-middle">*</span>
                     <input
                       type="text"
                       value={customerData.address}
@@ -633,7 +634,7 @@ function ActivatePageContent() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-white mb-1">
-                      Número *
+                      Número <span className="text-red-300 text-xs align-middle">*</span>
                     </label>
                     <input
                       type="text"
@@ -655,7 +656,9 @@ function ActivatePageContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-white mb-1">Bairro</label>
+                    <label className="block text-sm font-medium text-white mb-1">
+                      Bairro <span className="text-red-300 text-xs align-middle">*</span>
+                    </label>
                     <input
                       type="text"
                       value={customerData.province}
@@ -664,7 +667,9 @@ function ActivatePageContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-white mb-1">Cidade *</label>
+                    <label className="block text-sm font-medium text-white mb-1">
+                      Cidade <span className="text-red-300 text-xs align-middle">*</span>
+                    </label>
                     <input
                       type="text"
                       value={customerData.city}
@@ -674,7 +679,9 @@ function ActivatePageContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-white mb-1">Estado *</label>
+                    <label className="block text-sm font-medium text-white mb-1">
+                      Estado <span className="text-red-300 text-xs align-middle">*</span>
+                    </label>
                     <input
                       type="text"
                       value={customerData.state}
