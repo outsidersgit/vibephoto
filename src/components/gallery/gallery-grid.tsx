@@ -821,7 +821,7 @@ export function GalleryGrid({
                         )}
                       </div>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
             )
