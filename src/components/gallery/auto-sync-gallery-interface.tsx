@@ -1040,12 +1040,24 @@ export function AutoSyncGalleryInterface({
       }
 
       // Aguardar todas as deleções
-      const results = await Promise.all(deletePromises)
-      const deletedItems = results.flat()
+      await Promise.all(deletePromises)
 
       // Limpar seleção
       setSelectedImages([])
       setBulkSelectMode(false)
+
+      // Atualizar estados locais com itens removidos
+      if (generationIds.size > 0) {
+        setLocalGenerations(prev => prev.filter(gen => !generationIds.has(gen.id)))
+      }
+
+      if (videoIds.size > 0) {
+        setLocalVideos(prev => prev.filter(video => !videoIds.has(video.id)))
+      }
+
+      if (editHistoryIds.size > 0) {
+        setLocalEditHistory(prev => prev.filter(edit => !editHistoryIds.has(edit.id)))
+      }
 
       // React Query já invalida o cache automaticamente nas mutations
 
