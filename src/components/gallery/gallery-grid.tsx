@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Card, CardContent } from '@/components/ui/card'
@@ -605,7 +605,7 @@ export function GalleryGrid({
 
                 {/* Hover Actions */}
                 {!bulkSelectMode && hoveredImage === currentImageUrl && (
-                  <div>
+                  <React.Fragment>
                     {/* Botão Excluir - Canto Inferior Direito */}
                     {onDeleteGeneration && (
                       <Button
@@ -822,6 +822,7 @@ export function GalleryGrid({
                       </div>
                     </div>
                   </div>
+                  </React.Fragment>
                 )}
               </div>
             )
