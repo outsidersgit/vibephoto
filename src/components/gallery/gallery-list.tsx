@@ -38,7 +38,7 @@ interface GalleryListProps {
   favoriteImages?: string[]
   onImageSelect: (imageUrl: string) => void
   onImageClick: (imageUrl: string) => void
-  onToggleFavorite?: (imageUrl: string) => void
+  onToggleFavorite?: (imageUrl: string, generation: any) => void | Promise<boolean>
   onUpscale?: (imageUrl: string, generation?: any) => void
   userPlan?: string
   onDeleteGeneration?: (generationId: string) => Promise<boolean>
@@ -160,7 +160,7 @@ export function GalleryList({
         }
         break
       case 'favorite':
-        onToggleFavorite?.(imageUrl)
+        onToggleFavorite?.(imageUrl, generation)
         break
       case 'edit':
         router.push(`/editor?image=${encodeURIComponent(imageUrl)}`)

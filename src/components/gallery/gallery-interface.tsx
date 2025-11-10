@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import dynamic from 'next/dynamic'
@@ -94,10 +94,16 @@ export function GalleryInterface({
   const [loading, setLoading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [viewMode, setViewMode] = useState(filters.view || 'grid')
+  const [favoriteImages, setFavoriteImages] = useState<string[]>([])
+  const favoriteImagesRef = useRef<string[]>([])
 
   useEffect(() => {
     setViewMode(filters.view || 'grid')
   }, [filters.view])
+
+  useEffect(() => {
+    favoriteImagesRef.current = favoriteImages
+  }, [favoriteImages])
   
   // Upscale states
   const [upscaleModal, setUpscaleModal] = useState({
@@ -123,12 +129,37 @@ export function GalleryInterface({
     { value: 'prompt', label: 'Por Prompt' }
   ]
 
+  const handleViewChange = useCallback(
+    (nextView: 'grid' | 'list') => {
+      setViewMode(nextView)
+
+      if (typeof window === 'undefined') return
+
+      const params = new URLSearchParams(window.location.search)
+      if (nextView) {
+        params.set('view', nextView)
+      } else {
+        params.delete('view')
+      }
+
+      const newQuery = params.toString()
+      const newUrl = `${window.location.pathname}${newQuery ? `?${newQuery}` : ''}`
+      window.history.replaceState(null, '', newUrl)
+    },
+    []
+  )
+
   const updateFilter = (key: string, value: string | null) => {
     const currentValue = searchParams.get(key)
     if ((value || '') === (currentValue || '') && key !== 'page') {
       if (key === 'view' && value) {
-        setViewMode(value)
+        handleViewChange((value as 'grid' | 'list') || 'grid')
       }
+      return
+    }
+
+    if (key === 'view') {
+      handleViewChange((value as 'grid' | 'list') || 'grid')
       return
     }
 
@@ -139,14 +170,10 @@ export function GalleryInterface({
     } else {
       params.delete(key)
     }
-    
+
     // Reset to page 1 when filtering
     if (key !== 'page') {
       params.set('page', '1')
-    }
-    
-    if (key === 'view') {
-      setViewMode(value || 'grid')
     }
 
     const queryString = params.toString()
@@ -162,6 +189,70 @@ export function GalleryInterface({
     router.push('/gallery')
     setSearchQuery('')
   }
+
+  const toggleFavorite = useCallback(
+    async (imageUrl: string, generation?: any) => {
+      if (!generation?.id) {
+        return favoriteImagesRef.current.includes(imageUrl)
+      }
+
+      const isCurrentlyFavorite = favoriteImagesRef.current.includes(imageUrl)
+      const nextState = !isCurrentlyFavorite
+
+      setFavoriteImages((prev) => {
+        const set = new Set(prev)
+        if (nextState) {
+          set.add(imageUrl)
+        } else {
+          set.delete(imageUrl)
+        }
+        return Array.from(set)
+      })
+
+      try {
+        const response = await fetch('/api/gallery/favorites', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            generationId: generation.id,
+            imageUrl,
+            favorite: nextState
+          })
+        })
+
+        if (!response.ok) {
+          throw new Error('Falha ao atualizar favorito')
+        }
+
+        const data = await response.json()
+        const updated: string[] | undefined = Array.isArray(data?.data?.favoriteImages)
+          ? data.data.favoriteImages
+          : undefined
+
+        if (updated) {
+          setFavoriteImages(updated)
+        }
+
+        return nextState
+      } catch (error) {
+        console.error('Erro ao atualizar favorito:', error)
+        setFavoriteImages((prev) => {
+          const set = new Set(prev)
+          if (nextState) {
+            set.delete(imageUrl)
+          } else {
+            set.add(imageUrl)
+          }
+          return Array.from(set)
+        })
+
+        return isCurrentlyFavorite
+      }
+    },
+    []
+  )
 
   const handleBulkAction = async (action: string) => {
     switch (action) {
@@ -221,6 +312,15 @@ export function GalleryInterface({
       setIsDeleting(true)
       await performDelete(generationId)
       router.refresh()
+
+      const generationMediaUrls = currentData
+        .filter(item => item.generation?.id === generationId)
+        .map(item => item.url)
+
+      if (generationMediaUrls.length > 0) {
+        setFavoriteImages(prev => prev.filter(url => !generationMediaUrls.includes(url)))
+      }
+
       if (targetUrl) {
         setSelectedImages(prev => prev.filter(url => url !== targetUrl))
         if (selectedImage === targetUrl) {
@@ -285,6 +385,14 @@ export function GalleryInterface({
       if (failures.length > 0) {
         console.error('❌ Some deletions failed:', failures)
         alert(`${successes.length} ${successes.length === 1 ? 'imagem excluída' : 'imagens excluídas'} com sucesso.\n${failures.length} ${failures.length === 1 ? 'falhou' : 'falharam'}.`)
+      }
+
+      const removedUrls = currentData
+        .filter(item => item.generation?.id && generationIds.includes(item.generation.id))
+        .map(item => item.url)
+
+      if (removedUrls.length > 0) {
+        setFavoriteImages(prev => prev.filter(url => !removedUrls.includes(url)))
       }
 
       router.refresh()
@@ -510,6 +618,29 @@ export function GalleryInterface({
     }
   }, [activeTab, editedImages, videos, filteredGenerations])
 
+  useEffect(() => {
+    const favoritesFromMetadata = new Set<string>(favoriteImagesRef.current)
+
+    filteredGenerations.forEach((generation) => {
+      const metadata = (generation?.metadata ?? {}) as Record<string, any>
+      const metadataFavorites = Array.isArray(metadata?.favoriteImages)
+        ? (metadata.favoriteImages as string[])
+        : []
+
+      metadataFavorites.forEach((url) => favoritesFromMetadata.add(url))
+    })
+
+    const merged = Array.from(favoritesFromMetadata)
+    const current = favoriteImagesRef.current
+
+    if (
+      merged.length !== current.length ||
+      merged.some((url, index) => url !== current[index])
+    ) {
+      setFavoriteImages(merged)
+    }
+  }, [filteredGenerations])
+
   const hasActiveFilters = filters.model || filters.search
 
   return (
@@ -601,17 +732,17 @@ export function GalleryInterface({
             {/* View Toggle */}
             <div className="flex border border-gray-300 rounded-md">
               <Button
-                      variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
                 size="sm"
-                onClick={() => updateFilter('view', 'grid')}
+                onClick={() => handleViewChange('grid')}
                 className="rounded-r-none"
               >
                 <Grid3X3 className="w-4 h-4" />
               </Button>
               <Button
-                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
                 size="sm"
-                onClick={() => updateFilter('view', 'list')}
+                onClick={() => handleViewChange('list')}
                 className="rounded-l-none"
               >
                 <List className="w-4 h-4" />
@@ -837,6 +968,8 @@ export function GalleryInterface({
                       onUpscale={handleOpenUpscale}
                       onDeleteGeneration={deleteGeneration}
                       deleting={isDeleting}
+                      favoriteImages={favoriteImages}
+                      onToggleFavorite={toggleFavorite}
                     />
                   ) : (
                     <GalleryList
@@ -849,6 +982,8 @@ export function GalleryInterface({
                       onUpscale={handleOpenUpscale}
                       onDeleteGeneration={deleteGeneration}
                       deleting={isDeleting}
+                      favoriteImages={favoriteImages}
+                      onToggleFavorite={toggleFavorite}
                     />
                   )}
                 </>
@@ -907,6 +1042,8 @@ export function GalleryInterface({
             onClose={() => setSelectedImage(null)}
             onUpscale={handleOpenUpscale}
             onDeleteGeneration={deleteGeneration}
+            onToggleFavorite={toggleFavorite}
+            isFavorite={favoriteImages.includes(mediaItem.url)}
             userPlan={session?.user?.plan || 'FREE'}
           />
         )

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db'
-import { GenerationStatus } from '@prisma/client'
+import { GenerationStatus, Prisma } from '@prisma/client'
 import { CreditManager } from '@/lib/credits/manager'
 import { getImageGenerationCost } from '@/lib/credits/pricing'
 
@@ -234,6 +234,57 @@ export async function getGenerationStats(userId: string) {
     pending,
     averageProcessingTime: averageProcessingTime._avg.processingTime || 0
   }
+}
+
+export async function toggleGenerationFavoriteImage(
+  userId: string,
+  generationId: string,
+  imageUrl: string,
+  favorite?: boolean
+): Promise<string[]> {
+  const generation = await prisma.generation.findFirst({
+    where: {
+      id: generationId,
+      userId
+    },
+    select: {
+      metadata: true
+    }
+  })
+
+  if (!generation) {
+    throw new Error('Generation not found or access denied')
+  }
+
+  const metadataObj = ((generation.metadata ?? {}) as Prisma.JsonObject) || {}
+  const currentFavorites: string[] = Array.isArray((metadataObj as any).favoriteImages)
+    ? ([...(metadataObj as any).favoriteImages] as string[])
+    : []
+
+  const favoritesSet = new Set(currentFavorites)
+  const shouldFavorite =
+    typeof favorite === 'boolean' ? favorite : !favoritesSet.has(imageUrl)
+
+  if (shouldFavorite) {
+    favoritesSet.add(imageUrl)
+  } else {
+    favoritesSet.delete(imageUrl)
+  }
+
+  const updatedFavorites = Array.from(favoritesSet)
+  const updatedMetadata: Prisma.JsonObject = {
+    ...metadataObj,
+    favoriteImages: updatedFavorites
+  }
+
+  await prisma.generation.update({
+    where: { id: generationId },
+    data: {
+      metadata: updatedMetadata
+    }
+  })
+
+  return updatedFavorites
 }
 
 export async function searchGenerations(

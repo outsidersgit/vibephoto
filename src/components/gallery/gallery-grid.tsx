@@ -59,7 +59,7 @@ interface GalleryGridProps {
   onUpscale?: (imageUrl: string, generation: any) => void
   userPlan?: string
   favoriteImages?: string[]
-  onToggleFavorite?: (imageUrl: string) => void
+  onToggleFavorite?: (imageUrl: string, generation: any) => void | Promise<boolean>
   onDeleteGeneration?: (generationId: string) => Promise<boolean>
   deleting?: boolean
 }
@@ -426,7 +426,7 @@ export function GalleryGrid({
         }
         break
       case 'favorite':
-        onToggleFavorite?.(imageUrl)
+        onToggleFavorite?.(imageUrl, generation)
         break
       case 'upscale':
         onUpscale?.(imageUrl, generation)

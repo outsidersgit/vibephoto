@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import dynamic from 'next/dynamic'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -26,12 +25,12 @@ import { formatDate } from '@/lib/utils'
 import { MediaItem } from '@/types'
 import { getGenerationCostDescription } from '@/lib/utils/gallery-cost'
 import Link from 'next/link'
-import { CompactVideoButton } from '@/components/video/video-button'
 import { FeedbackBadge } from '@/components/feedback/feedback-badge'
 import { useFeedback } from '@/hooks/useFeedback'
 import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
 import { CREDIT_COSTS, getVideoGenerationCost } from '@/lib/credits/pricing'
 import { sharePhoto, SharePlatform } from '@/lib/utils/social-share'
+import { useRouter } from 'next/navigation'
 
 // Lazy load VideoModal (Fase 2 - Otimização de Performance)
 const VideoModal = dynamic(() => import('@/components/video/video-modal').then(mod => ({ default: mod.VideoModal })), {
@@ -45,17 +44,29 @@ interface ImageModalProps {
   allImages: MediaItem[]
   onUpscale?: (imageUrl: string, generation: any) => void
   onDeleteGeneration?: (generationId: string) => Promise<boolean>
+  onToggleFavorite?: (imageUrl: string, generation?: any) => Promise<boolean>
   userPlan?: string
+  isFavorite?: boolean
 }
 
-export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDeleteGeneration, userPlan }: ImageModalProps) {
+export function ImageModal({
+  mediaItem,
+  onClose,
+  allImages,
+  onUpscale,
+  onDeleteGeneration,
+  onToggleFavorite,
+  userPlan,
+  isFavorite: initialFavorite = false
+}: ImageModalProps) {
+  const router = useRouter()
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [zoom, setZoom] = useState(1)
   const [rotation, setRotation] = useState(0)
   const [showInfo, setShowInfo] = useState(false)
   const [showShareMenu, setShowShareMenu] = useState(false)
   const [showShareSubmenu, setShowShareSubmenu] = useState(false)
-  const [showVideoModal, setShowVideoModal] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(initialFavorite)
   const [isDeleting, setIsDeleting] = useState(false)
   const currentImage = allImages[currentImageIndex] || mediaItem
   const generationId = currentImage?.generation?.id
@@ -127,12 +138,9 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDeleteG
       // Create download link
       const link = document.createElement('a')
       link.href = url
-
-      // Generate filename
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '')
-      const promptSlug = currentImage.prompt?.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_') || 'image'
+      const timestamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14)
       const extension = blob.type.includes('video') ? 'mp4' : 'jpg'
-      link.download = `vibephoto_${promptSlug}_${timestamp}.${extension}`
+      link.download = `vibephoto_${timestamp}.${extension}`
 
       // Trigger download
       document.body.appendChild(link)
@@ -144,16 +152,28 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDeleteG
       triggerEvent('download')
     } catch (error) {
       console.error('Download failed:', error)
-      // Fallback to simple download method
+      const timestamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14)
       const link = document.createElement('a')
       link.href = currentImage.url
-      link.download = `vibephoto_${currentImage.id}.jpg`
+      link.download = `vibephoto_${timestamp}.jpg`
+      link.rel = 'noopener'
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       triggerEvent('download')
     }
   }
+
+  useEffect(() => {
+    setIsFavorite(initialFavorite)
+  }, [initialFavorite])
+
+  const handleToggleFavorite = useCallback(async () => {
+    const currentImage = allImages[currentImageIndex]
+    if (!currentImage || !onToggleFavorite) return
+    const nextState = await onToggleFavorite(currentImage.url, currentImage.generation)
+    setIsFavorite(nextState)
+  }, [allImages, currentImageIndex, onToggleFavorite])
 
   const handleDelete = async () => {
     if (!currentImage.generation?.id || !onDeleteGeneration) return
@@ -166,6 +186,96 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDeleteG
     } finally {
       setIsDeleting(false)
     }
+  }
+
+  const handleCreateVideo = useCallback(() => {
+    const currentImage = allImages[currentImageIndex]
+    if (!currentImage) return
+    triggerEvent('feature_use', { metadata: { feature: 'video' } })
+    router.push(`/generate?video=${encodeURIComponent(currentImage.url)}`)
+  }, [allImages, currentImageIndex, router, triggerEvent])
+
+  const renderShareMenu = () => {
+    if (!showShareMenu) return null
+
+    return (
+      <div className="absolute bottom-full left-0 mb-2 bg-black bg-opacity-90 border border-gray-600 rounded-lg shadow-lg min-w-48">
+        <div className="py-1">
+          <button
+            onClick={() => handleShare('instagram')}
+            className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
+          >
+            <InstagramIcon size={16} />
+            <span>Instagram</span>
+          </button>
+          <button
+            onClick={() => handleShare('tiktok')}
+            className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
+          >
+            <TikTokIcon size={16} />
+            <span>TikTok</span>
+          </button>
+          <button
+            onClick={() => handleShare('whatsapp')}
+            className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
+          >
+            <WhatsAppIcon size={16} />
+            <span>WhatsApp</span>
+          </button>
+
+          <hr className="border-gray-600 my-1" />
+
+          <div className="relative">
+            <button
+              className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center justify-between"
+              onClick={() => setShowShareSubmenu(!showShareSubmenu)}
+            >
+              <div className="flex items-center space-x-2">
+                <MoreHorizontal className="w-4 h-4" />
+                <span>Outros compartilhamentos</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showShareSubmenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showShareSubmenu && (
+              <div className="bg-black bg-opacity-95 border-t border-gray-600">
+                <button
+                  onClick={() => handleShare('gmail')}
+                  className="w-full px-8 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
+                >
+                  <GmailIcon size={16} />
+                  <span>Gmail</span>
+                </button>
+                <button
+                  onClick={() => handleShare('copy')}
+                  className="w-full px-8 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
+                >
+                  <Copy className="w-4 h-4" />
+                  <span>Copiar Link</span>
+                </button>
+                <button
+                  onClick={() => handleShare('telegram')}
+                  className="w-full px-8 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
+                >
+                  <TelegramIcon size={16} />
+                  <span>Telegram</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          <hr className="border-gray-600 my-1" />
+
+          <button
+            onClick={() => handleShare()}
+            className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
+          >
+            <Share2 className="w-4 h-4" />
+            <span>Compartilhar (outros)</span>
+          </button>
+        </div>
+      </div>
+    )
   }
 
   const showShareFeedback = (result: any) => {
@@ -311,11 +421,6 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDeleteG
     alert('Prompt copiado para a área de transferência!')
   }
 
-  const handleOpenVideoModal = () => {
-    triggerEvent('feature_use', { metadata: { feature: 'video' } })
-    setShowVideoModal(true)
-  }
-
   if (!currentImage) return null
 
   return (
@@ -426,170 +531,92 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDeleteG
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center space-x-2">
-            {/* Download */}
+          <div className="flex items-center flex-wrap gap-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={handleDownload}
-              className="text-white hover:bg-white hover:bg-opacity-20"
+              className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20"
+              title="Baixar imagem"
             >
-              <Download className="w-4 h-4 mr-1" />
-            Baixar
+              <Download className="w-4 h-4" />
+              Baixar
             </Button>
 
-            {/* Favorite */}
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => console.log('Toggle favorite')}
-              className="text-white hover:bg-white hover:bg-opacity-20"
+              onClick={handleToggleFavorite}
+              className={`inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 ${isFavorite ? 'text-pink-300' : ''}`}
+              title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
             >
-              <Heart className="w-4 h-4 mr-1" />
-            Favoritar
+              <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+              {isFavorite ? 'Favorito' : 'Favoritar'}
             </Button>
 
             <Button
               variant="ghost"
               size="sm"
               onClick={handleDelete}
-            className="text-red-400 hover:bg-red-500/20 hover:text-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isDeleting}
+              className="inline-flex items-center gap-1 px-3 py-2 text-red-400 hover:bg-red-500/20 hover:text-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isDeleting}
+              title="Excluir imagem"
             >
-              <Trash2 className="w-4 h-4 mr-1" />
-            {isDeleting ? 'Excluindo...' : 'Excluir'}
+              <Trash2 className="w-4 h-4" />
+              {isDeleting ? 'Excluindo...' : 'Excluir'}
             </Button>
 
-            {/* Upscale */}
             {onUpscale && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleUpscaleClick}
-                className="text-white hover:bg-white hover:bg-opacity-20"
+                className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20"
+                title="Fazer upscale"
               >
-                <ZoomIn className="w-4 h-4 mr-1" />
+                <ZoomIn className="w-4 h-4" />
                 Upscale ({CREDIT_COSTS.UPSCALE_PER_IMAGE} créditos)
               </Button>
             )}
 
-            {/* Edit */}
             {currentImage.operationType === 'generated' && (
               <Link href={`/editor?image=${encodeURIComponent(currentImage.url)}`}>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-white hover:bg-white hover:bg-opacity-20"
+                  className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20"
+                  title="Editar com IA"
                 >
-                  <Edit2 className="w-4 h-4 mr-1" />
+                  <Edit2 className="w-4 h-4" />
                   Editar ({CREDIT_COSTS.IMAGE_EDIT_PER_IMAGE} créditos)
                 </Button>
               </Link>
             )}
 
-            {/* Video Creation */}
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleOpenVideoModal}
-              className="text-white hover:bg-white hover:bg-opacity-20"
+              onClick={handleCreateVideo}
+              className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20"
+              title="Criar vídeo a partir desta imagem"
             >
-              <Video className="w-4 h-4 mr-1" />
+              <Video className="w-4 h-4" />
               Criar vídeo ({getVideoGenerationCost(5)} créditos)
             </Button>
 
-            {/* Share Dropdown */}
             <div className="relative">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowShareMenu(!showShareMenu)}
-                className="text-white hover:bg-white hover:bg-opacity-20"
+                className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20"
+                title="Compartilhar"
               >
-                <Share2 className="w-4 h-4 mr-1" />
-              Compartilhar
+                <Share2 className="w-4 h-4" />
+                Compartilhar
                 <ChevronDown className="w-3 h-3 ml-1" />
               </Button>
-
-              {showShareMenu && (
-                <div className="absolute bottom-full left-0 mb-2 bg-black bg-opacity-90 border border-gray-600 rounded-lg shadow-lg min-w-48">
-                  <div className="py-1">
-                    <button
-                      onClick={() => handleShare('instagram')}
-                      className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
-                    >
-                      <InstagramIcon size={16} />
-                      <span>Instagram</span>
-                    </button>
-                    <button
-                      onClick={() => handleShare('tiktok')}
-                      className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
-                    >
-                      <TikTokIcon size={16} />
-                      <span>TikTok</span>
-                    </button>
-                    <button
-                      onClick={() => handleShare('whatsapp')}
-                      className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
-                    >
-                      <WhatsAppIcon size={16} />
-                      <span>WhatsApp</span>
-                    </button>
-
-                    <hr className="border-gray-600 my-1" />
-
-                    {/* Outros Compartilhamentos Submenu */}
-                    <div className="relative">
-                      <button
-                        className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center justify-between"
-                        onClick={() => setShowShareSubmenu(!showShareSubmenu)}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <MoreHorizontal className="w-4 h-4" />
-                          <span>Outros compartilhamentos</span>
-                        </div>
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showShareSubmenu ? 'rotate-180' : ''}`} />
-                      </button>
-
-                      {/* Submenu */}
-                      {showShareSubmenu && (
-                        <div className="bg-black bg-opacity-95 border-t border-gray-600">
-                          <button
-                            onClick={() => handleShare('gmail')}
-                            className="w-full px-8 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
-                          >
-                            <GmailIcon size={16} />
-                            <span>Gmail</span>
-                          </button>
-                          <button
-                            onClick={() => handleShare('copy')}
-                            className="w-full px-8 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
-                          >
-                            <Copy className="w-4 h-4" />
-                            <span>Copiar Link</span>
-                          </button>
-                          <button
-                            onClick={() => handleShare('telegram')}
-                            className="w-full px-8 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
-                          >
-                            <TelegramIcon size={16} />
-                            <span>Telegram</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <hr className="border-gray-600 my-1" />
-                    <button
-                      onClick={() => handleShare()}
-                      className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
-                    >
-                      <Share2 className="w-4 h-4" />
-                      <span>Compartilhar (outros)</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+              {renderShareMenu()}
             </div>
           </div>
         </div>
@@ -621,19 +648,9 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDeleteG
             {currentImage.generation?.negativePrompt && (
               <div>
                 <div className="text-gray-300">Prompt negativo:</div>
-                <div className="mt-1">{currentImage.generation.negativePrompt}</div>
+                <div className="mt-1 text-gray-200">{currentImage.generation.negativePrompt}</div>
               </div>
             )}
-
-            <div>
-              <div className="text-gray-300">Tipo:</div>
-              <div className="capitalize">{currentImage.operationType}</div>
-            </div>
-
-            <div>
-              <div className="text-gray-300">Status:</div>
-              <div className="capitalize">{currentImage.status.toLowerCase()}</div>
-            </div>
 
             {currentImage.metadata && (
               <>
@@ -668,12 +685,6 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDeleteG
                     <div className="text-gray-300">Modelo:</div>
                     <div>{currentImage.generation.model?.name || 'Indefinido'}</div>
                   </div>
-                  {currentImage.generation.resolution && (
-                    <div>
-                      <div className="text-gray-300">Resolução:</div>
-                      <div>{currentImage.generation.resolution}</div>
-                    </div>
-                  )}
                   {currentImage.generation.aspectRatio && (
                     <div>
                       <div className="text-gray-300">Proporção:</div>
@@ -721,19 +732,7 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDeleteG
         </div>
       )}
 
-      {/* Video Modal */}
-      {showVideoModal && (
-        <VideoModal
-          isOpen={showVideoModal}
-          onClose={() => setShowVideoModal(false)}
-          imageUrl={currentImage.url}
-          mode="image-to-video"
-          generation={currentImage.generation}
-          userPlan={userPlan || 'FREE'}
-        />
-      )}
-
-      {/* Feedback Modal */}
+      {/* Feedback Badge */}
       <FeedbackBadge
         visible={feedback.isVisible}
         onClose={feedback.dismiss}
