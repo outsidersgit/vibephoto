@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { PLANS, type Plan } from '@/config/pricing'
 import { CheckoutModal } from '@/components/checkout/checkout-modal'
+import { PaymentMethodModal } from '@/components/credits/payment-method-modal'
 import { UpdateCardModal } from '@/components/payments/update-card-modal'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
@@ -131,6 +132,8 @@ function BillingPageContent() {
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [purchasing, setPurchasing] = useState<string | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD' | null>(null)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
   const [checkoutUrl, setCheckoutUrl] = useState<string>('')
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
 
@@ -224,6 +227,8 @@ function BillingPageContent() {
 
   const handleBuyPackage = (packageId: string) => {
     setSelectedPackageId(packageId)
+    setPaymentMethod(null)
+    setPaymentError(null)
     setShowPaymentModal(true)
   }
 
@@ -235,6 +240,8 @@ function BillingPageContent() {
     if (!selectedPackageId) return
 
     setPurchasing(selectedPackageId)
+    setPaymentMethod(method)
+    setPaymentError(null)
 
     try {
       const response = await fetch('/api/checkout/credits', {
@@ -249,23 +256,28 @@ function BillingPageContent() {
       const data = await response.json()
 
       if (data.success && data.checkoutUrl) {
+        setPaymentError(null)
         setShowPaymentModal(false)
         setCheckoutUrl(data.checkoutUrl)
         setShowCheckoutModal(true)
       } else {
-        alert(`❌ Erro: ${data.error || 'Erro ao criar checkout'}`)
+        setPaymentError(data.error || 'Erro ao criar checkout')
         setPurchasing(null)
       }
     } catch (error) {
       console.error('Erro ao processar compra:', error)
-      alert('❌ Erro ao processar compra')
+      setPaymentError('Erro ao processar compra')
       setPurchasing(null)
+    } finally {
+      setPaymentMethod(null)
     }
   }
 
   const handleCheckoutSuccess = async () => {
     setShowCheckoutModal(false)
     setPurchasing(null)
+    setPaymentMethod(null)
+    setPaymentError(null)
     setCheckoutUrl('')
     // Auto-update session after billing mutations
     await updateSession()
@@ -275,6 +287,8 @@ function BillingPageContent() {
   const handleCheckoutClose = () => {
     setShowCheckoutModal(false)
     setPurchasing(null)
+    setPaymentMethod(null)
+    setPaymentError(null)
     setCheckoutUrl('')
   }
 
@@ -859,74 +873,22 @@ function BillingPageContent() {
         </Tabs>
       </div>
 
-      {/* Payment Method Selection Modal */}
-      {showPaymentModal && selectedPackage && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-          onClick={() => {
-            setShowPaymentModal(false)
-            setPurchasing(null)
-          }}
-        >
-          <div
-            className="fixed top-1/2 left-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-6 shadow-2xl mx-4"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h3 className="text-2xl font-bold text-gray-900 mb-2" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-              Escolha o Método de Pagamento
-            </h3>
-            <p className="text-gray-600 mb-6" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-              {selectedPackage.name} – R$ {selectedPackage.price}
-            </p>
-
-            <div className="space-y-4 mb-6">
-              {/* PIX Option */}
-              <button
-                onClick={() => handlePurchase('PIX')}
-                disabled={!!purchasing}
-                className="w-full p-6 border-2 border-gray-300 bg-gray-200 rounded-xl hover:shadow-lg transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="font-bold text-gray-900 text-lg" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                    PIX
-                  </div>
-                  {purchasing === selectedPackage?.id && (
-                    <Loader2 className="w-5 h-5 text-gray-900 animate-spin" />
-                  )}
-                </div>
-              </button>
-
-              {/* Credit Card Option */}
-              <button
-                onClick={() => handlePurchase('CREDIT_CARD')}
-                disabled={!!purchasing}
-                className="w-full p-6 border-2 border-gray-300 bg-gray-200 rounded-xl hover:shadow-lg transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="font-bold text-gray-900 text-lg" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                    Cartão de Crédito
-                  </div>
-                  {purchasing === selectedPackage?.id && (
-                    <Loader2 className="w-5 h-5 text-gray-900 animate-spin" />
-                  )}
-                </div>
-              </button>
-            </div>
-
-            <button
-              onClick={() => {
-                setShowPaymentModal(false)
-                setPurchasing(null)
-              }}
-              disabled={!!purchasing}
-              className="w-full py-2 text-gray-600 hover:text-gray-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
+      <PaymentMethodModal
+        isOpen={Boolean(showPaymentModal && selectedPackage)}
+        packageName={selectedPackage?.name ?? ''}
+        packagePrice={selectedPackage?.price ?? ''}
+        description={selectedPackage?.description}
+        onSelect={handlePurchase}
+        onClose={() => {
+          setShowPaymentModal(false)
+          setPurchasing(null)
+          setPaymentMethod(null)
+          setPaymentError(null)
+        }}
+        loading={Boolean(purchasing)}
+        loadingMethod={paymentMethod}
+        errorMessage={paymentError}
+      />
 
       {/* Checkout Modal with Asaas iframe */}
       {showCheckoutModal && checkoutUrl && (

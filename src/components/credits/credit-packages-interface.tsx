@@ -16,11 +16,11 @@ import {
   TrendingUp,
   Award,
   Sparkles,
-  AlertTriangle,
-  Loader2
+  AlertTriangle
 } from 'lucide-react'
 import { CreditBalance } from './credit-balance'
 import { CheckoutModal } from '@/components/checkout/checkout-modal'
+import { PaymentMethodModal } from '@/components/credits/payment-method-modal'
 
 interface CreditPackage {
   id: string
@@ -58,6 +58,7 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [checkoutUrl, setCheckoutUrl] = useState<string>('')
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
+  const [purchaseError, setPurchaseError] = useState<string | null>(null)
 
   const loadPackagesAndBalance = useCallback(async () => {
     // CRITICAL: Verificar novamente antes de fazer fetch
@@ -165,6 +166,7 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
       setSelectedPackageId(packageId)
     }
 
+    setPurchaseError(null)
     setShowPaymentModal(true)
   }
 
@@ -173,6 +175,7 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
 
     setPurchasing(selectedPackageId)
     setPaymentMethod(method)
+    setPurchaseError(null)
 
     try {
       const response = await fetch('/api/checkout/credits', {
@@ -187,16 +190,17 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
       const data = await response.json()
 
       if (data.success && data.checkoutUrl) {
+        setPurchaseError(null)
         setShowPaymentModal(false)
         setCheckoutUrl(data.checkoutUrl)
         setShowCheckoutModal(true)
       } else {
-        alert(`❌ Erro: ${data.error || 'Erro ao criar checkout'}`)
+        setPurchaseError(data.error || 'Erro ao criar checkout')
         setPurchasing(null)
       }
     } catch (error) {
       console.error('Erro ao processar compra:', error)
-      alert('❌ Erro ao processar compra')
+      setPurchaseError('Erro ao processar compra')
       setPurchasing(null)
     } finally {
       setPaymentMethod(null)
@@ -208,6 +212,7 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
     setPurchasing(null)
     setPaymentMethod(null)
     setCheckoutUrl('')
+    setPurchaseError(null)
 
     // Recarregar saldo
     setTimeout(() => {
@@ -220,6 +225,7 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
     setPurchasing(null)
     setPaymentMethod(null)
     setCheckoutUrl('')
+    setPurchaseError(null)
   }
 
   const selectedPackage = packages.find(pkg => pkg.id === selectedPackageId)
@@ -322,79 +328,24 @@ export function CreditPackagesInterface({ user }: CreditPackagesInterfaceProps) 
         })}
       </div>
 
-      {/* Payment Method Selection Modal */}
-      {showPaymentModal && selectedPackage && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-          onClick={() => {
-            setShowPaymentModal(false)
-            setPurchasing(null)
-            if (previousSelectedId) {
-              setSelectedPackageId(previousSelectedId)
-            }
-            setPaymentMethod(null)
-          }}
-        >
-          <div
-            className="fixed top-1/2 left-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-6 shadow-2xl mx-4"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h3 className="text-2xl font-bold text-gray-900 mb-2" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-              Escolha o Método de Pagamento
-            </h3>
-            <p className="text-gray-600 mb-6" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-              {selectedPackage.name} – R$ {selectedPackage.price}
-            </p>
-
-            <div className="space-y-4 mb-6">
-              {/* PIX Option */}
-              <button
-                onClick={() => handlePurchase('PIX')}
-                disabled={!!purchasing}
-                className="w-full p-6 border-2 border-gray-300 bg-gray-200 rounded-xl hover:shadow-lg transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="font-bold text-gray-900 text-lg" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                  PIX
-                </div>
-                {paymentMethod === 'PIX' && purchasing === selectedPackage.id && (
-                  <Loader2 className="w-5 h-5 text-gray-900 animate-spin mt-2" />
-                )}
-              </button>
-
-              {/* Credit Card Option */}
-              <button
-                onClick={() => handlePurchase('CREDIT_CARD')}
-                disabled={!!purchasing}
-                className="w-full p-6 border-2 border-gray-300 bg-gray-200 rounded-xl hover:shadow-lg transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="font-bold text-gray-900 text-lg" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                  Cartão de Crédito
-                </div>
-                {paymentMethod === 'CREDIT_CARD' && purchasing === selectedPackage.id && (
-                  <Loader2 className="w-5 h-5 text-gray-900 animate-spin mt-2" />
-                )}
-              </button>
-            </div>
-
-            <button
-              onClick={() => {
-                setShowPaymentModal(false)
-                setPurchasing(null)
-                // Restaurar seleção anterior ao cancelar
-                if (previousSelectedId) {
-                  setSelectedPackageId(previousSelectedId)
-                }
-                setPaymentMethod(null)
-              }}
-              disabled={!!purchasing}
-              className="w-full py-2 text-gray-600 hover:text-gray-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
+      <PaymentMethodModal
+        isOpen={Boolean(showPaymentModal && selectedPackage)}
+        packageName={selectedPackage?.name ?? ''}
+        packagePrice={selectedPackage?.price ?? ''}
+        onSelect={handlePurchase}
+        onClose={() => {
+          setShowPaymentModal(false)
+          setPurchasing(null)
+          if (previousSelectedId) {
+            setSelectedPackageId(previousSelectedId)
+          }
+          setPaymentMethod(null)
+          setPurchaseError(null)
+        }}
+        loading={Boolean(purchasing)}
+        loadingMethod={paymentMethod}
+        errorMessage={purchaseError}
+      />
 
       {/* Checkout Modal with Asaas iframe */}
       {showCheckoutModal && checkoutUrl && (

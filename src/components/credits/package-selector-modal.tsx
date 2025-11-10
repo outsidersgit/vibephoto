@@ -8,9 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, AlertCircle, ArrowLeft, Check } from 'lucide-react'
+import { Loader2, Check } from 'lucide-react'
 import { CheckoutModal } from '@/components/checkout/checkout-modal'
+import { PaymentMethodModal } from '@/components/credits/payment-method-modal'
 
 interface CreditPackage {
   id: string
@@ -143,15 +143,6 @@ export function PackageSelectorModal({
     onClose()
   }
 
-  const handleBack = () => {
-    if (step === 'select-method') {
-      setStep('select-package')
-    } else if (step === 'checkout') {
-      setStep('select-method')
-      setCheckoutUrl('')
-    }
-  }
-
   const selectedPackage = packages.find(pkg => pkg.id === selectedPackageId)
 
   return (
@@ -240,71 +231,17 @@ export function PackageSelectorModal({
         </DialogContent>
       </Dialog>
 
-      {/* Payment Method Selection Modal - Custom Style */}
-      {step === 'select-method' && selectedPackage && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-          onClick={handleClose}
-        >
-          <div
-            className="fixed top-1/2 left-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-6 shadow-2xl mx-4"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h3 className="text-2xl font-bold text-gray-900 mb-2" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-              Escolha o Método de Pagamento
-            </h3>
-            <p className="text-gray-600 mb-6" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-              {selectedPackage.name} – R$ {selectedPackage.price}
-            </p>
-
-            <div className="space-y-4 mb-6">
-              {/* PIX Option */}
-              <button
-                onClick={() => !loading && handleMethodSelect('PIX')}
-                disabled={loading}
-                className="w-full p-6 border-2 border-gray-300 bg-gray-200 rounded-xl hover:shadow-lg transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="font-bold text-gray-900 text-lg" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                  PIX
-                </div>
-                {loading && selectedMethod === 'PIX' && (
-                  <Loader2 className="w-5 h-5 text-gray-900 animate-spin mt-2" />
-                )}
-              </button>
-
-              {/* Credit Card Option */}
-              <button
-                onClick={() => !loading && handleMethodSelect('CREDIT_CARD')}
-                disabled={loading}
-                className="w-full p-6 border-2 border-gray-300 bg-gray-200 rounded-xl hover:shadow-lg transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="font-bold text-gray-900 text-lg" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                  Cartão de Crédito
-                </div>
-                {loading && selectedMethod === 'CREDIT_CARD' && (
-                  <Loader2 className="w-5 h-5 text-gray-900 animate-spin mt-2" />
-                )}
-              </button>
-            </div>
-
-            {error && (
-              <Alert className="bg-red-50 border-red-200 mb-4">
-                <AlertCircle className="h-4 w-4 text-red-600" />
-                <AlertDescription className="text-red-800">{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <button
-              onClick={handleClose}
-              disabled={loading}
-              className="w-full py-2 text-gray-600 hover:text-gray-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
+      <PaymentMethodModal
+        isOpen={step === 'select-method' && Boolean(selectedPackage)}
+        packageName={selectedPackage?.name ?? ''}
+        packagePrice={selectedPackage?.price ?? ''}
+        description={selectedPackage?.description}
+        onSelect={(method) => handleMethodSelect(method)}
+        onClose={handleClose}
+        loading={loading}
+        loadingMethod={selectedMethod}
+        errorMessage={error}
+      />
 
       {/* Checkout Modal */}
       {step === 'checkout' && checkoutUrl && (
