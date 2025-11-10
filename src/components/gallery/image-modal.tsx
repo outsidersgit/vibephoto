@@ -32,12 +32,6 @@ import { CREDIT_COSTS, getVideoGenerationCost } from '@/lib/credits/pricing'
 import { sharePhoto, SharePlatform } from '@/lib/utils/social-share'
 import { useRouter } from 'next/navigation'
 
-// Lazy load VideoModal (Fase 2 - Otimização de Performance)
-const VideoModal = dynamic(() => import('@/components/video/video-modal').then(mod => ({ default: mod.VideoModal })), {
-  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
-  ssr: false
-})
-
 interface ImageModalProps {
   mediaItem: MediaItem
   onClose: () => void

@@ -700,7 +700,6 @@ export function GalleryGrid({
                           <Share2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                         </Button>
 
-                        {/* Share Dropdown */}
                         {shareDropdown === currentImageUrl && (
                           <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border p-2 min-w-[200px] sm:min-w-[180px] z-30">
                             <button
@@ -741,7 +740,6 @@ export function GalleryGrid({
 
                             <div className="border-t border-gray-200 my-1"></div>
 
-                            {/* Outros Compartilhamentos Submenu */}
                             <div className="relative">
                               <button
                                 className="flex items-center justify-between w-full p-2 hover:bg-gray-100 rounded text-sm"
@@ -757,7 +755,6 @@ export function GalleryGrid({
                                 <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${shareSubmenu === currentImageUrl ? 'rotate-0' : 'rotate-270'}`} />
                               </button>
 
-                              {/* Submenu - appears on click */}
                               {shareSubmenu === currentImageUrl && (
                                 <div className="absolute left-full top-0 ml-1 bg-white rounded-lg shadow-lg border p-2 min-w-[160px] z-40">
                                   <button
@@ -801,10 +798,10 @@ export function GalleryGrid({
                                 </div>
                               )}
                             </div>
+                          </div>
+                        )}
                       </div>
-                    )}
 
-                      {/* Excluir imagem */}
                       {onDeleteGeneration && (
                         <Button
                           size="sm"
