@@ -175,7 +175,8 @@ const carouselStyles = [
     title: 'Wanderlust',
     description: 'Adventure portraits in exotic, inspiring locations',
     image: '/examples/desert-adventure.png',
-    prompt: 'Mulher em vestido listrado saboreando vinho... Pátio europeu com plantas trepadeiras coloridas.'
+    prompt:
+      'Recriação da icônica fotografia “Afghan Girl” de Steve McCurry... Jovem afegã de olhos verdes intensos sob lenço vermelho, encarando a câmera com olhar profundo... Luz lateral suave revela textura natural da pele... Fundo esverdeado desfocado contrasta com o calor do lenço... Estilo: fotojornalismo National Geographic, textura de filme Kodachrome, realismo emocional.'
   },
   {
     id: 'future-drive',

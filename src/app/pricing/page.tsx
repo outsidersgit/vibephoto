@@ -40,6 +40,11 @@ const aiExamples = [
     image: "/examples/card-artisticas-conceituais.jpg"
   },
   {
+    title: "Obras Reinventadas",
+    description: "Ícones visuais recriados com a força da IA.",
+    image: "/examples/card-obras-reinventadas.jpg"
+  },
+  {
     title: "Filosofia em imagem",
     description: "Ideias profundas ganham forma visual.",
     image: "/examples/card-filosofia-imagem.jpg"
@@ -68,6 +73,11 @@ const aiExamples = [
     title: "Influência sob Medida",
     description: "O influenciador que você imagina, pronto para ganhar vida.",
     image: "/examples/card-influencer.jpg"
+  },
+  {
+    title: "Visual Cinematográfico",
+    description: "Crie cenas que parecem saídas de um filme.",
+    image: "/examples/card-visual-cinematografico.jpg"
   }
 ]
 
