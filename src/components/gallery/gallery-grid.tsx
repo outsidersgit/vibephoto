@@ -819,7 +819,6 @@ export function GalleryGrid({
                           <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                         </Button>
                       )}
-                        )}
                       </div>
                     </div>
                   </div>
