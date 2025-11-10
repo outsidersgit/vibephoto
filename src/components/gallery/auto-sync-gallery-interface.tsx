@@ -753,15 +753,84 @@ export function AutoSyncGalleryInterface({
   }
 
   // Funções para gerenciar favoritos
-  const toggleFavorite = (imageUrl: string) => {
+  const toggleFavorite = useCallback(async (imageUrl: string, generation?: any) => {
+    const generationId = generation?.id
+    if (!generationId) {
+      // Fallback: só alterna localmente
+      setFavoriteImages(prev =>
+        prev.includes(imageUrl)
+          ? prev.filter(url => url !== imageUrl)
+          : [...prev, imageUrl]
+      )
+      return prev.includes(imageUrl)
+    }
+
+    const isCurrentlyFavorite = favoriteImages.includes(imageUrl)
+    const nextState = !isCurrentlyFavorite
+
     setFavoriteImages(prev => {
-      if (prev.includes(imageUrl)) {
-        return prev.filter(url => url !== imageUrl)
+      const set = new Set(prev)
+      if (nextState) {
+        set.add(imageUrl)
       } else {
-        return [...prev, imageUrl]
+        set.delete(imageUrl)
       }
+      return Array.from(set)
     })
-  }
+
+    try {
+      const response = await fetch('/api/gallery/favorites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          generationId,
+          imageUrl,
+          favorite: nextState
+        })
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Falha ao atualizar favorito')
+      }
+
+      const data = await response.json()
+      if (Array.isArray(data?.data?.favoriteImages)) {
+        setFavoriteImages(data.data.favoriteImages)
+      }
+
+      addToast({
+        title: nextState ? 'Adicionado aos favoritos' : 'Removido dos favoritos',
+        description: nextState
+          ? 'A imagem está salva nos seus favoritos.'
+          : 'A imagem foi removida dos favoritos.',
+        variant: 'default'
+      })
+
+      return nextState
+    } catch (error) {
+      console.error('Erro ao atualizar favorito:', error)
+      setFavoriteImages(prev => {
+        const set = new Set(prev)
+        if (nextState) {
+          set.delete(imageUrl)
+        } else {
+          set.add(imageUrl)
+        }
+        return Array.from(set)
+      })
+
+      addToast({
+        title: 'Erro ao atualizar favorito',
+        description: error instanceof Error ? error.message : 'Tente novamente em instantes.',
+        variant: 'destructive'
+      })
+
+      return isCurrentlyFavorite
+    }
+  }, [addToast, favoriteImages])
 
   const toggleFavoritesFilter = () => {
     setShowFavoritesOnly(!showFavoritesOnly)
@@ -1730,7 +1799,7 @@ export function AutoSyncGalleryInterface({
                       onImageSelect={toggleImageSelection}
                       onImageClick={setSelectedImage}
                       onUpscale={handleOpenUpscale}
-                      userPlan={user?.plan || 'STARTER'}
+                      userPlan={user?.plan || 'PREMIUM'}
                       favoriteImages={favoriteImages}
                       onToggleFavorite={toggleFavorite}
                     />
@@ -1935,6 +2004,8 @@ export function AutoSyncGalleryInterface({
             allImages={allImages}
             onUpscale={handleOpenUpscale}
             onDeleteGeneration={handleDeleteGeneration}
+            onToggleFavorite={toggleFavorite}
+            isFavorite={favoriteImages.includes(mediaItem.url)}
             userPlan={user?.plan || 'FREE'}
           />
         )
