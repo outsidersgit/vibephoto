@@ -22,7 +22,8 @@ import {
   ZoomIn,
   Video,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Trash2
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { MediaItem } from '@/types'
@@ -40,6 +41,8 @@ interface GalleryListProps {
   onToggleFavorite?: (imageUrl: string) => void
   onUpscale?: (imageUrl: string, generation?: any) => void
   userPlan?: string
+  onDeleteGeneration?: (generationId: string) => Promise<boolean>
+  deleting?: boolean
 }
 
 export function GalleryList({
@@ -52,7 +55,9 @@ export function GalleryList({
   onImageClick,
   onToggleFavorite,
   onUpscale,
-  userPlan = 'FREE'
+  userPlan = 'FREE',
+  onDeleteGeneration,
+  deleting = false
 }: GalleryListProps) {
   const router = useRouter()
   // Use mediaItems if provided, otherwise fall back to generations
@@ -87,6 +92,19 @@ export function GalleryList({
         return 'bg-red-100 text-red-800'
       default:
         return ''
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'PROCESSING':
+        return 'Processando'
+      case 'FAILED':
+        return 'Falhou'
+      case 'COMPLETED':
+        return 'Concluído'
+      default:
+        return status
     }
   }
 
@@ -132,13 +150,13 @@ export function GalleryList({
       case 'share':
         if (navigator.share) {
           navigator.share({
-            title: 'AI Generated Photo',
-            text: generation.prompt,
+            title: 'Imagem gerada por IA',
+            text: 'Confira esta criação feita no VibePhoto!',
             url: imageUrl
           })
         } else {
           navigator.clipboard.writeText(imageUrl)
-          alert('Image URL copied to clipboard!')
+          alert('Link da imagem copiado para a área de transferência!')
         }
         break
       case 'favorite':
@@ -149,6 +167,10 @@ export function GalleryList({
         break
       case 'upscale':
         onUpscale?.(imageUrl, generation)
+        break
+      case 'delete':
+        if (!onDeleteGeneration || !generation?.id) return
+        await onDeleteGeneration(generation.id)
         break
     }
   }
@@ -237,7 +259,7 @@ export function GalleryList({
                     <div className="flex items-center space-x-1">
                       {getStatusIcon(status)}
                       <Badge variant="secondary" className={getStatusColor(status)}>
-                        {status}
+                        {getStatusLabel(status)}
                       </Badge>
                     </div>
                   )}
@@ -318,7 +340,7 @@ export function GalleryList({
                       variant="ghost"
                       className="h-7 w-7 p-0 text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
                       onClick={() => handleImageAction('download', imageUrl, generation)}
-                      title="Download"
+                      title="Baixar imagem"
                     >
                       <Download className="w-4 h-4" />
                     </Button>
@@ -346,13 +368,26 @@ export function GalleryList({
                     >
                       <Share2 className="w-4 h-4" />
                     </Button>
+
+                    {onDeleteGeneration && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => handleImageAction('delete', imageUrl, generation)}
+                        title="Excluir imagem"
+                        disabled={deleting}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 )}
 
                 {status === 'PROCESSING' && (
                   <div className="flex items-center text-yellow-600 dark:text-yellow-400">
                     <Clock className="w-4 h-4 mr-2 animate-pulse" />
-                    <span className="text-xs">Generating... (~30 seconds remaining)</span>
+                    <span className="text-xs">Gerando... (~30 segundos restantes)</span>
                   </div>
                 )}
 
@@ -360,10 +395,10 @@ export function GalleryList({
                   <div className="flex items-center space-x-2">
                     <div className="flex items-center text-red-600 dark:text-red-400">
                       <AlertCircle className="w-4 h-4 mr-2" />
-                      <span className="text-xs">Generation failed</span>
+                      <span className="text-xs">Geração falhou</span>
                     </div>
                     <Button size="sm" variant="ghost" className="h-8 px-3 text-xs dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700">
-                      Retry
+                      Tentar novamente
                     </Button>
                   </div>
                 )}

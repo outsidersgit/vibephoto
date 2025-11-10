@@ -24,7 +24,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
-  Info
+  Info,
+  Trash2
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { getGenerationCostDescription, resolveOperationTypeFromGeneration } from '@/lib/utils/gallery-cost'
@@ -59,6 +60,8 @@ interface GalleryGridProps {
   userPlan?: string
   favoriteImages?: string[]
   onToggleFavorite?: (imageUrl: string) => void
+  onDeleteGeneration?: (generationId: string) => Promise<boolean>
+  deleting?: boolean
 }
 
 export function GalleryGrid({
@@ -70,7 +73,9 @@ export function GalleryGrid({
   onUpscale,
   userPlan,
   favoriteImages = [],
-  onToggleFavorite
+  onToggleFavorite,
+  onDeleteGeneration,
+  deleting = false
 }: GalleryGridProps) {
   const router = useRouter()
   const [hoveredImage, setHoveredImage] = useState<string | null>(null)
@@ -411,13 +416,13 @@ export function GalleryGrid({
       case 'share':
         if (navigator.share) {
           navigator.share({
-            title: 'AI Generated Photo',
-            text: generation.prompt,
+            title: 'Imagem gerada por IA',
+            text: 'Confira esta criação feita no VibePhoto!',
             url: imageUrl
           })
         } else {
           navigator.clipboard.writeText(imageUrl)
-          alert('Image URL copied to clipboard!')
+          alert('Link da imagem copiado para a área de transferência!')
         }
         break
       case 'favorite':
@@ -453,6 +458,10 @@ export function GalleryGrid({
         break
       case 'share-telegram':
         handleShare('telegram', imageUrl, generation)
+        break
+      case 'delete':
+        if (!onDeleteGeneration || !generation?.id) return
+        await onDeleteGeneration(generation.id)
         break
     }
   }
@@ -792,7 +801,24 @@ export function GalleryGrid({
                                 </div>
                               )}
                             </div>
-                          </div>
+                      </div>
+
+                      {/* Excluir imagem */}
+                      {onDeleteGeneration && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-9 w-9 sm:h-7 sm:w-7 p-0 bg-white text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleImageAction('delete', currentImageUrl, generation)
+                          }}
+                          title="Excluir imagem"
+                          disabled={deleting}
+                        >
+                          <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                        </Button>
+                      )}
                         )}
                       </div>
                     </div>
@@ -806,8 +832,8 @@ export function GalleryGrid({
             <CardContent className="flex items-center justify-center h-full">
               <div className="text-center">
                 <Clock className="w-8 h-8 text-gray-400 mx-auto mb-2 animate-pulse" />
-                <p className="text-sm text-gray-600">Generating...</p>
-                <p className="text-xs text-gray-500">~30 seconds</p>
+                <p className="text-sm text-gray-600">Gerando...</p>
+                <p className="text-xs text-gray-500">~30 segundos</p>
               </div>
             </CardContent>
           </Card>
@@ -816,8 +842,8 @@ export function GalleryGrid({
             <CardContent className="flex items-center justify-center h-full">
               <div className="text-center">
                 <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-                <p className="text-sm text-red-600">Failed</p>
-                <p className="text-xs text-red-500">Try again</p>
+                <p className="text-sm text-red-600">Falhou</p>
+                <p className="text-xs text-red-500">Tente novamente</p>
               </div>
             </CardContent>
           </Card>

@@ -15,7 +15,6 @@ import {
   ZoomOut,
   RotateCw,
   Copy,
-  ExternalLink,
   Info,
   Edit2,
   ChevronDown,
@@ -32,6 +31,7 @@ import { FeedbackBadge } from '@/components/feedback/feedback-badge'
 import { useFeedback } from '@/hooks/useFeedback'
 import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
 import { CREDIT_COSTS, getVideoGenerationCost } from '@/lib/credits/pricing'
+import { sharePhoto, SharePlatform } from '@/lib/utils/social-share'
 
 // Lazy load VideoModal (Fase 2 - Otimização de Performance)
 const VideoModal = dynamic(() => import('@/components/video/video-modal').then(mod => ({ default: mod.VideoModal })), {
@@ -44,11 +44,11 @@ interface ImageModalProps {
   onClose: () => void
   allImages: MediaItem[]
   onUpscale?: (imageUrl: string, generation: any) => void
-  onDelete?: (generationId: string) => void
+  onDeleteGeneration?: (generationId: string) => Promise<boolean>
   userPlan?: string
 }
 
-export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete, userPlan }: ImageModalProps) {
+export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDeleteGeneration, userPlan }: ImageModalProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [zoom, setZoom] = useState(1)
   const [rotation, setRotation] = useState(0)
@@ -56,6 +56,7 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
   const [showShareMenu, setShowShareMenu] = useState(false)
   const [showShareSubmenu, setShowShareSubmenu] = useState(false)
   const [showVideoModal, setShowVideoModal] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const currentImage = allImages[currentImageIndex] || mediaItem
   const generationId = currentImage?.generation?.id
   const feedback = useFeedback({ generationId })
@@ -155,110 +156,138 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
   }
 
   const handleDelete = async () => {
-    if (!currentImage.generation?.id) return
-
-    const confirmed = confirm(
-      'Tem certeza que deseja excluir esta geração? Esta ação não pode ser desfeita.'
-    )
-
-    if (!confirmed) return
-
+    if (!currentImage.generation?.id || !onDeleteGeneration) return
     try {
-      const response = await fetch('/api/generations/delete', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ generationId: currentImage.generation.id })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to delete generation')
+      setIsDeleting(true)
+      const success = await onDeleteGeneration(currentImage.generation.id)
+      if (success) {
+        onClose()
       }
-
-      console.log('✅ Generation deleted successfully')
-
-      // Close modal first
-      onClose()
-
-      // Notify parent after a small delay to ensure modal is closed
-      setTimeout(() => {
-        if (onDelete) {
-          onDelete(currentImage.generation.id)
-        }
-      }, 100)
-
-    } catch (error) {
-      console.error('❌ Delete failed:', error)
-      alert('Erro ao excluir geração. Tente novamente.')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
-  const handleShare = async (platform?: string) => {
+  const showShareFeedback = (result: any) => {
+    const toast = document.createElement('div')
+    const icon = result.success ? '✅' : '❌'
+    const bgColor = result.success ? '#10b981' : '#ef4444'
+
+    toast.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 16px;">${icon}</span>
+        <div>
+          <div style="font-weight: 600;">${result.message}</div>
+          ${result.action ? `<div style="font-size: 12px; opacity: 0.9;">${result.action}</div>` : ''}
+        </div>
+      </div>
+    `
+
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: ${bgColor};
+      color: white;
+      padding: 16px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 1000;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      animation: slideIn 0.3s ease-out;
+      max-width: 320px;
+      min-width: 250px;
+    `
+
+    document.body.appendChild(toast)
+
+    if (!document.getElementById('share-toast-styles')) {
+      const style = document.createElement('style')
+      style.id = 'share-toast-styles'
+      style.textContent = `
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `
+      document.head.appendChild(style)
+    }
+
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        toast.style.animation = 'slideIn 0.3s ease-out reverse'
+        setTimeout(() => {
+          if (document.body.contains(toast)) {
+            document.body.removeChild(toast)
+          }
+        }, 300)
+      }
+    }, 4000)
+  }
+
+  const handleShare = async (platform?: SharePlatform | 'default') => {
     const currentImage = allImages[currentImageIndex]
     if (!currentImage) return
 
-    const promptText = currentImage.generation?.prompt || 'AI Generated Photo'
     const imageUrl = currentImage.url
-
-    let sharePerformed = false
 
     try {
       switch (platform) {
         case 'instagram':
-          window.open(`https://www.instagram.com/create/story/?url=${encodeURIComponent(imageUrl)}`, '_blank')
-          sharePerformed = true
+          showShareFeedback(await sharePhoto({ imageUrl, generation: currentImage.generation, platform: 'instagram' }))
+          triggerEvent('share')
           break
         case 'tiktok':
-          window.open(`https://www.tiktok.com/upload?url=${encodeURIComponent(imageUrl)}`, '_blank')
-          sharePerformed = true
+          showShareFeedback(await sharePhoto({ imageUrl, generation: currentImage.generation, platform: 'tiktok' }))
+          triggerEvent('share')
           break
         case 'whatsapp':
-          window.open(`https://wa.me/?text=${encodeURIComponent(`Olha essa foto incrível gerada por IA! ${imageUrl}`)}`, '_blank')
-          sharePerformed = true
+          showShareFeedback(await sharePhoto({ imageUrl, generation: currentImage.generation, platform: 'whatsapp' }))
+          triggerEvent('share')
           break
         case 'telegram':
-          window.open(`https://t.me/share/url?url=${encodeURIComponent(imageUrl)}&text=${encodeURIComponent(promptText)}`, '_blank')
-          sharePerformed = true
+          showShareFeedback(await sharePhoto({ imageUrl, generation: currentImage.generation, platform: 'telegram' }))
+          triggerEvent('share')
           break
         case 'gmail':
-          const gmailSubject = encodeURIComponent('Foto Incrível Gerada por IA')
-          const gmailBody = encodeURIComponent(`Olha essa foto incrível que foi gerada por IA:\n\n${promptText}\n\n${imageUrl}`)
-          window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${gmailSubject}&body=${gmailBody}`, '_blank')
-          sharePerformed = true
+          showShareFeedback(await sharePhoto({ imageUrl, generation: currentImage.generation, platform: 'gmail' }))
+          triggerEvent('share')
           break
         case 'copy':
-          await navigator.clipboard.writeText(imageUrl)
-          alert('Link copiado para a área de transferência!')
-          sharePerformed = true
+          showShareFeedback(await sharePhoto({ imageUrl, generation: currentImage.generation, platform: 'copy' }))
+          triggerEvent('share')
           break
         default:
           if (navigator.share) {
             await navigator.share({
-              title: 'AI Generated Photo',
-              text: promptText,
+              title: 'Imagem gerada por IA',
+              text: 'Confira esta criação feita no VibePhoto!',
               url: imageUrl
             })
-            sharePerformed = true
+            showShareFeedback({
+              success: true,
+              message: 'Compartilhamento iniciado!'
+            })
+            triggerEvent('share')
           } else {
-            await navigator.clipboard.writeText(imageUrl)
-            alert('Image URL copied to clipboard!')
-            sharePerformed = true
+            showShareFeedback(await sharePhoto({ imageUrl, generation: currentImage.generation, platform: 'copy' }))
+            triggerEvent('share')
           }
       }
     } catch (error) {
       console.error('Share failed:', error)
-      // Fallback to copy
-      try {
-        await navigator.clipboard.writeText(imageUrl)
-        alert('Link copiado para a área de transferência!')
-        sharePerformed = true
-      } catch (copyError) {
-        console.error('Copy failed:', copyError)
-      }
-    }
-
-    if (sharePerformed) {
-      triggerEvent('share')
+      showShareFeedback({
+        success: false,
+        message: 'Não foi possível compartilhar.',
+        action: 'Tente novamente em instantes.'
+      })
     }
 
     setShowShareMenu(false)
@@ -406,7 +435,7 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
               className="text-white hover:bg-white hover:bg-opacity-20"
             >
               <Download className="w-4 h-4 mr-1" />
-              Download
+            Baixar
             </Button>
 
             {/* Favorite */}
@@ -417,17 +446,18 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
               className="text-white hover:bg-white hover:bg-opacity-20"
             >
               <Heart className="w-4 h-4 mr-1" />
-              Save
+            Favoritar
             </Button>
 
             <Button
               variant="ghost"
               size="sm"
               onClick={handleDelete}
-              className="text-white hover:bg-red-500 hover:bg-opacity-80"
+            className="text-red-400 hover:bg-red-500/20 hover:text-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isDeleting}
             >
               <Trash2 className="w-4 h-4 mr-1" />
-              Excluir
+            {isDeleting ? 'Excluindo...' : 'Excluir'}
             </Button>
 
             {/* Upscale */}
@@ -465,7 +495,7 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
               className="text-white hover:bg-white hover:bg-opacity-20"
             >
               <Video className="w-4 h-4 mr-1" />
-              Vídeo ({getVideoGenerationCost(5)} créditos)
+              Criar vídeo ({getVideoGenerationCost(5)} créditos)
             </Button>
 
             {/* Share Dropdown */}
@@ -477,7 +507,7 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
                 className="text-white hover:bg-white hover:bg-opacity-20"
               >
                 <Share2 className="w-4 h-4 mr-1" />
-                Share
+              Compartilhar
                 <ChevronDown className="w-3 h-3 ml-1" />
               </Button>
 
@@ -555,42 +585,20 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
                       className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
                     >
                       <Share2 className="w-4 h-4" />
-                      <span>Compartilhar geral</span>
+                      <span>Compartilhar (outros)</span>
                     </button>
                   </div>
                 </div>
               )}
             </div>
-
-            {/* Open in new tab */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => window.open(currentImage.url, '_blank')}
-              className="text-white hover:bg-white hover:bg-opacity-20"
-            >
-              <ExternalLink className="w-4 h-4 mr-1" />
-              Open
-            </Button>
-
-            {/* Back to Gallery */}
-            <Link href="/gallery">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white hover:bg-white hover:bg-opacity-20"
-              >
-                Ver Galeria
-              </Button>
-            </Link>
           </div>
         </div>
       </div>
 
       {/* Info Panel */}
       {showInfo && currentImage && (
-        <div className="absolute top-16 right-4 bg-black bg-opacity-80 text-white p-4 rounded-lg max-w-sm z-10">
-          <h3 className="font-semibold mb-3">Image Details</h3>
+        <div className="absolute top-16 right-4 bg-black bg-opacity-80 text-white p-4 rounded-lg max-w-sm max-h-[70vh] overflow-y-auto z-10">
+          <h3 className="font-semibold mb-3 text-base">Detalhes da Imagem</h3>
 
           <div className="space-y-3 text-sm">
             {currentImage.generation?.prompt && (
@@ -612,13 +620,13 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
 
             {currentImage.generation?.negativePrompt && (
               <div>
-                <div className="text-gray-300">Negative Prompt:</div>
+                <div className="text-gray-300">Prompt negativo:</div>
                 <div className="mt-1">{currentImage.generation.negativePrompt}</div>
               </div>
             )}
 
             <div>
-              <div className="text-gray-300">Type:</div>
+              <div className="text-gray-300">Tipo:</div>
               <div className="capitalize">{currentImage.operationType}</div>
             </div>
 
@@ -632,12 +640,12 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
                 {currentImage.metadata.width && currentImage.metadata.height && (
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <div className="text-gray-300">Dimensions:</div>
+                      <div className="text-gray-300">Dimensões:</div>
                       <div>{currentImage.metadata.width} × {currentImage.metadata.height}</div>
                     </div>
                     {currentImage.metadata.format && (
                       <div>
-                        <div className="text-gray-300">Format:</div>
+                        <div className="text-gray-300">Formato:</div>
                         <div className="uppercase">{currentImage.metadata.format}</div>
                       </div>
                     )}
@@ -646,7 +654,7 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
 
                 {currentImage.metadata.sizeBytes && (
                   <div>
-                    <div className="text-gray-300">Size:</div>
+                    <div className="text-gray-300">Tamanho:</div>
                     <div>{(currentImage.metadata.sizeBytes / 1024 / 1024).toFixed(1)} MB</div>
                   </div>
                 )}
@@ -657,24 +665,24 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="text-gray-300">Model:</div>
-                    <div>{currentImage.generation.model?.name || 'Unknown'}</div>
+                    <div className="text-gray-300">Modelo:</div>
+                    <div>{currentImage.generation.model?.name || 'Indefinido'}</div>
                   </div>
                   {currentImage.generation.resolution && (
                     <div>
-                      <div className="text-gray-300">Resolution:</div>
+                      <div className="text-gray-300">Resolução:</div>
                       <div>{currentImage.generation.resolution}</div>
                     </div>
                   )}
                   {currentImage.generation.aspectRatio && (
                     <div>
-                      <div className="text-gray-300">Aspect Ratio:</div>
+                      <div className="text-gray-300">Proporção:</div>
                       <div>{currentImage.generation.aspectRatio}</div>
                     </div>
                   )}
                   {currentImage.generation.style && (
                     <div>
-                      <div className="text-gray-300">Style:</div>
+                      <div className="text-gray-300">Estilo:</div>
                       <div className="capitalize">{currentImage.generation.style}</div>
                     </div>
                   )}
@@ -682,14 +690,14 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
 
                 {currentImage.generation.createdAt && (
                   <div>
-                    <div className="text-gray-300">Created:</div>
+                    <div className="text-gray-300">Criado em:</div>
                     <div>{formatDate(currentImage.generation.createdAt)}</div>
                   </div>
                 )}
 
                 {currentImage.generation.processingTime && (
                   <div>
-                    <div className="text-gray-300">Processing Time:</div>
+                    <div className="text-gray-300">Tempo de processamento:</div>
                     <div>{(currentImage.generation.processingTime / 1000).toFixed(1)}s</div>
                   </div>
                 )}
@@ -708,7 +716,7 @@ export function ImageModal({ mediaItem, onClose, allImages, onUpscale, onDelete,
           </div>
 
           <div className="mt-4 pt-3 border-t border-gray-600 text-xs text-gray-400">
-            Press 'I' to toggle this panel, ESC to close, ← → to navigate
+            Pressione 'I' para alternar este painel, ESC para fechar, ← → para navegar
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import dynamic from 'next/dynamic'
@@ -92,6 +92,12 @@ export function GalleryInterface({
   const [editedImages, setEditedImages] = useState<any[]>([])
   const [videos, setVideos] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [viewMode, setViewMode] = useState(filters.view || 'grid')
+
+  useEffect(() => {
+    setViewMode(filters.view || 'grid')
+  }, [filters.view])
   
   // Upscale states
   const [upscaleModal, setUpscaleModal] = useState({
@@ -118,6 +124,14 @@ export function GalleryInterface({
   ]
 
   const updateFilter = (key: string, value: string | null) => {
+    const currentValue = searchParams.get(key)
+    if ((value || '') === (currentValue || '') && key !== 'page') {
+      if (key === 'view' && value) {
+        setViewMode(value)
+      }
+      return
+    }
+
     const params = new URLSearchParams(searchParams.toString())
     
     if (value) {
@@ -131,7 +145,12 @@ export function GalleryInterface({
       params.set('page', '1')
     }
     
-    router.push(`/gallery?${params.toString()}`)
+    if (key === 'view') {
+      setViewMode(value || 'grid')
+    }
+
+    const queryString = params.toString()
+    router.replace(queryString ? `/gallery?${queryString}` : '/gallery')
   }
 
   const handleSearch = (e: React.FormEvent) => {
@@ -172,6 +191,52 @@ export function GalleryInterface({
   }
 
   // Bulk delete handler
+  const performDelete = useCallback(async (generationId: string) => {
+    const response = await fetch('/api/generations/delete', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ generationId })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Falha ao excluir ${generationId}`)
+    }
+  }, [])
+
+  const deleteGeneration = useCallback(async (generationId: string, options: { confirm?: boolean } = {}) => {
+    if (!generationId) return false
+    const mediaItem = currentData.find(item => item.generation?.id === generationId)
+    const targetUrl = mediaItem?.url
+
+    if (options.confirm !== false) {
+      const confirmed = confirm(
+        'Tem certeza que deseja excluir esta imagem? Esta ação não pode ser desfeita.'
+      )
+
+      if (!confirmed) return false
+    }
+
+    try {
+      setIsDeleting(true)
+      await performDelete(generationId)
+      router.refresh()
+      if (targetUrl) {
+        setSelectedImages(prev => prev.filter(url => url !== targetUrl))
+        if (selectedImage === targetUrl) {
+          setSelectedImage(null)
+        }
+      }
+      return true
+    } catch (error) {
+      console.error('❌ Falha ao excluir imagem:', error)
+      alert('Erro ao excluir imagem. Tente novamente.')
+      return false
+    } finally {
+      setIsDeleting(false)
+    }
+  }, [currentData, performDelete, router, selectedImage])
+
   const handleBulkDelete = async () => {
     if (selectedImages.length === 0) return
 
@@ -201,18 +266,12 @@ export function GalleryInterface({
 
       // Delete each generation
       const deletePromises = generationIds.map(async generationId => {
-        const response = await fetch('/api/generations/delete', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ generationId })
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || `Failed to delete ${generationId}`)
+        try {
+          await performDelete(generationId)
+          return { generationId, success: true }
+        } catch (error) {
+          throw error
         }
-
-        return { generationId, success: true }
       })
 
       const results = await Promise.allSettled(deletePromises)
@@ -228,8 +287,7 @@ export function GalleryInterface({
         alert(`${successes.length} ${successes.length === 1 ? 'imagem excluída' : 'imagens excluídas'} com sucesso.\n${failures.length} ${failures.length === 1 ? 'falhou' : 'falharam'}.`)
       }
 
-      // Reload the page to ensure fresh data
-      window.location.reload()
+      router.refresh()
 
     } catch (error) {
       console.error('❌ Bulk delete failed:', error)
@@ -239,16 +297,6 @@ export function GalleryInterface({
   }
 
   // Single delete handler (from modal)
-  const handleDelete = async (generationId: string) => {
-    console.log('🗑️ Deleting generation:', generationId)
-
-    // Refresh gallery using router
-    router.refresh()
-
-    // Reload to ensure fresh data
-    window.location.reload()
-  }
-
   // Upscale functions
   const handleOpenUpscale = async (imageUrl: string, generation?: any) => {
     // Check if the URL is a temporary Replicate URL (will be expired)
@@ -429,7 +477,28 @@ export function GalleryInterface({
   }, [activeTab, filters.page, filters.search])
 
   // Get current data based on active tab
-  const getCurrentData = (): MediaItem[] => {
+  const filteredGenerations = useMemo(() => {
+    return generations.filter(generation => {
+      if (generation.operationType) {
+        return generation.operationType === 'generation'
+      }
+      return !generation.prompt?.startsWith('[EDITED]')
+    })
+  }, [generations])
+
+  const currentGenerations = useMemo(() => {
+    switch (activeTab) {
+      case 'edited':
+        return editedImages
+      case 'videos':
+        return videos
+      case 'generated':
+      default:
+        return filteredGenerations
+    }
+  }, [activeTab, editedImages, videos, filteredGenerations])
+
+  const currentData: MediaItem[] = useMemo(() => {
     switch (activeTab) {
       case 'edited':
         return editHistoryToMediaItems(editedImages)
@@ -437,19 +506,9 @@ export function GalleryInterface({
         return videoToMediaItems(videos)
       case 'generated':
       default:
-        // Show regular generated images (not edited or upscaled)
-        const filteredGenerations = generations.filter(generation => {
-          if (generation.operationType) {
-            return generation.operationType === 'generation'
-          }
-          // Legacy fallback: exclude only edited (include upscaled in generated tab)
-          return !generation.prompt?.startsWith('[EDITED]')
-        })
         return generationToMediaItems(filteredGenerations)
     }
-  }
-
-  const currentData = getCurrentData()
+  }, [activeTab, editedImages, videos, filteredGenerations])
 
   const hasActiveFilters = filters.model || filters.search
 
@@ -542,7 +601,7 @@ export function GalleryInterface({
             {/* View Toggle */}
             <div className="flex border border-gray-300 rounded-md">
               <Button
-                variant={filters.view === 'grid' ? 'default' : 'ghost'}
+                      variant={viewMode === 'grid' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => updateFilter('view', 'grid')}
                 className="rounded-r-none"
@@ -550,7 +609,7 @@ export function GalleryInterface({
                 <Grid3X3 className="w-4 h-4" />
               </Button>
               <Button
-                variant={filters.view === 'list' ? 'default' : 'ghost'}
+                      variant={viewMode === 'list' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => updateFilter('view', 'list')}
                 className="rounded-l-none"
@@ -624,7 +683,7 @@ export function GalleryInterface({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <span className="font-medium text-blue-900">
-                  {selectedImages.length} imagem{selectedImages.length !== 1 ? 'ns' : ''} selecionada{selectedImages.length !== 1 ? 's' : ''}
+                  {selectedImages.length} {selectedImages.length === 1 ? 'imagem' : 'imagens'} {selectedImages.length === 1 ? 'selecionada' : 'selecionadas'}
                 </span>
                 <Button
                   variant="ghost"
@@ -768,23 +827,28 @@ export function GalleryInterface({
                 </div>
               ) : (
                 <>
-                  {filters.view === 'grid' ? (
+                  {viewMode === 'grid' ? (
                     <GalleryGrid
-                      mediaItems={currentData}
+                      generations={currentGenerations}
                       bulkSelectMode={bulkSelectMode}
                       selectedImages={selectedImages}
                       onImageSelect={toggleImageSelection}
                       onImageClick={setSelectedImage}
                       onUpscale={handleOpenUpscale}
+                      onDeleteGeneration={deleteGeneration}
+                      deleting={isDeleting}
                     />
                   ) : (
                     <GalleryList
                       mediaItems={currentData}
+                      generations={currentGenerations}
                       bulkSelectMode={bulkSelectMode}
                       selectedImages={selectedImages}
                       onImageSelect={toggleImageSelection}
                       onImageClick={setSelectedImage}
                       onUpscale={handleOpenUpscale}
+                      onDeleteGeneration={deleteGeneration}
+                      deleting={isDeleting}
                     />
                   )}
                 </>
@@ -842,7 +906,7 @@ export function GalleryInterface({
             allImages={currentData}
             onClose={() => setSelectedImage(null)}
             onUpscale={handleOpenUpscale}
-            onDelete={handleDelete}
+            onDeleteGeneration={deleteGeneration}
             userPlan={session?.user?.plan || 'FREE'}
           />
         )

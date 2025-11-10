@@ -1508,8 +1508,8 @@ export function AutoSyncGalleryInterface({
                   <>
                     <span className="font-medium text-blue-900 text-sm sm:text-base">
                       {activeTab === 'videos'
-                        ? `${selectedVideos.size} vídeo${selectedVideos.size !== 1 ? 's' : ''} selecionado${selectedVideos.size !== 1 ? 's' : ''}`
-                        : `${selectedImages.length} imagem${selectedImages.length !== 1 ? 'ns' : ''} selecionada${selectedImages.length !== 1 ? 's' : ''}`
+                        ? `${selectedVideos.size} ${selectedVideos.size === 1 ? 'vídeo' : 'vídeos'} ${selectedVideos.size === 1 ? 'selecionado' : 'selecionados'}`
+                        : `${selectedImages.length} ${selectedImages.length === 1 ? 'imagem' : 'imagens'} ${selectedImages.length === 1 ? 'selecionada' : 'selecionadas'}`
                       }
                     </span>
                     <Button
