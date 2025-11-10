@@ -62,7 +62,7 @@ const faqData: FAQItem[] = [
   {
     category: 'funcionamento',
     question: 'Posso editar ou refazer uma foto gerada?',
-    answer: 'Sim. Você pode editar qualquer foto (gerada aqui ou enviada) no nosso Editor de IA. É edição não destrutiva: o original fica preservado.'
+    answer: 'Sim. Você pode editar qualquer foto (gerada aqui ou enviada) no nosso Editor IA. É edição não destrutiva: o original fica preservado.'
   },
   {
     category: 'funcionamento',
@@ -81,8 +81,8 @@ const faqData: FAQItem[] = [
   },
   {
     category: 'funcionamento',
-    question: 'Como funciona o Editor de Imagens com IA?',
-    answer: 'O Editor de IA permite editar qualquer imagem, seja gerada na plataforma ou enviada por você, utilizando comandos de texto simples e intuitivos. Com ele, você pode modificar cenários, trocar roupas, ajustar iluminação, remover objetos, fundir imagens e criar composições exclusivas — tudo com o máximo de controle e realismo. Cada edição custa 15 créditos e é não destrutiva, ou seja, o arquivo original permanece preservado.'
+    question: 'Como funciona o Editor IA?',
+    answer: 'O Editor IA permite editar ou criar qualquer imagem — seja sua, gerada na plataforma ou totalmente nova. Você pode recriar fotos famosas, montar campanhas publicitárias ou dar vida a qualquer ideia usando comandos de texto simples. Modifique cenários, troque roupas, ajuste luz, remova objetos ou combine imagens com realismo total. Cada edição custa 15 créditos.'
   },
   {
     category: 'funcionamento',
@@ -129,7 +129,7 @@ const faqData: FAQItem[] = [
   {
     category: 'pagamento',
     question: 'Como cancelar minha assinatura e excluir minha conta?',
-    answer: 'Para excluir sua conta, você deve PRIMEIRO cancelar sua assinatura ativa. Vá em "Minha Assinatura" e clique em "Cancelar Assinatura". Aguarde a confirmação do cancelamento. Após isso, você pode solicitar a exclusão da conta em "Perfil > Excluir Conta". A exclusão de conta é irreversível e removerá todos os seus dados, fotos e modelos permanentemente. Este processo pode levar até 30 dias para ser concluído.'
+    answer: 'Para excluir sua conta, você deve PRIMEIRO cancelar sua assinatura ativa. Vá em "Minha Assinatura" e clique em "Cancelar Assinatura". Aguarde a confirmação do cancelamento. Após isso, você pode solicitar a exclusão da conta em "Perfil > Excluir Conta". A exclusão de conta é irreversível e removerá todos os seus dados, fotos e modelos permanentemente.'
   },
   {
     category: 'pagamento',
