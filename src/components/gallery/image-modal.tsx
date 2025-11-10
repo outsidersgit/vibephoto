@@ -30,6 +30,7 @@ import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from
 import { CREDIT_COSTS } from '@/lib/credits/pricing'
 import { sharePhoto, SharePlatform } from '@/lib/utils/social-share'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 interface ImageModalProps {
   mediaItem: MediaItem
@@ -248,10 +249,12 @@ export function ImageModal({
   const handleCreateVideo = useCallback(() => {
     const currentImage = allImages[currentImageIndex]
     if (!currentImage) return
-    console.log('Criar vídeo clicado', currentImage.url)
+    const videoSource = currentImage.originalUrl || currentImage.url
+    console.log('Criar vídeo clicado', videoSource)
     triggerEvent('feature_use', { metadata: { feature: 'video' } })
-    router.push(`/generate?video=${encodeURIComponent(currentImage.url)}`)
-  }, [allImages, currentImageIndex, router, triggerEvent])
+    onClose()
+    router.push(`/generate?video=${encodeURIComponent(videoSource)}`)
+  }, [allImages, currentImageIndex, onClose, router, triggerEvent])
 
   const renderShareMenu = () => {
     if (!showShareMenu) return null
@@ -643,22 +646,22 @@ export function ImageModal({
                 title="Fazer upscale"
               >
                 <ZoomIn className="w-4 h-4" />
-                Upscale ({CREDIT_COSTS.UPSCALE_PER_IMAGE} créditos)
+                Upscale
               </Button>
             )}
 
             {currentImage.operationType === 'generated' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push(`/editor?image=${encodeURIComponent(currentImage.url)}`)}
-                className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 cursor-pointer"
-                title="Editar com IA"
-                asChild={false}
-              >
-                <Edit2 className="w-4 h-4" />
-                Editar ({CREDIT_COSTS.IMAGE_EDIT_PER_IMAGE} créditos)
-              </Button>
+              <Link href={`/editor?image=${encodeURIComponent(currentImage.url)}`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 cursor-pointer"
+                  title="Editar com IA"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Editar
+                </Button>
+              </Link>
             )}
 
             <Button
