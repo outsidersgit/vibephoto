@@ -802,6 +802,7 @@ export function GalleryGrid({
                               )}
                             </div>
                       </div>
+                    )}
 
                       {/* Excluir imagem */}
                       {onDeleteGeneration && (
