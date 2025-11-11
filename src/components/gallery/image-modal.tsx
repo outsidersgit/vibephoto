@@ -837,6 +837,7 @@ export function ImageModal({
         isSubmitting={feedback.isSubmitting}
         promptPreview={currentImage?.generation?.prompt}
         className="top-6 right-6 bottom-auto"
+        disableInteractions
       />
     </div>
   )

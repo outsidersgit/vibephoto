@@ -9,6 +9,7 @@ interface FeedbackBadgeProps {
   isSubmitting?: boolean
   promptPreview?: string | null
   className?: string
+  disableInteractions?: boolean
 }
 
 const RATING_LABELS: Record<number, string> = {
@@ -25,7 +26,8 @@ export function FeedbackBadge({
   onSubmit,
   isSubmitting = false,
   promptPreview,
-  className
+  className,
+  disableInteractions = false
 }: FeedbackBadgeProps) {
   const [rating, setRating] = useState(0)
   const [hoveredRating, setHoveredRating] = useState(0)
@@ -96,7 +98,8 @@ export function FeedbackBadge({
     >
       <div
         className={cn(
-          'pointer-events-auto w-[280px] rounded-2xl border border-white/40 bg-white/95 shadow-xl backdrop-blur-md',
+          disableInteractions ? 'pointer-events-none' : 'pointer-events-auto',
+          'w-[280px] rounded-2xl border border-white/40 bg-white/95 shadow-xl backdrop-blur-md',
           'ring-1 ring-black/5'
         )}
       >
