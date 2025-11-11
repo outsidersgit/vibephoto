@@ -35,7 +35,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const videoStatus = params.status
   const videoQuality = params.quality
 
-  const [models, generationBatch, videoBatch, videoStatsResult] = await Promise.all([
+  const [models, generationBatch] = await Promise.all([
     getModelsByUserId(userId).catch(() => []),
     fetchGenerationBatch({
       userId,
@@ -43,21 +43,39 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
       modelId: modelFilter,
       searchQuery: searchQuery || undefined,
       sortBy
-    }),
-    fetchVideoBatch({
-      userId,
-      limit,
-      status: videoStatus ? (videoStatus.toUpperCase() as VideoStatus) : undefined,
-      quality: videoQuality || undefined,
-      searchQuery: searchQuery || undefined
-    }),
-    getVideoGenerationStats(userId).catch(() => ({
-      totalVideos: 0,
-      completedVideos: 0,
-      processingVideos: 0,
-      failedVideos: 0,
-      totalCreditsUsed: 0
-    }))
+    })
+  ])
+
+  const shouldPrefetchVideos = activeTab === 'videos'
+
+  const videoBatchPromise = shouldPrefetchVideos
+    ? fetchVideoBatch({
+        userId,
+        limit,
+        status: videoStatus ? (videoStatus.toUpperCase() as VideoStatus) : undefined,
+        quality: videoQuality || undefined,
+        searchQuery: searchQuery || undefined
+      })
+    : Promise.resolve({
+        items: [] as any[],
+        nextCursor: null as string | null,
+        hasMore: false,
+        totalCount: 0
+      })
+
+  const videoStatsPromise = shouldPrefetchVideos
+    ? getVideoGenerationStats(userId).catch(() => ({
+        totalVideos: 0,
+        completedVideos: 0,
+        processingVideos: 0,
+        failedVideos: 0,
+        totalCreditsUsed: 0
+      }))
+    : Promise.resolve(undefined)
+
+  const [videoBatch, videoStatsResult] = await Promise.all([
+    videoBatchPromise,
+    videoStatsPromise
   ])
 
   const stats = {
