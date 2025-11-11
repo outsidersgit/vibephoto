@@ -9,7 +9,6 @@ import {
   Download,
   Heart,
   Share2,
-  Eye,
   MoreHorizontal,
   Clock,
   CheckCircle,
@@ -288,7 +287,7 @@ export function GalleryList({
                       onClick={() => onImageClick(imageUrl)}
                       title="Visualizar todas as imagens"
                     >
-                      <Eye className="w-4 h-4" />
+                      <MoreHorizontal className="w-4 h-4" />
                     </Button>
 
                     <Button

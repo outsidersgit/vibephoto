@@ -43,8 +43,7 @@ export function ImageDetailsDialog({ generation, open, onClose }: ImageDetailsDi
         {generation ? (
           <div className="space-y-5 text-sm text-slate-200/90">
             <div>
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Detalhes principais</span>
-              <h4 className="mt-1 text-base font-semibold text-white">Prompt</h4>
+              <h4 className="text-base font-semibold text-white">Prompt</h4>
               <div className="mt-2 relative max-h-48 overflow-y-auto rounded-lg bg-white/5 px-3 py-2 leading-relaxed text-slate-100/90">
                 <button
                   type="button"
@@ -61,10 +60,6 @@ export function ImageDetailsDialog({ generation, open, onClose }: ImageDetailsDi
               {copied && (
                 <p className="mt-1 text-[11px] font-medium text-emerald-300">Prompt copiado!</p>
               )}
-            </div>
-
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Informações da geração</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
