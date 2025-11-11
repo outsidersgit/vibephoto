@@ -33,8 +33,7 @@ import {
   WifiOff,
   Film,
   Settings,
-  BarChart3,
-  Loader2
+  BarChart3
 } from 'lucide-react'
 import { GalleryGrid } from './gallery-grid'
 import { GalleryList } from './gallery-list'
@@ -65,14 +64,15 @@ interface AutoSyncGalleryInterfaceProps {
   pagination: {
     limit: number
     total: number
-    nextCursor: string | null
-    hasMore: boolean
+    page: number
+    pages: number
   }
   videoPagination?: {
     limit: number
     total: number
-    nextCursor: string | null
-    hasMore: boolean
+    page: number
+    pages: number
+    hasMore?: boolean
   }
   models: any[]
   stats: {
@@ -210,6 +210,7 @@ export function AutoSyncGalleryInterface({
     search: searchParams.get('search') || undefined,
     sort: searchParams.get('sort') || 'newest',
     limit: pagination?.limit ?? 24,
+    page: Math.max(parseInt(searchParams.get('page') || '1', 10), 1)
   }
 
   // CRITICAL: Só usar initialGenerations se autorizado e tem sessão
@@ -329,28 +330,7 @@ export function AutoSyncGalleryInterface({
     if (galleryData?.videos) {
       setLocalVideos(galleryData.videos)
     }
-    if (galleryData?.pagination) {
-      if (activeTab === 'generated') {
-        const nextCursor = galleryData.pagination.nextCursor ?? (galleryData.generations && galleryData.generations.length > 0
-          ? galleryData.generations[galleryData.generations.length - 1]?.id ?? null
-          : null)
-        setHasMoreGenerations(galleryData.pagination.hasMore ?? (galleryData.pagination.total > (galleryData.generations?.length ?? 0)))
-        setNextGenerationCursor(nextCursor)
-        setTotalGenerationsCount(galleryData.pagination.total ?? totalGenerationsCount)
-        setAutoLoadGenerations(false)
-      }
-
-      if (activeTab === 'videos') {
-        const nextCursor = galleryData.pagination.nextCursor ?? (galleryData.videos && galleryData.videos.length > 0
-          ? galleryData.videos[galleryData.videos.length - 1]?.id ?? null
-          : null)
-        setHasMoreVideos(galleryData.pagination.hasMore ?? (galleryData.pagination.total > (galleryData.videos?.length ?? 0)))
-        setNextVideoCursor(nextCursor)
-        setTotalVideosCount(galleryData.pagination.total ?? totalVideosCount)
-        setAutoLoadVideos(false)
-      }
-    }
-  }, [galleryData, activeTab, totalGenerationsCount, totalVideosCount])
+  }, [galleryData, activeTab])
   
   // Usar estado local (que sempre tem dados) em vez de dados diretos do React Query
   const generations = [...localGenerations].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -360,21 +340,39 @@ export function AutoSyncGalleryInterface({
   const lastUpdate = galleryData ? new Date() : null
   const [pendingUpdates, setPendingUpdates] = useState(0)
 
-  const initialGenerationCursor = pagination?.nextCursor ?? (initialGenerations.length > 0 ? initialGenerations[initialGenerations.length - 1]?.id ?? null : null)
-  const [hasMoreGenerations, setHasMoreGenerations] = useState<boolean>(pagination?.hasMore ?? false)
-  const [nextGenerationCursor, setNextGenerationCursor] = useState<string | null>(initialGenerationCursor)
-  const [isLoadingMoreGenerations, setIsLoadingMoreGenerations] = useState(false)
-  const [autoLoadGenerations, setAutoLoadGenerations] = useState(false)
-  const [totalGenerationsCount, setTotalGenerationsCount] = useState<number>(pagination?.total ?? initialGenerations.length)
-  const generationButtonRef = useRef<HTMLButtonElement | null>(null)
+  const fallbackGenerationPagination: { limit: number; total: number; page: number; pages: number } = {
+    limit: pagination?.limit ?? initialGenerations.length || 1,
+    total: pagination?.total ?? initialGenerations.length,
+    page: pagination?.page ?? 1,
+    pages: pagination?.pages ?? Math.max(
+      1,
+      Math.ceil((pagination?.total ?? initialGenerations.length) / Math.max(pagination?.limit ?? initialGenerations.length || 1, 1))
+    )
+  }
 
-  const initialVideoCursor = videoPagination?.nextCursor ?? (initialVideos && initialVideos.length > 0 ? initialVideos[initialVideos.length - 1]?.id ?? null : null)
-  const [hasMoreVideos, setHasMoreVideos] = useState<boolean>(videoPagination?.hasMore ?? false)
-  const [nextVideoCursor, setNextVideoCursor] = useState<string | null>(initialVideoCursor)
-  const [isLoadingMoreVideos, setIsLoadingMoreVideos] = useState(false)
-  const [autoLoadVideos, setAutoLoadVideos] = useState(false)
-  const [totalVideosCount, setTotalVideosCount] = useState<number>(videoPagination?.total ?? (initialVideos?.length ?? 0))
-  const videoButtonRef = useRef<HTMLButtonElement | null>(null)
+  const fallbackVideoPagination: { limit: number; total: number; page: number; pages: number } = {
+    limit: videoPagination?.limit ?? (initialVideos?.length ?? 1),
+    total: videoPagination?.total ?? (initialVideos?.length ?? 0),
+    page: videoPagination?.page ?? 1,
+    pages: videoPagination?.pages ?? Math.max(
+      1,
+      Math.ceil((videoPagination?.total ?? (initialVideos?.length ?? 0)) / Math.max(videoPagination?.limit ?? (initialVideos?.length ?? 1), 1))
+    )
+  }
+
+  const generationPaginationInfo = activeTab === 'generated'
+    ? galleryData?.pagination ?? fallbackGenerationPagination
+    : fallbackGenerationPagination
+
+  const videoPaginationInfo = activeTab === 'videos'
+    ? galleryData?.pagination ?? fallbackVideoPagination
+    : fallbackVideoPagination
+
+  const generationCurrentPage = generationPaginationInfo.page
+  const generationTotalPages = generationPaginationInfo.pages
+
+  const videoCurrentPage = videoPaginationInfo.page
+  const videoTotalPages = videoPaginationInfo.pages
 
   // State para contadores globais de cada tab (independente da tab ativa)
   const [globalCounts, setGlobalCounts] = useState({
@@ -705,14 +703,6 @@ export function AutoSyncGalleryInterface({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
-  useEffect(() => {
-    if (activeTab === 'generated') {
-      setAutoLoadVideos(false)
-    } else if (activeTab === 'videos') {
-      setAutoLoadGenerations(false)
-    }
-  }, [activeTab])
-
   const sortOptions = [
     { value: 'newest', label: 'Mais Recentes' },
     { value: 'oldest', label: 'Mais Antigas' },
@@ -727,6 +717,10 @@ export function AutoSyncGalleryInterface({
       params.set(key, value)
     } else {
       params.delete(key)
+    }
+
+    if (key !== 'page') {
+      params.delete('page')
     }
     
     // Preserve tab when updating filters
@@ -745,6 +739,8 @@ export function AutoSyncGalleryInterface({
     } else {
       params.set('tab', tab)
     }
+
+    params.delete('page')
 
     // O useEffect detectará a mudança na URL e atualizará activeTab + fará refresh
     router.push(`/gallery?${params.toString()}`)
@@ -1377,203 +1373,15 @@ export function AutoSyncGalleryInterface({
   
   const hasActiveFilters = filters.model || filters.search || statusFilter !== 'all' || showFavoritesOnly
 
-  const loadMoreGenerations = useCallback(async (trigger: 'button' | 'observer' = 'button') => {
-    if (!hasMoreGenerations || isLoadingMoreGenerations) {
-      return
-    }
+  const handleGenerationPageChange = useCallback((nextPage: number) => {
+    const normalized = Math.max(1, Math.min(nextPage, generationTotalPages || 1))
+    updateFilter('page', normalized > 1 ? normalized.toString() : null)
+  }, [generationTotalPages, updateFilter])
 
-    const effectiveCursor = nextGenerationCursor ?? generations[generations.length - 1]?.id
-    if (!effectiveCursor) {
-      console.warn('🔁 Sem cursor válido para carregar mais gerações.')
-      return
-    }
-
-    setIsLoadingMoreGenerations(true)
-
-    try {
-      const params = new URLSearchParams()
-      params.set('tab', 'generated')
-      params.set('limit', String(pagination?.limit ?? 24))
-      params.set('cursor', effectiveCursor)
-
-      if (galleryFilters.model) params.set('model', galleryFilters.model)
-      if (galleryFilters.search) params.set('search', galleryFilters.search)
-      if (galleryFilters.sort) params.set('sort', galleryFilters.sort)
-      if (showFavoritesOnly) params.set('favorites', 'true')
-
-      const response = await fetch(`/api/gallery/load-more?${params.toString()}`)
-
-      if (!response.ok) {
-        throw new Error('Falha ao buscar mais gerações')
-      }
-
-      const json = await response.json()
-
-      if (!json.success) {
-        throw new Error(json.error || 'Resposta inválida ao carregar mais gerações')
-      }
-
-      const fetchedGenerations: any[] = json.data?.generations || []
-
-      setTotalGenerationsCount(json.data?.totalCount ?? totalGenerationsCount)
-
-      if (fetchedGenerations.length > 0) {
-        setLocalGenerations(prev => {
-          const existingIds = new Set(prev.map((gen: any) => gen.id))
-          const merged = [...prev]
-
-          fetchedGenerations.forEach((gen: any) => {
-            if (!existingIds.has(gen.id)) {
-              merged.push(gen)
-            }
-          })
-
-          merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          return merged
-        })
-      }
-
-      setHasMoreGenerations(json.data?.hasMore ?? false)
-      setNextGenerationCursor(json.data?.nextCursor ?? null)
-
-      if (trigger === 'button' && (json.data?.hasMore ?? false)) {
-        setAutoLoadGenerations(true)
-      }
-    } catch (error) {
-      console.error('❌ Erro ao carregar mais gerações:', error)
-      addToast({
-        title: 'Não foi possível carregar mais fotos',
-        description: error instanceof Error ? error.message : 'Tente novamente em instantes.',
-        variant: 'destructive'
-      })
-    } finally {
-      setIsLoadingMoreGenerations(false)
-    }
-  }, [hasMoreGenerations, isLoadingMoreGenerations, nextGenerationCursor, generations, pagination?.limit, galleryFilters.model, galleryFilters.search, galleryFilters.sort, showFavoritesOnly, totalGenerationsCount, addToast])
-
-  const loadMoreVideos = useCallback(async (trigger: 'button' | 'observer' = 'button') => {
-    if (!hasMoreVideos || isLoadingMoreVideos) {
-      return
-    }
-
-    const effectiveCursor = nextVideoCursor ?? videos[videos.length - 1]?.id
-    if (!effectiveCursor) {
-      console.warn('🔁 Sem cursor válido para carregar mais vídeos.')
-      return
-    }
-
-    setIsLoadingMoreVideos(true)
-
-    try {
-      const params = new URLSearchParams()
-      params.set('tab', 'videos')
-      params.set('limit', String(videoPagination?.limit ?? 24))
-      params.set('cursor', effectiveCursor)
-
-      if (filters.search) params.set('search', filters.search)
-      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter)
-
-      const response = await fetch(`/api/gallery/load-more?${params.toString()}`)
-
-      if (!response.ok) {
-        throw new Error('Falha ao buscar mais vídeos')
-      }
-
-      const json = await response.json()
-
-      if (!json.success) {
-        throw new Error(json.error || 'Resposta inválida ao carregar mais vídeos')
-      }
-
-      const fetchedVideos: any[] = json.data?.videos || []
-
-      setTotalVideosCount(json.data?.totalCount ?? totalVideosCount)
-
-      if (fetchedVideos.length > 0) {
-        setLocalVideos(prev => {
-          const existingIds = new Set(prev.map((video: any) => video.id))
-          const merged = [...prev]
-
-          fetchedVideos.forEach((video: any) => {
-            if (!existingIds.has(video.id)) {
-              merged.push(video)
-            }
-          })
-
-          merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          return merged
-        })
-      }
-
-      setHasMoreVideos(json.data?.hasMore ?? false)
-      setNextVideoCursor(json.data?.nextCursor ?? null)
-
-      if (trigger === 'button' && (json.data?.hasMore ?? false)) {
-        setAutoLoadVideos(true)
-      }
-    } catch (error) {
-      console.error('❌ Erro ao carregar mais vídeos:', error)
-      addToast({
-        title: 'Não foi possível carregar mais vídeos',
-        description: error instanceof Error ? error.message : 'Tente novamente em instantes.',
-        variant: 'destructive'
-      })
-    } finally {
-      setIsLoadingMoreVideos(false)
-    }
-  }, [hasMoreVideos, isLoadingMoreVideos, nextVideoCursor, videos, videoPagination?.limit, filters.search, statusFilter, totalVideosCount, addToast])
-
-  useEffect(() => {
-    if (!autoLoadGenerations || !hasMoreGenerations || activeTab !== 'generated' || isLoadingMoreGenerations) {
-      return
-    }
-
-    const target = generationButtonRef.current
-    if (!target) return
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          loadMoreGenerations('observer')
-        }
-      })
-    }, {
-      rootMargin: '300px 0px 300px 0px',
-      threshold: 0.1
-    })
-
-    observer.observe(target)
-
-    return () => {
-      observer.disconnect()
-    }
-  }, [autoLoadGenerations, hasMoreGenerations, activeTab, isLoadingMoreGenerations, loadMoreGenerations])
-
-  useEffect(() => {
-    if (!autoLoadVideos || !hasMoreVideos || activeTab !== 'videos' || isLoadingMoreVideos) {
-      return
-    }
-
-    const target = videoButtonRef.current
-    if (!target) return
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          loadMoreVideos('observer')
-        }
-      })
-    }, {
-      rootMargin: '300px 0px 300px 0px',
-      threshold: 0.1
-    })
-
-    observer.observe(target)
-
-    return () => {
-      observer.disconnect()
-    }
-  }, [autoLoadVideos, hasMoreVideos, activeTab, isLoadingMoreVideos, loadMoreVideos])
+  const handleVideoPageChange = useCallback((nextPage: number) => {
+    const normalized = Math.max(1, Math.min(nextPage, videoTotalPages || 1))
+    updateFilter('page', normalized > 1 ? normalized.toString() : null)
+  }, [videoTotalPages, updateFilter])
 
   return (
     <div className="space-y-3">
@@ -2044,60 +1852,70 @@ export function AutoSyncGalleryInterface({
 
               {/* Pagination */}
               <div className="flex flex-col items-center space-y-4 mt-6">
-                {activeTab === 'generated' && (
-                  hasMoreGenerations ? (
+                {activeTab === 'generated' && generationTotalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
                     <Button
-                      ref={generationButtonRef}
                       type="button"
-                      onClick={() => loadMoreGenerations('button')}
-                      disabled={isLoadingMoreGenerations}
-                      className="relative inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#667EEA] to-[#764BA2] px-6 sm:px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-[#667EEA]/20 transition-all duration-200 hover:from-[#5a6bd8] hover:to-[#6a4190] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#764BA2]/60 focus-visible:ring-offset-2 disabled:opacity-70"
+                      variant="outline"
+                      onClick={() => handleGenerationPageChange(generationCurrentPage - 1)}
+                      disabled={generationCurrentPage <= 1}
+                      className="inline-flex items-center gap-2 rounded-xl border border-gray-300 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                     >
-                      {isLoadingMoreGenerations ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Carregando...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="hidden sm:inline">Carregar mais</span>
-                          <span className="sm:hidden">Ver mais</span>
-                        </>
-                      )}
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
                     </Button>
-                  ) : (
-                    generations.length > 0 && (
-                      <p className="text-xs text-gray-500">Você já visualizou todas as fotos geradas.</p>
-                    )
-                  )
+                    <span className="text-sm text-gray-600">
+                      Página <span className="font-medium text-gray-900">{generationCurrentPage}</span> de{' '}
+                      <span className="font-medium text-gray-900">{generationTotalPages}</span>
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleGenerationPageChange(generationCurrentPage + 1)}
+                      disabled={generationCurrentPage >= generationTotalPages}
+                      className="inline-flex items-center gap-2 rounded-xl border border-gray-300 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                    >
+                      Próxima
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 )}
 
-                {activeTab === 'videos' && (
-                  hasMoreVideos ? (
+                {activeTab === 'videos' && videoTotalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
                     <Button
-                      ref={videoButtonRef}
                       type="button"
-                      onClick={() => loadMoreVideos('button')}
-                      disabled={isLoadingMoreVideos}
-                      className="relative inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#667EEA] to-[#764BA2] px-6 sm:px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-[#667EEA]/20 transition-all duration-200 hover:from-[#5a6bd8] hover:to-[#6a4190] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#764BA2]/60 focus-visible:ring-offset-2 disabled:opacity-70"
+                      variant="outline"
+                      onClick={() => handleVideoPageChange(videoCurrentPage - 1)}
+                      disabled={videoCurrentPage <= 1}
+                      className="inline-flex items-center gap-2 rounded-xl border border-gray-300 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                     >
-                      {isLoadingMoreVideos ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Carregando...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="hidden sm:inline">Carregar mais</span>
-                          <span className="sm:hidden">Ver mais</span>
-                        </>
-                      )}
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
                     </Button>
-                  ) : (
-                    videos.length > 0 && (
-                      <p className="text-xs text-gray-500">Você já visualizou todos os vídeos.</p>
-                    )
-                  )
+                    <span className="text-sm text-gray-600">
+                      Página <span className="font-medium text-gray-900">{videoCurrentPage}</span> de{' '}
+                      <span className="font-medium text-gray-900">{videoTotalPages}</span>
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleVideoPageChange(videoCurrentPage + 1)}
+                      disabled={videoCurrentPage >= videoTotalPages}
+                      className="inline-flex items-center gap-2 rounded-xl border border-gray-300 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                    >
+                      Próxima
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
+                {activeTab === 'generated' && generations.length > 0 && generationTotalPages <= 1 && (
+                  <p className="text-xs text-gray-500">Mostrando todas as fotos geradas.</p>
+                )}
+
+                {activeTab === 'videos' && videos.length > 0 && videoTotalPages <= 1 && (
+                  <p className="text-xs text-gray-500">Mostrando todos os vídeos.</p>
                 )}
               </div>
             </>

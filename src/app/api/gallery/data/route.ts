@@ -24,11 +24,11 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const limit = Math.min(parseInt(searchParams.get('limit') || '24', 10), 40)
+    const page = Math.max(parseInt(searchParams.get('page') || '1', 10), 1)
     const modelFilter = searchParams.get('model') || undefined
     const searchQuery = searchParams.get('search') || undefined
     const sortBy = (searchParams.get('sort') || 'newest') as 'newest' | 'oldest' | 'model' | 'prompt'
     const tab = searchParams.get('tab') || 'generated'
-    const cursor = searchParams.get('cursor') || undefined
     const statusParam = searchParams.get('status') || undefined
     const qualityParam = searchParams.get('quality') || undefined
 
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       const videoResult = await fetchVideoBatch({
         userId,
         limit,
-        cursor,
+        page,
         status: statusParam ? (statusParam.toUpperCase() as VideoStatus) : undefined,
         quality: qualityParam || undefined,
         searchQuery
@@ -63,7 +63,8 @@ export async function GET(request: NextRequest) {
         pagination: {
           limit,
           total: videoResult.totalCount,
-          nextCursor: videoResult.nextCursor,
+          page: videoResult.page,
+          pages: videoResult.totalPages,
           hasMore: videoResult.hasMore
         },
         timestamp: new Date().toISOString()
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
     const generationResult = await fetchGenerationBatch({
       userId,
       limit,
-      cursor,
+      page,
       modelId: modelFilter,
       searchQuery,
       sortBy
@@ -95,7 +96,8 @@ export async function GET(request: NextRequest) {
       pagination: {
         limit,
         total: generationResult.totalCount,
-        nextCursor: generationResult.nextCursor,
+        page: generationResult.page,
+        pages: generationResult.totalPages,
         hasMore: generationResult.hasMore
       },
       timestamp: new Date().toISOString()

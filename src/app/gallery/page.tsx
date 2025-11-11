@@ -26,6 +26,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
 
   const params = await searchParams
   const limit = Math.min(parseInt(params.limit || '24'), 30)
+  const page = Math.max(parseInt(params.page || '1'), 1)
   const modelFilter = params.model
   const searchQuery = params.search
   const sortBy = (params.sort || 'newest') as 'newest' | 'oldest' | 'model' | 'prompt'
@@ -47,6 +48,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
     fetchGenerationBatch({
       userId,
       limit,
+      page,
       modelId: modelFilter,
       searchQuery: searchQuery || undefined,
       sortBy
@@ -59,13 +61,15 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
     ? fetchVideoBatch({
         userId,
         limit,
+        page,
         status: videoStatus || undefined,
         quality: videoQuality || undefined,
         searchQuery: searchQuery || undefined
       })
     : Promise.resolve({
         items: [] as any[],
-        nextCursor: null as string | null,
+        page: 1,
+        totalPages: 1,
         hasMore: false,
         totalCount: 0
       })
@@ -101,13 +105,14 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const safeGenerationPagination = serializeForProps({
     limit,
     total: generationBatch.totalCount,
-    nextCursor: generationBatch.nextCursor,
-    hasMore: generationBatch.hasMore
+    page: generationBatch.page,
+    pages: generationBatch.totalPages
   })
   const safeVideoPagination = serializeForProps({
     limit,
     total: videoBatch.totalCount,
-    nextCursor: videoBatch.nextCursor,
+    page: videoBatch.page,
+    pages: videoBatch.totalPages,
     hasMore: videoBatch.hasMore
   })
 

@@ -603,7 +603,7 @@ export async function searchVideoGenerations(
 export interface VideoBatchParams {
   userId: string
   limit?: number
-  cursor?: string | null
+  page?: number
   status?: VideoStatus | string | null
   quality?: string | null
   searchQuery?: string | null
@@ -611,7 +611,8 @@ export interface VideoBatchParams {
 
 export interface VideoBatchResult {
   items: any[]
-  nextCursor: string | null
+  page: number
+  totalPages: number
   hasMore: boolean
   totalCount: number
 }
@@ -619,11 +620,14 @@ export interface VideoBatchResult {
 export async function fetchVideoBatch({
   userId,
   limit = 24,
-  cursor,
+  page: requestedPage,
   status,
   quality,
   searchQuery
 }: VideoBatchParams): Promise<VideoBatchResult> {
+  const page = Math.max(requestedPage ?? 1, 1)
+  const skip = (page - 1) * limit
+
   const where: any = {
     userId,
     status: status
@@ -643,7 +647,8 @@ export async function fetchVideoBatch({
   const queryArgs: any = {
     where,
     orderBy: { createdAt: 'desc' },
-    take: limit + 1,
+    skip,
+    take: limit,
     select: {
       id: true,
       sourceImageUrl: true,
@@ -686,26 +691,20 @@ export async function fetchVideoBatch({
     }
   }
 
-  if (cursor) {
-    queryArgs.cursor = { id: cursor }
-    queryArgs.skip = 1
-  }
-
   const results = await prisma.videoGeneration.findMany(queryArgs)
-  const hasMore = results.length > limit
-  const items = hasMore ? results.slice(0, limit) : results
-  const nextCursor = hasMore ? items[items.length - 1]?.id ?? null : null
+  const totalCount = await prisma.videoGeneration.count({ where })
+  const totalPages = Math.max(1, Math.ceil(totalCount / limit))
+  const hasMore = page < totalPages
 
-  const serializableItems = items.map(video => ({
+  const serializableItems = results.map(video => ({
     ...video,
     sizeBytes: video.sizeBytes ? video.sizeBytes.toString() : null
   }))
 
-  const totalCount = await prisma.videoGeneration.count({ where })
-
   return {
     items: serializableItems,
-    nextCursor,
+    page,
+    totalPages,
     hasMore,
     totalCount
   }

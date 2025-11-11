@@ -3,10 +3,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 export interface GalleryFilters {
   tab?: string
   status?: string
+  model?: string
   search?: string
   sort?: string
   limit?: number
-  cursor?: string | null
+  page?: number
 }
 
 export interface GalleryData {
@@ -22,9 +23,8 @@ export interface GalleryData {
   pagination: {
     limit: number
     total: number
-    page?: number
-    pages?: number
-    nextCursor?: string | null
+    page: number
+    pages: number
     hasMore?: boolean
   }
 }
@@ -44,7 +44,7 @@ export function useGalleryData(filters: GalleryFilters, placeholderData?: Galler
       if (filters.search) params.append('search', filters.search)
       if (filters.sort) params.append('sort', filters.sort)
       if (filters.limit) params.append('limit', filters.limit.toString())
-      if (filters.cursor) params.append('cursor', filters.cursor)
+      if (filters.page) params.append('page', filters.page.toString())
 
       const response = await fetch(`/api/gallery/data?${params.toString()}`)
 

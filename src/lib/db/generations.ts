@@ -6,7 +6,7 @@ import { getImageGenerationCost } from '@/lib/credits/pricing'
 export interface GenerationBatchParams {
   userId: string
   limit?: number
-  cursor?: string | null
+  page?: number
   modelId?: string
   searchQuery?: string
   sortBy?: 'newest' | 'oldest' | 'model' | 'prompt'
@@ -15,7 +15,8 @@ export interface GenerationBatchParams {
 
 export interface GenerationBatchResult {
   items: any[]
-  nextCursor: string | null
+  page: number
+  totalPages: number
   hasMore: boolean
   totalCount: number
 }
@@ -23,12 +24,15 @@ export interface GenerationBatchResult {
 export async function fetchGenerationBatch({
   userId,
   limit = 24,
-  cursor,
+  page: requestedPage,
   modelId,
   searchQuery,
   sortBy = 'newest',
   includePackages = false
 }: GenerationBatchParams): Promise<GenerationBatchResult> {
+  const page = Math.max(requestedPage ?? 1, 1)
+  const skip = (page - 1) * limit
+
   const where: Prisma.GenerationWhereInput = {
     userId,
     status: GenerationStatus.COMPLETED,
@@ -48,7 +52,8 @@ export async function fetchGenerationBatch({
   const queryArgs: Prisma.GenerationFindManyArgs = {
     where,
     orderBy,
-    take: limit + 1,
+    skip,
+    take: limit,
     include: {
       model: {
         select: { id: true, name: true, class: true }
@@ -63,21 +68,15 @@ export async function fetchGenerationBatch({
     }
   }
 
-  if (cursor) {
-    queryArgs.cursor = { id: cursor }
-    queryArgs.skip = 1
-  }
-
   const results = await prisma.generation.findMany(queryArgs)
-  const hasMore = results.length > limit
-  const items = hasMore ? results.slice(0, limit) : results
-  const nextCursor = hasMore ? items[items.length - 1]?.id ?? null : null
-
   const totalCount = await prisma.generation.count({ where })
+  const totalPages = Math.max(1, Math.ceil(totalCount / limit))
+  const hasMore = page < totalPages
 
   return {
-    items,
-    nextCursor,
+    items: results,
+    page,
+    totalPages,
     hasMore,
     totalCount
   }
