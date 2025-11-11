@@ -255,10 +255,9 @@ export function ImageModal({
       console.log('Criar vídeo clicado', videoSource)
 
       triggerEvent('feature_use', { metadata: { feature: 'video' } })
-      onClose()
       router.push(`/generate?tab=video&sourceImage=${encodeURIComponent(videoSource)}`)
     },
-    [allImages, currentImageIndex, onClose, router, triggerEvent]
+    [allImages, currentImageIndex, router, triggerEvent]
   )
 
   const showShareFeedback = (result: any) => {
