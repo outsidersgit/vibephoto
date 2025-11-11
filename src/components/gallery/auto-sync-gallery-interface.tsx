@@ -240,16 +240,18 @@ export function AutoSyncGalleryInterface({
   const [localGenerations, setLocalGenerations] = useState<any[]>(safeInitialGenerations)
   const [localEditHistory, setLocalEditHistory] = useState<any[]>([])
   const [localVideos, setLocalVideos] = useState<any[]>(safeInitialVideos)
+const [favoriteImages, setFavoriteImages] = useState<string[]>([])
+const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
 
-  const filterSignature = [
-    activeTab,
-    currentModel || '',
-    currentSearchParam || '',
-    currentSort || '',
-    showFavoritesOnly ? 'fav' : '',
-  ].join('|')
-  const previousFilterSignatureRef = useRef(filterSignature)
-  
+const filterSignature = [
+  activeTab,
+  currentModel || '',
+  currentSearchParam || '',
+  currentSort || '',
+  showFavoritesOnly ? 'fav' : '',
+].join('|')
+const previousFilterSignatureRef = useRef(filterSignature)
+
   // CRITICAL: Limpar dados locais se sessão for perdida
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -407,8 +409,15 @@ export function AutoSyncGalleryInterface({
   const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set())
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [bulkSelectMode, setBulkSelectMode] = useState(false)
-  const [favoriteImages, setFavoriteImages] = useState<string[]>([])
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
+
+  const filterSignature = [
+    activeTab,
+    currentModel || '',
+    currentSearchParam || '',
+    currentSort || '',
+    showFavoritesOnly ? 'fav' : '',
+  ].join('|')
+  const previousFilterSignatureRef = useRef(filterSignature)
 
   // Upscale states
   const [activeUpscale, setActiveUpscale] = useState<{
