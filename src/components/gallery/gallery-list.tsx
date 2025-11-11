@@ -9,7 +9,6 @@ import {
   Download,
   Heart,
   Share2,
-  MoreHorizontal,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -280,15 +279,6 @@ export function GalleryList({
                 {/* Actions */}
                 {status === 'COMPLETED' && imageUrl && (
                   <div className="flex items-center flex-wrap gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
-                      onClick={() => onImageClick(imageUrl)}
-                      title="Visualizar todas as imagens"
-                    >
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
 
                     <Button
                       size="sm"
