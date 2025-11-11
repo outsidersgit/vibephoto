@@ -116,53 +116,36 @@ export function AutoSyncGalleryInterface({
   // CRITICAL: Proteção contra botão voltar (bfcache) após logout
   const { data: session, status } = useSession()
   const isAuthorized = useAuthGuard()
-  
-  // CRITICAL: Verificação IMEDIATA antes de qualquer hook ou estado
-  // Prevenir erro React #300 ao bloquear renderização completamente
-  // PERFORMANCE: Verificação otimizada para mobile e desktop
-  // MOBILE COMPATIBLE: document.cookie funciona em todos os mobile browsers
-  if (typeof window !== 'undefined') {
-    // PERFORMANCE: Função leve (<0.1ms) que verifica cookies diretamente
-    // Evita depender de NextAuth que pode estar em estado inconsistente
-    const hasSessionCookie = () => {
-      try {
-        // MOBILE: document.cookie funciona em iOS Safari, Android Chrome, etc.
-        const cookies = document.cookie.split(';')
-        return cookies.some(cookie => {
-          const cookieName = cookie.trim().split('=')[0]
-          return cookieName.includes('next-auth') || 
-                 cookieName.includes('__Secure-next-auth') || 
-                 cookieName.includes('__Host-next-auth')
-        })
-      } catch (e) {
-        // MOBILE: Fallback seguro se cookie API falhar
-        return false
+
+  // CRITICAL: useEffect para redirecionar (não pode fazer early return após hooks)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // PERFORMANCE: Função leve (<0.1ms) que verifica cookies diretamente
+      const hasSessionCookie = () => {
+        try {
+          const cookies = document.cookie.split(';')
+          return cookies.some(cookie => {
+            const cookieName = cookie.trim().split('=')[0]
+            return cookieName.includes('next-auth') ||
+                   cookieName.includes('__Secure-next-auth') ||
+                   cookieName.includes('__Host-next-auth')
+          })
+        } catch (e) {
+          return false
+        }
+      }
+
+      // CRITICAL: Se não há cookie de sessão, redirecionar IMEDIATAMENTE
+      if (!hasSessionCookie() && (status === 'unauthenticated' || isAuthorized === false)) {
+        const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent('/gallery')
+        try {
+          window.location.replace(redirectUrl)
+        } catch (error) {
+          window.location.href = redirectUrl
+        }
       }
     }
-    
-    // CRITICAL: Se não há cookie de sessão, redirecionar IMEDIATAMENTE
-    // MOBILE COMPATIBLE: location.replace funciona em todos os mobile browsers
-    if (!hasSessionCookie() && (status === 'unauthenticated' || isAuthorized === false)) {
-      // Bloquear qualquer renderização adicional
-      const redirectUrl = '/auth/signin?callbackUrl=' + encodeURIComponent('/gallery')
-      try {
-        // MOBILE: replace funciona em iOS Safari, Android Chrome, etc.
-        window.location.replace(redirectUrl)
-      } catch (error) {
-        // MOBILE: Fallback para browsers que não suportam replace
-        window.location.href = redirectUrl
-      }
-      // Retornar componente mínimo para evitar erro React
-      return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Redirecionando para login...</p>
-          </div>
-        </div>
-      )
-    }
-  }
+  }, [status, isAuthorized])
   
   // CRITICAL: Redirecionar se não autorizado (usando useEffect para não violar regras dos hooks)
   useEffect(() => {
