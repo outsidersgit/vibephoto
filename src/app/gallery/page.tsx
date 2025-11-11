@@ -35,25 +35,76 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const videoStatus = params.status
   const videoQuality = params.quality
 
-  const serializeForProps = <T,>(data: T): T => {
-    return JSON.parse(
-      JSON.stringify(data, (_key, value) =>
-        typeof value === 'bigint' ? value.toString() : value
+  // Safe serialization with comprehensive error handling
+  const serializeForProps = <T,>(data: T, context = 'unknown'): T => {
+    try {
+      // Handle null/undefined early
+      if (data === null || data === undefined) {
+        return data as T
+      }
+
+      return JSON.parse(
+        JSON.stringify(data, (key, value) => {
+          // Handle BigInt
+          if (typeof value === 'bigint') {
+            return value.toString()
+          }
+          // Handle Date objects
+          if (value instanceof Date) {
+            return value.toISOString()
+          }
+          // Skip functions
+          if (typeof value === 'function') {
+            return undefined
+          }
+          // Handle Buffer (common in Prisma)
+          if (value && typeof value === 'object' && value.type === 'Buffer') {
+            return undefined
+          }
+          return value
+        })
       )
-    )
+    } catch (error) {
+      console.error(`❌ Serialization error in ${context}:`, error)
+      console.error('Failed data sample:', typeof data === 'object' ? JSON.stringify(data, null, 2).substring(0, 500) : data)
+
+      // Return safe fallback based on type
+      if (Array.isArray(data)) {
+        return [] as unknown as T
+      }
+      if (typeof data === 'object' && data !== null) {
+        return {} as T
+      }
+      return data
+    }
   }
 
-  const [models, generationBatch] = await Promise.all([
-    getModelsByUserId(userId).catch(() => []),
-    fetchGenerationBatch({
-      userId,
-      limit,
-      page,
-      modelId: modelFilter,
-      searchQuery: searchQuery || undefined,
-      sortBy: sortParam
-    })
-  ])
+  // Fetch data with better error handling
+  let models: any[] = []
+  let generationBatch: any = { items: [], totalCount: 0, page: 1, totalPages: 1, hasMore: false }
+
+  try {
+    [models, generationBatch] = await Promise.all([
+      getModelsByUserId(userId).catch((err) => {
+        console.error('❌ Error fetching models:', err)
+        return []
+      }),
+      fetchGenerationBatch({
+        userId,
+        limit,
+        page,
+        modelId: modelFilter,
+        searchQuery: searchQuery || undefined,
+        sortBy: sortParam
+      }).catch((err) => {
+        console.error('❌ Error fetching generations:', err)
+        return { items: [], totalCount: 0, page: 1, totalPages: 1, hasMore: false }
+      })
+    ])
+  } catch (error) {
+    console.error('❌ Critical error loading gallery data:', error)
+    // Use safe defaults
+  }
 
   const shouldPrefetchVideos = activeTab === 'videos'
 
@@ -95,26 +146,26 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
     totalImages: generationBatch.totalCount,
     favoriteImages: 0,
     collections: 0
-  })
+  }, 'stats')
 
-  const videoStats = videoStatsResult ? serializeForProps(videoStatsResult) : undefined
+  const videoStats = videoStatsResult ? serializeForProps(videoStatsResult, 'videoStats') : undefined
 
-  const safeGenerations = serializeForProps(generationBatch.items)
-  const safeVideos = serializeForProps(videoBatch.items)
-  const safeModels = serializeForProps(models)
+  const safeGenerations = serializeForProps(generationBatch.items, 'generations')
+  const safeVideos = serializeForProps(videoBatch.items, 'videos')
+  const safeModels = serializeForProps(models, 'models')
   const safeGenerationPagination = serializeForProps({
     limit,
     total: generationBatch.totalCount,
     page: generationBatch.page,
     pages: generationBatch.totalPages
-  })
+  }, 'generationPagination')
   const safeVideoPagination = serializeForProps({
     limit,
     total: videoBatch.totalCount,
     page: videoBatch.page,
     pages: videoBatch.totalPages,
     hasMore: videoBatch.hasMore
-  })
+  }, 'videoPagination')
 
   return (
     <>
