@@ -243,15 +243,6 @@ export function AutoSyncGalleryInterface({
 const [favoriteImages, setFavoriteImages] = useState<string[]>([])
 const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
 
-const filterSignature = [
-  activeTab,
-  currentModel || '',
-  currentSearchParam || '',
-  currentSort || '',
-  showFavoritesOnly ? 'fav' : '',
-].join('|')
-const previousFilterSignatureRef = useRef(filterSignature)
-
   // CRITICAL: Limpar dados locais se sessão for perdida
   useEffect(() => {
     if (status === 'unauthenticated') {
