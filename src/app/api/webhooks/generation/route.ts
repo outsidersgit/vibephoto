@@ -87,28 +87,6 @@ export async function POST(request: NextRequest) {
           select: {
             name: true
           }
-          const potentialSources = [
-            referenceImageUrl,
-            Array.isArray(updateData.imageUrls) && updateData.imageUrls.length > 0 ? updateData.imageUrls[0] : null,
-            temporaryUrls[0] ?? null
-          ].filter(Boolean) as string[]
-
-          for (const source of potentialSources) {
-            const aspectInfo = await extractImageMetadata(source)
-            if (aspectInfo && aspectInfo.aspectRatio) {
-              updateData.aspectRatio = aspectInfo.aspectRatio
-              Object.assign(newMetadata, {
-                aspectRatio: aspectInfo.aspectRatio,
-                width: aspectInfo.width,
-                height: aspectInfo.height
-              })
-              break
-            }
-          }
-        }
-
-        if (Object.keys(newMetadata).length > 0) {
-          updateData.metadata = newMetadata
         }
       }
     })
@@ -138,9 +116,10 @@ export async function POST(request: NextRequest) {
         const newMetadata: Record<string, any> = { ...existingMetadata }
         let referenceImageUrl: string | null = null
         
+        let temporaryUrls: string[] = []
+        
         if (payload.output) {
           // Handle different output formats
-          let temporaryUrls: string[] = []
           
           if (Array.isArray(payload.output)) {
             temporaryUrls = payload.output
@@ -273,6 +252,33 @@ export async function POST(request: NextRequest) {
           updateData.processingTime = Math.round(payload.metrics.total_time * 1000) // Convert to milliseconds
         } else {
           updateData.processingTime = new Date().getTime() - new Date(generation.createdAt).getTime()
+        }
+
+        const potentialSources = [
+          referenceImageUrl,
+          Array.isArray(updateData.imageUrls) && updateData.imageUrls.length > 0 ? updateData.imageUrls[0] : null,
+          (Array.isArray(temporaryUrls) && temporaryUrls.length > 0) ? temporaryUrls[0] : null
+        ].filter(Boolean) as string[]
+
+        for (const source of potentialSources) {
+          try {
+            const aspectInfo = await extractImageMetadata(source)
+            if (aspectInfo && aspectInfo.aspectRatio) {
+              updateData.aspectRatio = aspectInfo.aspectRatio
+              Object.assign(newMetadata, {
+                aspectRatio: aspectInfo.aspectRatio,
+                width: aspectInfo.width,
+                height: aspectInfo.height
+              })
+              break
+            }
+          } catch (error) {
+            console.warn('⚠️ [WEBHOOK] Failed to read metadata from source:', { source, error })
+          }
+        }
+
+        if (Object.keys(newMetadata).length > 0) {
+          updateData.metadata = newMetadata
         }
 
         // NOTE: Credits are already debited and transaction created on generation creation
