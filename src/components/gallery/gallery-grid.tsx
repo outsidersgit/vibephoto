@@ -710,7 +710,7 @@ export function GalleryGrid({
                         onClick={(e) => {
                           e.stopPropagation()
                           const videoSource = generation?.originalImageUrl || currentImageUrl
-                          router.push(`/generate?tab=video&image=${encodeURIComponent(videoSource)}`)
+                          router.push(`/generate?tab=video&sourceImage=${encodeURIComponent(videoSource)}`)
                         }}
                         title="Criar vídeo"
                       >
