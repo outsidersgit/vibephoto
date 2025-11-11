@@ -7,7 +7,6 @@ import {
   X,
   Download,
   Heart,
-  Share2,
   ChevronLeft,
   ChevronRight,
   ZoomIn,
@@ -16,9 +15,7 @@ import {
   Copy,
   Info,
   Edit2,
-  ChevronDown,
   Video,
-  MoreHorizontal,
   Trash2
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
@@ -27,9 +24,7 @@ import { getGenerationCostDescription } from '@/lib/utils/gallery-cost'
 import { getAspectRatioLabel } from '@/lib/utils/aspect-ratio'
 import { FeedbackBadge } from '@/components/feedback/feedback-badge'
 import { useFeedback } from '@/hooks/useFeedback'
-import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
 import { CREDIT_COSTS } from '@/lib/credits/pricing'
-import { sharePhoto, SharePlatform } from '@/lib/utils/social-share'
 import { useRouter } from 'next/navigation'
 
 interface ImageModalProps {
@@ -58,8 +53,6 @@ export function ImageModal({
   const [zoom, setZoom] = useState(1)
   const [rotation, setRotation] = useState(0)
   const [showInfo, setShowInfo] = useState(false)
-  const [showShareMenu, setShowShareMenu] = useState(false)
-  const [showShareSubmenu, setShowShareSubmenu] = useState(false)
   const [isFavorite, setIsFavorite] = useState(initialFavorite)
   const [isDeleting, setIsDeleting] = useState(false)
   const currentImage = allImages[currentImageIndex] || mediaItem
@@ -268,89 +261,6 @@ export function ImageModal({
     [allImages, currentImageIndex, onClose, router, triggerEvent]
   )
 
-  const renderShareMenu = () => {
-    if (!showShareMenu) return null
-
-    return (
-      <div className="absolute bottom-full left-0 mb-2 bg-black bg-opacity-90 border border-gray-600 rounded-lg shadow-lg min-w-48 z-50">
-        <div className="py-1">
-          <button
-            onClick={() => handleShare('instagram')}
-            className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
-          >
-            <InstagramIcon size={16} />
-            <span>Instagram</span>
-          </button>
-          <button
-            onClick={() => handleShare('tiktok')}
-            className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
-          >
-            <TikTokIcon size={16} />
-            <span>TikTok</span>
-          </button>
-          <button
-            onClick={() => handleShare('whatsapp')}
-            className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
-          >
-            <WhatsAppIcon size={16} />
-            <span>WhatsApp</span>
-          </button>
-
-          <hr className="border-gray-600 my-1" />
-
-          <div className="relative">
-            <button
-              className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center justify-between"
-              onClick={() => setShowShareSubmenu(!showShareSubmenu)}
-            >
-              <div className="flex items-center space-x-2">
-                <MoreHorizontal className="w-4 h-4" />
-                <span>Outros compartilhamentos</span>
-              </div>
-              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showShareSubmenu ? 'rotate-180' : ''}`} />
-            </button>
-
-            {showShareSubmenu && (
-              <div className="bg-black bg-opacity-95 border-t border-gray-600">
-                <button
-                  onClick={() => handleShare('gmail')}
-                  className="w-full px-8 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
-                >
-                  <GmailIcon size={16} />
-                  <span>Gmail</span>
-                </button>
-                <button
-                  onClick={() => handleShare('copy')}
-                  className="w-full px-8 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
-                >
-                  <Copy className="w-4 h-4" />
-                  <span>Copiar Link</span>
-                </button>
-                <button
-                  onClick={() => handleShare('telegram')}
-                  className="w-full px-8 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
-                >
-                  <TelegramIcon size={16} />
-                  <span>Telegram</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          <hr className="border-gray-600 my-1" />
-
-          <button
-            onClick={() => handleShare()}
-            className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white hover:bg-opacity-20 flex items-center space-x-2"
-          >
-            <Share2 className="w-4 h-4" />
-            <span>Compartilhar (outros)</span>
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   const showShareFeedback = (result: any) => {
     const toast = document.createElement('div')
     const icon = result.success ? '✅' : '❌'
@@ -413,69 +323,6 @@ export function ImageModal({
         }, 300)
       }
     }, 4000)
-  }
-
-  const handleShare = async (platform?: SharePlatform | 'default') => {
-    const currentImage = allImages[currentImageIndex]
-    if (!currentImage) return
-
-    const imageUrl = currentImage.url
-    console.log('Compartilhar clicado', platform ?? 'menu', imageUrl)
-
-    try {
-      switch (platform) {
-        case 'instagram':
-          showShareFeedback(await sharePhoto({ imageUrl, generation: currentImage.generation, platform: 'instagram' }))
-          triggerEvent('share')
-          break
-        case 'tiktok':
-          showShareFeedback(await sharePhoto({ imageUrl, generation: currentImage.generation, platform: 'tiktok' }))
-          triggerEvent('share')
-          break
-        case 'whatsapp':
-          showShareFeedback(await sharePhoto({ imageUrl, generation: currentImage.generation, platform: 'whatsapp' }))
-          triggerEvent('share')
-          break
-        case 'telegram':
-          showShareFeedback(await sharePhoto({ imageUrl, generation: currentImage.generation, platform: 'telegram' }))
-          triggerEvent('share')
-          break
-        case 'gmail':
-          showShareFeedback(await sharePhoto({ imageUrl, generation: currentImage.generation, platform: 'gmail' }))
-          triggerEvent('share')
-          break
-        case 'copy':
-          showShareFeedback(await sharePhoto({ imageUrl, generation: currentImage.generation, platform: 'copy' }))
-          triggerEvent('share')
-          break
-        default:
-          if (navigator.share) {
-            await navigator.share({
-              title: 'Imagem gerada por IA',
-              text: 'Confira esta criação feita no VibePhoto!',
-              url: imageUrl
-            })
-            showShareFeedback({
-              success: true,
-              message: 'Compartilhamento iniciado!'
-            })
-            triggerEvent('share')
-          } else {
-            showShareFeedback(await sharePhoto({ imageUrl, generation: currentImage.generation, platform: 'copy' }))
-            triggerEvent('share')
-          }
-      }
-    } catch (error) {
-      console.error('Share failed:', error)
-      showShareFeedback({
-        success: false,
-        message: 'Não foi possível compartilhar.',
-        action: 'Tente novamente em instantes.'
-      })
-    }
-
-    setShowShareMenu(false)
-    setShowShareSubmenu(false)
   }
 
   const handleUpscaleClick = () => {
@@ -695,26 +542,6 @@ export function ImageModal({
               <Video className="w-4 h-4" />
               Criar vídeo
             </Button>
-
-            <div className="relative inline-flex">
-              <Button
-                variant="ghost"
-                size="sm"
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  console.log('Abrindo menu de compartilhamento', !showShareMenu)
-                  setShowShareMenu(!showShareMenu)
-                }}
-                className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 cursor-pointer"
-                title="Compartilhar"
-              >
-                <Share2 className="w-4 h-4" />
-                Compartilhar
-                <ChevronDown className="w-3 h-3 ml-1" />
-              </Button>
-              {renderShareMenu()}
-            </div>
           </div>
         </div>
       </div>

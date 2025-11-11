@@ -9,9 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   Download,
   Heart,
-  Share2,
   Eye,
-  MoreHorizontal,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -21,14 +19,11 @@ import {
   Video,
   ChevronLeft,
   ChevronRight,
-  Copy,
   Info,
   Trash2
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { getGenerationCostDescription, resolveOperationTypeFromGeneration } from '@/lib/utils/gallery-cost'
-import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
-import { sharePhoto, SharePlatform } from '@/lib/utils/social-share'
 import { OptimizedImage } from '@/components/ui/optimized-image'
 import { ImageDetailsDialog } from './image-details-dialog'
 
@@ -77,8 +72,6 @@ export function GalleryGrid({
 }: GalleryGridProps) {
   const router = useRouter()
   const [hoveredImage, setHoveredImage] = useState<string | null>(null)
-  const [shareDropdown, setShareDropdown] = useState<string | null>(null)
-  const [shareSubmenu, setShareSubmenu] = useState<string | null>(null)
   const [currentVariations, setCurrentVariations] = useState<Record<string, number>>({})
   const [infoGeneration, setInfoGeneration] = useState<any | null>(null)
   const [currentModal, setCurrentModal] = useState<{
@@ -87,19 +80,6 @@ export function GalleryGrid({
     imageUrl?: string
     showSlider?: boolean
   }>({ type: null, generation: null })
-
-  // Close share dropdown and submenu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setShareDropdown(null)
-      setShareSubmenu(null)
-    }
-
-    if (shareDropdown || shareSubmenu) {
-      document.addEventListener('click', handleClickOutside)
-      return () => document.removeEventListener('click', handleClickOutside)
-    }
-  }, [shareDropdown, shareSubmenu])
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -213,35 +193,6 @@ export function GalleryGrid({
       ...prev,
       [generationId]: index
     }))
-  }
-
-  // Social sharing functions
-  // Nova função centralizada de compartilhamento
-  const handleShare = async (platform: SharePlatform, imageUrl: string, generation: any) => {
-    try {
-      console.log(`🚀 [GALLERY] Sharing to ${platform}:`, { imageUrl, generation })
-
-      const result = await sharePhoto({
-        imageUrl,
-        generation,
-        platform
-      })
-
-      // Exibe feedback baseado no resultado
-      showShareFeedback(result)
-
-      return result.success
-
-    } catch (error) {
-      console.error('❌ [GALLERY] Share failed:', error)
-      showShareFeedback({
-        success: false,
-        method: 'copy',
-        message: 'Erro no compartilhamento',
-        action: 'Tente novamente'
-      })
-      return false
-    }
   }
 
   // Função para exibir feedback visual
@@ -411,18 +362,6 @@ export function GalleryGrid({
           })
         }
         break
-      case 'share':
-        if (navigator.share) {
-          navigator.share({
-            title: 'Imagem gerada por IA',
-            text: 'Confira esta criação feita no VibePhoto!',
-            url: imageUrl
-          })
-        } else {
-          navigator.clipboard.writeText(imageUrl)
-          alert('Link da imagem copiado para a área de transferência!')
-        }
-        break
       case 'favorite':
         onToggleFavorite?.(imageUrl, generation)
         break
@@ -434,28 +373,6 @@ export function GalleryGrid({
         router.push(`/editor?image=${encodeURIComponent(imageUrl)}&generationId=${generation.id}`)
         break
       case 'video':
-        // Video creation is handled by the CompactVideoButton component
-        break
-      case 'share-dropdown':
-        // Toggle share dropdown
-        setShareDropdown(shareDropdown === imageUrl ? null : imageUrl)
-        setShareSubmenu(null) // Close submenu when opening dropdown
-        break
-      case 'share-submenu':
-        // Toggle share submenu
-        setShareSubmenu(shareSubmenu === imageUrl ? null : imageUrl)
-        break
-      case 'share-email':
-        handleShare('gmail', imageUrl, generation)
-        break
-      case 'share-copy':
-        handleShare('copy', imageUrl, generation)
-        break
-      case 'share-whatsapp-direct':
-        handleShare('whatsapp', imageUrl, generation)
-        break
-      case 'share-telegram':
-        handleShare('telegram', imageUrl, generation)
         break
       case 'delete':
         if (!onDeleteGeneration || !generation?.id) return
@@ -717,122 +634,6 @@ export function GalleryGrid({
                         <Video className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                       </Button>
 
-                      {/* Compartilhar */}
-                      <div className="relative">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="h-9 w-9 sm:h-7 sm:w-7 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleImageAction('share-dropdown', currentImageUrl, generation)
-                          }}
-                          title="Compartilhar"
-                        >
-                          <Share2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                        </Button>
-
-                        {shareDropdown === currentImageUrl && (
-                          <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border p-2 min-w-[200px] sm:min-w-[180px] z-30">
-                            <button
-                              className="flex items-center space-x-2 w-full p-2 hover:bg-gray-100 rounded text-sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleShare('instagram', currentImageUrl, generation)
-                                setShareDropdown(null)
-                              }}
-                            >
-                              <InstagramIcon size={20} />
-                              <span className="text-gray-700">Instagram</span>
-                            </button>
-
-                            <button
-                              className="flex items-center space-x-2 w-full p-2 hover:bg-gray-100 rounded text-sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleShare('tiktok', currentImageUrl, generation)
-                                setShareDropdown(null)
-                              }}
-                            >
-                              <TikTokIcon size={20} />
-                              <span className="text-gray-700">TikTok</span>
-                            </button>
-
-                            <button
-                              className="flex items-center space-x-2 w-full p-2 hover:bg-gray-100 rounded text-sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleShare('whatsapp', currentImageUrl, generation)
-                                setShareDropdown(null)
-                              }}
-                            >
-                              <WhatsAppIcon size={20} />
-                              <span className="text-gray-700">WhatsApp</span>
-                            </button>
-
-                            <div className="border-t border-gray-200 my-1"></div>
-
-                            <div className="relative">
-                              <button
-                                className="flex items-center justify-between w-full p-2 hover:bg-gray-100 rounded text-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleImageAction('share-submenu', currentImageUrl, generation)
-                                }}
-                              >
-                                <div className="flex items-center space-x-2">
-                                  <MoreHorizontal size={20} />
-                                  <span className="text-gray-700">Outros compartilhamentos</span>
-                                </div>
-                                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${shareSubmenu === currentImageUrl ? 'rotate-0' : 'rotate-270'}`} />
-                              </button>
-
-                              {shareSubmenu === currentImageUrl && (
-                                <div className="absolute left-full top-0 ml-1 bg-white rounded-lg shadow-lg border p-2 min-w-[160px] z-40">
-                                  <button
-                                    className="flex items-center space-x-2 w-full p-2 hover:bg-gray-100 rounded text-sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleImageAction('share-email', currentImageUrl, generation)
-                                      setShareDropdown(null)
-                                      setShareSubmenu(null)
-                                    }}
-                                  >
-                                    <GmailIcon size={16} />
-                                    <span className="text-gray-700">Gmail</span>
-                                  </button>
-
-                                  <button
-                                    className="flex items-center space-x-2 w-full p-2 hover:bg-gray-100 rounded text-sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleImageAction('share-copy', currentImageUrl, generation)
-                                      setShareDropdown(null)
-                                      setShareSubmenu(null)
-                                    }}
-                                  >
-                                    <Copy size={16} className="text-gray-600" />
-                                    <span className="text-gray-700">Copiar Link</span>
-                                  </button>
-
-                                  <button
-                                    className="flex items-center space-x-2 w-full p-2 hover:bg-gray-100 rounded text-sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleImageAction('share-telegram', currentImageUrl, generation)
-                                      setShareDropdown(null)
-                                      setShareSubmenu(null)
-                                    }}
-                                  >
-                                    <TelegramIcon size={16} />
-                                    <span className="text-gray-700">Telegram</span>
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
                     </div>
                   </div>
                 )}

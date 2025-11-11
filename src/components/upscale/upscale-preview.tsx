@@ -4,14 +4,13 @@ import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Download, ZoomIn, ZoomOut, Eye, EyeOff, RotateCcw, Share2 } from 'lucide-react'
+import { Download, ZoomIn, ZoomOut, Eye, EyeOff, RotateCcw } from 'lucide-react'
 
 interface UpscalePreviewProps {
   originalImage: string
   upscaledImage: string
   scaleFactor: number
   onDownload?: () => void
-  onShare?: () => void
   onReset?: () => void
   className?: string
 }
@@ -21,7 +20,6 @@ export function UpscalePreview({
   upscaledImage,
   scaleFactor,
   onDownload,
-  onShare,
   onReset,
   className = ''
 }: UpscalePreviewProps) {
@@ -324,13 +322,6 @@ export function UpscalePreview({
             <Download className="w-4 h-4 mr-2" />
             Download Original
           </Button>
-
-          {onShare && (
-            <Button variant="outline" onClick={onShare}>
-              <Share2 className="w-4 h-4 mr-2" />
-              Compartilhar
-            </Button>
-          )}
 
           {onReset && (
             <Button variant="outline" onClick={onReset}>

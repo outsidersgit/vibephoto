@@ -12,8 +12,6 @@ import {
   Volume2,
   VolumeX,
   Maximize,
-  Share2,
-  Copy,
   Check,
   Clock,
   Calendar,
@@ -22,11 +20,8 @@ import {
   ExternalLink,
   Heart,
   Eye,
-  ChevronDown,
-  MoreHorizontal,
   Trash2
 } from 'lucide-react'
-import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
 import { calculateOperationCost, getCostDescription } from '@/lib/utils/cost-calculator'
 
 interface VideoGeneration {
@@ -74,8 +69,6 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
   const [showFullPrompt, setShowFullPrompt] = useState(false)
   const [showSourceImage, setShowSourceImage] = useState(false)
   const [isFavorited, setIsFavorited] = useState(false)
-  const [showShareMenu, setShowShareMenu] = useState(false)
-  const [showShareSubmenu, setShowShareSubmenu] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -226,61 +219,6 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
     
     videoElement.currentTime = newTime
     setCurrentTime(newTime)
-  }
-
-  const handleShare = async (platform: string) => {
-    if (!video.videoUrl) return
-
-    const promptText = video.prompt || 'AI Generated Video'
-    const videoUrl = video.videoUrl
-
-    try {
-      switch (platform) {
-        case 'instagram':
-          window.open(`https://www.instagram.com/create/story/?url=${encodeURIComponent(videoUrl)}`, '_blank')
-          break
-        case 'tiktok':
-          window.open(`https://www.tiktok.com/upload?url=${encodeURIComponent(videoUrl)}`, '_blank')
-          break
-        case 'whatsapp':
-          window.open(`https://wa.me/?text=${encodeURIComponent(`Olha esse vídeo incrível gerado por IA! ${videoUrl}`)}`, '_blank')
-          break
-        case 'telegram':
-          window.open(`https://t.me/share/url?url=${encodeURIComponent(videoUrl)}&text=${encodeURIComponent(promptText)}`, '_blank')
-          break
-        case 'gmail':
-          const gmailSubject = encodeURIComponent('Vídeo Incrível Gerado por IA')
-          const gmailBody = encodeURIComponent(`Olha esse vídeo incrível que foi gerado por IA:\n\n${promptText}\n\n${videoUrl}`)
-          window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${gmailSubject}&body=${gmailBody}`, '_blank')
-          break
-        case 'copy':
-          await navigator.clipboard.writeText(videoUrl)
-          alert('Link copiado para a área de transferência!')
-          break
-        default:
-          if (navigator.share) {
-            await navigator.share({
-              title: 'AI Generated Video',
-              text: promptText,
-              url: videoUrl
-            })
-          } else {
-            await navigator.clipboard.writeText(videoUrl)
-            alert('Video URL copied to clipboard!')
-          }
-      }
-    } catch (error) {
-      console.error('Share failed:', error)
-      // Fallback to copy
-      try {
-        await navigator.clipboard.writeText(videoUrl)
-        alert('Link copiado para a área de transferência!')
-      } catch (copyError) {
-        console.error('Copy failed:', copyError)
-      }
-    }
-    setShowShareMenu(false)
-    setShowShareSubmenu(false)
   }
 
   const handleDownload = async () => {
@@ -639,100 +577,8 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
                   >
                     <Trash2 className="w-4 h-4 text-red-600" />
                   </button>
-
-                  {/* Share Tool */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowShareMenu(!showShareMenu)}
-                      className="w-8 h-8 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
-                      title="Compartilhar"
-                    >
-                      <Share2 className="w-4 h-4 text-gray-700" />
-                    </button>
-
-                    {showShareMenu && (
-                      <div className="absolute top-full right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl min-w-48 z-50">
-                        <div className="py-1">
-                          <button
-                            onClick={() => handleShare('instagram')}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                          >
-                            <InstagramIcon size={16} />
-                            <span>Instagram</span>
-                          </button>
-                          <button
-                            onClick={() => handleShare('tiktok')}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                          >
-                            <TikTokIcon size={16} />
-                            <span>TikTok</span>
-                          </button>
-                          <button
-                            onClick={() => handleShare('whatsapp')}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                          >
-                            <WhatsAppIcon size={16} />
-                            <span>WhatsApp</span>
-                          </button>
-
-                          <hr className="border-gray-200 my-1" />
-
-                          {/* Outros Compartilhamentos Submenu */}
-                          <div className="relative">
-                            <button
-                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between"
-                              onClick={() => setShowShareSubmenu(!showShareSubmenu)}
-                            >
-                              <div className="flex items-center space-x-2">
-                                <MoreHorizontal className="w-4 h-4" />
-                                <span>Outros compartilhamentos</span>
-                              </div>
-                              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showShareSubmenu ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            {/* Submenu */}
-                            {showShareSubmenu && (
-                              <div className="bg-gray-50 border-t border-gray-200">
-                                <button
-                                  onClick={() => handleShare('gmail')}
-                                  className="w-full px-8 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                                >
-                                  <GmailIcon size={16} />
-                                  <span>Gmail</span>
-                                </button>
-                                <button
-                                  onClick={() => handleShare('copy')}
-                                  className="w-full px-8 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                                >
-                                  <Copy className="w-4 h-4" />
-                                  <span>Copiar Link</span>
-                                </button>
-                                <button
-                                  onClick={() => handleShare('telegram')}
-                                  className="w-full px-8 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                                >
-                                  <TelegramIcon size={16} />
-                                  <span>Telegram</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
                 </div>
 
-                {/* Backdrop to close share menu */}
-                {showShareMenu && (
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => {
-                      setShowShareMenu(false)
-                      setShowShareSubmenu(false)
-                    }}
-                  />
-                )}
               </div>
             )}
 

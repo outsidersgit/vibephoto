@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge'
 import {
   Download,
   Heart,
-  Share2,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -133,18 +132,6 @@ export function GalleryList({
           document.body.appendChild(link)
           link.click()
           document.body.removeChild(link)
-        }
-        break
-      case 'share':
-        if (navigator.share) {
-          navigator.share({
-            title: 'Imagem gerada por IA',
-            text: 'Confira esta criação feita no VibePhoto!',
-            url: imageUrl
-          })
-        } else {
-          navigator.clipboard.writeText(imageUrl)
-          alert('Link da imagem copiado para a área de transferência!')
         }
         break
       case 'favorite':
@@ -338,16 +325,6 @@ export function GalleryList({
                       title="Favoritar"
                     >
                       <Heart className={`w-4 h-4 ${favoriteImages.includes(imageUrl) ? 'fill-current' : ''}`} />
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
-                      onClick={() => handleImageAction('share', imageUrl, generation)}
-                      title="Compartilhar"
-                    >
-                      <Share2 className="w-4 h-4" />
                     </Button>
 
                     {onDeleteGeneration && (

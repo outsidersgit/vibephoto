@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Download, Heart, Share2, Eye, MoreHorizontal, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { Download, Heart, Eye, MoreHorizontal, Clock, CheckCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
 interface ResultsGalleryProps {
@@ -55,26 +55,6 @@ export function ResultsGallery({ generations }: ResultsGalleryProps) {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-  }
-
-  const handleShare = async (imageUrl: string, prompt: string) => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'AI Generated Photo',
-          text: prompt,
-          url: imageUrl
-        })
-      } catch (error) {
-        // Fallback to clipboard
-        navigator.clipboard.writeText(imageUrl)
-        alert('Image URL copied to clipboard!')
-      }
-    } else {
-      // Fallback to clipboard
-      navigator.clipboard.writeText(imageUrl)
-      alert('Image URL copied to clipboard!')
-    }
   }
 
   if (generations.length === 0) {
@@ -156,17 +136,6 @@ export function ResultsGallery({ generations }: ResultsGalleryProps) {
                             }}
                           >
                             <Download className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="h-7 w-7 p-0"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleShare(imageUrl, generation.prompt)
-                            }}
-                          >
-                            <Share2 className="w-3 h-3" />
                           </Button>
                         </div>
                       </div>

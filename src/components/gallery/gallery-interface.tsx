@@ -15,7 +15,6 @@ import {
   SortDesc, 
   Download, 
   Heart,
-  Share2,
   Trash2,
   Image,
   Calendar,
