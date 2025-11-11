@@ -664,17 +664,24 @@ export function ImageModal({
             )}
 
             {currentImage.operationType === 'generated' && (
-              <Link href={`/editor?image=${encodeURIComponent(currentImage.url)}`}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 cursor-pointer"
-                  title="Editar com IA"
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 cursor-pointer"
+                title="Editar com IA"
+              >
+                <Link
+                  href={`/editor?image=${encodeURIComponent(currentImage.url)}`}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onClose()
+                  }}
                 >
                   <Edit2 className="w-4 h-4" />
                   Editar
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             )}
 
             <Button
