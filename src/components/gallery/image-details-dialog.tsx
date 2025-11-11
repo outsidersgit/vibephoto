@@ -41,10 +41,11 @@ export function ImageDetailsDialog({ generation, open, onClose }: ImageDetailsDi
         <DialogTitle className="text-lg font-semibold text-white mb-4">Detalhes da imagem</DialogTitle>
 
         {generation ? (
-          <div className="space-y-4 text-sm text-slate-200/90">
+          <div className="space-y-5 text-sm text-slate-200/90">
             <div>
-              <span className="text-xs font-semibold text-slate-300">Prompt</span>
-              <div className="mt-1 relative max-h-40 overflow-y-auto rounded-lg bg-white/5 px-3 py-2 leading-relaxed text-slate-100/90">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Detalhes principais</span>
+              <h4 className="mt-1 text-base font-semibold text-white">Prompt</h4>
+              <div className="mt-2 relative max-h-48 overflow-y-auto rounded-lg bg-white/5 px-3 py-2 leading-relaxed text-slate-100/90">
                 <button
                   type="button"
                   onClick={handleCopyPrompt}
@@ -58,35 +59,39 @@ export function ImageDetailsDialog({ generation, open, onClose }: ImageDetailsDi
                 </div>
               </div>
               {copied && (
-                <p className="mt-1 text-[11px] text-emerald-300">Prompt copiado!</p>
+                <p className="mt-1 text-[11px] font-medium text-emerald-300">Prompt copiado!</p>
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Informações da geração</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <span className="text-xs font-semibold text-slate-300">Gerado em</span>
-                <p className="mt-1 text-sm text-slate-100/80">
+                <h5 className="text-sm font-semibold text-white">Gerado em</h5>
+                <p className="mt-1 text-sm text-slate-200">
                   {generation.createdAt ? formatDate(generation.createdAt) : '—'}
                 </p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-slate-300">Custo</span>
-                <p className="mt-1 text-sm text-slate-100/80">
+                <h5 className="text-sm font-semibold text-white">Custo</h5>
+                <p className="mt-1 text-sm text-slate-200">
                   {getGenerationCostDescription(generation) || '—'}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <span className="text-xs font-semibold text-slate-300">Modelo</span>
-                <p className="mt-1 text-sm text-slate-100/80">
+                <h5 className="text-sm font-semibold text-white">Modelo</h5>
+                <p className="mt-1 text-sm text-slate-200">
                   {generation.model?.name || 'Indefinido'}
                 </p>
               </div>
               <div>
-                <span className="text-xs font-semibold text-slate-300">Total de imagens</span>
-                <p className="mt-1 text-sm text-slate-100/80">
+                <h5 className="text-sm font-semibold text-white">Total de imagens</h5>
+                <p className="mt-1 text-sm text-slate-200">
                   {Array.isArray(generation.imageUrls) ? generation.imageUrls.length : 1}
                 </p>
               </div>

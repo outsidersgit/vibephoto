@@ -258,7 +258,7 @@ export function ImageModal({
 
       triggerEvent('feature_use', { metadata: { feature: 'video' } })
       onClose()
-      router.push(`/generate?video=${encodeURIComponent(videoSource)}`)
+      router.push(`/generate?tab=video&image=${encodeURIComponent(videoSource)}`)
     },
     [allImages, currentImageIndex, onClose, router, triggerEvent]
   )

@@ -320,7 +320,7 @@ export function GalleryList({
                       onClick={(e) => {
                         e.stopPropagation()
                         const videoSource = generation?.originalImageUrl || imageUrl
-                        router.push(`/generate?video=${encodeURIComponent(videoSource)}`)
+                        router.push(`/generate?tab=video&image=${encodeURIComponent(videoSource)}`)
                       }}
                       title="Criar vídeo"
                     >
