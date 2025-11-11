@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { formatDate } from '@/lib/utils'
 import { getGenerationCostDescription } from '@/lib/utils/gallery-cost'
 import { Copy } from 'lucide-react'
+import { getAspectRatioLabel } from '@/lib/utils/aspect-ratio'
 
 interface ImageDetailsDialogProps {
   generation: any | null
@@ -41,6 +42,14 @@ export function ImageDetailsDialog({ generation, open, onClose }: ImageDetailsDi
         <DialogTitle className="text-lg font-semibold text-white mb-4">Detalhes da imagem</DialogTitle>
 
         {generation ? (
+          (() => {
+            const aspectRatioLabel = getAspectRatioLabel(
+              generation.metadata?.width ?? generation.width,
+              generation.metadata?.height ?? generation.height,
+              generation.aspectRatio
+            )
+
+            return (
           <div className="space-y-5 text-sm text-slate-200/90">
             <div>
               <h4 className="text-base font-semibold text-white">Prompt</h4>
@@ -85,13 +94,15 @@ export function ImageDetailsDialog({ generation, open, onClose }: ImageDetailsDi
                 </p>
               </div>
               <div>
-                <h5 className="text-sm font-semibold text-white">Total de imagens</h5>
+                <h5 className="text-sm font-semibold text-white">Proporção</h5>
                 <p className="mt-1 text-sm text-slate-200">
-                  {Array.isArray(generation.imageUrls) ? generation.imageUrls.length : 1}
+                  {aspectRatioLabel}
                 </p>
               </div>
             </div>
           </div>
+            )
+          })()
         ) : (
           <p className="text-sm text-slate-300">Carregando informações...</p>
         )}

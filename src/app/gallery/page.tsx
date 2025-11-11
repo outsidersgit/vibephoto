@@ -29,7 +29,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const page = Math.max(parseInt(params.page || '1'), 1)
   const modelFilter = params.model
   const searchQuery = params.search
-  const sortBy = (params.sort || 'newest') as 'newest' | 'oldest' | 'model' | 'prompt'
+  const sortParam = params.sort === 'oldest' ? 'oldest' : 'newest'
   const viewMode = params.view || 'grid'
   const activeTab = params.tab || 'generated'
   const videoStatus = params.status
@@ -51,7 +51,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
       page,
       modelId: modelFilter,
       searchQuery: searchQuery || undefined,
-      sortBy
+      sortBy: sortParam
     })
   ])
 
@@ -172,7 +172,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
             filters={{
               model: modelFilter,
               search: searchQuery || undefined,
-              sort: sortBy,
+              sort: sortParam,
               view: viewMode,
               tab: activeTab === 'videos' ? 'videos' : 'generated'
             }}

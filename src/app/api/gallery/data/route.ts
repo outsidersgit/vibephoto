@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const page = Math.max(parseInt(searchParams.get('page') || '1', 10), 1)
     const modelFilter = searchParams.get('model') || undefined
     const searchQuery = searchParams.get('search') || undefined
-    const sortBy = (searchParams.get('sort') || 'newest') as 'newest' | 'oldest' | 'model' | 'prompt'
+    const sortParam = searchParams.get('sort') === 'oldest' ? 'oldest' : 'newest'
     const tab = searchParams.get('tab') || 'generated'
     const statusParam = searchParams.get('status') || undefined
     const qualityParam = searchParams.get('quality') || undefined
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       page,
       modelId: modelFilter,
       searchQuery,
-      sortBy
+        sortBy: sortParam
     })
 
     return NextResponse.json({

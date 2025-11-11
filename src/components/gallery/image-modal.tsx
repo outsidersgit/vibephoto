@@ -24,6 +24,7 @@ import {
 import { formatDate } from '@/lib/utils'
 import { MediaItem } from '@/types'
 import { getGenerationCostDescription } from '@/lib/utils/gallery-cost'
+import { getAspectRatioLabel } from '@/lib/utils/aspect-ratio'
 import { FeedbackBadge } from '@/components/feedback/feedback-badge'
 import { useFeedback } from '@/hooks/useFeedback'
 import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from '@/components/ui/social-icons'
@@ -63,6 +64,11 @@ export function ImageModal({
   const [isFavorite, setIsFavorite] = useState(initialFavorite)
   const [isDeleting, setIsDeleting] = useState(false)
   const currentImage = allImages[currentImageIndex] || mediaItem
+  const aspectRatioLabel = getAspectRatioLabel(
+    currentImage?.metadata?.width ?? currentImage?.generation?.width,
+    currentImage?.metadata?.height ?? currentImage?.generation?.height,
+    currentImage?.generation?.aspectRatio
+  )
   const generationId = currentImage?.generation?.id
   const feedback = useFeedback({ generationId })
   const { triggerFeedback, triggerEvent } = feedback
@@ -767,10 +773,10 @@ export function ImageModal({
                     <div className="text-gray-300">Modelo:</div>
                     <div>{currentImage.generation.model?.name || 'Indefinido'}</div>
                   </div>
-                  {currentImage.generation.aspectRatio && (
+                  {aspectRatioLabel && aspectRatioLabel !== '—' && (
                     <div>
                       <div className="text-gray-300">Proporção:</div>
-                      <div>{currentImage.generation.aspectRatio}</div>
+                      <div>{aspectRatioLabel}</div>
                     </div>
                   )}
                   {currentImage.generation.style && (

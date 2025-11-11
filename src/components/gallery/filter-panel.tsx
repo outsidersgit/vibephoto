@@ -2,36 +2,30 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { X, User, Calendar, Image, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { X, User, ArrowUpDown } from 'lucide-react'
 
 interface FilterPanelProps {
   models: any[]
   selectedModel?: string
+  selectedSort: 'newest' | 'oldest'
   onModelSelect: (modelId: string | null) => void
+  onSortChange: (sort: 'newest' | 'oldest') => void
   onClose: () => void
 }
 
-export function FilterPanel({ models, selectedModel, onModelSelect, onClose }: FilterPanelProps) {
-  const statusOptions = [
-    { value: 'COMPLETED', label: 'Concluída', icon: CheckCircle, color: 'text-green-600' },
-    { value: 'PROCESSING', label: 'Processando', icon: Clock, color: 'text-yellow-600' },
-    { value: 'FAILED', label: 'Falhada', icon: AlertCircle, color: 'text-red-600' }
-  ]
+const sortOptions: Array<{ value: 'newest' | 'oldest'; label: string }> = [
+  { value: 'newest', label: 'Mais recentes' },
+  { value: 'oldest', label: 'Mais antigas' }
+]
 
-  const timeRanges = [
-    { value: 'today', label: 'Hoje' },
-    { value: 'week', label: 'Esta Semana' },
-    { value: 'month', label: 'Este Mês' },
-    { value: 'year', label: 'Este Ano' }
-  ]
-
-  const imageCountRanges = [
-    { value: '1', label: '1 Imagem' },
-    { value: '2-3', label: '2-3 Imagens' },
-    { value: '4+', label: '4+ Imagens' }
-  ]
-
+export function FilterPanel({
+  models,
+  selectedModel,
+  selectedSort,
+  onModelSelect,
+  onSortChange,
+  onClose
+}: FilterPanelProps) {
   const getClassIcon = (modelClass: string) => {
     return <User className="w-4 h-4" />
   }
@@ -58,6 +52,29 @@ export function FilterPanel({ models, selectedModel, onModelSelect, onClose }: F
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Sort */}
+        <div>
+          <h3 className="font-medium text-gray-900 mb-3 flex items-center">
+            <ArrowUpDown className="w-4 h-4 mr-2" />
+            Ordenar por
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {sortOptions.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => onSortChange(option.value)}
+                className={`p-3 text-left border rounded-lg transition-colors ${
+                  selectedSort === option.value
+                    ? 'border-purple-500 bg-purple-50 text-purple-700'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}
+              >
+                <div className="font-medium">{option.label}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Models Filter */}
         <div>
           <h3 className="font-medium text-gray-900 mb-3 flex items-center">
@@ -108,85 +125,6 @@ export function FilterPanel({ models, selectedModel, onModelSelect, onClose }: F
           </div>
         </div>
 
-        {/* Status Filter */}
-        <div>
-          <h3 className="font-medium text-gray-900 mb-3 flex items-center">
-            <CheckCircle className="w-4 h-4 mr-2" />
-            Status
-          </h3>
-          <div className="space-y-2">
-            {statusOptions.map((status) => {
-              const Icon = status.icon
-              return (
-                <button
-                  key={status.value}
-                  className="w-full p-3 text-left border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
-                >
-                  <div className="flex items-center space-x-2">
-                    <Icon className={`w-4 h-4 ${status.color}`} />
-                    <span>{status.label}</span>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Time Range Filter */}
-        <div>
-          <h3 className="font-medium text-gray-900 mb-3 flex items-center">
-            <Calendar className="w-4 h-4 mr-2" />
-            Criado em
-          </h3>
-          <div className="grid grid-cols-2 gap-2">
-            {timeRanges.map((range) => (
-              <button
-                key={range.value}
-                className="p-3 text-sm border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
-              >
-                {range.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Image Count Filter */}
-        <div>
-          <h3 className="font-medium text-gray-900 mb-3 flex items-center">
-            <Image className="w-4 h-4 mr-2" />
-            Quantidade de Imagens
-          </h3>
-          <div className="space-y-2">
-            {imageCountRanges.map((range) => (
-              <button
-                key={range.value}
-                className="w-full p-3 text-left border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
-              >
-                {range.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Filters */}
-        <div>
-          <h3 className="font-medium text-gray-900 mb-3">Filtros Rápidos</h3>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm">
-              Recentes
-            </Button>
-            <Button variant="outline" size="sm">
-              Favoritos
-            </Button>
-            <Button variant="outline" size="sm">
-              Alta Qualidade
-            </Button>
-            <Button variant="outline" size="sm">
-              Múltiplas Imagens
-            </Button>
-          </div>
-        </div>
-
         {/* Clear Filters */}
         <div className="pt-4 border-t border-gray-200">
           <Button
@@ -194,7 +132,7 @@ export function FilterPanel({ models, selectedModel, onModelSelect, onClose }: F
             className="w-full"
             onClick={() => {
               onModelSelect(null)
-              // Reset other filters here
+              onSortChange('newest')
             }}
           >
             Limpar Todos os Filtros

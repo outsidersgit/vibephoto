@@ -637,10 +637,7 @@ export async function fetchVideoBatch({
       : VideoStatus.COMPLETED,
     ...(quality ? { quality: quality as any } : {}),
     ...(searchQuery && {
-      OR: [
-        { prompt: { contains: searchQuery, mode: 'insensitive' } },
-        { negativePrompt: { contains: searchQuery, mode: 'insensitive' } }
-      ]
+      prompt: { contains: searchQuery, mode: 'insensitive' }
     })
   }
 

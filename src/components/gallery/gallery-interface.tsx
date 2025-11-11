@@ -123,10 +123,8 @@ export function GalleryInterface({
   } | null>(null)
 
   const sortOptions = [
-    { value: 'newest', label: 'Mais Recentes' },
-    { value: 'oldest', label: 'Mais Antigas' },
-    { value: 'model', label: 'Por Modelo' },
-    { value: 'prompt', label: 'Por Prompt' }
+    { value: 'newest', label: 'Mais recente' },
+    { value: 'oldest', label: 'Mais antigo' }
   ]
 
   const handleViewChange = useCallback(
@@ -641,7 +639,8 @@ export function GalleryInterface({
     }
   }, [filteredGenerations])
 
-  const hasActiveFilters = filters.model || filters.search
+  const sortIsDefault = (filters.sort || 'newest') === 'newest'
+  const hasActiveFilters = Boolean(filters.model || filters.search || !sortIsDefault)
 
   return (
     <div className="space-y-6">
@@ -696,7 +695,7 @@ export function GalleryInterface({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar por prompt, nome do modelo..."
+                  placeholder="Pesquisar por prompt..."
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
                 {searchQuery && (
@@ -788,6 +787,15 @@ export function GalleryInterface({
                   </button>
                 </Badge>
               )}
+
+            {!sortIsDefault && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Ordenação: {sortOptions.find((option) => option.value === filters.sort)?.label || 'Mais recente'}
+                <button onClick={() => updateFilter('sort', 'newest')}>
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            )}
               
               <Button variant="ghost" size="sm" onClick={clearFilters}>
                 Limpar todos
@@ -802,7 +810,9 @@ export function GalleryInterface({
         <FilterPanel
           models={models}
           selectedModel={filters.model}
+          selectedSort={filters.sort === 'oldest' ? 'oldest' : 'newest'}
           onModelSelect={(modelId) => updateFilter('model', modelId)}
+          onSortChange={(sort) => updateFilter('sort', sort)}
           onClose={() => setShowFilters(false)}
         />
       )}

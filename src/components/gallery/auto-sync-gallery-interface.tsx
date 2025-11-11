@@ -38,7 +38,6 @@ import {
 import { GalleryGrid } from './gallery-grid'
 import { GalleryList } from './gallery-list'
 import { GalleryStats } from './gallery-stats'
-import { FilterPanel } from './filter-panel'
 import { UpscaleProgress } from '@/components/upscale/upscale-progress'
 import { VideoGalleryWrapper } from './video-gallery-wrapper'
 
@@ -206,11 +205,15 @@ export function AutoSyncGalleryInterface({
   const activeTab = searchParams.get('tab') || 'generated'
   const DEFAULT_LOAD_LIMIT = 20
 
+  const currentModel = searchParams.get('model') || filters.model || undefined
+  const currentSearchParam = searchParams.get('search') || filters.search || ''
+  const currentSort = searchParams.get('sort') || filters.sort || 'newest'
+
   const galleryFilters = {
     tab: activeTab,
-    model: searchParams.get('model') || undefined,
-    search: searchParams.get('search') || undefined,
-    sort: searchParams.get('sort') || 'newest',
+    model: currentModel,
+    search: currentSearchParam || undefined,
+    sort: currentSort,
     limit: Number(searchParams.get('limit') || DEFAULT_LOAD_LIMIT.toString())
   }
 
@@ -237,6 +240,15 @@ export function AutoSyncGalleryInterface({
   const [localGenerations, setLocalGenerations] = useState<any[]>(safeInitialGenerations)
   const [localEditHistory, setLocalEditHistory] = useState<any[]>([])
   const [localVideos, setLocalVideos] = useState<any[]>(safeInitialVideos)
+
+  const filterSignature = [
+    activeTab,
+    currentModel || '',
+    currentSearchParam || '',
+    currentSort || '',
+    showFavoritesOnly ? 'fav' : '',
+  ].join('|')
+  const previousFilterSignatureRef = useRef(filterSignature)
   
   // CRITICAL: Limpar dados locais se sessão for perdida
   useEffect(() => {
@@ -248,90 +260,56 @@ export function AutoSyncGalleryInterface({
     }
   }, [status])
   
-  // Atualizar estado local quando React Query retornar novos dados
-  // CRITICAL: Fazer merge inteligente para preservar atualizações locais recentes
   useEffect(() => {
-    if (galleryData?.generations) {
-      const sortedServerGenerations = [...galleryData.generations].sort((a: any, b: any) => {
-        const aDate = new Date(a.createdAt).getTime()
-        const bDate = new Date(b.createdAt).getTime()
-        return bDate - aDate
-      })
+    if (!galleryData) return
 
-      console.log('🖼️ [Gallery] Applying server generations update', {
-        serverCount: galleryData.generations.length,
-        sortedServerCount: sortedServerGenerations.length,
-        firstServerId: sortedServerGenerations[0]?.id,
-        firstServerDate: sortedServerGenerations[0]?.createdAt
-      })
+    const filtersChanged = previousFilterSignatureRef.current !== filterSignature
 
-      setLocalGenerations((prevLocal) => {
-        const sortedPrev = [...prevLocal].sort((a: any, b: any) => {
-          const aDate = new Date(a.createdAt).getTime()
-          const bDate = new Date(b.createdAt).getTime()
-          return bDate - aDate
-        })
+    if (galleryData.generations) {
+      const serverPage = galleryData.pagination?.page ?? 1
+      const serverGenerations = [...galleryData.generations]
 
-        if (sortedPrev.length === 0) {
-          console.log('🖼️ [Gallery] Local state empty, applying sorted server data')
-          return sortedServerGenerations
+      setLocalGenerations(prev => {
+        if (filtersChanged || serverPage <= 1) {
+          return serverGenerations
         }
-        
-        // Se não há dados locais, usar dados do React Query
-        if (prevLocal.length === 0) {
-          console.log('🖼️ [Gallery] Local state empty, applying sorted server data')
-          return sortedServerGenerations
-        }
-        
-        // Criar mapa de gerações locais por ID para merge rápido
-        const localMap = new Map(sortedPrev.map((g: any) => [g.id, g]))
-        
-        // Merge: priorizar estado local se for mais recente ou se estiver COMPLETED
-        const merged = sortedServerGenerations.map((serverGen: any) => {
-          const localGen = localMap.get(serverGen.id)
-          
-          // Se existe localmente e está COMPLETED, priorizar local (evita flash)
-          if (localGen && localGen.status === 'COMPLETED' && serverGen.status !== 'COMPLETED') {
-            return localGen
-          }
-          
-          // Se existe localmente e tem imageUrls (foi atualizado via SSE), priorizar local
-          if (localGen && localGen.imageUrls && localGen.imageUrls.length > 0 && 
-              (!serverGen.imageUrls || serverGen.imageUrls.length === 0)) {
-            return localGen
-          }
-          
-          // Caso contrário, usar dados do servidor
-          return serverGen
-        })
-        
-        // Adicionar novas gerações locais que não estão no servidor ainda
-        const serverIds = new Set(sortedServerGenerations.map((g: any) => g.id))
-        const newLocalGenerations = sortedPrev.filter((g: any) => 
-          !serverIds.has(g.id) && g.status === 'COMPLETED'
+
+        const merged = new Map(prev.map((gen: any) => [gen.id, gen]))
+        serverGenerations.forEach(gen => merged.set(gen.id, gen))
+        return Array.from(merged.values()).sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         )
-        
-        const result = [...newLocalGenerations, ...merged]
-        result.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-
-        console.log('🖼️ [Gallery] Local merge complete', {
-          localBefore: prevLocal.length,
-          localAfter: result.length,
-          newLocalGenerations: newLocalGenerations.length,
-          firstItemId: result[0]?.id,
-          firstItemDate: result[0]?.createdAt
-        })
-
-        return result
       })
     }
-    if (galleryData?.editHistory) {
+
+    if (galleryData.editHistory) {
       setLocalEditHistory(galleryData.editHistory)
     }
-    if (galleryData?.videos) {
-      setLocalVideos(galleryData.videos)
+
+    if (galleryData.videos) {
+      const serverPage = activeTab === 'videos' ? galleryData.pagination?.page ?? 1 : 1
+      const serverVideos = [...galleryData.videos]
+
+      setLocalVideos(prev => {
+        if (filtersChanged || serverPage <= 1) {
+          return serverVideos
+        }
+
+        const merged = new Map(prev.map((video: any) => [video.id, video]))
+        serverVideos.forEach(video => merged.set(video.id, video))
+        return Array.from(merged.values()).sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+      })
     }
-  }, [galleryData, activeTab])
+
+    if (filtersChanged) {
+      setGenerationPage(1)
+      setVideoPage(1)
+    }
+
+    previousFilterSignatureRef.current = filterSignature
+  }, [galleryData, activeTab, filterSignature])
   
   // Usar estado local (que sempre tem dados) em vez de dados diretos do React Query
   const generations = [...localGenerations].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -341,7 +319,10 @@ export function AutoSyncGalleryInterface({
   const lastUpdate = galleryData ? new Date() : null
   const [pendingUpdates, setPendingUpdates] = useState(0)
 
-  const derivedGenerationLimit = pagination?.limit ?? galleryFilters.limit ?? (initialGenerations.length > 0 ? initialGenerations.length : 1)
+  const derivedGenerationLimit =
+    pagination?.limit ??
+    galleryFilters.limit ??
+    (initialGenerations.length > 0 ? initialGenerations.length : DEFAULT_LOAD_LIMIT)
   const derivedGenerationTotal = pagination?.total ?? initialGenerations.length
   const derivedGenerationPages =
     pagination?.pages ??
@@ -354,7 +335,10 @@ export function AutoSyncGalleryInterface({
     pages: derivedGenerationPages
   }
 
-  const derivedVideoLimit = videoPagination?.limit ?? galleryFilters.limit ?? ((initialVideos?.length ?? 0) > 0 ? (initialVideos?.length ?? 1) : 1)
+  const derivedVideoLimit =
+    videoPagination?.limit ??
+    galleryFilters.limit ??
+    ((initialVideos?.length ?? 0) > 0 ? (initialVideos?.length ?? 1) : DEFAULT_LOAD_LIMIT)
   const derivedVideoTotal = videoPagination?.total ?? (initialVideos?.length ?? 0)
   const derivedVideoPages =
     videoPagination?.pages ??
@@ -413,14 +397,16 @@ export function AutoSyncGalleryInterface({
   const isRefreshing = isRefetching
 
   // Estados originais da interface
-  const [searchQuery, setSearchQuery] = useState(filters.search || '')
+  const [searchQuery, setSearchQuery] = useState(currentSearchParam || '')
+  useEffect(() => {
+    setSearchQuery(currentSearchParam || '')
+  }, [currentSearchParam])
   const [showFilters, setShowFilters] = useState(false)
   const [showStatsPanel, setShowStatsPanel] = useState(false)
   const [selectedImages, setSelectedImages] = useState<string[]>([])
   const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set())
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [bulkSelectMode, setBulkSelectMode] = useState(false)
-  const [statusFilter, setStatusFilter] = useState('all')
   const [favoriteImages, setFavoriteImages] = useState<string[]>([])
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
 
@@ -733,10 +719,8 @@ export function AutoSyncGalleryInterface({
   }, [searchParams])
 
   const sortOptions = [
-    { value: 'newest', label: 'Mais Recentes' },
-    { value: 'oldest', label: 'Mais Antigas' },
-    { value: 'model', label: 'Por Modelo' },
-    { value: 'prompt', label: 'Por Prompt' }
+    { value: 'newest', label: 'Mais recente' },
+    { value: 'oldest', label: 'Mais antigo' }
   ]
 
   const updateFilter = (key: string, value: string | null) => {
@@ -783,7 +767,7 @@ export function AutoSyncGalleryInterface({
   const clearFilters = () => {
     router.push('/gallery')
     setSearchQuery('')
-    setStatusFilter('all')
+    setShowFavoritesOnly(false)
   }
 
   // Funções para gerenciar favoritos
@@ -1381,11 +1365,6 @@ export function AutoSyncGalleryInterface({
       tabData = generations
     }
 
-    // Apply status filter if not on videos tab
-    if (activeTab !== 'videos' && statusFilter !== 'all') {
-      tabData = tabData.filter(item => item.status === statusFilter)
-    }
-
     // Apply favorites filter
     if (showFavoritesOnly && favoriteImages.length > 0) {
       tabData = tabData.filter(item => {
@@ -1400,7 +1379,17 @@ export function AutoSyncGalleryInterface({
     return tabData
   })()
   
-  const hasActiveFilters = filters.model || filters.search || statusFilter !== 'all' || showFavoritesOnly
+  const sortIsDefault = (galleryFilters.sort || 'newest') === 'newest'
+  const currentSortLabel =
+    sortOptions.find(option => option.value === (galleryFilters.sort || 'newest'))?.label || 'Mais recente'
+  const currentModelName = currentModel ? models.find(m => m.id === currentModel)?.name : undefined
+  const activeFiltersCount = [
+    currentModel,
+    currentSearchParam ? 'search' : null,
+    showFavoritesOnly ? 'favorites' : null,
+    sortIsDefault ? null : galleryFilters.sort
+  ].filter(Boolean).length
+  const hasActiveFilters = activeFiltersCount > 0
 
   const handleLoadMoreGenerations = useCallback(async () => {
     if (isLoadingMoreGenerations || !hasMoreGenerations) {
@@ -1419,8 +1408,8 @@ export function AutoSyncGalleryInterface({
       if (galleryFilters.model) params.set('model', galleryFilters.model)
       if (galleryFilters.search) params.set('search', galleryFilters.search)
       if (galleryFilters.sort) params.set('sort', galleryFilters.sort)
-      if (showFavoritesOnly) params.set('favorites', 'true')
-
+      if (galleryFilters.search) params.set('search', galleryFilters.search)
+      if (galleryFilters.sort) params.set('sort', galleryFilters.sort)
       const response = await fetch(`/api/gallery/data?${params.toString()}`)
 
       if (!response.ok) {
@@ -1466,7 +1455,6 @@ export function AutoSyncGalleryInterface({
     galleryFilters.model,
     galleryFilters.search,
     galleryFilters.sort,
-    showFavoritesOnly,
     addToast,
     generationTotalPages
   ])
@@ -1485,9 +1473,7 @@ export function AutoSyncGalleryInterface({
       params.set('page', String(nextPage))
       params.set('limit', String(galleryFilters.limit ?? DEFAULT_LOAD_LIMIT))
 
-      if (filters.search) params.set('search', filters.search)
-      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter)
-
+      if (galleryFilters.search) params.set('search', galleryFilters.search)
       const response = await fetch(`/api/gallery/data?${params.toString()}`)
 
       if (!response.ok) {
@@ -1530,8 +1516,7 @@ export function AutoSyncGalleryInterface({
     hasMoreVideos,
     videoPage,
     galleryFilters.limit,
-    filters.search,
-    statusFilter,
+    galleryFilters.search,
     addToast,
     videoTotalPages
   ])
@@ -1621,10 +1606,10 @@ export function AutoSyncGalleryInterface({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
-                type="text"
+                type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar fotos..."
+                placeholder="Pesquisar por prompt..."
                 className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-transparent"
               />
               {searchQuery && (
@@ -1684,7 +1669,7 @@ export function AutoSyncGalleryInterface({
             Filtros
             {hasActiveFilters && (
               <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs bg-purple-100 text-purple-700">
-                {Object.values({ model: filters.model, search: filters.search }).filter(Boolean).length}
+                {activeFiltersCount}
               </Badge>
             )}
             {showFilters ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
@@ -1706,27 +1691,12 @@ export function AutoSyncGalleryInterface({
         {/* Collapsible Advanced Filters */}
         {showFilters && (
           <div className="border-t border-gray-200 pt-4 mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Status Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
-                  <option value="all">Todas ({generations.length})</option>
-                  <option value="COMPLETED">Completas ({generations.filter(g => g.status === 'COMPLETED').length})</option>
-                  <option value="PROCESSING">Processando ({generations.filter(g => g.status === 'PROCESSING').length})</option>
-                  <option value="FAILED">Falharam ({generations.filter(g => g.status === 'FAILED').length})</option>
-                </select>
-              </div>
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Sort */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Ordenar por</label>
                 <select
-                  value={filters.sort}
+                  value={galleryFilters.sort || 'newest'}
                   onChange={(e) => updateFilter('sort', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
@@ -1742,7 +1712,7 @@ export function AutoSyncGalleryInterface({
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Modelo</label>
                 <select
-                  value={filters.model || ''}
+                  value={currentModel || ''}
                   onChange={(e) => updateFilter('model', e.target.value || null)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
@@ -1761,19 +1731,37 @@ export function AutoSyncGalleryInterface({
               <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-gray-200">
                 <span className="text-sm text-gray-600">Filtros ativos:</span>
 
-                {filters.model && (
+              {currentModel && (
                   <Badge variant="secondary" className="flex items-center gap-1">
-                    Modelo: {models.find(m => m.id === filters.model)?.name}
-                    <button onClick={() => updateFilter('model', null)}>
+                  Modelo: {currentModelName || 'Selecionado'}
+                  <button onClick={() => updateFilter('model', null)}>
                       <X className="w-3 h-3" />
                     </button>
                   </Badge>
                 )}
 
-                {filters.search && (
+              {currentSearchParam && (
                   <Badge variant="secondary" className="flex items-center gap-1">
-                    Busca: "{filters.search}"
+                  Busca: "{currentSearchParam}"
                     <button onClick={() => updateFilter('search', null)}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+
+              {!sortIsDefault && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Ordenação: {currentSortLabel}
+                  <button onClick={() => updateFilter('sort', 'newest')}>
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              )}
+
+                {showFavoritesOnly && (
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    Favoritas
+                    <button onClick={toggleFavoritesFilter}>
                       <X className="w-3 h-3" />
                     </button>
                   </Badge>
@@ -1904,10 +1892,8 @@ export function AutoSyncGalleryInterface({
             }}
             pagination={videoPagination || pagination}
             filters={{
-              status: filters.search ? undefined : undefined,
-              quality: undefined,
-              search: filters.search,
-              sort: filters.sort
+              search: currentSearchParam || undefined,
+              sort: galleryFilters.sort
             }}
             bulkSelectMode={bulkSelectMode}
             selectedVideos={selectedVideos}

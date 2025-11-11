@@ -9,7 +9,7 @@ export interface GenerationBatchParams {
   page?: number
   modelId?: string
   searchQuery?: string
-  sortBy?: 'newest' | 'oldest' | 'model' | 'prompt'
+  sortBy?: 'newest' | 'oldest'
   includePackages?: boolean
 }
 
@@ -39,10 +39,7 @@ export async function fetchGenerationBatch({
     ...(includePackages ? { packageId: { not: null } } : { packageId: null }),
     ...(modelId && { modelId }),
     ...(searchQuery && {
-      OR: [
-        { prompt: { contains: searchQuery, mode: 'insensitive' } },
-        { model: { name: { contains: searchQuery, mode: 'insensitive' } } }
-      ]
+      prompt: { contains: searchQuery, mode: 'insensitive' }
     })
   }
 
