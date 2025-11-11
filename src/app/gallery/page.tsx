@@ -85,18 +85,31 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
     videoStatsPromise
   ])
 
-  const stats = {
+  const stats = serializeForProps({
     totalGenerations: generationBatch.totalCount,
     completedGenerations: generationBatch.totalCount,
     totalImages: generationBatch.totalCount,
     favoriteImages: 0,
     collections: 0
-  }
+  })
 
-  const videoStats = videoStatsResult || undefined
+  const videoStats = videoStatsResult ? serializeForProps(videoStatsResult) : undefined
 
   const safeGenerations = serializeForProps(generationBatch.items)
   const safeVideos = serializeForProps(videoBatch.items)
+  const safeModels = serializeForProps(models)
+  const safeGenerationPagination = serializeForProps({
+    limit,
+    total: generationBatch.totalCount,
+    nextCursor: generationBatch.nextCursor,
+    hasMore: generationBatch.hasMore
+  })
+  const safeVideoPagination = serializeForProps({
+    limit,
+    total: videoBatch.totalCount,
+    nextCursor: videoBatch.nextCursor,
+    hasMore: videoBatch.hasMore
+  })
 
   return (
     <>
@@ -147,18 +160,8 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
             user={session.user}
             initialGenerations={safeGenerations}
             initialVideos={safeVideos}
-            pagination={{
-              limit,
-              total: generationBatch.totalCount,
-              nextCursor: generationBatch.nextCursor,
-              hasMore: generationBatch.hasMore
-            }}
-            videoPagination={{
-              limit,
-              total: videoBatch.totalCount,
-              nextCursor: videoBatch.nextCursor,
-              hasMore: videoBatch.hasMore
-            }}
+            pagination={safeGenerationPagination}
+            videoPagination={safeVideoPagination}
             stats={stats}
             videoStats={videoStats}
             filters={{
@@ -168,7 +171,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
               view: viewMode,
               tab: activeTab === 'videos' ? 'videos' : 'generated'
             }}
-            models={models}
+            models={safeModels}
           />
         ) : (
           <div className="min-h-screen bg-gray-50 flex items-center justify-center">
