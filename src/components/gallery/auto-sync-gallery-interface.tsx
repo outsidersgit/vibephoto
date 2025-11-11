@@ -240,8 +240,8 @@ export function AutoSyncGalleryInterface({
   const [localGenerations, setLocalGenerations] = useState<any[]>(safeInitialGenerations)
   const [localEditHistory, setLocalEditHistory] = useState<any[]>([])
   const [localVideos, setLocalVideos] = useState<any[]>(safeInitialVideos)
-const [favoriteImages, setFavoriteImages] = useState<string[]>([])
-const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
+  const [favoriteImages, setFavoriteImages] = useState<string[]>([])
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
 
   // CRITICAL: Limpar dados locais se sessão for perdida
   useEffect(() => {
