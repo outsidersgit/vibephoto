@@ -599,3 +599,110 @@ export async function searchVideoGenerations(
     throw new Error(`Failed to search video generations: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
+
+export interface VideoBatchParams {
+  userId: string
+  limit?: number
+  cursor?: string | null
+  status?: VideoStatus
+  quality?: string | null
+  searchQuery?: string | null
+}
+
+export interface VideoBatchResult {
+  items: any[]
+  nextCursor: string | null
+  hasMore: boolean
+  totalCount: number
+}
+
+export async function fetchVideoBatch({
+  userId,
+  limit = 24,
+  cursor,
+  status,
+  quality,
+  searchQuery
+}: VideoBatchParams): Promise<VideoBatchResult> {
+  const where: any = {
+    userId,
+    status: status || VideoStatus.COMPLETED,
+    ...(quality ? { quality: quality as any } : {}),
+    ...(searchQuery && {
+      OR: [
+        { prompt: { contains: searchQuery, mode: 'insensitive' } },
+        { negativePrompt: { contains: searchQuery, mode: 'insensitive' } }
+      ]
+    })
+  }
+
+  const queryArgs: any = {
+    where,
+    orderBy: { createdAt: 'desc' },
+    take: limit + 1,
+    select: {
+      id: true,
+      sourceImageUrl: true,
+      sourceGenerationId: true,
+      prompt: true,
+      negativePrompt: true,
+      duration: true,
+      aspectRatio: true,
+      quality: true,
+      template: true,
+      status: true,
+      jobId: true,
+      errorMessage: true,
+      videoUrl: true,
+      thumbnailUrl: true,
+      storageProvider: true,
+      storageBucket: true,
+      storageKey: true,
+      posterKey: true,
+      publicUrl: true,
+      mimeType: true,
+      sizeBytes: true,
+      durationSec: true,
+      creditsUsed: true,
+      progress: true,
+      processingStartedAt: true,
+      estimatedTimeRemaining: true,
+      createdAt: true,
+      updatedAt: true,
+      processingCompletedAt: true,
+      metadata: true,
+      userId: true,
+      sourceGeneration: {
+        select: {
+          id: true,
+          prompt: true,
+          imageUrls: true
+        }
+      }
+    }
+  }
+
+  if (cursor) {
+    queryArgs.cursor = { id: cursor }
+    queryArgs.skip = 1
+  }
+
+  const results = await prisma.videoGeneration.findMany(queryArgs)
+  const hasMore = results.length > limit
+  const items = hasMore ? results.slice(0, limit) : results
+  const nextCursor = hasMore ? items[items.length - 1]?.id ?? null : null
+
+  const serializableItems = items.map(video => ({
+    ...video,
+    sizeBytes: video.sizeBytes ? video.sizeBytes.toString() : null
+  }))
+
+  const totalCount = await prisma.videoGeneration.count({ where })
+
+  return {
+    items: serializableItems,
+    nextCursor,
+    hasMore,
+    totalCount
+  }
+}

@@ -1,9 +1,9 @@
 import { requireAuth } from '@/lib/auth'
-import { getGenerationsByUserId, searchGenerations } from '@/lib/db/generations'
+import { fetchGenerationBatch } from '@/lib/db/generations'
 import { getModelsByUserId } from '@/lib/db/models'
-import { getVideoGenerationsByUserId, getVideoGenerationStats } from '@/lib/db/videos'
+import { fetchVideoBatch, getVideoGenerationStats } from '@/lib/db/videos'
 import { AutoSyncGalleryInterface } from '@/components/gallery/auto-sync-gallery-interface'
-import { prisma } from '@/lib/db'
+import { VideoStatus } from '@prisma/client'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 
 interface GalleryPageProps {
@@ -26,151 +26,49 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const userId = session.user.id
 
   const params = await searchParams
-  const page = parseInt(params.page || '1')
-  const limit = parseInt(params.limit || '20')
+  const limit = Math.min(parseInt(params.limit || '24'), 30)
   const modelFilter = params.model
   const searchQuery = params.search
-  const sortBy = params.sort || 'newest'
+  const sortBy = (params.sort || 'newest') as 'newest' | 'oldest' | 'model' | 'prompt'
   const viewMode = params.view || 'grid'
   const activeTab = params.tab || 'generated'
   const videoStatus = params.status
   const videoQuality = params.quality
 
-  // Otimização: Buscar modelos e gerações em paralelo para reduzir latência (Fase 2 - Performance)
-  let models: any[] = []
-  let generationsData: { generations: any[]; totalCount: number } = { generations: [], totalCount: 0 }
-  
-  try {
-    // Executar todas as queries em paralelo com Promise.all
-    const skip = (page - 1) * limit
-    
-    if (activeTab === 'generated' || !activeTab || activeTab === 'edited' || activeTab === 'packages') {
-      // Consolidate all photos in "Fotos Geradas" tab (normal, editor, packages, edited)
-      const where = {
-        userId,
-        status: 'COMPLETED' as any,
-        ...(modelFilter && { modelId: modelFilter }),
-        ...(searchQuery && {
-          OR: [
-            { prompt: { contains: searchQuery, mode: 'insensitive' as any } },
-            { model: { name: { contains: searchQuery, mode: 'insensitive' as any } } }
-          ]
-        })
-      }
+  const [models, generationBatch, videoBatch, videoStatsResult] = await Promise.all([
+    getModelsByUserId(userId).catch(() => []),
+    fetchGenerationBatch({
+      userId,
+      limit,
+      modelId: modelFilter,
+      searchQuery: searchQuery || undefined,
+      sortBy
+    }),
+    fetchVideoBatch({
+      userId,
+      limit,
+      status: videoStatus ? (videoStatus.toUpperCase() as VideoStatus) : undefined,
+      quality: videoQuality || undefined,
+      searchQuery: searchQuery || undefined
+    }),
+    getVideoGenerationStats(userId).catch(() => ({
+      totalVideos: 0,
+      completedVideos: 0,
+      processingVideos: 0,
+      failedVideos: 0,
+      totalCreditsUsed: 0
+    }))
+  ])
 
-      // Query paralela: models + generations (only generations, no edit_history)
-      const [modelsResult, generationsResult, generationCount] = await Promise.all([
-        getModelsByUserId(userId),
-        prisma.generation.findMany({
-          where,
-          skip,
-          take: limit,
-          orderBy: { createdAt: 'desc' },
-          include: { 
-            model: {
-              select: { id: true, name: true, class: true }
-            },
-            userPackage: {
-              include: {
-                package: {
-                  select: { id: true, name: true }
-                }
-              }
-            }
-          }
-        }),
-        prisma.generation.count({ where })
-      ])
-
-      models = modelsResult
-      generationsData = { generations: generationsResult, totalCount: generationCount }
-    } else if (searchQuery && activeTab === 'generated') {
-      // Query paralela: models + search (only generations, no edit_history)
-      const [modelsResult, generationSearchResult] = await Promise.all([
-        getModelsByUserId(userId),
-        searchGenerations(userId, searchQuery, page, limit)
-      ])
-      
-      models = modelsResult
-      generationsData = { 
-        generations: generationSearchResult.generations, 
-        totalCount: generationSearchResult.pagination.total 
-      }
-    }
-  } catch (error) {
-    console.error('Database error:', error)
-    models = []
-    generationsData = { generations: [], totalCount: 0 }
-  }
-
-  // Get video data if on videos tab
-  let videosData: { videos: any[]; totalCount: number } = { videos: [], totalCount: 0 }
-  let videoStats: { totalVideos: number; completedVideos: number; processingVideos: number; failedVideos: number; totalCreditsUsed: number } | undefined = undefined
-  
-  if (activeTab === 'videos') {
-    try {
-      if (searchQuery) {
-        // Search videos by prompt
-        const { searchVideoGenerations } = await import('@/lib/db/videos')
-        videosData = await searchVideoGenerations(userId, searchQuery, page, limit)
-      } else {
-        // Get videos with status and quality filters
-        const videoResult = await getVideoGenerationsByUserId(
-          userId, 
-          page, 
-          limit, 
-          videoStatus as any,
-          videoQuality as any
-        )
-        videosData = { videos: videoResult.videos, totalCount: videoResult.totalCount }
-      }
-      
-      // Get video stats
-      const statsResult = await getVideoGenerationStats(userId)
-      videoStats = statsResult || undefined
-    } catch (error) {
-      console.error('Database error fetching videos:', error)
-      videosData = { videos: [], totalCount: 0 }
-      videoStats = {
-        totalVideos: 0,
-        completedVideos: 0,
-        processingVideos: 0,
-        failedVideos: 0,
-        totalCreditsUsed: 0,
-      }
-    }
-  }
-
-  // Otimização: Usar query agregada única ao invés de múltiplas counts (Fase 2 - Performance)
-  let totalCount = 0
-  let completedCount = 0
-
-  try {
-    // Uma única query agregada com groupBy por status
-    // Only count generations (edit_history is just for records)
-    const statsAgg = await prisma.generation.groupBy({
-      by: ['status'],
-      where: { userId },
-      _count: { status: true }
-    })
-    
-    const generationCompleted = statsAgg.find(s => s.status === 'COMPLETED')?._count.status || 0
-    totalCount = statsAgg.reduce((sum, stat) => sum + stat._count.status, 0)
-    completedCount = generationCompleted
-  } catch (error) {
-    console.error('Database error in gallery stats:', error)
-    // Use fallback stats from generationsData
-    totalCount = generationsData?.generations?.length || 0
-    completedCount = generationsData?.generations?.filter(g => g.status === 'COMPLETED').length || 0
-  }
-  
   const stats = {
-    totalGenerations: totalCount,
-    completedGenerations: completedCount,
-    totalImages: completedCount, // Simplified - assume 1 image per generation
-    favoriteImages: 0, // This would come from a favorites table
-    collections: 0 // This would come from collections
+    totalGenerations: generationBatch.totalCount,
+    completedGenerations: generationBatch.totalCount,
+    totalImages: generationBatch.totalCount,
+    favoriteImages: 0,
+    collections: 0
   }
+
+  const videoStats = videoStatsResult || undefined
 
   return (
     <>
@@ -218,32 +116,31 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {session?.user ? (
           <AutoSyncGalleryInterface
-            initialGenerations={generationsData.generations}
-            initialVideos={videosData.videos}
+            user={session.user}
+            initialGenerations={generationBatch.items}
+            initialVideos={videoBatch.items}
             pagination={{
-              page,
               limit,
-              total: generationsData.totalCount,
-              pages: Math.ceil(generationsData.totalCount / limit)
+              total: generationBatch.totalCount,
+              nextCursor: generationBatch.nextCursor,
+              hasMore: generationBatch.hasMore
             }}
             videoPagination={{
-              page,
               limit,
-              total: videosData.totalCount,
-              pages: Math.ceil(videosData.totalCount / limit)
+              total: videoBatch.totalCount,
+              nextCursor: videoBatch.nextCursor,
+              hasMore: videoBatch.hasMore
             }}
-            models={models}
             stats={stats}
             videoStats={videoStats}
             filters={{
               model: modelFilter,
-              search: searchQuery,
+              search: searchQuery || undefined,
               sort: sortBy,
               view: viewMode,
-              page,
-              tab: activeTab
+              tab: activeTab === 'videos' ? 'videos' : 'generated'
             }}
-            user={session.user}
+            models={models}
           />
         ) : (
           <div className="min-h-screen bg-gray-50 flex items-center justify-center">

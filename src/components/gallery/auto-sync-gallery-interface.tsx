@@ -33,7 +33,8 @@ import {
   WifiOff,
   Film,
   Settings,
-  BarChart3
+  BarChart3,
+  Loader2
 } from 'lucide-react'
 import { GalleryGrid } from './gallery-grid'
 import { GalleryList } from './gallery-list'
@@ -62,16 +63,16 @@ interface AutoSyncGalleryInterfaceProps {
   initialGenerations: any[]
   initialVideos?: any[]
   pagination: {
-    page: number
     limit: number
     total: number
-    pages: number
+    nextCursor: string | null
+    hasMore: boolean
   }
   videoPagination?: {
-    page: number
     limit: number
     total: number
-    pages: number
+    nextCursor: string | null
+    hasMore: boolean
   }
   models: any[]
   stats: {
@@ -93,7 +94,6 @@ interface AutoSyncGalleryInterfaceProps {
     search?: string
     sort: string
     view: string
-    page: number
     tab?: string
   }
   user: {
@@ -209,7 +209,7 @@ export function AutoSyncGalleryInterface({
     model: searchParams.get('model') || undefined,
     search: searchParams.get('search') || undefined,
     sort: searchParams.get('sort') || 'newest',
-    page: parseInt(searchParams.get('page') || '1'),
+    limit: pagination?.limit ?? 24,
   }
 
   // CRITICAL: Só usar initialGenerations se autorizado e tem sessão
@@ -329,7 +329,28 @@ export function AutoSyncGalleryInterface({
     if (galleryData?.videos) {
       setLocalVideos(galleryData.videos)
     }
-  }, [galleryData])
+    if (galleryData?.pagination) {
+      if (activeTab === 'generated') {
+        const nextCursor = galleryData.pagination.nextCursor ?? (galleryData.generations && galleryData.generations.length > 0
+          ? galleryData.generations[galleryData.generations.length - 1]?.id ?? null
+          : null)
+        setHasMoreGenerations(galleryData.pagination.hasMore ?? (galleryData.pagination.total > (galleryData.generations?.length ?? 0)))
+        setNextGenerationCursor(nextCursor)
+        setTotalGenerationsCount(galleryData.pagination.total ?? totalGenerationsCount)
+        setAutoLoadGenerations(false)
+      }
+
+      if (activeTab === 'videos') {
+        const nextCursor = galleryData.pagination.nextCursor ?? (galleryData.videos && galleryData.videos.length > 0
+          ? galleryData.videos[galleryData.videos.length - 1]?.id ?? null
+          : null)
+        setHasMoreVideos(galleryData.pagination.hasMore ?? (galleryData.pagination.total > (galleryData.videos?.length ?? 0)))
+        setNextVideoCursor(nextCursor)
+        setTotalVideosCount(galleryData.pagination.total ?? totalVideosCount)
+        setAutoLoadVideos(false)
+      }
+    }
+  }, [galleryData, activeTab, totalGenerationsCount, totalVideosCount])
   
   // Usar estado local (que sempre tem dados) em vez de dados diretos do React Query
   const generations = [...localGenerations].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -338,6 +359,22 @@ export function AutoSyncGalleryInterface({
   const stats = galleryData?.stats ?? initialStats
   const lastUpdate = galleryData ? new Date() : null
   const [pendingUpdates, setPendingUpdates] = useState(0)
+
+  const initialGenerationCursor = pagination?.nextCursor ?? (initialGenerations.length > 0 ? initialGenerations[initialGenerations.length - 1]?.id ?? null : null)
+  const [hasMoreGenerations, setHasMoreGenerations] = useState<boolean>(pagination?.hasMore ?? false)
+  const [nextGenerationCursor, setNextGenerationCursor] = useState<string | null>(initialGenerationCursor)
+  const [isLoadingMoreGenerations, setIsLoadingMoreGenerations] = useState(false)
+  const [autoLoadGenerations, setAutoLoadGenerations] = useState(false)
+  const [totalGenerationsCount, setTotalGenerationsCount] = useState<number>(pagination?.total ?? initialGenerations.length)
+  const generationButtonRef = useRef<HTMLButtonElement | null>(null)
+
+  const initialVideoCursor = videoPagination?.nextCursor ?? (initialVideos && initialVideos.length > 0 ? initialVideos[initialVideos.length - 1]?.id ?? null : null)
+  const [hasMoreVideos, setHasMoreVideos] = useState<boolean>(videoPagination?.hasMore ?? false)
+  const [nextVideoCursor, setNextVideoCursor] = useState<string | null>(initialVideoCursor)
+  const [isLoadingMoreVideos, setIsLoadingMoreVideos] = useState(false)
+  const [autoLoadVideos, setAutoLoadVideos] = useState(false)
+  const [totalVideosCount, setTotalVideosCount] = useState<number>(videoPagination?.total ?? (initialVideos?.length ?? 0))
+  const videoButtonRef = useRef<HTMLButtonElement | null>(null)
 
   // State para contadores globais de cada tab (independente da tab ativa)
   const [globalCounts, setGlobalCounts] = useState({
@@ -656,45 +693,25 @@ export function AutoSyncGalleryInterface({
   // Force refresh when URL tab parameter changes (via router.push)
   // ✅ Usar searchParams em vez de activeTab state para detectar mudanças de tab
   const previousTabRef = useRef(filters.tab || 'generated')
-  const previousPageRef = useRef(filters.page)
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     const currentTab = searchParams.get('tab') || 'generated'
-    const currentPage = parseInt(searchParams.get('page') || '1')
 
-    // Limpar timer anterior
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-    }
-
-    // Se a tab mudou, atualizar imediatamente (sem debounce)
     if (currentTab !== previousTabRef.current) {
       console.log(`🔄 Tab changed from [${previousTabRef.current}] to [${currentTab}], refreshing data...`)
       previousTabRef.current = currentTab
-      previousPageRef.current = currentPage
-      // activeTab agora é derivado de searchParams, não precisa mais de setState
       refreshGalleryData(false)
-      return
-    }
-
-    // Se apenas a página mudou, usar debounce de 150ms
-    if (currentPage !== previousPageRef.current) {
-      console.log(`📄 Page changed from [${previousPageRef.current}] to [${currentPage}], debouncing refresh...`)
-      debounceTimerRef.current = setTimeout(() => {
-        previousPageRef.current = currentPage
-        refreshGalleryData(false)
-      }, 150)
-    }
-
-    // Cleanup
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current)
-      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
+
+  useEffect(() => {
+    if (activeTab === 'generated') {
+      setAutoLoadVideos(false)
+    } else if (activeTab === 'videos') {
+      setAutoLoadGenerations(false)
+    }
+  }, [activeTab])
 
   const sortOptions = [
     { value: 'newest', label: 'Mais Recentes' },
@@ -710,11 +727,6 @@ export function AutoSyncGalleryInterface({
       params.set(key, value)
     } else {
       params.delete(key)
-    }
-    
-    // Reset to page 1 when filtering
-    if (key !== 'page') {
-      params.set('page', '1')
     }
     
     // Preserve tab when updating filters
@@ -733,9 +745,6 @@ export function AutoSyncGalleryInterface({
     } else {
       params.set('tab', tab)
     }
-
-    // Reset page when switching tabs
-    params.set('page', '1')
 
     // O useEffect detectará a mudança na URL e atualizará activeTab + fará refresh
     router.push(`/gallery?${params.toString()}`)
@@ -1368,6 +1377,204 @@ export function AutoSyncGalleryInterface({
   
   const hasActiveFilters = filters.model || filters.search || statusFilter !== 'all' || showFavoritesOnly
 
+  const loadMoreGenerations = useCallback(async (trigger: 'button' | 'observer' = 'button') => {
+    if (!hasMoreGenerations || isLoadingMoreGenerations) {
+      return
+    }
+
+    const effectiveCursor = nextGenerationCursor ?? generations[generations.length - 1]?.id
+    if (!effectiveCursor) {
+      console.warn('🔁 Sem cursor válido para carregar mais gerações.')
+      return
+    }
+
+    setIsLoadingMoreGenerations(true)
+
+    try {
+      const params = new URLSearchParams()
+      params.set('tab', 'generated')
+      params.set('limit', String(pagination?.limit ?? 24))
+      params.set('cursor', effectiveCursor)
+
+      if (galleryFilters.model) params.set('model', galleryFilters.model)
+      if (galleryFilters.search) params.set('search', galleryFilters.search)
+      if (galleryFilters.sort) params.set('sort', galleryFilters.sort)
+      if (showFavoritesOnly) params.set('favorites', 'true')
+
+      const response = await fetch(`/api/gallery/load-more?${params.toString()}`)
+
+      if (!response.ok) {
+        throw new Error('Falha ao buscar mais gerações')
+      }
+
+      const json = await response.json()
+
+      if (!json.success) {
+        throw new Error(json.error || 'Resposta inválida ao carregar mais gerações')
+      }
+
+      const fetchedGenerations: any[] = json.data?.generations || []
+
+      setTotalGenerationsCount(json.data?.totalCount ?? totalGenerationsCount)
+
+      if (fetchedGenerations.length > 0) {
+        setLocalGenerations(prev => {
+          const existingIds = new Set(prev.map((gen: any) => gen.id))
+          const merged = [...prev]
+
+          fetchedGenerations.forEach((gen: any) => {
+            if (!existingIds.has(gen.id)) {
+              merged.push(gen)
+            }
+          })
+
+          merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          return merged
+        })
+      }
+
+      setHasMoreGenerations(json.data?.hasMore ?? false)
+      setNextGenerationCursor(json.data?.nextCursor ?? null)
+
+      if (trigger === 'button' && (json.data?.hasMore ?? false)) {
+        setAutoLoadGenerations(true)
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar mais gerações:', error)
+      addToast({
+        title: 'Não foi possível carregar mais fotos',
+        description: error instanceof Error ? error.message : 'Tente novamente em instantes.',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsLoadingMoreGenerations(false)
+    }
+  }, [hasMoreGenerations, isLoadingMoreGenerations, nextGenerationCursor, generations, pagination?.limit, galleryFilters.model, galleryFilters.search, galleryFilters.sort, showFavoritesOnly, totalGenerationsCount, addToast])
+
+  const loadMoreVideos = useCallback(async (trigger: 'button' | 'observer' = 'button') => {
+    if (!hasMoreVideos || isLoadingMoreVideos) {
+      return
+    }
+
+    const effectiveCursor = nextVideoCursor ?? videos[videos.length - 1]?.id
+    if (!effectiveCursor) {
+      console.warn('🔁 Sem cursor válido para carregar mais vídeos.')
+      return
+    }
+
+    setIsLoadingMoreVideos(true)
+
+    try {
+      const params = new URLSearchParams()
+      params.set('tab', 'videos')
+      params.set('limit', String(videoPagination?.limit ?? 24))
+      params.set('cursor', effectiveCursor)
+
+      if (filters.search) params.set('search', filters.search)
+      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter)
+
+      const response = await fetch(`/api/gallery/load-more?${params.toString()}`)
+
+      if (!response.ok) {
+        throw new Error('Falha ao buscar mais vídeos')
+      }
+
+      const json = await response.json()
+
+      if (!json.success) {
+        throw new Error(json.error || 'Resposta inválida ao carregar mais vídeos')
+      }
+
+      const fetchedVideos: any[] = json.data?.videos || []
+
+      setTotalVideosCount(json.data?.totalCount ?? totalVideosCount)
+
+      if (fetchedVideos.length > 0) {
+        setLocalVideos(prev => {
+          const existingIds = new Set(prev.map((video: any) => video.id))
+          const merged = [...prev]
+
+          fetchedVideos.forEach((video: any) => {
+            if (!existingIds.has(video.id)) {
+              merged.push(video)
+            }
+          })
+
+          merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          return merged
+        })
+      }
+
+      setHasMoreVideos(json.data?.hasMore ?? false)
+      setNextVideoCursor(json.data?.nextCursor ?? null)
+
+      if (trigger === 'button' && (json.data?.hasMore ?? false)) {
+        setAutoLoadVideos(true)
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar mais vídeos:', error)
+      addToast({
+        title: 'Não foi possível carregar mais vídeos',
+        description: error instanceof Error ? error.message : 'Tente novamente em instantes.',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsLoadingMoreVideos(false)
+    }
+  }, [hasMoreVideos, isLoadingMoreVideos, nextVideoCursor, videos, videoPagination?.limit, filters.search, statusFilter, totalVideosCount, addToast])
+
+  useEffect(() => {
+    if (!autoLoadGenerations || !hasMoreGenerations || activeTab !== 'generated' || isLoadingMoreGenerations) {
+      return
+    }
+
+    const target = generationButtonRef.current
+    if (!target) return
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          loadMoreGenerations('observer')
+        }
+      })
+    }, {
+      rootMargin: '300px 0px 300px 0px',
+      threshold: 0.1
+    })
+
+    observer.observe(target)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [autoLoadGenerations, hasMoreGenerations, activeTab, isLoadingMoreGenerations, loadMoreGenerations])
+
+  useEffect(() => {
+    if (!autoLoadVideos || !hasMoreVideos || activeTab !== 'videos' || isLoadingMoreVideos) {
+      return
+    }
+
+    const target = videoButtonRef.current
+    if (!target) return
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          loadMoreVideos('observer')
+        }
+      })
+    }, {
+      rootMargin: '300px 0px 300px 0px',
+      threshold: 0.1
+    })
+
+    observer.observe(target)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [autoLoadVideos, hasMoreVideos, activeTab, isLoadingMoreVideos, loadMoreVideos])
+
   return (
     <div className="space-y-3">
       {/* Discrete Update Button */}
@@ -1836,138 +2043,62 @@ export function AutoSyncGalleryInterface({
               )}
 
               {/* Pagination */}
-              <div className="flex flex-col items-center space-y-3">
-                {/* Stats Info */}
-                <div className="text-xs text-gray-500">
-                  Mostrando {((pagination.page - 1) * pagination.limit) + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} fotos
-                  {pagination.pages > 1 && (
-                    <span className="ml-2">• Página {pagination.page} de {pagination.pages}</span>
-                  )}
-                </div>
-
-                {/* Pagination Controls */}
-                {pagination.pages > 1 && (
-                  <div className="flex items-center justify-center space-x-1">
+              <div className="flex flex-col items-center space-y-4 mt-6">
+                {activeTab === 'generated' && (
+                  hasMoreGenerations ? (
                     <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={pagination.page === 1}
-                      onClick={() => updateFilter('page', '1')}
-                      className="text-xs h-7 px-2"
+                      ref={generationButtonRef}
+                      type="button"
+                      onClick={() => loadMoreGenerations('button')}
+                      disabled={isLoadingMoreGenerations}
+                      className="relative inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#667EEA] to-[#764BA2] px-6 sm:px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-[#667EEA]/20 transition-all duration-200 hover:from-[#5a6bd8] hover:to-[#6a4190] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#764BA2]/60 focus-visible:ring-offset-2 disabled:opacity-70"
                     >
-                      ≪ Primeira
+                      {isLoadingMoreGenerations ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Carregando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="hidden sm:inline">Carregar mais</span>
+                          <span className="sm:hidden">Ver mais</span>
+                        </>
+                      )}
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={pagination.page === 1}
-                      onClick={() => updateFilter('page', (pagination.page - 1).toString())}
-                      className="text-xs h-7 px-2"
-                    >
-                      ‹ Anterior
-                    </Button>
-
-                    <div className="flex items-center space-x-1">
-                      {(() => {
-                        const currentPage = pagination.page
-                        const totalPages = pagination.pages
-                        const showPages = []
-
-                        // Always show first page
-                        if (totalPages > 0) showPages.push(1)
-
-                        // Show pages around current page
-                        for (let i = Math.max(2, currentPage - 2); i <= Math.min(totalPages - 1, currentPage + 2); i++) {
-                          if (!showPages.includes(i)) showPages.push(i)
-                        }
-
-                        // Always show last page (if different from first)
-                        if (totalPages > 1 && !showPages.includes(totalPages)) {
-                          showPages.push(totalPages)
-                        }
-
-                        // Sort and fill gaps
-                        showPages.sort((a, b) => a - b)
-                        const finalPages = []
-                        for (let i = 0; i < showPages.length; i++) {
-                          if (i > 0 && showPages[i] - showPages[i-1] > 1) {
-                            finalPages.push('...')
-                          }
-                          finalPages.push(showPages[i])
-                        }
-
-                        return finalPages.map((pageItem, index) => {
-                          if (pageItem === '...') {
-                            return (
-                              <span key={`ellipsis-${index}`} className="px-1 py-1 text-xs text-gray-400">
-                                ...
-                              </span>
-                            )
-                          }
-
-                          const pageNum = pageItem as number
-                          return (
-                            <Button
-                              key={pageNum}
-                              variant={pagination.page === pageNum ? 'secondary' : 'outline'}
-                              size="sm"
-                              onClick={() => updateFilter('page', pageNum.toString())}
-                              className={`text-xs h-7 w-7 p-0 ${
-                                pagination.page === pageNum
-                                  ? 'bg-gray-300 hover:bg-gray-400 text-gray-800 border-gray-300'
-                                  : ''
-                              }`}
-                            >
-                              {pageNum}
-                            </Button>
-                          )
-                        })
-                      })()}
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={pagination.page === pagination.pages}
-                      onClick={() => updateFilter('page', (pagination.page + 1).toString())}
-                      className="text-xs h-7 px-2"
-                    >
-                      Próxima ›
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={pagination.page === pagination.pages}
-                      onClick={() => updateFilter('page', pagination.pages.toString())}
-                      className="text-xs h-7 px-2"
-                    >
-                      Última ≫
-                    </Button>
-                  </div>
+                  ) : (
+                    generations.length > 0 && (
+                      <p className="text-xs text-gray-500">Você já visualizou todas as fotos geradas.</p>
+                    )
+                  )
                 )}
 
-                {/* Quick page size selector */}
-                <div className="flex items-center space-x-1 text-xs">
-                  <span className="text-gray-500">Itens por página:</span>
-                  {[10, 20, 50].map(size => (
+                {activeTab === 'videos' && (
+                  hasMoreVideos ? (
                     <Button
-                      key={size}
-                      variant={pagination.limit === size ? 'secondary' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        updateFilter('limit', size.toString())
-                        updateFilter('page', '1')
-                      }}
-                      className={`text-xs h-6 px-2 ${
-                        pagination.limit === size
-                          ? 'bg-gray-300 hover:bg-gray-400 text-gray-800 border-gray-300'
-                          : ''
-                      }`}
+                      ref={videoButtonRef}
+                      type="button"
+                      onClick={() => loadMoreVideos('button')}
+                      disabled={isLoadingMoreVideos}
+                      className="relative inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#667EEA] to-[#764BA2] px-6 sm:px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-[#667EEA]/20 transition-all duration-200 hover:from-[#5a6bd8] hover:to-[#6a4190] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#764BA2]/60 focus-visible:ring-offset-2 disabled:opacity-70"
                     >
-                      {size}
+                      {isLoadingMoreVideos ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Carregando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="hidden sm:inline">Carregar mais</span>
+                          <span className="sm:hidden">Ver mais</span>
+                        </>
+                      )}
                     </Button>
-                  ))}
-                </div>
+                  ) : (
+                    videos.length > 0 && (
+                      <p className="text-xs text-gray-500">Você já visualizou todos os vídeos.</p>
+                    )
+                  )
+                )}
               </div>
             </>
           )}

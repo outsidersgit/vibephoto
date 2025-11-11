@@ -1,7 +1,87 @@
 import { prisma } from '@/lib/db'
-import { GenerationStatus, Prisma } from '@prisma/client'
+import { Prisma, GenerationStatus } from '@prisma/client'
 import { CreditManager } from '@/lib/credits/manager'
 import { getImageGenerationCost } from '@/lib/credits/pricing'
+
+export interface GenerationBatchParams {
+  userId: string
+  limit?: number
+  cursor?: string | null
+  modelId?: string
+  searchQuery?: string
+  sortBy?: 'newest' | 'oldest' | 'model' | 'prompt'
+  includePackages?: boolean
+}
+
+export interface GenerationBatchResult {
+  items: any[]
+  nextCursor: string | null
+  hasMore: boolean
+  totalCount: number
+}
+
+export async function fetchGenerationBatch({
+  userId,
+  limit = 24,
+  cursor,
+  modelId,
+  searchQuery,
+  sortBy = 'newest',
+  includePackages = false
+}: GenerationBatchParams): Promise<GenerationBatchResult> {
+  const where: Prisma.GenerationWhereInput = {
+    userId,
+    status: GenerationStatus.COMPLETED,
+    ...(includePackages ? { packageId: { not: null } } : { packageId: null }),
+    ...(modelId && { modelId }),
+    ...(searchQuery && {
+      OR: [
+        { prompt: { contains: searchQuery, mode: 'insensitive' } },
+        { model: { name: { contains: searchQuery, mode: 'insensitive' } } }
+      ]
+    })
+  }
+
+  const orderBy: Prisma.GenerationOrderByWithRelationInput[] =
+    sortBy === 'oldest' ? [{ createdAt: 'asc' }] : [{ createdAt: 'desc' }]
+
+  const queryArgs: Prisma.GenerationFindManyArgs = {
+    where,
+    orderBy,
+    take: limit + 1,
+    include: {
+      model: {
+        select: { id: true, name: true, class: true }
+      },
+      userPackage: includePackages
+        ? {
+            include: {
+              package: true
+            }
+          }
+        : undefined
+    }
+  }
+
+  if (cursor) {
+    queryArgs.cursor = { id: cursor }
+    queryArgs.skip = 1
+  }
+
+  const results = await prisma.generation.findMany(queryArgs)
+  const hasMore = results.length > limit
+  const items = hasMore ? results.slice(0, limit) : results
+  const nextCursor = hasMore ? items[items.length - 1]?.id ?? null : null
+
+  const totalCount = await prisma.generation.count({ where })
+
+  return {
+    items,
+    nextCursor,
+    hasMore,
+    totalCount
+  }
+}
 
 export async function createGeneration(data: {
   userId: string

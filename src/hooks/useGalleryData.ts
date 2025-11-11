@@ -5,8 +5,8 @@ export interface GalleryFilters {
   status?: string
   search?: string
   sort?: string
-  page?: number
   limit?: number
+  cursor?: string | null
 }
 
 export interface GalleryData {
@@ -20,10 +20,12 @@ export interface GalleryData {
     totalCreditsUsed: number
   }
   pagination: {
-    page: number
     limit: number
     total: number
-    pages: number
+    page?: number
+    pages?: number
+    nextCursor?: string | null
+    hasMore?: boolean
   }
 }
 
@@ -41,8 +43,8 @@ export function useGalleryData(filters: GalleryFilters, placeholderData?: Galler
       if (filters.status) params.append('status', filters.status)
       if (filters.search) params.append('search', filters.search)
       if (filters.sort) params.append('sort', filters.sort)
-      if (filters.page) params.append('page', filters.page.toString())
       if (filters.limit) params.append('limit', filters.limit.toString())
+      if (filters.cursor) params.append('cursor', filters.cursor)
 
       const response = await fetch(`/api/gallery/data?${params.toString()}`)
 
