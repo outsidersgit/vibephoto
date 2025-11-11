@@ -41,6 +41,7 @@ export function useGalleryData(filters: GalleryFilters, placeholderData?: Galler
 
       if (filters.tab) params.append('tab', filters.tab)
       if (filters.status) params.append('status', filters.status)
+      if (filters.model) params.append('model', filters.model)
       if (filters.search) params.append('search', filters.search)
       if (filters.sort) params.append('sort', filters.sort)
       if (filters.limit) params.append('limit', filters.limit.toString())

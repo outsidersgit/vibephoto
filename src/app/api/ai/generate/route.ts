@@ -10,6 +10,7 @@ import { CreditManager } from '@/lib/credits/manager'
 import { getImageGenerationCost } from '@/lib/credits/pricing'
 import { createGeneration } from '@/lib/db/generations'
 import { Plan } from '@prisma/client'
+import { getAspectRatioValue } from '@/lib/utils/aspect-ratio'
 
 const generateImageSchema = z.object({
   modelId: z.string(),
@@ -158,6 +159,19 @@ export async function POST(request: NextRequest) {
       safety_checker: generationParams?.safety_checker ?? true
     }
 
+    const derivedAspectRatio = getAspectRatioValue(
+      finalParams.width,
+      finalParams.height,
+      null
+    )
+
+    let normalizedAspectRatio = aspectRatio
+    if ((!normalizedAspectRatio || normalizedAspectRatio === '1:1') && derivedAspectRatio) {
+      normalizedAspectRatio = derivedAspectRatio
+    }
+
+    const normalizedResolution = `${finalParams.width}x${finalParams.height}`
+
     // Calculate generation cost (fixed cost per image)
     const creditsNeeded = getImageGenerationCost(variations)
 
@@ -201,8 +215,8 @@ export async function POST(request: NextRequest) {
       modelId: model.id,
       prompt: finalPrompt,
       negativePrompt: negativePrompt || '',
-      aspectRatio,
-      resolution: `${finalParams.width}x${finalParams.height}`,
+      aspectRatio: normalizedAspectRatio,
+      resolution: normalizedResolution,
       variations,
       strength: undefined,
       seed: finalParams.seed,

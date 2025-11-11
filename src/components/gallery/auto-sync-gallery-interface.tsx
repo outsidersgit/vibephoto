@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import dynamic from 'next/dynamic'
@@ -177,6 +177,7 @@ export function AutoSyncGalleryInterface({
   const router = useRouter()
   const searchParams = useSearchParams()
   const { addToast } = useToast()
+  const [isNavigating, startTransition] = useTransition()
 
   // React Query hooks
   const queryClient = useQueryClient()
@@ -723,8 +724,12 @@ export function AutoSyncGalleryInterface({
     if (key !== 'tab' && activeTab !== 'generated') {
       params.set('tab', activeTab)
     }
-    
-    router.push(`/gallery?${params.toString()}`)
+    const nextQuery = params.toString()
+    const nextUrl = nextQuery ? `/gallery?${nextQuery}` : '/gallery'
+
+    startTransition(() => {
+      router.push(nextUrl, { scroll: false })
+    })
   }
 
   const switchTab = (tab: 'generated' | 'videos') => {
@@ -738,8 +743,12 @@ export function AutoSyncGalleryInterface({
 
     params.delete('page')
 
-    // O useEffect detectará a mudança na URL e atualizará activeTab + fará refresh
-    router.push(`/gallery?${params.toString()}`)
+    const nextQuery = params.toString()
+    const nextUrl = nextQuery ? `/gallery?${nextQuery}` : '/gallery'
+
+    startTransition(() => {
+      router.push(nextUrl, { scroll: false })
+    })
   }
 
   const handleSearch = (e: React.FormEvent) => {
@@ -1582,7 +1591,7 @@ export function AutoSyncGalleryInterface({
       </div>
 
       {/* Compact Search and Controls */}
-      <div className="bg-white rounded-lg border border-gray-200 p-3">
+      <div className="bg-white rounded-lg border border-gray-200 p-3" aria-busy={isNavigating}>
         <div className="flex items-center gap-3">
           {/* Compact Search Bar */}
           <form onSubmit={handleSearch} className="flex-1">
@@ -1591,7 +1600,9 @@ export function AutoSyncGalleryInterface({
               <input
                 id="gallery-search"
                 name="search"
-                type="search"
+                type="text"
+                role="searchbox"
+                inputMode="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Pesquisar por prompt..."
@@ -1618,7 +1629,8 @@ export function AutoSyncGalleryInterface({
               variant="ghost"
               size="sm"
               onClick={() => updateFilter('view', 'grid')}
-              className={`rounded-r-none h-8 px-2 ${filters.view === 'grid' ? 'bg-gray-700 text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'}`}
+                className={`rounded-r-none h-8 px-2 ${filters.view === 'grid' ? 'bg-gray-700 text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'}`}
+              disabled={isNavigating}
             >
               <Grid3X3 className="w-4 h-4" />
             </Button>
@@ -1626,7 +1638,8 @@ export function AutoSyncGalleryInterface({
               variant="ghost"
               size="sm"
               onClick={() => updateFilter('view', 'list')}
-              className={`rounded-l-none h-8 px-2 ${filters.view === 'list' ? 'bg-gray-700 text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'}`}
+                className={`rounded-l-none h-8 px-2 ${filters.view === 'list' ? 'bg-gray-700 text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'}`}
+              disabled={isNavigating}
             >
               <List className="w-4 h-4" />
             </Button>
@@ -1638,6 +1651,7 @@ export function AutoSyncGalleryInterface({
             size="sm"
             onClick={toggleFavoritesFilter}
             className={`h-8 px-3 flex items-center ${showFavoritesOnly ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-[#667EEA]' : 'text-gray-500 hover:text-[#667EEA] border-gray-200 hover:border-[#667EEA]'}`}
+            disabled={isNavigating}
             title={showFavoritesOnly ? 'Mostrar todas as fotos' : 'Mostrar apenas favoritas'}
           >
             <Heart className={`w-4 h-4 ${showFavoritesOnly ? 'fill-current' : ''}`} />
@@ -1649,6 +1663,7 @@ export function AutoSyncGalleryInterface({
             size="sm"
             onClick={() => setShowFilters(!showFilters)}
             className="flex items-center h-8 px-3"
+            disabled={isNavigating}
           >
             <Filter className="w-4 h-4 mr-1" />
             Filtros
@@ -1684,6 +1699,7 @@ export function AutoSyncGalleryInterface({
                   value={galleryFilters.sort || 'newest'}
                   onChange={(e) => updateFilter('sort', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  disabled={isNavigating}
                 >
                   {sortOptions.map(option => (
                     <option key={option.value} value={option.value}>
@@ -1700,6 +1716,7 @@ export function AutoSyncGalleryInterface({
                   value={currentModel || ''}
                   onChange={(e) => updateFilter('model', e.target.value || null)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  disabled={isNavigating}
                 >
                   <option value="">Todos os modelos</option>
                   {models.map(model => (

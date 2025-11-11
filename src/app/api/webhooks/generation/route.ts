@@ -7,6 +7,40 @@ import { broadcastGenerationStatusChange, broadcastGenerationProgress } from '@/
 import { recordImageGenerationCost } from '@/lib/services/credit-transaction-service'
 import { calculateGenerationCost } from '@/lib/ai'
 import crypto from 'crypto'
+import sharp from 'sharp'
+import { getAspectRatioValue } from '@/lib/utils/aspect-ratio'
+
+async function extractImageMetadata(url: string | null | undefined) {
+  if (!url) {
+    return null
+  }
+
+  try {
+    const response = await fetch(url)
+    if (!response.ok) {
+      console.warn(`⚠️ [WEBHOOK] Unable to fetch image for metadata (${response.status} ${response.statusText})`)
+      return null
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer())
+    const metadata = await sharp(buffer).metadata()
+
+    if (!metadata.width || !metadata.height) {
+      return null
+    }
+
+    const aspectRatio = getAspectRatioValue(metadata.width, metadata.height, null)
+
+    return {
+      width: metadata.width,
+      height: metadata.height,
+      aspectRatio: aspectRatio || null
+    }
+  } catch (error) {
+    console.warn('⚠️ [WEBHOOK] Failed to derive image metadata:', error)
+    return null
+  }
+}
 
 export async function POST(request: NextRequest) {
   console.log('🔔 Webhook generation received at:', new Date().toISOString())
@@ -53,6 +87,28 @@ export async function POST(request: NextRequest) {
           select: {
             name: true
           }
+          const potentialSources = [
+            referenceImageUrl,
+            Array.isArray(updateData.imageUrls) && updateData.imageUrls.length > 0 ? updateData.imageUrls[0] : null,
+            temporaryUrls[0] ?? null
+          ].filter(Boolean) as string[]
+
+          for (const source of potentialSources) {
+            const aspectInfo = await extractImageMetadata(source)
+            if (aspectInfo && aspectInfo.aspectRatio) {
+              updateData.aspectRatio = aspectInfo.aspectRatio
+              Object.assign(newMetadata, {
+                aspectRatio: aspectInfo.aspectRatio,
+                width: aspectInfo.width,
+                height: aspectInfo.height
+              })
+              break
+            }
+          }
+        }
+
+        if (Object.keys(newMetadata).length > 0) {
+          updateData.metadata = newMetadata
         }
       }
     })
@@ -78,6 +134,9 @@ export async function POST(request: NextRequest) {
       case 'succeeded':
         updateData.status = 'COMPLETED'
         updateData.completedAt = new Date()
+        const existingMetadata = (generation.metadata as any) || {}
+        const newMetadata: Record<string, any> = { ...existingMetadata }
+        let referenceImageUrl: string | null = null
         
         if (payload.output) {
           // Handle different output formats
@@ -119,15 +178,15 @@ export async function POST(request: NextRequest) {
               // Save s3 keys and metadata for future signed URL system
               updateData.storageKeys = s3Keys
               updateData.storageProvider = 'aws'
-              updateData.metadata = {
-                ...updateData.metadata,
-                s3Keys: s3Keys,
+              referenceImageUrl = referenceImageUrl || permanentUrls[0] || null
+              Object.assign(newMetadata, {
+                s3Keys,
                 originalUrls: temporaryUrls,
-                temporaryUrls: temporaryUrls, // Also save as temporaryUrls for consistency
+                temporaryUrls, // Also save as temporaryUrls for consistency
                 processedAt: new Date().toISOString(),
                 storageProvider: 'aws',
                 storageType: 'private'
-              }
+              })
 
               console.log(`✅ Successfully stored ${s3Keys.length} images permanently via auto-storage`)
               console.log(`🗂️ S3 Keys:`, s3Keys)
@@ -164,15 +223,15 @@ export async function POST(request: NextRequest) {
 
               updateData.storageKeys = s3Keys
               updateData.storageProvider = 'aws'
-              updateData.metadata = {
-                ...updateData.metadata,
-                s3Keys: s3Keys,
+              referenceImageUrl = referenceImageUrl || storageResult.permanentUrls[0] || null
+              Object.assign(newMetadata, {
+                s3Keys,
                 originalUrls: temporaryUrls,
-                temporaryUrls: temporaryUrls, // Also save as temporaryUrls for consistency
+                temporaryUrls, // Also save as temporaryUrls for consistency
                 processedAt: new Date().toISOString(),
                 storageProvider: 'legacy',
                 permanentUrls: storageResult.permanentUrls
-              }
+              })
 
               console.log(`✅ Successfully stored ${storageResult.permanentUrls.length} images permanently via legacy storage`)
             } else {
@@ -183,16 +242,16 @@ export async function POST(request: NextRequest) {
               updateData.imageUrls = temporaryUrls // Direct temporary URLs for immediate access
               updateData.thumbnailUrls = temporaryUrls
               updateData.storageProvider = 'temporary'
-              updateData.metadata = {
-                ...updateData.metadata,
-                temporaryUrls: temporaryUrls,
+              referenceImageUrl = referenceImageUrl || temporaryUrls[0] || null
+              Object.assign(newMetadata, {
+                temporaryUrls,
                 storageError: true,
                 errorDetails: {
                   autoStorage: String(autoStorageError),
                   legacyStorage: storageResult.error
                 },
                 expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour expiry
-              }
+              })
 
               // Still mark as completed but add warning in error message
               updateData.errorMessage = `Warning: Images may expire in 1 hour due to storage errors. Auto-storage: ${autoStorageError}, Legacy: ${storageResult.error}`

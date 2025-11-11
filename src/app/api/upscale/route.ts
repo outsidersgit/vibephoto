@@ -14,6 +14,41 @@ import {
 import { downloadAndStoreImages } from '@/lib/storage/utils'
 import { CreditManager } from '@/lib/credits/manager'
 import { Plan } from '@prisma/client'
+import sharp from 'sharp'
+import { getAspectRatioValue } from '@/lib/utils/aspect-ratio'
+
+async function fetchImageDimensions(url: string | null | undefined) {
+  if (!url) {
+    return null
+  }
+
+  try {
+    const response = await fetch(url)
+    if (!response.ok) {
+      console.warn(`⚠️ [UPSCALE] Failed to fetch image for dimensions: ${response.status} ${response.statusText}`)
+      return null
+    }
+
+    const arrayBuffer = await response.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    const metadata = await sharp(buffer).metadata()
+
+    if (!metadata.width || !metadata.height) {
+      return null
+    }
+
+    const aspectRatio = getAspectRatioValue(metadata.width, metadata.height, null)
+
+    return {
+      width: metadata.width,
+      height: metadata.height,
+      aspectRatio: aspectRatio || null
+    }
+  } catch (error) {
+    console.warn('⚠️ [UPSCALE] Unable to derive image dimensions:', error)
+    return null
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,6 +88,17 @@ export async function POST(request: NextRequest) {
 
     const imagesToProcess = batchMode ? imageUrls : [imageUrl]
     const imageCount = imagesToProcess.length
+
+    const imageDimensionInfo = await Promise.all(
+      imagesToProcess.map(async (url) => {
+        try {
+          return await fetchImageDimensions(url)
+        } catch (error) {
+          console.warn('⚠️ [UPSCALE] Failed to compute dimension info for image:', { url, error })
+          return null
+        }
+      })
+    )
 
     // 🔥 COMPREHENSIVE INPUT VALIDATION
     console.log('🔍 Performing comprehensive validation...')
@@ -186,6 +232,9 @@ export async function POST(request: NextRequest) {
       }
       
       // Cria registro na tabela Generation para tracking
+      const dimensionInfo = imageDimensionInfo[index]
+      const aspectRatioFromImage = dimensionInfo?.aspectRatio || '1:1'
+
       const generationRecord = await prisma.generation.create({
         data: {
           userId,
@@ -195,7 +244,7 @@ export async function POST(request: NextRequest) {
           thumbnailUrls: finalThumbnailUrls, // Empty for async, populated for sync
           status: finalStatus, // PROCESSING for async, COMPLETED/FAILED for sync
           resolution: `${options.upscale_factor}`, // e.g., "2x", "4x", "6x"
-          aspectRatio: '1:1', // Será atualizado
+          aspectRatio: aspectRatioFromImage || '1:1',
           style: 'upscale',
           operationType: 'upscale',
           seed: options.seed || Math.floor(Math.random() * 1000000),
@@ -209,7 +258,10 @@ export async function POST(request: NextRequest) {
             source: 'upscale',
             upscaleFactor: options.upscale_factor,
             enhanceModel: options.enhance_model || 'Standard V2',
-            cost: Math.ceil(creditsNeeded / imageCount)
+            cost: Math.ceil(creditsNeeded / imageCount),
+            ...(dimensionInfo?.width ? { originalWidth: dimensionInfo.width } : {}),
+            ...(dimensionInfo?.height ? { originalHeight: dimensionInfo.height } : {}),
+            ...(dimensionInfo?.aspectRatio ? { aspectRatio: dimensionInfo.aspectRatio } : {})
           }
         }
       })
