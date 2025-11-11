@@ -340,24 +340,30 @@ export function AutoSyncGalleryInterface({
   const lastUpdate = galleryData ? new Date() : null
   const [pendingUpdates, setPendingUpdates] = useState(0)
 
+  const derivedGenerationLimit = pagination?.limit ?? (initialGenerations.length > 0 ? initialGenerations.length : 1)
+  const derivedGenerationTotal = pagination?.total ?? initialGenerations.length
+  const derivedGenerationPages =
+    pagination?.pages ??
+    Math.max(1, Math.ceil(derivedGenerationTotal / Math.max(derivedGenerationLimit, 1)))
+
   const fallbackGenerationPagination: { limit: number; total: number; page: number; pages: number } = {
-    limit: pagination?.limit ?? initialGenerations.length || 1,
-    total: pagination?.total ?? initialGenerations.length,
+    limit: derivedGenerationLimit,
+    total: derivedGenerationTotal,
     page: pagination?.page ?? 1,
-    pages: pagination?.pages ?? Math.max(
-      1,
-      Math.ceil((pagination?.total ?? initialGenerations.length) / Math.max(pagination?.limit ?? initialGenerations.length || 1, 1))
-    )
+    pages: derivedGenerationPages
   }
 
+  const derivedVideoLimit = videoPagination?.limit ?? ((initialVideos?.length ?? 0) > 0 ? (initialVideos?.length ?? 1) : 1)
+  const derivedVideoTotal = videoPagination?.total ?? (initialVideos?.length ?? 0)
+  const derivedVideoPages =
+    videoPagination?.pages ??
+    Math.max(1, Math.ceil(derivedVideoTotal / Math.max(derivedVideoLimit, 1)))
+
   const fallbackVideoPagination: { limit: number; total: number; page: number; pages: number } = {
-    limit: videoPagination?.limit ?? (initialVideos?.length ?? 1),
-    total: videoPagination?.total ?? (initialVideos?.length ?? 0),
+    limit: derivedVideoLimit,
+    total: derivedVideoTotal,
     page: videoPagination?.page ?? 1,
-    pages: videoPagination?.pages ?? Math.max(
-      1,
-      Math.ceil((videoPagination?.total ?? (initialVideos?.length ?? 0)) / Math.max(videoPagination?.limit ?? (initialVideos?.length ?? 1), 1))
-    )
+    pages: derivedVideoPages
   }
 
   const generationPaginationInfo = activeTab === 'generated'
