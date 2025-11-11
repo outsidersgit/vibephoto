@@ -25,6 +25,8 @@ import {
   Image,
   Calendar,
   Eye,
+  ChevronLeft,
+  ChevronRight,
   ChevronDown,
   ChevronUp,
   X,
