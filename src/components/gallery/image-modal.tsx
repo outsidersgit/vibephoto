@@ -836,6 +836,7 @@ export function ImageModal({
         onSubmit={({ rating, comment }) => feedback.submitFeedback({ rating, comment, generationId })}
         isSubmitting={feedback.isSubmitting}
         promptPreview={currentImage?.generation?.prompt}
+        className="top-6 right-6 bottom-auto"
       />
     </div>
   )
