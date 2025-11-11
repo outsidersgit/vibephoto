@@ -3,7 +3,6 @@ import { fetchGenerationBatch } from '@/lib/db/generations'
 import { getModelsByUserId } from '@/lib/db/models'
 import { fetchVideoBatch, getVideoGenerationStats } from '@/lib/db/videos'
 import { AutoSyncGalleryInterface } from '@/components/gallery/auto-sync-gallery-interface'
-import { VideoStatus } from '@prisma/client'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 
 interface GalleryPageProps {
@@ -35,6 +34,14 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const videoStatus = params.status
   const videoQuality = params.quality
 
+  const serializeForProps = <T,>(data: T): T => {
+    return JSON.parse(
+      JSON.stringify(data, (_key, value) =>
+        typeof value === 'bigint' ? value.toString() : value
+      )
+    )
+  }
+
   const [models, generationBatch] = await Promise.all([
     getModelsByUserId(userId).catch(() => []),
     fetchGenerationBatch({
@@ -52,7 +59,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
     ? fetchVideoBatch({
         userId,
         limit,
-        status: videoStatus ? (videoStatus.toUpperCase() as VideoStatus) : undefined,
+        status: videoStatus || undefined,
         quality: videoQuality || undefined,
         searchQuery: searchQuery || undefined
       })
@@ -87,6 +94,9 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   }
 
   const videoStats = videoStatsResult || undefined
+
+  const safeGenerations = serializeForProps(generationBatch.items)
+  const safeVideos = serializeForProps(videoBatch.items)
 
   return (
     <>
@@ -135,8 +145,8 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
         {session?.user ? (
           <AutoSyncGalleryInterface
             user={session.user}
-            initialGenerations={generationBatch.items}
-            initialVideos={videoBatch.items}
+            initialGenerations={safeGenerations}
+            initialVideos={safeVideos}
             pagination={{
               limit,
               total: generationBatch.totalCount,

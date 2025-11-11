@@ -604,7 +604,7 @@ export interface VideoBatchParams {
   userId: string
   limit?: number
   cursor?: string | null
-  status?: VideoStatus
+  status?: VideoStatus | string | null
   quality?: string | null
   searchQuery?: string | null
 }
@@ -626,7 +626,11 @@ export async function fetchVideoBatch({
 }: VideoBatchParams): Promise<VideoBatchResult> {
   const where: any = {
     userId,
-    status: status || VideoStatus.COMPLETED,
+    status: status
+      ? typeof status === 'string'
+        ? (status.toUpperCase() as VideoStatus)
+        : status
+      : VideoStatus.COMPLETED,
     ...(quality ? { quality: quality as any } : {}),
     ...(searchQuery && {
       OR: [
