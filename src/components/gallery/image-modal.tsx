@@ -31,7 +31,6 @@ import { InstagramIcon, TikTokIcon, WhatsAppIcon, TelegramIcon, GmailIcon } from
 import { CREDIT_COSTS } from '@/lib/credits/pricing'
 import { sharePhoto, SharePlatform } from '@/lib/utils/social-share'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 
 interface ImageModalProps {
   mediaItem: MediaItem
