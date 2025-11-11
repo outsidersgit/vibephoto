@@ -605,7 +605,7 @@ export function ImageModal({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center flex-wrap gap-2">
+          <div className="flex items-center flex-wrap gap-2 pointer-events-none">
             <Button
               variant="ghost"
               size="sm"
@@ -613,8 +613,9 @@ export function ImageModal({
                 e.stopPropagation()
                 handleDownload()
               }}
-              className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20"
+              className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 pointer-events-auto"
               title="Baixar imagem"
+              type="button"
             >
               <Download className="w-4 h-4" />
               Baixar
@@ -627,8 +628,9 @@ export function ImageModal({
                 e.stopPropagation()
                 handleToggleFavorite()
               }}
-              className={`inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 ${isFavorite ? 'text-pink-300' : ''}`}
+              className={`inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 pointer-events-auto ${isFavorite ? 'text-pink-300' : ''}`}
               title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+              type="button"
             >
               <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
               {isFavorite ? 'Favorito' : 'Favoritar'}
@@ -641,9 +643,10 @@ export function ImageModal({
                 e.stopPropagation()
                 handleDelete()
               }}
-              className="inline-flex items-center gap-1 px-3 py-2 text-red-400 hover:bg-red-500/20 hover:text-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1 px-3 py-2 text-red-400 hover:bg-red-500/20 hover:text-red-200 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
               disabled={isDeleting}
               title="Excluir imagem"
+              type="button"
             >
               <Trash2 className="w-4 h-4" />
               {isDeleting ? 'Excluindo...' : 'Excluir'}
@@ -654,8 +657,9 @@ export function ImageModal({
                 variant="ghost"
                 size="sm"
                 onClick={handleUpscaleClick}
-                className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20"
+                className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 pointer-events-auto"
                 title="Fazer upscale"
+                type="button"
               >
                 <ZoomIn className="w-4 h-4" />
                 Upscale
@@ -666,7 +670,7 @@ export function ImageModal({
               <Button
                 variant="ghost"
                 size="sm"
-                className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 cursor-pointer"
+                className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 cursor-pointer pointer-events-auto"
                 title="Editar com IA"
                 type="button"
                 onClick={(event) => {
@@ -684,7 +688,7 @@ export function ImageModal({
               variant="ghost"
               size="sm"
               onClick={handleCreateVideo}
-              className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20"
+              className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20 pointer-events-auto"
               type="button"
               title="Criar vídeo a partir desta imagem"
             >
@@ -692,7 +696,7 @@ export function ImageModal({
               Criar vídeo
             </Button>
 
-            <div className="relative">
+            <div className="relative inline-flex pointer-events-auto">
               <Button
                 variant="ghost"
                 size="sm"
