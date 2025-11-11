@@ -25,7 +25,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const userId = session.user.id
 
   const params = await searchParams
-  const limit = Math.min(parseInt(params.limit || '24'), 30)
+  const limit = Math.min(parseInt(params.limit || '20'), 30)
   const page = Math.max(parseInt(params.page || '1'), 1)
   const modelFilter = params.model
   const searchQuery = params.search

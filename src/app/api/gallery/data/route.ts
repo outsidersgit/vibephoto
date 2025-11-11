@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const userId = session.user.id
 
     const { searchParams } = new URL(request.url)
-    const limit = Math.min(parseInt(searchParams.get('limit') || '24', 10), 40)
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 40)
     const page = Math.max(parseInt(searchParams.get('page') || '1', 10), 1)
     const modelFilter = searchParams.get('model') || undefined
     const searchQuery = searchParams.get('search') || undefined
