@@ -697,7 +697,9 @@ export function ImageModal({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation()
                   console.log('Abrindo menu de compartilhamento', !showShareMenu)
                   setShowShareMenu(!showShareMenu)
                 }}
