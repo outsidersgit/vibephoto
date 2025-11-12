@@ -74,7 +74,22 @@ export class AstriaProvider extends AIProvider {
         throw new Error(fullErrorMessage)
       }
 
-      return await response.json()
+      const responseText = await response.text()
+      if (!responseText) {
+        return null
+      }
+
+      try {
+        return JSON.parse(responseText)
+      } catch (parseError) {
+        console.warn(`⚠️ [ASTRIA_API_WARNING] Non-JSON response received (returning raw text)`, {
+          endpoint: `${this.baseUrl}${endpoint}`,
+          method,
+          responseText,
+          parseError
+        })
+        return responseText
+      }
     } catch (error) {
       console.error(`Astria API request failed (${method} ${endpoint}):`, error)
       throw error
@@ -295,6 +310,30 @@ export class AstriaProvider extends AIProvider {
         }
       }
       
+  async deleteTune(tuneId: string): Promise<boolean> {
+    if (!tuneId) {
+      throw new AIError('Astria tune ID is required for deletion', 'INVALID_TUNE_ID')
+    }
+
+    try {
+      await this.makeRequest('DELETE', `/tunes/${tuneId}`)
+      console.log(`✅ Astria tune deleted successfully: ${tuneId}`)
+      return true
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+
+      if (/404/.test(message) || /not found/i.test(message)) {
+        console.warn(`⚠️ Astria tune not found during deletion (treating as already removed): ${tuneId}`)
+        return false
+      }
+
+      throw new AIError(
+        `Failed to delete Astria tune ${tuneId}: ${message}`,
+        'TUNE_DELETE_ERROR'
+      )
+    }
+  }
+
       console.log(`⚠️ Astria tune with title "${title}" not found in recent tunes`)
       return null
     } catch (error) {

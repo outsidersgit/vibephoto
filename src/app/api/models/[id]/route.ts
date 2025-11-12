@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { getModelById, deleteModel, updateModelStatus } from '@/lib/db/models'
+import { AstriaProvider } from '@/lib/ai/providers/astria'
 
 export async function GET(
   request: NextRequest,
@@ -109,6 +110,16 @@ export async function DELETE(
         { error: 'Model not found' },
         { status: 404 }
       )
+    }
+
+    if (existingModel.aiProvider === 'astria' && existingModel.trainingJobId) {
+      try {
+        const astria = new AstriaProvider()
+        await astria.deleteTune(existingModel.trainingJobId)
+      } catch (error) {
+        console.error(`⚠️ Failed to delete Astria tune for model ${id}:`, error)
+        // Continue with local deletion to avoid blocking user flow
+      }
     }
 
     await deleteModel(id, session.user.id)

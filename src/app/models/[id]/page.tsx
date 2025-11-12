@@ -4,10 +4,11 @@ import { getGenerationsByUserId } from '@/lib/db/generations'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Play, Eye, Download, Trash2, Users, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Play, Eye, Download, Users, Clock, CheckCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { formatDate } from '@/lib/utils'
+import { DeleteModelAction } from '@/components/models/delete-model-action'
 
 interface ModelPageProps {
   params: Promise<{
@@ -250,32 +251,20 @@ export default async function ModelPage({ params }: ModelPageProps) {
               </CardHeader>
               <CardContent className="space-y-4">
                 {model.status === 'READY' && (
-                  <>
-                    <Button asChild className="w-full bg-white text-slate-900 hover:bg-slate-50 hover:text-slate-800 font-semibold py-3 shadow-sm border border-slate-200 transition-all duration-200 justify-start">
-                      <Link href={`/generate?model=${model.id}`} className="flex items-center">
-                        <Play className="w-4 h-4 mr-2 text-slate-700" />
-                        Gerar Fotos
-                      </Link>
-                    </Button>
-
-                    <Button variant="outline" asChild className="w-full border-2 border-slate-300 text-slate-100 bg-slate-700 hover:bg-slate-600 hover:border-slate-200 py-3 font-medium transition-all duration-200 shadow-sm justify-start">
-                      <Link href={`/gallery?model=${model.id}`} className="flex items-center">
-                        <Eye className="w-4 h-4 mr-2" />
-                        Ver Galeria
-                      </Link>
-                    </Button>
-                  </>
+                  <Button asChild className="w-full bg-white text-slate-900 hover:bg-slate-50 hover:text-slate-800 font-semibold py-3 shadow-sm border border-slate-200 transition-all duration-200 justify-start">
+                    <Link href={`/generate?model=${model.id}`} className="flex items-center">
+                      <Play className="w-4 h-4 mr-2 text-slate-700" />
+                      Gerar Fotos
+                    </Link>
+                  </Button>
                 )}
 
-                <Button variant="outline" className="w-full border-2 border-slate-300 text-slate-100 bg-slate-700 hover:bg-slate-600 hover:border-slate-200 py-3 font-medium transition-all duration-200 shadow-sm justify-start">
-                  <Download className="w-4 h-4 mr-2" />
-                  Exportar Modelo
-                </Button>
-
-                <Button variant="destructive" className="w-full bg-red-600 hover:bg-red-500 text-white border-2 border-red-500 hover:border-red-400 py-3 font-medium transition-all duration-200 shadow-sm justify-start">
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Deletar Modelo
-                </Button>
+                <DeleteModelAction
+                  modelId={model.id}
+                  label="Excluir modelo"
+                  loadingLabel="Excluindo..."
+                  redirectTo="/models"
+                />
               </CardContent>
             </Card>
           </div>

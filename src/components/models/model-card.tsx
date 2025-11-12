@@ -7,15 +7,14 @@ import { Badge } from '@/components/ui/badge'
 import {
   MoreHorizontal,
   Eye,
-  Trash2,
   AlertCircle,
   Clock,
   CheckCircle,
-  Sparkles,
   Check
 } from 'lucide-react'
 import Link from 'next/link'
 import { VibePhotoLogo } from '@/components/ui/vibephoto-logo'
+import { DeleteModelAction } from '@/components/models/delete-model-action'
 
 interface ModelCardProps {
   model: any
@@ -26,7 +25,6 @@ interface ModelCardProps {
 }
 
 export function ModelCard({ model, showProgress, showError, isSelected = false, onSelect }: ModelCardProps) {
-  const [isDeleting, setIsDeleting] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [showActions, setShowActions] = useState(false)
 
@@ -53,30 +51,6 @@ export function ModelCard({ model, showProgress, showError, isSelected = false, 
         return <AlertCircle className="w-3 h-3 text-red-500" />
       default:
         return <Clock className="w-3 h-3 text-slate-400" />
-    }
-  }
-
-  const handleDelete = async () => {
-    if (!confirm('Tem certeza que deseja excluir este modelo? Esta ação não pode ser desfeita.')) {
-      return
-    }
-
-    setIsDeleting(true)
-    try {
-      const response = await fetch(`/api/models/${model.id}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        window.location.reload()
-      } else {
-        alert('Falha ao excluir modelo')
-      }
-    } catch (error) {
-      alert('Erro ao excluir modelo')
-    } finally {
-      setIsDeleting(false)
-      setShowActions(false)
     }
   }
 
@@ -189,24 +163,23 @@ export function ModelCard({ model, showProgress, showError, isSelected = false, 
                   <div className="py-1">
                     <Link
                       href={`/models/${model.id}`}
-                      onClick={() => setShowActions(false)}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        setShowActions(false)
+                      }}
                       className="flex items-center px-3 py-2 text-xs text-white hover:bg-slate-600/50 transition-colors"
                     >
                       <Eye className="w-3.5 h-3.5 mr-2" />
                       Ver Detalhes
                     </Link>
 
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDelete()
-                      }}
-                      disabled={isDeleting}
-                      className="flex items-center px-3 py-2 text-xs text-red-400 hover:bg-red-900/20 w-full text-left transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 mr-2" />
-                      {isDeleting ? 'Excluindo...' : 'Excluir'}
-                    </button>
+                    <DeleteModelAction
+                      modelId={model.id}
+                      variant="menu"
+                      label="Excluir modelo"
+                      onSuccess={() => window.location.reload()}
+                      onSettled={() => setShowActions(false)}
+                    />
                   </div>
                 </div>
               )}
