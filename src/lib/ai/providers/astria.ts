@@ -307,9 +307,17 @@ export class AstriaProvider extends AIProvider {
             // Se primeira página falhar, não continuar
             break
           }
-        }
       }
-      
+      }
+
+      console.log(`⚠️ Astria tune with title "${title}" not found in recent tunes`)
+      return null
+    } catch (error) {
+      console.error(`❌ Error searching for tune by title "${title}":`, error)
+      return null
+    }
+  }
+
   async deleteTune(tuneId: string): Promise<boolean> {
     if (!tuneId) {
       throw new AIError('Astria tune ID is required for deletion', 'INVALID_TUNE_ID')
@@ -331,14 +339,6 @@ export class AstriaProvider extends AIProvider {
         `Failed to delete Astria tune ${tuneId}: ${message}`,
         'TUNE_DELETE_ERROR'
       )
-    }
-  }
-
-      console.log(`⚠️ Astria tune with title "${title}" not found in recent tunes`)
-      return null
-    } catch (error) {
-      console.error(`❌ Error searching for tune by title "${title}":`, error)
-      return null
     }
   }
 
