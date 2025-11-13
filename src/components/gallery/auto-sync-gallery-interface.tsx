@@ -1370,9 +1370,12 @@ export function AutoSyncGalleryInterface({
     }
 
     // Apply favorites filter
-    if (showFavoritesOnly && favoriteImages.length > 0) {
+    if (showFavoritesOnly) {
+      if (favoriteImages.length === 0) {
+        return []
+      }
+
       tabData = tabData.filter(item => {
-        // For generations, check if any of their images are favorited
         if (item.imageUrls) {
           return item.imageUrls.some(url => favoriteImages.includes(url))
         }
@@ -1382,6 +1385,10 @@ export function AutoSyncGalleryInterface({
 
     return tabData
   })()
+
+  const isFavoritesFilterActive = showFavoritesOnly
+  const hasAnyFavoriteImages = favoriteImages.length > 0
+  const isEmptyFavoritesView = isFavoritesFilterActive && !hasAnyFavoriteImages
   
   const sortIsDefault = (galleryFilters.sort || 'newest') === 'newest'
   const currentSortLabel =
@@ -1944,16 +1951,28 @@ export function AutoSyncGalleryInterface({
             <Card className="text-center py-12">
               <CardContent>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                  {hasActiveFilters ? 'Nenhum Resultado Encontrado' : 'Nenhuma Foto Ainda'}
+                  {isEmptyFavoritesView
+                    ? 'Sem favoritos ainda'
+                    : hasActiveFilters
+                      ? 'Nenhum Resultado Encontrado'
+                      : 'Nenhuma Foto Ainda'}
                 </h3>
                 <p className="text-gray-600 mb-6" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                  {hasActiveFilters
-                    ? 'Tente ajustar seus filtros ou termos de busca'
-                    : 'Comece gerando fotos com IA para construir sua galeria'
+                  {isEmptyFavoritesView
+                    ? 'Você ainda não favoritou nenhuma imagem.'
+                    : hasActiveFilters
+                      ? 'Tente ajustar seus filtros ou termos de busca'
+                      : 'Comece gerando fotos com IA para construir sua galeria'
                   }
                 </p>
-                {hasActiveFilters ? (
-                  <Button onClick={clearFilters} style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>Limpar Filtros</Button>
+                {isEmptyFavoritesView ? (
+                  <Button onClick={toggleFavoritesFilter} style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                    Ver todas as imagens
+                  </Button>
+                ) : hasActiveFilters ? (
+                  <Button onClick={clearFilters} style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                    Limpar Filtros
+                  </Button>
                 ) : (
                   <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-4">
                     <Button asChild className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-0">
@@ -1973,30 +1992,42 @@ export function AutoSyncGalleryInterface({
                 <Card className="text-center py-12">
                   <CardContent>
                     <h3 className="text-xl font-semibold text-gray-900 mb-2" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                      {activeTab === 'generated' ? 'Nenhuma Foto Gerada' : 'Nenhum Item'}
+                      {isEmptyFavoritesView
+                        ? 'Sem favoritos ainda'
+                        : activeTab === 'generated'
+                          ? 'Nenhuma Foto Gerada'
+                          : 'Nenhum Item'}
                     </h3>
                     <p className="text-gray-600 mb-6" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                      {activeTab === 'generated'
-                        ? 'Comece gerando fotos com IA para construir sua galeria'
-                        : 'Nenhum conteúdo encontrado'
+                      {isEmptyFavoritesView
+                        ? 'Você ainda não favoritou nenhuma imagem.'
+                        : activeTab === 'generated'
+                          ? 'Comece gerando fotos com IA para construir sua galeria'
+                          : 'Nenhum conteúdo encontrado'
                       }
                     </p>
-                    <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-4">
-                      {activeTab === 'generated' ? (
-                        <>
+                    {isEmptyFavoritesView ? (
+                      <Button onClick={toggleFavoritesFilter} style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                        Ver todas as imagens
+                      </Button>
+                    ) : (
+                      <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+                        {activeTab === 'generated' ? (
+                          <>
+                            <Button asChild className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-0">
+                              <a href="/generate" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>Gere Sua Primeira Foto</a>
+                            </Button>
+                            <Button asChild variant="outline" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                              <a href="/editor">Usar Editor IA</a>
+                            </Button>
+                          </>
+                        ) : (
                           <Button asChild className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-0">
-                            <a href="/generate" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>Gere Sua Primeira Foto</a>
+                            <a href="/generate" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>Começar</a>
                           </Button>
-                          <Button asChild variant="outline" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                            <a href="/editor">Usar Editor IA</a>
-                          </Button>
-                        </>
-                      ) : (
-                        <Button asChild className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-0">
-                          <a href="/generate" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>Começar</a>
-                        </Button>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ) : (

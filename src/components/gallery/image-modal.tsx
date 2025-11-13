@@ -521,7 +521,6 @@ export function ImageModal({
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation()
-                  onClose()
                   router.push(`/editor?image=${encodeURIComponent(currentImage.url)}`)
                 }}
               >
