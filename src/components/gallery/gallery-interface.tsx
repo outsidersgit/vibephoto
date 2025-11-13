@@ -229,7 +229,21 @@ export function GalleryInterface({
           : undefined
 
         if (updated) {
-          setFavoriteImages(updated)
+          const generationImages: string[] = Array.isArray(generation.imageUrls)
+            ? generation.imageUrls
+            : []
+
+          setFavoriteImages((prev) => {
+            const set = new Set(prev)
+
+            // Remover favoritos anteriores deste generation para evitar duplicações/órfãos
+            if (generationImages.length > 0) {
+              generationImages.forEach((url) => set.delete(url))
+            }
+
+            updated.forEach((url) => set.add(url))
+            return Array.from(set)
+          })
         }
 
         return nextState

@@ -811,7 +811,20 @@ export function AutoSyncGalleryInterface({
 
       const data = await response.json()
       if (Array.isArray(data?.data?.favoriteImages)) {
-        setFavoriteImages(data.data.favoriteImages)
+        const generationImages: string[] = Array.isArray(generation?.imageUrls)
+          ? generation.imageUrls
+          : []
+
+        setFavoriteImages(prev => {
+          const set = new Set(prev)
+
+          if (generationImages.length > 0) {
+            generationImages.forEach(url => set.delete(url))
+          }
+
+          data.data.favoriteImages.forEach((url: string) => set.add(url))
+          return Array.from(set)
+        })
       }
 
       addToast({
