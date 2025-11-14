@@ -241,18 +241,19 @@ export function PackagesPageClient({ initialPackages = [] }: PackagesPageClientP
                 <Button
                   key={categoryId}
                   variant="default"
-                  className="text-xs bg-blue-600 text-white hover:bg-blue-700"
+                  className="text-xs bg-blue-600 text-white hover:bg-blue-700 inline-flex items-center gap-1"
                   onClick={() => setSelectedCategories(
                     selectedCategories.filter(cat => cat !== categoryId)
                   )}
                 >
                   {option.label}
+                  <span className="text-xs font-semibold">×</span>
                 </Button>
               )
             })}
             <Button
               variant="ghost"
-              className="text-xs text-gray-400 hover:text-white"
+              className="text-xs text-gray-400 hover:text-white hover:bg-gray-700/60"
               onClick={() => setSelectedCategories([])}
             >
               Limpar categorias
