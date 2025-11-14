@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getGenerationById, updateGenerationStatus } from '@/lib/db/generations'
-import { validateImageUrl } from '@/lib/storage/utils'
 import { prisma } from '@/lib/db'
 
 export async function GET(
@@ -29,33 +28,15 @@ export async function GET(
       )
     }
 
-    // Validate image URLs before returning
-    const validImageUrls: string[] = []
-    const validThumbnailUrls: string[] = []
-
-    if (generation.imageUrls && Array.isArray(generation.imageUrls)) {
-      for (let i = 0; i < generation.imageUrls.length; i++) {
-        const imageUrl = generation.imageUrls[i]
-        const thumbnailUrl = generation.thumbnailUrls?.[i] || imageUrl
-
-        // Quick validation (timeout after 5 seconds)
-        const imageValid = await validateImageUrl(imageUrl)
-        if (imageValid) {
-          validImageUrls.push(imageUrl)
-          validThumbnailUrls.push(thumbnailUrl)
-        }
-      }
-      
-      // If some URLs are expired, log it
-      if (validImageUrls.length < generation.imageUrls.length) {
-        console.warn(`Some image URLs expired for generation ${id}: ${generation.imageUrls.length} -> ${validImageUrls.length}`)
-      }
-    }
+    // Include temporary URLs stored in metadata for faster preview fallback
+    const metadata = (generation.metadata as any) || {}
+    const temporaryUrls = metadata.temporaryUrls || metadata.originalUrls || []
 
     return NextResponse.json({ 
       ...generation,
-      imageUrls: validImageUrls,
-      thumbnailUrls: validThumbnailUrls
+      imageUrls: generation.imageUrls || [],
+      thumbnailUrls: generation.thumbnailUrls || [],
+      temporaryUrls
     })
 
   } catch (error: any) {
