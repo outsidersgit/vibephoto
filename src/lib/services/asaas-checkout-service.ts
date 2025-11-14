@@ -415,10 +415,14 @@ export async function createSubscriptionCheckout(
       influencerSplit.percentualValue = percentage
     }
 
-    if (!checkoutData.splits) {
-      checkoutData.splits = []
+    if (influencerSplit.fixedValue || influencerSplit.percentualValue) {
+      if (!checkoutData.splits) {
+        checkoutData.splits = []
+      }
+      checkoutData.splits.push(influencerSplit)
+    } else {
+      console.warn('⚠️ [CHECKOUT] Influenciador sem fixedValue/percentualValue válido, split ignorado:', influencer.id)
     }
-    checkoutData.splits.push(influencerSplit)
   }
 
   // Validar dados do cliente
