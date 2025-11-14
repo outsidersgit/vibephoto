@@ -389,11 +389,11 @@ model EditHistory {
 }
 
 enum PackageCategory {
+  LIFESTYLE
   PROFESSIONAL
-  SOCIAL
-  THEMATIC
-  ARTISTIC
-  FANTASY
+  CREATIVE
+  FASHION
+  PREMIUM
 }
 
 enum PackageStatus {

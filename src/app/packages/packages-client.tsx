@@ -37,7 +37,6 @@ export function PackagesPageClient({ initialPackages = [] }: PackagesPageClientP
   const isAuthorized = useAuthGuard()
   
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedPackage, setSelectedPackage] = useState<any>(null)
   const [showFilters, setShowFilters] = useState(false)
   const [activeTab, setActiveTab] = useState('browse')
@@ -80,27 +79,23 @@ export function PackagesPageClient({ initialPackages = [] }: PackagesPageClientP
   const showLoadingSkeleton = loading && initialPackages.length === 0
 
 
-  const categories = [
-    { id: 'PREMIUM', name: 'Premium', count: packages.filter(p => p.category === 'PREMIUM').length },
-    { id: 'LIFESTYLE', name: 'Lifestyle', count: packages.filter(p => p.category === 'LIFESTYLE').length },
-    { id: 'FASHION', name: 'Fashion', count: packages.filter(p => p.category === 'FASHION').length },
-    { id: 'CREATIVE', name: 'Creative', count: packages.filter(p => p.category === 'CREATIVE').length }
+  const categoryOptions = [
+    { id: 'LIFESTYLE', label: 'Lifestyle' },
+    { id: 'PROFESSIONAL', label: 'Professional' },
+    { id: 'CREATIVE', label: 'Creative' },
+    { id: 'FASHION', label: 'Fashion' },
+    { id: 'PREMIUM', label: 'Premium' }
   ]
-
-  // Available categories for filtering
-  const availableCategories = ['LIFESTYLE', 'PROFESSIONAL', 'CREATIVE', 'FASHION', 'PREMIUM']
 
   const filteredPackages = packages.filter(pkg => {
     const matchesSearch = pkg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          pkg.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          pkg.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
 
-    const matchesCategory = !selectedCategory || pkg.category === selectedCategory
-
     const matchesCategories = selectedCategories.length === 0 ||
                              selectedCategories.includes(pkg.category)
 
-    return matchesSearch && matchesCategory && matchesCategories
+    return matchesSearch && matchesCategories
   })
 
   const stats = {
@@ -191,21 +186,21 @@ export function PackagesPageClient({ initialPackages = [] }: PackagesPageClientP
                 <div className="p-4">
                   <h4 className="text-sm font-medium text-white mb-3">Categorias</h4>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {availableCategories.map((category) => (
-                      <label key={category} className="flex items-center space-x-2 cursor-pointer">
+                    {categoryOptions.map((category) => (
+                      <label key={category.id} className="flex items-center space-x-2 cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={selectedCategories.includes(category)}
+                          checked={selectedCategories.includes(category.id)}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedCategories([...selectedCategories, category])
+                              setSelectedCategories([...selectedCategories, category.id])
                             } else {
-                              setSelectedCategories(selectedCategories.filter(c => c !== category))
+                              setSelectedCategories(selectedCategories.filter(c => c !== category.id))
                             }
                           }}
                           className="rounded border-gray-500 text-blue-600 focus:ring-blue-500 bg-gray-700"
                         />
-                        <span className="text-sm text-gray-300 capitalize">{category.toLowerCase()}</span>
+                        <span className="text-sm text-gray-300">{category.label}</span>
                       </label>
                     ))}
                   </div>
@@ -233,6 +228,42 @@ export function PackagesPageClient({ initialPackages = [] }: PackagesPageClientP
               />
             )}
           </div>
+        </div>
+
+        {/* Category Chips */}
+        <div className="flex flex-wrap gap-2">
+          {categoryOptions.map(({ id, label }) => {
+            const isActive = selectedCategories.includes(id)
+            return (
+              <Button
+                key={id}
+                variant={isActive ? 'default' : 'outline'}
+                className={`text-xs ${
+                  isActive
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white'
+                }`}
+                onClick={() => {
+                  if (isActive) {
+                    setSelectedCategories(selectedCategories.filter((cat) => cat !== id))
+                  } else {
+                    setSelectedCategories([...selectedCategories, id])
+                  }
+                }}
+              >
+                {label}
+              </Button>
+            )
+          })}
+          {selectedCategories.length > 0 && (
+            <Button
+              variant="ghost"
+              className="text-xs text-gray-400 hover:text-white"
+              onClick={() => setSelectedCategories([])}
+            >
+              Limpar categorias
+            </Button>
+          )}
         </div>
 
         {/* Results */}

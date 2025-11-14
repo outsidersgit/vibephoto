@@ -60,7 +60,7 @@ const packageMetadata: Record<string, Omit<PackageData, 'id' | 'previewImages'>>
   },
   'executive-minimalist': {
     name: 'Executive Minimalist',
-    category: 'PREMIUM',
+    category: 'PROFESSIONAL',
     description: 'Elegância corporativa com linhas limpas, poder silencioso e liderança moderna',
     promptCount: 20,
     price: 400,
@@ -127,7 +127,7 @@ const packageMetadata: Record<string, Omit<PackageData, 'id' | 'previewImages'>>
   },
   'conceitual': {
     name: 'Conceitual',
-    category: 'PREMIUM',
+    category: 'CREATIVE',
     description: 'Fotografia artística que transcende o comum com conceitos visuais únicos',
     promptCount: 5,
     price: 400,
@@ -157,7 +157,7 @@ const packageMetadata: Record<string, Omit<PackageData, 'id' | 'previewImages'>>
   },
   'rebel': {
     name: 'Rebel',
-    category: 'CREATIVE',
+    category: 'FASHION',
     description: 'Atitude sem medo, estilo alternativo e expressão autêntica de personalidade',
     promptCount: 5,
     price: 200,
@@ -172,7 +172,7 @@ const packageMetadata: Record<string, Omit<PackageData, 'id' | 'previewImages'>>
   },
   'urban': {
     name: 'Urban',
-    category: 'LIFESTYLE',
+    category: 'PROFESSIONAL',
     description: 'Energia das grandes cidades com estilo streetwear e cultura urbana autêntica',
     promptCount: 5,
     price: 200,
@@ -187,7 +187,7 @@ const packageMetadata: Record<string, Omit<PackageData, 'id' | 'previewImages'>>
   },
   'soft-power': {
     name: 'Soft Power',
-    category: 'PROFESSIONAL',
+    category: 'PREMIUM',
     description: 'Força suave, elegância com propósito e liderança gentil',
     promptCount: 5,
     price: 350,
@@ -269,7 +269,7 @@ const packageMetadata: Record<string, Omit<PackageData, 'id' | 'previewImages'>>
   },
   'golden-hour': {
     name: 'Golden Hour',
-    category: 'CREATIVE',
+    category: 'PREMIUM',
     description: 'Magia da luz dourada que transforma momentos comuns em arte cinematográfica',
     promptCount: 20,
     price: 350,

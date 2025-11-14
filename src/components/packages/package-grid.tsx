@@ -29,14 +29,16 @@ interface PackageGridProps {
 export function PackageGrid({ packages, onPackageSelect }: PackageGridProps) {
   const getCategoryIcon = (category: string) => {
     switch (category) {
+      case 'LIFESTYLE':
+        return '🌿'
       case 'PROFESSIONAL':
         return '👔'
-      case 'SOCIAL':
-        return '📱'
-      case 'FANTASY':
-        return '🏰'
-      case 'ARTISTIC':
+      case 'CREATIVE':
         return '🎨'
+      case 'FASHION':
+        return '👗'
+      case 'PREMIUM':
+        return '🌟'
       default:
         return '📦'
     }

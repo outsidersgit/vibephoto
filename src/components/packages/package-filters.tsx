@@ -36,10 +36,11 @@ export function PackageFilters({ onClose }: PackageFiltersProps) {
   ]
 
   const categories = [
+    { id: 'LIFESTYLE', name: 'Lifestyle', icon: '🌿' },
     { id: 'PROFESSIONAL', name: 'Professional', icon: '👔' },
-    { id: 'SOCIAL', name: 'Social Media', icon: '📱' },
-    { id: 'FANTASY', name: 'Fantasy', icon: '🏰' },
-    { id: 'ARTISTIC', name: 'Artistic', icon: '🎨' }
+    { id: 'CREATIVE', name: 'Creative', icon: '🎨' },
+    { id: 'FASHION', name: 'Fashion', icon: '👗' },
+    { id: 'PREMIUM', name: 'Premium', icon: '🌟' }
   ]
 
   const toggleTag = (tag: string) => {

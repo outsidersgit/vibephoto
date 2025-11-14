@@ -4,14 +4,63 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { scanPackagesDirectory, PackageData } from '@/lib/packages/scanner'
 
-function mapCategory(cat: string): 'PROFESSIONAL' | 'SOCIAL' | 'THEMATIC' | 'ARTISTIC' | 'FANTASY' {
-  const c = (cat || '').toUpperCase()
-  if (['PREMIUM','PROFESSIONAL','EXECUTIVE','BUSINESS'].includes(c)) return 'PROFESSIONAL'
-  if (['SOCIAL','INSTAGRAM','LIFESTYLE','URBAN'].includes(c)) return 'SOCIAL'
-  if (['FASHION','VINTAGE','MAKEUP','OUTFIT','PET','COMIC','2000S','SUMMER','REBEl','URBAN','MIRROR','GOLDEN','FOOD','FLIGHT','NEO','QUIET','SOFT','VINTAGE','NOMADE'].some(k=>c.includes(k))) return 'THEMATIC'
-  if (['ART','ARTISTIC','CREATIVE','CONCEITUAL'].includes(c)) return 'ARTISTIC'
-  if (['FANTASY'].includes(c)) return 'FANTASY'
-  return 'THEMATIC'
+type PackageCategoryType = 'LIFESTYLE' | 'PROFESSIONAL' | 'CREATIVE' | 'FASHION' | 'PREMIUM'
+
+function mapCategory(cat: string, name: string): PackageCategoryType {
+  const normalizedCategory = (cat || '').trim().toUpperCase()
+  const normalizedName = (name || '').trim().toUpperCase()
+
+  if (['LIFESTYLE', 'PROFESSIONAL', 'CREATIVE', 'FASHION', 'PREMIUM'].includes(normalizedCategory)) {
+    return normalizedCategory as PackageCategoryType
+  }
+
+  if ([
+    'QUIET LUXURY',
+    'SOFT POWER',
+    'GOLDEN HOUR'
+  ].includes(normalizedName)) {
+    return 'PREMIUM'
+  }
+
+  if ([
+    'EXECUTIVE MINIMALIST',
+    'URBAN'
+  ].includes(normalizedName)) {
+    return 'PROFESSIONAL'
+  }
+
+  if ([
+    'CONCEITUAL',
+    'COMIC BOOK',
+    'VINTAGE',
+    '2000S CAM'
+  ].includes(normalizedName)) {
+    return 'CREATIVE'
+  }
+
+  if ([
+    'MAKEUP',
+    'REBEL',
+    'OUTFIT'
+  ].includes(normalizedName)) {
+    return 'FASHION'
+  }
+
+  if ([
+    'LIFE AESTHETIC',
+    'SUMMER VIBES',
+    'WANDERLUST',
+    'NEO CASUAL',
+    'MIRROR SELFIE',
+    'PET SHOT',
+    'FOOD MOOD',
+    'FLIGHT MODE',
+    'FITNESS AESTHETIC'
+  ].includes(normalizedName)) {
+    return 'LIFESTYLE'
+  }
+
+  return 'LIFESTYLE'
 }
 
 export async function POST(req: NextRequest) {
@@ -33,7 +82,7 @@ export async function POST(req: NextRequest) {
     const id = pkg.id
     const name = pkg.name
     const description = pkg.description
-    const category = mapCategory(pkg.category)
+    const category = mapCategory(pkg.category, name)
     const prompts = (pkg as any).prompts || []
     const previewUrls = pkg.previewImages || []
     const isPremium = !!pkg.isPremium
