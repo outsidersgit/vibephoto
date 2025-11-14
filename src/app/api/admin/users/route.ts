@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { z } from 'zod'
 import { broadcastCreditsUpdate, broadcastUserUpdate } from '@/lib/services/realtime-service'
 import { getCreditsLimitForPlan } from '@/lib/constants/plans'
-import { createInfluencerWithSubaccount } from '@/lib/services/influencer-service'
+import { createInfluencer, generateCouponCode } from '@/lib/services/influencer-service'
 
 async function ensureAdmin() {
   const session = await getServerSession(authOptions)
@@ -24,17 +24,13 @@ export async function GET() {
 const PlanEnum = z.enum(['STARTER','PREMIUM','GOLD'])
 const RoleEnumUpper = z.enum(['USER','ADMIN'])
 const SubscriptionStatusEnum = z.enum(['ACTIVE','CANCELLED','OVERDUE','EXPIRED','PENDING']).optional()
+
+const walletIdRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const InfluencerSchema = z.object({
-  couponCode: z.string().min(3),
+  couponCode: z.string().trim().optional(),
+  walletId: z.string().regex(walletIdRegex, 'Wallet ID inválido'),
   commissionPercentage: z.number().min(0).max(100).optional(),
-  commissionFixedValue: z.number().min(0).optional(),
-  cpfCnpj: z.string().min(11),
-  postalCode: z.string().min(8),
-  incomeValue: z.number().positive(),
-  phone: z.string().optional(),
-  mobilePhone: z.string().optional(),
-  personType: z.enum(['FISICA', 'JURIDICA']).optional(),
-  companyType: z.string().optional()
+  commissionFixedValue: z.number().min(0).optional()
 }).optional()
 
 export async function POST(request: NextRequest) {
@@ -90,27 +86,61 @@ export async function POST(request: NextRequest) {
 
   if (payload.influencer) {
     const influencerData = payload.influencer
+    const normalizedWallet = influencerData.walletId.trim().toLowerCase()
+    let couponCode = influencerData.couponCode?.trim().toUpperCase() || ''
+
+    if (!couponCode) {
+      couponCode = generateCouponCode(payload.name || created.name || created.email)
+    }
+
+    const hasPercentage = typeof influencerData.commissionPercentage === 'number'
+    const hasFixedValue = typeof influencerData.commissionFixedValue === 'number'
+
+    if (hasPercentage && hasFixedValue) {
+      await prisma.user.delete({ where: { id: created.id } }).catch(() => null)
+      return NextResponse.json({
+        error: 'Selecione apenas um tipo de comissão por influenciador (percentual ou valor fixo).'
+      }, { status: 400 })
+    }
+
     try {
-      await createInfluencerWithSubaccount({
+      const [existingCoupon, existingWallet] = await Promise.all([
+        prisma.influencer.findUnique({ where: { couponCode } }),
+        prisma.influencer.findUnique({ where: { asaasWalletId: normalizedWallet } })
+      ])
+
+      if (existingCoupon) {
+        throw new Error('DUPLICATE_COUPON')
+      }
+
+      if (existingWallet) {
+        throw new Error('DUPLICATE_WALLET')
+      }
+
+      await createInfluencer({
         userId: created.id,
-        name: payload.name || created.name || created.email,
-        email: created.email,
-        cpfCnpj: influencerData.cpfCnpj,
-        postalCode: influencerData.postalCode,
-        incomeValue: influencerData.incomeValue,
-        phone: influencerData.phone,
-        mobilePhone: influencerData.mobilePhone,
-        personType: influencerData.personType,
-        companyType: influencerData.companyType,
-        couponCode: influencerData.couponCode.toUpperCase(),
+        couponCode,
+        asaasWalletId: normalizedWallet,
         commissionPercentage: influencerData.commissionPercentage,
-        commissionFixedValue: influencerData.commissionFixedValue ?? undefined
+        commissionFixedValue: influencerData.commissionFixedValue ?? undefined,
+        name: payload.name || created.name || created.email,
+        incomeValue: undefined
       })
     } catch (error) {
       console.error('❌ [Admin Users] Erro ao configurar influenciador:', error)
       await prisma.user.delete({ where: { id: created.id } }).catch(() => null)
+
+      if (error instanceof Error) {
+        if (error.message === 'DUPLICATE_COUPON') {
+          return NextResponse.json({ error: 'Código de afiliado já está em uso. Escolha outro código.' }, { status: 409 })
+        }
+        if (error.message === 'DUPLICATE_WALLET') {
+          return NextResponse.json({ error: 'Este Wallet ID já está vinculado a outro influenciador.' }, { status: 409 })
+        }
+      }
+
       return NextResponse.json({
-        error: error instanceof Error ? error.message : 'Falha ao criar influenciador'
+        error: 'Falha ao criar influenciador'
       }, { status: 500 })
     }
   }

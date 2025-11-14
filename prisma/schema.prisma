@@ -91,7 +91,7 @@ model Influencer {
   id                   String   @id @default(cuid())
   userId               String   @unique
   couponCode           String   @unique @map("codigo_cupom")
-  asaasWalletId        String?  @map("asaas_wallet_id")
+  asaasWalletId        String   @unique @map("asaas_wallet_id")
   asaasApiKey          String?  @map("asaas_api_key")
   commissionPercentage Decimal  @default(20.00) @db.Decimal(5, 2)
   commissionFixedValue Decimal? @map("valor_fixo") @db.Decimal(10, 2)

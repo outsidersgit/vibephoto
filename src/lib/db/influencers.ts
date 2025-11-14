@@ -4,27 +4,25 @@ import { Prisma } from '@prisma/client'
 export interface CreateInfluencerInput {
   userId: string
   couponCode: string
+  asaasWalletId: string
   commissionPercentage?: number
   commissionFixedValue?: number | null
-  asaasWalletId?: string | null
-  asaasApiKey?: string | null
   incomeValue?: number | null
 }
 
 export async function createInfluencerRecord({
   userId,
   couponCode,
+  asaasWalletId,
   commissionPercentage,
   commissionFixedValue,
-  asaasWalletId,
-  asaasApiKey
+  incomeValue
 }: CreateInfluencerInput) {
   return prisma.influencer.create({
     data: {
       userId,
       couponCode,
       asaasWalletId,
-      asaasApiKey,
       ...(typeof commissionPercentage === 'number'
         ? { commissionPercentage: new Prisma.Decimal(commissionPercentage) }
         : {}),
@@ -54,6 +52,26 @@ export async function findInfluencerByUserId(userId: string) {
   return prisma.influencer.findUnique({
     where: { userId }
   })
+}
+
+export async function findInfluencerByWalletId(walletId: string) {
+  return prisma.influencer.findUnique({
+    where: { asaasWalletId: walletId }
+  })
+}
+
+export async function isCouponAvailable(couponCode: string) {
+  const existing = await prisma.influencer.findUnique({
+    where: { couponCode: couponCode.toUpperCase() }
+  })
+  return !existing
+}
+
+export async function isWalletAvailable(walletId: string) {
+  const existing = await prisma.influencer.findUnique({
+    where: { asaasWalletId: walletId }
+  })
+  return !existing
 }
 
 export async function incrementInfluencerStats(

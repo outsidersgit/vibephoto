@@ -10,12 +10,10 @@ export default function NewUserPage() {
   const [isInfluencer, setIsInfluencer] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [couponCode, setCouponCode] = useState('')
+  const [walletId, setWalletId] = useState('')
+  const [commissionMode, setCommissionMode] = useState<'percentage' | 'fixed'>('percentage')
   const [commissionPercentage, setCommissionPercentage] = useState('20')
   const [commissionFixedValue, setCommissionFixedValue] = useState('')
-  const [influencerDocument, setInfluencerDocument] = useState('')
-  const [influencerPostalCode, setInfluencerPostalCode] = useState('')
-  const [influencerIncomeValue, setInfluencerIncomeValue] = useState('1000')
-  const [influencerPhone, setInfluencerPhone] = useState('')
 
   const generatedDefaultCoupon = useMemo(() => {
     const seed = nameInput.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
@@ -41,51 +39,33 @@ export default function NewUserPage() {
       const influencerEnabled = formData.get('isInfluencer') === 'on'
 
       if (influencerEnabled) {
-        const commissionPercentageValue = formData.get('commissionPercentage') as string
-        const commissionFixedValueInput = formData.get('commissionFixedValue') as string
-        const document = (formData.get('influencerDocument') as string || '').trim()
-        const postalCode = (formData.get('influencerPostalCode') as string || '').trim()
-        const incomeValueRaw = formData.get('influencerIncomeValue') as string
-        const phone = (formData.get('influencerPhone') as string || '').trim()
         const coupon = (formData.get('couponCode') as string || '').trim().toUpperCase()
+        const walletInput = (formData.get('walletId') as string || '').trim()
 
-        const cleanDocument = document.replace(/\D/g, '')
-        if (cleanDocument.length < 11) {
-          throw new Error('Informe um CPF/CNPJ válido para o influenciador.')
+        const walletRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        if (!walletRegex.test(walletInput)) {
+          throw new Error('Informe um Wallet ID válido (formato UUID).')
         }
 
-        const cleanPostalCode = postalCode.replace(/\D/g, '')
-        if (cleanPostalCode.length !== 8) {
-          throw new Error('Informe um CEP válido para o influenciador.')
-        }
+        const percentageValueRaw = formData.get('commissionPercentage') as string
+        const fixedValueRaw = formData.get('commissionFixedValue') as string
 
-        const incomeValue = parseFloat((incomeValueRaw || '').replace(',', '.'))
-        if (!Number.isFinite(incomeValue) || incomeValue <= 0) {
-          throw new Error('Informe a renda mensal (incomeValue) do influenciador.')
-        }
-
-        const commissionPercentageNumber = commissionPercentageValue
-          ? parseFloat(commissionPercentageValue.replace(',', '.'))
+        const percentageValue = percentageValueRaw
+          ? parseFloat(percentageValueRaw.replace(',', '.'))
           : undefined
-        const commissionFixedNumber = commissionFixedValueInput
-          ? parseFloat(commissionFixedValueInput.replace(',', '.'))
+        const fixedValue = fixedValueRaw
+          ? parseFloat(fixedValueRaw.replace(',', '.'))
           : undefined
-
-        body.cpfCnpj = cleanDocument
-        body.postalCode = cleanPostalCode
-        if (phone) {
-          body.phone = phone
-        }
 
         body.influencer = {
-          couponCode: coupon || generatedDefaultCoupon,
-          commissionPercentage: Number.isFinite(commissionPercentageNumber) ? commissionPercentageNumber : undefined,
-          commissionFixedValue: Number.isFinite(commissionFixedNumber) ? commissionFixedNumber : undefined,
-          cpfCnpj: cleanDocument,
-          postalCode: cleanPostalCode,
-          incomeValue,
-          phone,
-          personType: cleanDocument.length > 11 ? 'JURIDICA' : 'FISICA'
+          walletId: walletInput,
+          couponCode: coupon || undefined,
+          commissionPercentage: commissionMode === 'percentage' && Number.isFinite(percentageValue)
+            ? percentageValue
+            : undefined,
+          commissionFixedValue: commissionMode === 'fixed' && Number.isFinite(fixedValue)
+            ? fixedValue
+            : undefined
         }
       }
 
@@ -161,9 +141,26 @@ export default function NewUserPage() {
             Este usuário é influenciador?
           </label>
           {isInfluencer && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-700">Código do cupom</label>
+                <label className="block text-sm text-gray-700">Wallet ID do Asaas do influenciador</label>
+                <input
+                  name="walletId"
+                  value={walletId}
+                  onChange={(event) => setWalletId(event.target.value)}
+                  onBlur={() => setWalletId((prev) => prev.trim().toLowerCase())}
+                  required
+                  placeholder="Ex: 154c8886-677c-141c-b3c7-65042c738580"
+                  className="mt-1 w-full border rounded-md px-3 py-2 font-mono"
+                  pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Peça ao influenciador para criar a conta no Asaas e fornecer o Wallet ID (formato UUID).
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-700">Código do cupom (opcional)</label>
                 <div className="flex gap-2 mt-1">
                   <input
                     name="couponCode"
@@ -180,10 +177,42 @@ export default function NewUserPage() {
                     Gerar código
                   </button>
                 </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Caso deixe em branco, geraremos um código automaticamente.
+                </p>
               </div>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">Tipo de comissão</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="radio"
+                      name="commissionMode"
+                      value="percentage"
+                      checked={commissionMode === 'percentage'}
+                      onChange={() => setCommissionMode('percentage')}
+                    />
+                    Percentual (%)
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="radio"
+                      name="commissionMode"
+                      value="fixed"
+                      checked={commissionMode === 'fixed'}
+                      onChange={() => setCommissionMode('fixed')}
+                    />
+                    Valor fixo (R$)
+                  </label>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-gray-700">Percentual comissão (%)</label>
+                  <label className="block text-sm text-gray-700">
+                    Percentual de comissão (%)
+                  </label>
                   <input
                     name="commissionPercentage"
                     type="number"
@@ -193,10 +222,13 @@ export default function NewUserPage() {
                     value={commissionPercentage}
                     onChange={(event) => setCommissionPercentage(event.target.value)}
                     className="mt-1 w-full border rounded-md px-3 py-2"
+                    disabled={commissionMode !== 'percentage'}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-700">Valor fixo (R$)</label>
+                  <label className="block text-sm text-gray-700">
+                    Valor fixo (R$)
+                  </label>
                   <input
                     name="commissionFixedValue"
                     type="number"
@@ -205,72 +237,9 @@ export default function NewUserPage() {
                     value={commissionFixedValue}
                     onChange={(event) => setCommissionFixedValue(event.target.value)}
                     className="mt-1 w-full border rounded-md px-3 py-2"
-                    placeholder="Opcional"
+                    disabled={commissionMode !== 'fixed'}
                   />
                 </div>
-              </div>
-              <div className="border border-amber-300 bg-amber-50 text-amber-900 rounded-md px-3 py-2 text-sm">
-                <p className="font-semibold">Informe sempre um CEP válido</p>
-                <p className="mt-1">
-                  O <code className="font-mono text-xs">postalCode</code> informado precisa ser válido para que o Asaas cadastre
-                  a cidade corretamente. Caso não seja localizado, a API retornará erro <code className="font-mono text-xs">400</code>.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-gray-700">CPF/CNPJ</label>
-                  <input
-                    name="influencerDocument"
-                    value={influencerDocument}
-                    onChange={(event) => setInfluencerDocument(event.target.value)}
-                    placeholder="Somente números"
-                    className="mt-1 w-full border rounded-md px-3 py-2"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-700">CEP</label>
-                  <input
-                    name="influencerPostalCode"
-                    value={influencerPostalCode}
-                    onChange={(event) => setInfluencerPostalCode(event.target.value)}
-                    placeholder="00000-000"
-                    className="mt-1 w-full border rounded-md px-3 py-2"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-gray-700">Renda mensal (incomeValue)</label>
-                  <input
-                    name="influencerIncomeValue"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={influencerIncomeValue}
-                    onChange={(event) => setInfluencerIncomeValue(event.target.value)}
-                    className="mt-1 w-full border rounded-md px-3 py-2"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-700">Telefone (opcional)</label>
-                  <input
-                    name="influencerPhone"
-                    value={influencerPhone}
-                    onChange={(event) => setInfluencerPhone(event.target.value)}
-                    placeholder="(11) 99999-9999"
-                    className="mt-1 w-full border rounded-md px-3 py-2"
-                  />
-                </div>
-              </div>
-              <div className="border border-rose-300 bg-rose-50 text-rose-900 rounded-md px-3 py-2 text-sm">
-                <p className="font-semibold">Atenção</p>
-                <p className="mt-1">
-                  Informe a renda mensal no campo acima. O Asaas exige o envio do campo <code className="font-mono text-xs">incomeValue</code> para
-                  criação de subcontas a partir de 30/05/24.
-                </p>
               </div>
             </div>
           )}

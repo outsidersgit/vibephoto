@@ -1,8 +1,4 @@
-import { asaas } from '@/lib/payments/asaas'
-import {
-  createInfluencerRecord,
-  CreateInfluencerInput
-} from '@/lib/db/influencers'
+import { createInfluencerRecord } from '@/lib/db/influencers'
 
 export function generateCouponCode(base?: string) {
   const seed = (base || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
@@ -11,45 +7,24 @@ export function generateCouponCode(base?: string) {
   return `${prefix}${random}`
 }
 
-export interface InfluencerSetupInput
-  extends Omit<CreateInfluencerInput, 'asaasWalletId' | 'asaasApiKey'> {
+export interface InfluencerSetupInput {
+  userId: string
+  couponCode: string
+  asaasWalletId: string
+  commissionPercentage?: number
+  commissionFixedValue?: number | null
   name: string
-  email: string
-  cpfCnpj: string
-  postalCode: string
-  incomeValue: number
-  phone?: string
-  mobilePhone?: string
-  personType?: 'FISICA' | 'JURIDICA'
-  companyType?: string
+  incomeValue?: number | null
 }
 
-export async function createInfluencerWithSubaccount(input: InfluencerSetupInput) {
-  const subaccount = await asaas.createSubaccount({
-    name: input.name,
-    email: input.email,
-    cpfCnpj: input.cpfCnpj,
-    postalCode: input.postalCode,
-    incomeValue: input.incomeValue,
-    phone: input.phone,
-    mobilePhone: input.mobilePhone,
-    personType: input.personType,
-    companyType: input.companyType
-  })
-
-  const influencer = await createInfluencerRecord({
+export async function createInfluencer(input: InfluencerSetupInput) {
+  return createInfluencerRecord({
     userId: input.userId,
     couponCode: input.couponCode,
+    asaasWalletId: input.asaasWalletId,
     commissionPercentage: input.commissionPercentage,
     commissionFixedValue: input.commissionFixedValue,
-    asaasWalletId: subaccount.walletId,
-    asaasApiKey: subaccount.apiKey,
-    incomeValue: input.incomeValue
+    incomeValue: input.incomeValue ?? undefined
   })
-
-  return {
-    influencer,
-    subaccount
-  }
 }
 

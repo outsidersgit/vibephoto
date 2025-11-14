@@ -321,16 +321,19 @@ function ActivatePageContent() {
         return
       }
 
+      let referralCodeForCheckout: string | undefined
       if (referralCodeNormalized) {
         const referralValid = await validateReferralCode({ silent: true })
-        if (!referralValid) {
-          setLoading(false)
+
+        if (referralValid) {
+          referralCodeForCheckout = referralCodeNormalized
+        } else {
+          referralCodeForCheckout = undefined
           addToast({
-            type: 'error',
-            title: 'Código de indicação inválido',
-            description: referralMessage || 'Verifique o código informado antes de prosseguir.'
+            type: 'warning',
+            title: 'Código de indicação não encontrado',
+            description: 'Não encontramos esse código. Continuaremos sem aplicar a indicação.'
           })
-          return
         }
       }
 
@@ -367,7 +370,7 @@ function ActivatePageContent() {
         body: JSON.stringify({
           planId: selectedPlan,
           cycle: billingCycle === 'annual' ? 'YEARLY' : 'MONTHLY',
-          referralCode: referralCodeNormalized || undefined
+          referralCode: referralCodeForCheckout
         })
       })
 
@@ -690,7 +693,7 @@ function ActivatePageContent() {
               <div className="border-t border-slate-600 pt-6">
                 <h3 className="text-base font-semibold text-white mb-2">Código de Indicação (Opcional)</h3>
                 <p className="text-sm text-slate-300 mb-3">
-                  Se alguém indicou você, informe o código para garantir que o influenciador receba a comissão correta.
+                  Se alguém indicou você, informe o código de indicação (opcional). Caso não tenha, continue normalmente.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <input
@@ -707,10 +710,9 @@ function ActivatePageContent() {
                   />
                   <Button
                     type="button"
-                    variant="outline"
                     onClick={() => validateReferralCode()}
                     disabled={referralStatus === 'loading'}
-                    className="h-11 border-slate-500 text-white hover:bg-white/10"
+                    className="h-11 bg-purple-600 text-white hover:bg-purple-500 focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-0 disabled:opacity-70"
                   >
                     {referralStatus === 'loading' ? 'Validando...' : 'Validar código'}
                   </Button>

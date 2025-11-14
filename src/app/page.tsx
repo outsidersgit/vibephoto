@@ -153,7 +153,7 @@ const carouselStyles = [
     title: 'Quiet Luxury',
     description: 'Elegant portraits with subtle luxury and refinement',
     image: '/examples/professional-woman.jpg',
-    prompt: 'Mulher loira com suéter bege e lenço de seda da Hermès... Deck de madeira com mar nublado ao fundo.'
+    prompt: 'Mulher loira com suéter bege e lenço de seda da Hermès... Deck de madeira sobre o mar e tempo nublado.'
   },
   {
     id: 'mirror',
@@ -1213,8 +1213,8 @@ function NavigationSteps() {
     },
     {
       id: 3,
-      title: 'Edite suas criações',
-      description: 'Quer ajustar algo ou criar do zero? Acesse o Editor de Imagem e explore. Gere fotos únicas, de pessoas fictícias, editoriais, vitrines de moda, postagens ou outfits virtuais, tudo em um só lugar, com liberdade total para criar.',
+      title: 'Editor IA',
+      description: 'Quer ajustar algo ou criar do zero? Acesse o Editor IA e explore. Gere fotos únicas, de pessoas fictícias, editoriais, vitrines de moda, postagens ou outfits virtuais, tudo em um só lugar, com liberdade total para criar.',
       action: 'Editar Fotos',
       href: '/editor'
     },
@@ -1249,7 +1249,7 @@ function NavigationSteps() {
     {
       id: 8,
       title: '', // Sem título - apenas adendo
-      description: 'Acesse todas as ferramentas pelas páginas do app ou pelos botões de ação nas miniaturas da galeria. Cada imagem também tem um botão de compartilhamento, divulgue suas criações com um clique. Vamos nessa?',
+      description: 'Acesse todas as ferramentas pelas páginas do app ou pelos botões de ação nas miniaturas da galeria. Tudo o que você precisa para criar, editar e gerar está sempre a um clique de distância. Vamos nessa?',
       action: 'Começar',
       href: '/models/create'
     }
