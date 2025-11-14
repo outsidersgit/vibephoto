@@ -25,11 +25,11 @@ interface PackageConfigModalProps {
 }
 
 const ASPECT_RATIOS = [
-  { value: '1:1', label: 'Quadrado (1:1)', resolution: '1024x1024' },
-  { value: '4:3', label: 'Padrão (4:3)', resolution: '1024x768' },
-  { value: '3:4', label: 'Retrato (3:4)', resolution: '768x1024' },
-  { value: '9:16', label: 'Vertical (9:16)', resolution: '576x1024' },
-  { value: '16:9', label: 'Paisagem (16:9)', resolution: '1024x576' }
+  { value: '1:1', label: 'Quadrado (1:1)' },
+  { value: '4:3', label: 'Padrão (4:3)' },
+  { value: '3:4', label: 'Retrato (3:4)' },
+  { value: '9:16', label: 'Vertical (9:16)' },
+  { value: '16:9', label: 'Paisagem (16:9)' }
 ]
 
 export function PackageConfigModal({
@@ -194,7 +194,7 @@ export function PackageConfigModal({
               >
                 {ASPECT_RATIOS.map((ratio) => (
                   <option key={ratio.value} value={ratio.value}>
-                    {ratio.label} - {ratio.resolution}
+                    {ratio.label}
                   </option>
                 ))}
               </select>
