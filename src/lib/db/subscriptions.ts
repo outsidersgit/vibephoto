@@ -32,6 +32,8 @@ export async function createSubscription(data: {
     ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000) // + 1 ano
     : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // + 1 mês (30 dias)
 
+  let renewalError: Error | null = null
+
   const result = await prisma.$transaction(async (tx) => {
     const updatedUser = await tx.user.update({
       where: { id: data.userId },
@@ -59,16 +61,21 @@ export async function createSubscription(data: {
     })
 
     if (data.status === 'ACTIVE' && totalCredits > 0) {
-      await recordSubscriptionRenewal(
-        data.userId,
-        totalCredits,
-        {
-          plan: data.plan,
-          billingCycle: data.billingCycle,
-          reason: 'ACTIVATION'
-        },
-        tx
-      )
+      try {
+        await recordSubscriptionRenewal(
+          data.userId,
+          totalCredits,
+          {
+            plan: data.plan,
+            billingCycle: data.billingCycle,
+            reason: 'ACTIVATION'
+          },
+          tx
+        )
+      } catch (error) {
+        renewalError = error as Error
+        console.error('❌ [createSubscription] Failed to record subscription renewal transaction:', error)
+      }
     }
 
     return {
@@ -80,6 +87,23 @@ export async function createSubscription(data: {
       }
     }
   })
+
+  if (renewalError) {
+    await prisma.usageLog.create({
+      data: {
+        userId: data.userId,
+        action: 'SUBSCRIPTION_CREDIT_ERROR',
+        creditsUsed: 0,
+        details: {
+          stage: 'createSubscription',
+          message: renewalError.message,
+          hint: 'Verify CreditTransactionSource enum contains SUBSCRIPTION'
+        }
+      }
+    }).catch((logError) => {
+      console.error('❌ [createSubscription] Failed to log credit transaction error:', logError)
+    })
+  }
 
   if (data.status === 'ACTIVE' && result?.snapshot) {
     await broadcastCreditsUpdate(
@@ -174,22 +198,29 @@ export async function updateSubscriptionStatus(
       source: plan ? 'parameter' : 'user_record'
     })
 
+    let renewalError: Error | null = null
+
     const result = await prisma.$transaction(async (tx) => {
       const updatedUser = await tx.user.update({
         where: { id: userId },
         data: updateData
       })
 
-      await recordSubscriptionRenewal(
-        userId,
-        totalCredits,
-        {
-          plan: finalPlan,
-          billingCycle: currentBillingCycle,
-          reason: 'STATUS_ACTIVE'
-        },
-        tx
-      )
+      try {
+        await recordSubscriptionRenewal(
+          userId,
+          totalCredits,
+          {
+            plan: finalPlan,
+            billingCycle: currentBillingCycle,
+            reason: 'STATUS_ACTIVE'
+          },
+          tx
+        )
+      } catch (error) {
+        renewalError = error as Error
+        console.error('❌ [updateSubscriptionStatus] Failed to record subscription renewal transaction:', error)
+      }
 
       return {
         updatedUser,
@@ -200,6 +231,23 @@ export async function updateSubscriptionStatus(
         }
       }
     })
+
+    if (renewalError) {
+      await prisma.usageLog.create({
+        data: {
+          userId,
+          action: 'SUBSCRIPTION_CREDIT_ERROR',
+          creditsUsed: 0,
+          details: {
+            stage: 'updateSubscriptionStatus',
+            message: renewalError.message,
+            hint: 'Verify CreditTransactionSource enum contains SUBSCRIPTION'
+          }
+        }
+      }).catch((logError) => {
+        console.error('❌ [updateSubscriptionStatus] Failed to log credit transaction error:', logError)
+      })
+    }
 
     if (result?.snapshot) {
       await broadcastCreditsUpdate(
