@@ -1,4 +1,5 @@
 import { asaas } from '@/lib/payments/asaas'
+import type { AsaasCustomer } from '@/lib/payments/asaas'
 import { prisma } from '@/lib/prisma'
 import { getPlanById, PLANS_FALLBACK } from '@/config/pricing'
 import { CreditPackageService } from '@/lib/services/credit-package-service'
@@ -43,17 +44,35 @@ async function getOrCreateAsaasCustomer(user: any): Promise<string> {
 
       // CRÍTICO: Verificar se o cliente tem addressNumber
       // Se não tiver, atualizar com 'S/N' (requisito do Asaas)
+      const requiredAddressFields: Partial<AsaasCustomer> = {}
+
       if (!existingCustomer.addressNumber || existingCustomer.addressNumber.trim() === '') {
-        console.log('⚠️ Cliente encontrado sem addressNumber, atualizando com "S/N"...')
+        requiredAddressFields.addressNumber = user.addressNumber?.trim() || 'S/N'
+      }
+      if (!existingCustomer.address && user.address) {
+        requiredAddressFields.address = user.address
+      }
+      if (!existingCustomer.city && user.city) {
+        requiredAddressFields.city = user.city
+      }
+      if (!existingCustomer.state && user.state) {
+        requiredAddressFields.state = user.state
+      }
+      if (!existingCustomer.postalCode && user.postalCode) {
+        requiredAddressFields.postalCode = user.postalCode.replace(/\D/g, '')
+      }
+      if (!existingCustomer.province && user.province) {
+        requiredAddressFields.province = user.province
+      }
+
+      if (Object.keys(requiredAddressFields).length > 0) {
+        console.log('⚠️ Cliente existente sem dados completos, atualizando no Asaas:', requiredAddressFields)
         try {
-          const addressNumber = user.addressNumber?.trim() || 'S/N'
-          await asaas.updateCustomer(existingCustomer.id, {
-            addressNumber: addressNumber
-          })
-          console.log('✅ Cliente atualizado com addressNumber:', addressNumber)
+          await asaas.updateCustomer(existingCustomer.id, requiredAddressFields)
+          console.log('✅ Cliente atualizado com dados de endereço obrigatórios')
         } catch (updateError: any) {
-          console.warn('⚠️ Erro ao atualizar addressNumber do cliente existente:', updateError.message)
-          // Continuar mesmo se não conseguir atualizar - pode ser que o Asaas aceite
+          console.warn('⚠️ Erro ao atualizar dados obrigatórios do cliente existente:', updateError.message)
+          // Continuar mesmo se não conseguir atualizar - tentaremos seguir com o checkout
         }
       }
 
