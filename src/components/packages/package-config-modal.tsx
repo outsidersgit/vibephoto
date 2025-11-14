@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { X, Check, AlertCircle } from 'lucide-react'
+import { X, AlertCircle } from 'lucide-react'
 
 interface AIModel {
   id: string
@@ -25,10 +25,11 @@ interface PackageConfigModalProps {
 }
 
 const ASPECT_RATIOS = [
-  { value: '1:1', label: '1:1 (Quadrado)', resolution: '1024x1024', icon: '⬜' },
-  { value: '4:5', label: '4:5 (Retrato)', resolution: '832x1024', icon: '📱' },
-  { value: '16:9', label: '16:9 (Paisagem)', resolution: '1024x576', icon: '🖼️' },
-  { value: '9:16', label: '9:16 (Stories)', resolution: '576x1024', icon: '📲' }
+  { value: '1:1', label: 'Quadrado (1:1)', resolution: '1024x1024' },
+  { value: '4:3', label: 'Padrão (4:3)', resolution: '1024x768' },
+  { value: '3:4', label: 'Retrato (3:4)', resolution: '768x1024' },
+  { value: '9:16', label: 'Vertical (9:16)', resolution: '576x1024' },
+  { value: '16:9', label: 'Paisagem (16:9)', resolution: '1024x576' }
 ]
 
 export function PackageConfigModal({
@@ -149,43 +150,34 @@ export function PackageConfigModal({
                 Escolha qual modelo será usado nas {totalImages} fotos do pacote
               </p>
 
-              <div className="space-y-2">
+              <select
+                value={selectedModel}
+                onChange={(event) => setSelectedModel(event.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+              >
                 {models.map((model) => (
-                  <button
-                    key={model.id}
-                    onClick={() => setSelectedModel(model.id)}
-                    className={`w-full p-3 rounded-lg border transition-all text-left ${
-                      selectedModel === model.id
-                        ? 'border-purple-500 bg-purple-950/30'
-                        : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <h4 className="text-sm font-medium text-white">{model.name}</h4>
-                          {selectedModel === model.id && (
-                            <Check className="w-3.5 h-3.5 text-purple-400" />
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {model.class}
-                        </p>
-                      </div>
-                      {model.sampleImages?.[0] && (
-                        <img
-                          src={model.sampleImages[0]}
-                          alt={model.name}
-                          className="w-12 h-12 rounded-md object-cover ml-3"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                      )}
-                    </div>
-                  </button>
+                  <option key={model.id} value={model.id}>
+                    {model.name} • {model.class}
+                  </option>
                 ))}
-              </div>
+              </select>
+
+              {selectedModelData?.sampleImages?.[0] && (
+                <div className="mt-3 flex items-center gap-3 text-xs text-slate-400">
+                  <img
+                    src={selectedModelData.sampleImages[0]}
+                    alt={selectedModelData.name}
+                    className="w-12 h-12 rounded-md object-cover border border-slate-700"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                  <div>
+                    <p className="text-slate-300 font-medium">{selectedModelData.name}</p>
+                    <p>{selectedModelData.class}</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

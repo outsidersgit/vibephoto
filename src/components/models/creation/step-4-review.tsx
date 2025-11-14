@@ -7,7 +7,9 @@ import { Badge } from '@/components/ui/badge'
 import { CheckCircle, Clock, Zap, Image, User, AlertTriangle, Sparkles, Brain, Star, Shield, ArrowLeft, Coins } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
-interface ModelCreationStep3Props {
+type ModelStatus = 'UPLOADING' | 'PROCESSING' | 'TRAINING' | 'READY' | 'ERROR' | null
+
+interface ModelCreationStep4Props {
   modelData: {
     name: string
     class: 'MAN' | 'WOMAN' | 'BOY' | 'GIRL' | 'ANIMAL'
@@ -16,11 +18,30 @@ interface ModelCreationStep3Props {
     fullBodyPhotos: File[]
   }
   isSubmitting: boolean
-  onSubmit: (provider: 'astria', classWord: string) => void
+  onSubmit: () => void
   onPrevStep: () => void
+  pendingModelId: string | null
+  pendingModelStatus: ModelStatus
+  pendingModelProgress: number
+  pendingModelMessage: string | null
+  pendingModelError: string | null
+  onViewModels: () => void
+  trainingActive: boolean
 }
 
-export function ModelCreationStep4({ modelData, isSubmitting, onSubmit, onPrevStep }: ModelCreationStep3Props) {
+export function ModelCreationStep4({
+  modelData,
+  isSubmitting,
+  onSubmit,
+  onPrevStep,
+  pendingModelId,
+  pendingModelStatus,
+  pendingModelProgress,
+  pendingModelMessage,
+  pendingModelError,
+  onViewModels,
+  trainingActive
+}: ModelCreationStep4Props) {
   const { addToast } = useToast()
   const totalPhotos = modelData.facePhotos.length + modelData.halfBodyPhotos.length + modelData.fullBodyPhotos.length
   const totalSizeMB = (modelData.facePhotos.reduce((acc, file) => acc + file.size, 0) +
@@ -176,6 +197,49 @@ export function ModelCreationStep4({ modelData, isSubmitting, onSubmit, onPrevSt
     consentAccepted &&
     (modelCostInfo === null || modelCostInfo.canAffordNextModel)
 
+  const statusLabelMap: Record<Exclude<ModelStatus, null>, string> = {
+    UPLOADING: 'Enviando fotos',
+    PROCESSING: 'Processando dados',
+    TRAINING: 'Treinando modelo',
+    READY: 'Pronto',
+    ERROR: 'Erro'
+  }
+
+  const defaultStatusMessage: Record<Exclude<ModelStatus, null>, string> = {
+    UPLOADING: 'Estamos subindo suas fotos com segurança.',
+    PROCESSING: 'Organizando e validando suas fotos antes do treinamento.',
+    TRAINING: 'O Astria está treinando o seu modelo. Isso pode levar alguns minutos.',
+    READY: 'Modelo finalizado! Você já pode usar esse modelo em suas criações.',
+    ERROR: 'Algo deu errado no treinamento. Revise as fotos e tente novamente.'
+  }
+
+  const showTrainingStatus = Boolean(
+    pendingModelId &&
+    (pendingModelStatus || isSubmitting || trainingActive)
+  )
+
+  const currentStatus: ModelStatus =
+    pendingModelStatus ||
+    (isSubmitting ? 'UPLOADING' : null)
+
+  const statusMessage =
+    (pendingModelMessage && pendingModelMessage.trim().length > 0
+      ? pendingModelMessage
+      : (currentStatus ? defaultStatusMessage[currentStatus] : null)) ||
+    'Preparando o treinamento do seu modelo.'
+
+  const progressValue = Math.min(
+    100,
+    Math.max(
+      currentStatus === 'READY'
+        ? 100
+        : currentStatus === 'ERROR'
+          ? pendingModelProgress || 0
+          : pendingModelProgress || (isSubmitting ? 10 : 0),
+      0
+    )
+  )
+
   return (
     <div className="space-y-4" style={{fontFamily: 'SF Pro Display, -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
       {/* Model Summary */}
@@ -316,15 +380,67 @@ export function ModelCreationStep4({ modelData, isSubmitting, onSubmit, onPrevSt
         </CardContent>
       </Card>
 
+      {/* Training Status */}
+      {showTrainingStatus && (
+        <Card className="border-purple-200 bg-purple-50">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-purple-900">Status do Treinamento</p>
+                <p className="text-xs text-purple-700">
+                  {currentStatus ? statusLabelMap[currentStatus] : 'Inicializando'}
+                </p>
+              </div>
+              <Badge className="bg-purple-600 text-white">
+                {currentStatus ? statusLabelMap[currentStatus] : 'Preparando'}
+              </Badge>
+            </div>
+
+            <div>
+              <div className="w-full bg-purple-200/70 rounded-full h-2">
+                <div
+                  className="h-2 rounded-full bg-purple-600 transition-all duration-500"
+                  style={{ width: `${progressValue}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs text-purple-800">{statusMessage}</p>
+            </div>
+
+            {pendingModelError && (
+              <div className="text-xs text-red-700 bg-red-100 border border-red-200 rounded-md p-2">
+                {pendingModelError}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 text-xs text-purple-800">
+              <span>• Não feche esta aba enquanto as fotos são enviadas</span>
+              <span>• Você pode acompanhar em Meus Modelos após o envio</span>
+              <span>• Vamos manter este painel atualizado em tempo real</span>
+            </div>
+
+            {currentStatus === 'READY' && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-purple-400 text-purple-900 hover:bg-purple-100"
+                onClick={onViewModels}
+              >
+                Ver modelo treinado
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* While You Wait */}
       <Card className="bg-[#34495E] border-[#4A5F7A]">
         <CardContent className="p-4">
           <h4 className="text-sm font-medium text-gray-300 mb-2">Enquanto Você Espera</h4>
           <div className="text-xs text-gray-400 space-y-1">
-            <p>• Você receberá uma notificação por email quando o treinamento estiver completo</p>
-            <p>• Você pode fechar esta página e verificar mais tarde</p>
-            <p>• O progresso ficará visível no seu painel de modelos</p>
-            <p>• O treinamento geralmente leva {estimatedTrainingTime} minutos</p>
+            <p>• Acompanhe o status em tempo real nesta página ou em Meus Modelos</p>
+            <p>• Você pode continuar usando o app enquanto o treino acontece</p>
+            <p>• Mostramos avisos na interface assim que tudo for concluído</p>
+            <p>• O treinamento geralmente leva cerca de {estimatedTrainingTime} minutos</p>
           </div>
         </CardContent>
       </Card>
@@ -374,16 +490,16 @@ export function ModelCreationStep4({ modelData, isSubmitting, onSubmit, onPrevSt
                     })
                     return
                   }
-                  onSubmit(selectedProvider, modelData.class.toLowerCase())
+                  onSubmit()
                 }}
-                disabled={!allRequiredPassed || isSubmitting}
+                disabled={!allRequiredPassed || isSubmitting || trainingActive}
                 size="lg"
                 className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 text-white border-0"
               >
-                {isSubmitting ? (
+                {(isSubmitting || trainingActive) ? (
                   <>
                     <Clock className="w-5 h-5 mr-2 animate-spin" />
-                    Criando...
+                    {trainingActive ? 'Treinando modelo...' : 'Preparando...'}
                   </>
                 ) : (
                   'Criar Modelo'

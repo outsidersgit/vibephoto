@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ import { ModelCreationStep3FullBody } from '@/components/models/creation/step-3-
 import { ModelCreationStep4 } from '@/components/models/creation/step-4-review'
 import { SubscriptionGate } from '@/components/subscription/subscription-gate'
 import { useToast } from '@/hooks/use-toast'
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 
@@ -27,6 +28,12 @@ export default function CreateModelPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [modelCostInfo, setModelCostInfo] = useState<any>(null)
+  const [pendingModelId, setPendingModelId] = useState<string | null>(null)
+  const [pendingModelStatus, setPendingModelStatus] = useState<'UPLOADING' | 'PROCESSING' | 'TRAINING' | 'READY' | 'ERROR' | null>(null)
+  const [pendingModelProgress, setPendingModelProgress] = useState<number>(0)
+  const [pendingModelMessage, setPendingModelMessage] = useState<string | null>(null)
+  const [pendingModelError, setPendingModelError] = useState<string | null>(null)
+  const hasRedirectedRef = useRef(false)
 
   const [modelData, setModelData] = useState({
     name: '',
@@ -35,8 +42,6 @@ export default function CreateModelPage() {
     halfBodyPhotos: [] as File[],
     fullBodyPhotos: [] as File[]
   })
-
-  const [consentAccepted, setConsentAccepted] = useState(false)
 
   // Fetch model cost info on mount
   useEffect(() => {
@@ -98,13 +103,102 @@ export default function CreateModelPage() {
     }
   }
 
+  const trainingActive = Boolean(
+    pendingModelId &&
+    pendingModelStatus &&
+    !['READY', 'ERROR'].includes(pendingModelStatus)
+  )
+
+  const handlePendingModelStatus = useCallback((status: string, data?: any) => {
+    if (!pendingModelId) return
+    setPendingModelStatus(status as any)
+    if (typeof data?.progress === 'number') {
+      setPendingModelProgress(data.progress)
+    }
+    if (data?.message) {
+      setPendingModelMessage(data.message)
+    }
+
+    if (status === 'READY') {
+      setPendingModelMessage('Treinamento concluído! Abrindo seus modelos...')
+      setPendingModelError(null)
+      setIsSubmitting(false)
+      if (!hasRedirectedRef.current) {
+        hasRedirectedRef.current = true
+        addToast({
+          title: 'Modelo pronto 🎉',
+          description: 'Seu modelo terminou o treinamento. Redirecionando para seus modelos.',
+          type: 'success'
+        })
+        setTimeout(() => {
+          router.push(`/models?highlight=${pendingModelId}`)
+        }, 1500)
+      }
+    } else if (status === 'ERROR') {
+      setPendingModelError(data?.errorMessage || 'O treinamento falhou. Ajuste as fotos e tente novamente.')
+      setPendingModelMessage('O Astria interrompeu este treinamento.')
+      setIsSubmitting(false)
+    }
+  }, [pendingModelId, addToast, router])
+
+  useRealtimeUpdates({
+    onModelStatusChange: (modelId, status, data) => {
+      if (!pendingModelId || modelId !== pendingModelId) return
+      handlePendingModelStatus(status, data)
+    },
+    onTrainingProgress: (modelId, progress, message) => {
+      if (!pendingModelId || modelId !== pendingModelId) return
+      if (typeof progress === 'number') {
+        setPendingModelProgress(progress)
+      }
+      if (message) {
+        setPendingModelMessage(message)
+      }
+    }
+  })
+
+  useEffect(() => {
+    if (!pendingModelId || !trainingActive) return
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/models/${pendingModelId}/check-status`, {
+          method: 'POST'
+        })
+        if (!res.ok) return
+        const data = await res.json().catch(() => null)
+        if (data?.currentStatus) {
+          handlePendingModelStatus(data.currentStatus, {
+            progress: data.progress,
+            errorMessage: data.error
+          })
+        }
+      } catch (error) {
+        console.error('❌ Falha ao consultar status do modelo:', error)
+      }
+    }, 60000)
+
+    return () => clearInterval(interval)
+  }, [pendingModelId, trainingActive, handlePendingModelStatus])
+
   const handleSubmit = async () => {
+    if (trainingActive) {
+      addToast({
+        title: 'Treinamento em andamento',
+        description: 'Aguarde o modelo atual finalizar antes de iniciar um novo.',
+        type: 'warning'
+      })
+      return
+    }
+
     setIsSubmitting(true)
+    setPendingModelError(null)
+    setPendingModelMessage(null)
 
     addToast({
-      title: "Iniciando treinamento",
-      description: "Enviando fotos e configurando modelo de IA...",
-      type: "info"
+      title: 'Preparando tudo',
+      description: 'Enviando fotos e configurando o treinamento do modelo...',
+      type: 'info'
     })
 
     try {
@@ -243,13 +337,17 @@ export default function CreateModelPage() {
 
       console.log('✅ Model creation response:', result)
 
-      addToast({
-        title: "Modelo criado com sucesso",
-        description: "Treinamento iniciado! Tempo estimado: 40 minutos. Você receberá uma notificação quando estiver pronto.",
-        type: "success"
-      })
+      setPendingModelId(result.modelId)
+      setPendingModelStatus((result.status as any) || 'TRAINING')
+      setPendingModelProgress(result.progress ?? 20)
+      setPendingModelMessage('Treinamento iniciado no Astria. Isso pode levar alguns minutos.')
+      hasRedirectedRef.current = false
 
-      router.push('/models?created=true')
+      addToast({
+        title: 'Treinamento iniciado',
+        description: 'Acompanhe o progresso aqui ou em Meus Modelos. Vamos avisar quando terminar.',
+        type: 'info'
+      })
     } catch (error) {
       console.error('❌ Error creating model:', error)
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
@@ -260,6 +358,9 @@ export default function CreateModelPage() {
         type: "error"
       })
       setIsSubmitting(false)
+      setPendingModelId(null)
+      setPendingModelStatus(null)
+      setPendingModelProgress(0)
     }
   }
 
@@ -349,6 +450,13 @@ export default function CreateModelPage() {
               isSubmitting={isSubmitting}
               onSubmit={handleSubmit}
               onPrevStep={handlePrevStep}
+              pendingModelId={pendingModelId}
+              pendingModelStatus={pendingModelStatus}
+              pendingModelProgress={pendingModelProgress}
+              pendingModelMessage={pendingModelMessage}
+              pendingModelError={pendingModelError}
+              onViewModels={() => router.push('/models')}
+              trainingActive={trainingActive}
             />
           )}
         </div>
