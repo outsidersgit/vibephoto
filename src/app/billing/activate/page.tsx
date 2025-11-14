@@ -40,6 +40,10 @@ function ActivatePageContent() {
     state: ''
   })
   const lastFetchedCepRef = useRef<string | null>(null)
+  const [referralCode, setReferralCode] = useState('')
+  const [referralStatus, setReferralStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle')
+  const [referralDetails, setReferralDetails] = useState<{ couponCode: string; name: string | null } | null>(null)
+  const [referralMessage, setReferralMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (session?.user) {
@@ -221,6 +225,78 @@ function ActivatePageContent() {
     return { savings, monthsEquivalent }
   }
 
+  const referralCodeNormalized = referralCode.trim().toUpperCase()
+
+  const validateReferralCode = async ({ silent = false } = {}) => {
+    if (!referralCodeNormalized) {
+      setReferralStatus('idle')
+      setReferralDetails(null)
+      setReferralMessage(null)
+      return true
+    }
+
+    if (referralStatus === 'valid' && referralDetails?.couponCode === referralCodeNormalized) {
+      return true
+    }
+
+    try {
+      setReferralStatus('loading')
+      setReferralMessage(null)
+      const response = await fetch('/api/influencers/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: referralCodeNormalized })
+      })
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}))
+        const message = errorPayload?.error || 'Código não encontrado.'
+        setReferralStatus('invalid')
+        setReferralDetails(null)
+        setReferralMessage(message)
+        if (!silent) {
+          addToast({
+            type: 'error',
+            title: 'Código inválido',
+            description: message
+          })
+        }
+        return false
+      }
+
+      const payload = await response.json()
+      setReferralStatus('valid')
+      setReferralDetails({
+        couponCode: payload?.influencer?.couponCode || referralCodeNormalized,
+        name: payload?.influencer?.name || null
+      })
+      const successMessage = `Código válido!${payload?.influencer?.name ? ` Indicação por ${payload.influencer.name}.` : ''}`
+      setReferralMessage(successMessage)
+      if (!silent) {
+        addToast({
+          type: 'success',
+          title: 'Código validado',
+          description: successMessage
+        })
+      }
+      return true
+    } catch (error) {
+      console.error('Erro ao validar código de indicação:', error)
+      setReferralStatus('invalid')
+      setReferralDetails(null)
+      const fallbackMessage = 'Não foi possível validar o código. Tente novamente.'
+      setReferralMessage(fallbackMessage)
+      if (!silent) {
+        addToast({
+          type: 'error',
+          title: 'Erro ao validar código',
+          description: fallbackMessage
+        })
+      }
+      return false
+    }
+  }
+
   const handleCreateCheckout = async () => {
     setLoading(true)
     try {
@@ -243,6 +319,19 @@ function ActivatePageContent() {
           description: `Por favor, preencha: ${missingFields.join(', ')}`
         })
         return
+      }
+
+      if (referralCodeNormalized) {
+        const referralValid = await validateReferralCode({ silent: true })
+        if (!referralValid) {
+          setLoading(false)
+          addToast({
+            type: 'error',
+            title: 'Código de indicação inválido',
+            description: referralMessage || 'Verifique o código informado antes de prosseguir.'
+          })
+          return
+        }
       }
 
       // Atualizar dados do usuário no banco antes de criar o checkout
@@ -277,7 +366,8 @@ function ActivatePageContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           planId: selectedPlan,
-          cycle: billingCycle === 'annual' ? 'YEARLY' : 'MONTHLY'
+          cycle: billingCycle === 'annual' ? 'YEARLY' : 'MONTHLY',
+          referralCode: referralCodeNormalized || undefined
         })
       })
 
@@ -595,6 +685,42 @@ function ActivatePageContent() {
                     required
                   />
                 </div>
+              </div>
+
+              <div className="border-t border-slate-600 pt-6">
+                <h3 className="text-base font-semibold text-white mb-2">Código de Indicação (Opcional)</h3>
+                <p className="text-sm text-slate-300 mb-3">
+                  Se alguém indicou você, informe o código para garantir que o influenciador receba a comissão correta.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="text"
+                    value={referralCode}
+                    onChange={(event) => {
+                      setReferralCode(event.target.value.toUpperCase())
+                      setReferralStatus('idle')
+                      setReferralDetails(null)
+                      setReferralMessage(null)
+                    }}
+                    placeholder="Ex: MARIA10"
+                    className="flex-1 h-11 px-3 py-2 bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 uppercase"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => validateReferralCode()}
+                    disabled={referralStatus === 'loading'}
+                    className="h-11 border-slate-500 text-white hover:bg-white/10"
+                  >
+                    {referralStatus === 'loading' ? 'Validando...' : 'Validar código'}
+                  </Button>
+                </div>
+                {referralStatus === 'valid' && referralMessage && (
+                  <p className="mt-3 text-sm text-emerald-300">{referralMessage}</p>
+                )}
+                {referralStatus === 'invalid' && referralMessage && (
+                  <p className="mt-3 text-sm text-red-300">{referralMessage}</p>
+                )}
               </div>
 
               {/* Endereço (Obrigatório) */}

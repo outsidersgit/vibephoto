@@ -870,7 +870,7 @@ const AIToolsShowcase = () => {
     },
     editor: {
       title: "Editor",
-      description: "Modifique, adicione, remova e combine fotos como quiser — liberdade criativa absoluta.",
+      description: "Modifique, adicione, remova e combine fotos como quiser,  liberdade criativa absoluta.",
       type: "sidebyside",
       beforeImage: "/examples/tools/editor-after-1.jpg",
       afterImage: "/examples/tools/editor-after-2.jpg",
@@ -1207,14 +1207,14 @@ function NavigationSteps() {
     {
       id: 2,
       title: 'Gere imagens',
-      description: 'Depois, vá em Gerar Imagem e escolha o estilo que quiser. Se quiser aprimorar o resultado, use o botão de lupa nos botões de ação da imagem e aplique upscale — aumentando a resolução e deixando sua criação ainda mais nítida.',
+      description: 'Depois, vá em Gerar Imagem e escolha o estilo que quiser. Se quiser aprimorar o resultado, use o botão de lupa nos botões de ação da imagem e aplique upscale, aumentando a resolução e deixando sua criação ainda mais nítida.',
       action: 'Gerar Fotos',
       href: '/generate'
     },
     {
       id: 3,
       title: 'Edite suas criações',
-      description: 'Quer ajustar algo ou criar do zero? Acesse o Editor de Imagem e explore. Gere fotos únicas — de pessoas fictícias, editoriais, vitrines de moda, postagens ou outfits virtuais — tudo em um só lugar, com liberdade total para criar.',
+      description: 'Quer ajustar algo ou criar do zero? Acesse o Editor de Imagem e explore. Gere fotos únicas, de pessoas fictícias, editoriais, vitrines de moda, postagens ou outfits virtuais, tudo em um só lugar, com liberdade total para criar.',
       action: 'Editar Fotos',
       href: '/editor'
     },
@@ -1249,7 +1249,7 @@ function NavigationSteps() {
     {
       id: 8,
       title: '', // Sem título - apenas adendo
-      description: 'Acesse todas as ferramentas pelas páginas do app ou pelos botões de ação nas miniaturas da galeria. Cada imagem também tem um botão de compartilhamento — divulgue suas criações com um clique. Vamos nessa?',
+      description: 'Acesse todas as ferramentas pelas páginas do app ou pelos botões de ação nas miniaturas da galeria. Cada imagem também tem um botão de compartilhamento, divulgue suas criações com um clique. Vamos nessa?',
       action: 'Começar',
       href: '/models/create'
     }

@@ -48,6 +48,12 @@ model User {
   state              String?
   postalCode         String?
 
+  // Influencer / referral tracking
+  referralCodeUsed        String?  @map("codigo_usado")
+  referredByInfluencerId  String?  @map("influencer_id")
+  referredByInfluencer    Influencer? @relation("InfluencerReferrals", fields: [referredByInfluencerId], references: [id])
+  influencerProfile       Influencer? @relation("InfluencerOwner")
+
   // User statistics (from migrations) - TEMPORARILY COMMENTED (MISSING IN DB)
   // totalModels      Int       @default(0)
   // totalGenerations Int       @default(0)
@@ -79,6 +85,27 @@ model User {
   @@index([lastLoginAt])
   @@index([plan])
   @@map("users")
+}
+
+model Influencer {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  couponCode           String   @unique @map("codigo_cupom")
+  asaasWalletId        String?  @map("asaas_wallet_id")
+  asaasApiKey          String?  @map("asaas_api_key")
+  commissionPercentage Decimal  @default(20.00) @db.Decimal(5, 2)
+  commissionFixedValue Decimal? @map("valor_fixo") @db.Decimal(10, 2)
+  monthlyIncome        Decimal? @map("income_value") @db.Decimal(12, 2)
+  totalReferrals       Int      @default(0) @map("total_indicacoes")
+  totalCommissions     Decimal  @default(0) @map("total_comissoes") @db.Decimal(10, 2)
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  user           User     @relation("InfluencerOwner", fields: [userId], references: [id], onDelete: Cascade)
+  referredUsers  User[]   @relation("InfluencerReferrals")
+  payments       Payment[] @relation("InfluencerPayments")
+
+  @@map("influencers")
 }
 
 model Account {
@@ -589,6 +616,8 @@ model Payment {
   // References
   subscriptionId    String? // Asaas subscription ID if applicable
   externalReference String? // Our internal reference
+  influencerId      String? @map("influencer_id")
+  referralCodeUsed  String? @map("codigo_usado")
 
   // Related data
   planType     Plan? // If subscription payment
@@ -603,6 +632,7 @@ model Payment {
   // Relations
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  influencer Influencer? @relation("InfluencerPayments", fields: [influencerId], references: [id])
 
   @@index([userId])
   @@index([status])

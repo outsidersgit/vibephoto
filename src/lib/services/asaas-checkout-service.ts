@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getPlanById, PLANS_FALLBACK } from '@/config/pricing'
 import { CreditPackageService } from '@/lib/services/credit-package-service'
 import { getAsaasEnvironment, getAsaasCheckoutUrl, getWebhookBaseUrl } from '@/lib/utils/environment'
+import { findInfluencerByCouponCode } from '@/lib/db/influencers'
 
 // URLs de callback para Asaas - usa domínio de produção
 const CALLBACK_BASE = getWebhookBaseUrl() || 'https://vibephoto.app'
@@ -265,7 +266,8 @@ export async function createCreditPackageCheckout(
 export async function createSubscriptionCheckout(
   planId: 'STARTER' | 'PREMIUM' | 'GOLD',
   cycle: 'MONTHLY' | 'YEARLY',
-  userId: string
+  userId: string,
+  referralCode?: string
 ): Promise<{ checkoutId: string; checkoutUrl: string }> {
   // Buscar plano do banco de dados
   console.log('🔍 [CHECKOUT] Buscando plano:', planId)
@@ -317,12 +319,24 @@ export async function createSubscriptionCheckout(
       province: true,
       city: true,
       state: true,
-      postalCode: true
+      postalCode: true,
+      referralCodeUsed: true,
+      referredByInfluencerId: true
     }
   })
 
   if (!user) {
     throw new Error('Usuário não encontrado')
+  }
+
+  let influencer: Awaited<ReturnType<typeof findInfluencerByCouponCode>> | null = null
+  if (referralCode) {
+    influencer = await findInfluencerByCouponCode(referralCode, { includeUser: true })
+    if (!influencer) {
+      console.warn('⚠️ [CHECKOUT] Código de indicação inválido informado:', referralCode)
+    } else if (!influencer.asaasWalletId) {
+      console.warn('⚠️ [CHECKOUT] Influenciador encontrado, porém sem walletId configurado:', influencer.id)
+    }
   }
 
   // Calcular valor baseado no ciclo
@@ -368,6 +382,26 @@ export async function createSubscriptionCheckout(
     }
   }
 
+  if (influencer?.asaasWalletId) {
+    const influencerSplit: Record<string, any> = {
+      walletId: influencer.asaasWalletId
+    }
+
+    const fixedValue = influencer.commissionFixedValue?.toNumber?.() ?? null
+    const percentage = influencer.commissionPercentage?.toNumber?.() ?? null
+
+    if (fixedValue && fixedValue > 0) {
+      influencerSplit.fixedValue = fixedValue
+    } else if (percentage && percentage > 0) {
+      influencerSplit.percentualValue = percentage
+    }
+
+    if (!checkoutData.splits) {
+      checkoutData.splits = []
+    }
+    checkoutData.splits.push(influencerSplit)
+  }
+
   // Validar dados do cliente
   if (!user.name || !user.email || !user.cpfCnpj || !user.phone) {
     throw new Error('Usuário precisa completar cadastro com CPF e telefone')
@@ -408,18 +442,31 @@ export async function createSubscriptionCheckout(
       description: `Assinatura ${plan.name} - ${cycle}`,
       dueDate: dueDateObj, // Agora é um Date object válido
       planType: planId,
-      billingCycle: cycle
+      billingCycle: cycle,
+      ...(influencer
+        ? {
+            influencerId: influencer.id,
+            referralCodeUsed: referralCode
+          }
+        : {})
     }
   })
 
   // CRÍTICO: Salvar plan e billingCycle diretamente na tabela users
   // Isso garante que os dados estejam disponíveis mesmo se o Payment não for encontrado no webhook
+  const userUpdateData: Record<string, any> = {
+    plan: planId, // Salvar plan diretamente (Plan enum)
+    billingCycle: cycle // Salvar billingCycle diretamente (MONTHLY/YEARLY)
+  }
+
+  if (influencer) {
+    userUpdateData.referralCodeUsed = referralCode
+    userUpdateData.referredByInfluencerId = influencer.id
+  }
+
   await prisma.user.update({
     where: { id: user.id },
-    data: {
-      plan: planId, // Salvar plan diretamente (Plan enum)
-      billingCycle: cycle // Salvar billingCycle diretamente (MONTHLY/YEARLY)
-    }
+    data: userUpdateData
   })
 
   console.log('✅ [CHECKOUT] Plan e billingCycle salvos na tabela users:', {

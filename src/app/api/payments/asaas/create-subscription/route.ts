@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { asaas, getNextDueDate } from '@/lib/payments/asaas'
 import { createSubscription } from '@/lib/db/subscriptions'
+import { findInfluencerByCouponCode } from '@/lib/db/influencers'
 import { getPlanPrice } from '@/lib/db/subscription-plans'
 import { Plan } from '@prisma/client'
 
@@ -25,13 +26,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { 
-      customerId, 
-      plan, 
+    const {
+      customerId,
+      plan,
       cycle = 'MONTHLY',
       billingType = 'CREDIT_CARD',
       creditCard,
-      creditCardHolderInfo 
+      creditCardHolderInfo,
+      referralCode: rawReferralCode
     } = body
 
     if (!customerId || !plan) {
@@ -50,7 +52,23 @@ export async function POST(request: NextRequest) {
                      '127.0.0.1'
 
     // Create subscription in Asaas
-    const subscriptionData = {
+    let referralInfluencer: Awaited<ReturnType<typeof findInfluencerByCouponCode>> | null = null
+    const referralCode =
+      typeof rawReferralCode === 'string'
+        ? rawReferralCode.trim().toUpperCase()
+        : undefined
+
+    if (referralCode) {
+      referralInfluencer = await findInfluencerByCouponCode(referralCode, { includeUser: true })
+      if (!referralInfluencer) {
+        return NextResponse.json(
+          { error: 'Código de indicação inválido.' },
+          { status: 404 }
+        )
+      }
+    }
+
+    const subscriptionData: any = {
       customer: customerId,
       billingType,
       value: planPrice,
@@ -67,6 +85,27 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    if (referralInfluencer?.asaasWalletId) {
+      const influencerSplit: Record<string, any> = {
+        walletId: referralInfluencer.asaasWalletId
+      }
+
+      const fixedValue = referralInfluencer.commissionFixedValue
+        ? Number(referralInfluencer.commissionFixedValue)
+        : null
+      const percentValue = referralInfluencer.commissionPercentage
+        ? Number(referralInfluencer.commissionPercentage)
+        : null
+
+      if (fixedValue && fixedValue > 0) {
+        influencerSplit.fixedValue = fixedValue
+      } else if (percentValue && percentValue > 0) {
+        influencerSplit.percentualValue = percentValue
+      }
+
+      subscriptionData.splits = [influencerSplit]
+    }
+
     const subscription = await asaas.createSubscription(subscriptionData)
 
     // Update user subscription in database
@@ -80,7 +119,10 @@ export async function POST(request: NextRequest) {
       plan: plan as Plan,
       status: subscription.status,
       currentPeriodStart,
-      currentPeriodEnd
+      currentPeriodEnd,
+      billingCycle: cycle,
+      influencerId: referralInfluencer?.id,
+      referralCodeUsed: referralCode
     })
 
     return NextResponse.json({

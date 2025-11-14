@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { asaas, handleAsaasError } from '@/lib/payments/asaas'
 import { updateSubscriptionStatus } from '@/lib/db/subscriptions'
 import { broadcastCreditsUpdate, broadcastUserUpdate } from '@/lib/services/realtime-service'
+import { incrementInfluencerStats } from '@/lib/db/influencers'
 import crypto from 'crypto'
 
 interface AsaasWebhookPayload {
@@ -679,7 +680,9 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
         subscriptionId: true,
         creditsBalance: true,
         email: true,
-        name: true
+        name: true,
+        referralCodeUsed: true,
+        referredByInfluencerId: true
       }
     })
 
@@ -695,6 +698,10 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
       currentPlan: user.plan,
       subscriptionId: user.subscriptionId
     })
+
+    let influencerCandidateId: string | null = user.referredByInfluencerId || null
+    let commissionReferralCode: string | null = user.referralCodeUsed || null
+    let wasAlreadyConfirmed = false
 
     // Salvar creditCardToken se presente
     if (payment.creditCardToken) {
@@ -749,7 +756,9 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
               planType: true,
               asaasCheckoutId: true,
               subscriptionId: true,
-              status: true
+              status: true,
+              influencerId: true,
+              referralCodeUsed: true
             }
           })
           
@@ -761,6 +770,15 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
               planType: originalPayment.planType,
               billingCycle: originalPayment.billingCycle
             })
+          if (originalPayment.influencerId) {
+            influencerCandidateId = originalPayment.influencerId
+          }
+          if (originalPayment.referralCodeUsed) {
+            commissionReferralCode = originalPayment.referralCodeUsed
+          }
+          if (originalPayment.status === 'CONFIRMED') {
+            wasAlreadyConfirmed = true
+          }
           } else {
             console.warn('⚠️ [WEBHOOK] Payment não encontrado pelo externalReference:', payment.externalReference)
           }
@@ -784,7 +802,9 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
               planType: true,
               asaasCheckoutId: true,
               subscriptionId: true,
-              status: true
+              status: true,
+              influencerId: true,
+              referralCodeUsed: true
             }
           })
           
@@ -796,6 +816,15 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
               planType: originalPayment.planType,
               billingCycle: originalPayment.billingCycle
             })
+            if (originalPayment.influencerId) {
+              influencerCandidateId = originalPayment.influencerId
+            }
+            if (originalPayment.referralCodeUsed) {
+              commissionReferralCode = originalPayment.referralCodeUsed
+            }
+            if (originalPayment.status === 'CONFIRMED') {
+              wasAlreadyConfirmed = true
+            }
           } else {
             console.warn('⚠️ [WEBHOOK] Payment não encontrado pela Estratégia 2')
             // Listar todos os Payments do usuário para debug
@@ -845,6 +874,15 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
               planType: originalPayment.planType,
               billingCycle: originalPayment.billingCycle
             })
+            if (originalPayment.influencerId) {
+              influencerCandidateId = originalPayment.influencerId
+            }
+            if (originalPayment.referralCodeUsed) {
+              commissionReferralCode = originalPayment.referralCodeUsed
+            }
+            if (originalPayment.status === 'CONFIRMED') {
+              wasAlreadyConfirmed = true
+            }
           } else {
             console.warn('⚠️ [WEBHOOK] Payment não encontrado pelo subscriptionId:', payment.subscription)
           }
@@ -1146,7 +1184,9 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
                 subscriptionId: payment.subscription,
                 externalReference: payment.externalReference,
                 planType: plan || undefined,
-                billingCycle: billingCycle || undefined
+                billingCycle: billingCycle || undefined,
+                influencerId: influencerCandidateId || undefined,
+                referralCodeUsed: commissionReferralCode || undefined
               }
             })
             console.log('✅ [WEBHOOK] Novo Payment criado como fallback')
@@ -1159,11 +1199,26 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
         try {
           // Primeiro, tentar atualizar um payment existente com esse asaasPaymentId
           const existingPayment = await prisma.payment.findUnique({
-            where: { asaasPaymentId: payment.id }
+            where: { asaasPaymentId: payment.id },
+            select: {
+              id: true,
+              status: true,
+              influencerId: true,
+              referralCodeUsed: true
+            }
           })
 
           if (existingPayment) {
             // Payment já existe, apenas atualizar status
+            if (existingPayment.influencerId) {
+              influencerCandidateId = existingPayment.influencerId
+            }
+            if (existingPayment.referralCodeUsed) {
+              commissionReferralCode = existingPayment.referralCodeUsed
+            }
+            if (existingPayment.status === 'CONFIRMED') {
+              wasAlreadyConfirmed = true
+            }
             await prisma.payment.update({
               where: { id: existingPayment.id },
               data: {
@@ -1171,7 +1226,8 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
                 confirmedDate: new Date(),
                 ...(plan && { planType: plan }),
                 ...(billingCycle && { billingCycle: billingCycle }),
-                ...(payment.subscription && { subscriptionId: payment.subscription })
+                ...(payment.subscription && { subscriptionId: payment.subscription }),
+                ...(commissionReferralCode ? { referralCodeUsed: commissionReferralCode } : {})
               }
             })
             console.log('✅ [WEBHOOK] Payment existente atualizado para CONFIRMED')
@@ -1184,10 +1240,26 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
                 status: 'PENDING',
                 ...(payment.externalReference && { asaasCheckoutId: payment.externalReference })
               },
-              orderBy: { createdAt: 'desc' }
+              orderBy: { createdAt: 'desc' },
+              select: {
+                id: true,
+                status: true,
+                asaasCheckoutId: true,
+                influencerId: true,
+                referralCodeUsed: true
+              }
             })
 
             if (pendingPayment) {
+              if (pendingPayment.influencerId) {
+                influencerCandidateId = pendingPayment.influencerId
+              }
+              if (pendingPayment.referralCodeUsed) {
+                commissionReferralCode = pendingPayment.referralCodeUsed
+              }
+              if (pendingPayment.status === 'CONFIRMED') {
+                wasAlreadyConfirmed = true
+              }
               // Atualizar este Payment PENDING encontrado
               await prisma.payment.update({
                 where: { id: pendingPayment.id },
@@ -1197,7 +1269,8 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
                   status: 'CONFIRMED',
                   confirmedDate: new Date(),
                   ...(plan && { planType: plan }),
-                  ...(billingCycle && { billingCycle: billingCycle })
+                  ...(billingCycle && { billingCycle: billingCycle }),
+                  ...(commissionReferralCode ? { referralCodeUsed: commissionReferralCode } : {})
                 }
               })
               console.log('✅ [WEBHOOK] Payment PENDING encontrado e atualizado:', {
@@ -1230,7 +1303,9 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
                   externalReference: payment.externalReference,
                   asaasCheckoutId: payment.externalReference || undefined,
                   planType: plan || undefined,
-                  billingCycle: billingCycle || undefined
+                  billingCycle: billingCycle || undefined,
+                  influencerId: influencerCandidateId || undefined,
+                  referralCodeUsed: commissionReferralCode || undefined
                 }
               })
               console.log('✅ [WEBHOOK] Novo Payment criado (original não encontrado):', {
@@ -1269,6 +1344,52 @@ async function handlePaymentSuccess(payment: AsaasWebhookPayload['payment']): Pr
         currentPeriodEnd: currentPeriodEnd?.toISOString(),
         creditsWillBeSet: !!plan
       })
+
+      if (influencerCandidateId && !wasAlreadyConfirmed) {
+        try {
+          const influencerRecord = await prisma.influencer.findUnique({
+            where: { id: influencerCandidateId },
+            select: {
+              commissionPercentage: true,
+              commissionFixedValue: true
+            }
+          })
+
+          if (influencerRecord) {
+            const paymentValue = Number(payment.value || 0)
+            const fixedCommission = influencerRecord.commissionFixedValue
+              ? Number(influencerRecord.commissionFixedValue)
+              : 0
+            const percentCommission = influencerRecord.commissionPercentage
+              ? Number(influencerRecord.commissionPercentage)
+              : 0
+
+            let commissionValue = 0
+
+            if (fixedCommission > 0) {
+              commissionValue = fixedCommission
+            } else if (percentCommission > 0 && paymentValue > 0) {
+              commissionValue = (paymentValue * percentCommission) / 100
+            }
+
+            commissionValue = Math.round(commissionValue * 100) / 100
+
+            if (commissionValue > 0) {
+              await incrementInfluencerStats(influencerCandidateId, {
+                referrals: 1,
+                commissionValue
+              })
+              console.log('✅ [WEBHOOK] Comissão registrada para influenciador:', {
+                influencerId: influencerCandidateId,
+                commissionValue,
+                paymentId: payment.id
+              })
+            }
+          }
+        } catch (influencerError) {
+          console.error('⚠️ [WEBHOOK] Erro ao registrar comissão do influenciador:', influencerError)
+        }
+      }
       
       // Verificar se Payment foi criado/atualizado
       const finalPayment = await prisma.payment.findFirst({

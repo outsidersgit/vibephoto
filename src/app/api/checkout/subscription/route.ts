@@ -24,6 +24,10 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const { planId, cycle } = body
+    const referralCode =
+      typeof body.referralCode === 'string'
+        ? body.referralCode.trim().toUpperCase()
+        : undefined
 
     // Validação
     if (!planId || !cycle) {
@@ -55,7 +59,8 @@ export async function POST(req: NextRequest) {
     const checkout = await createSubscriptionCheckout(
       planId,
       cycle,
-      userId
+      userId,
+      referralCode
     )
 
     return NextResponse.json({

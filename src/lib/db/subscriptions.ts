@@ -14,6 +14,8 @@ export async function createSubscription(data: {
   currentPeriodEnd: Date
   cancelAtPeriodEnd?: boolean
   billingCycle?: 'MONTHLY' | 'YEARLY'
+  influencerId?: string
+  referralCodeUsed?: string
 }) {
   const creditsLimit = await getCreditsLimitForPlan(data.plan)
   const now = new Date()
@@ -44,7 +46,15 @@ export async function createSubscription(data: {
         lastCreditRenewalAt: now,
         creditsExpiresAt,
         creditsLimit: totalCredits,
-        creditsUsed: 0
+        creditsUsed: 0,
+        ...(data.influencerId
+          ? {
+              referredByInfluencerId: data.influencerId,
+              referralCodeUsed: data.referralCodeUsed
+            }
+          : data.referralCodeUsed
+            ? { referralCodeUsed: data.referralCodeUsed }
+            : {})
       }
     })
 

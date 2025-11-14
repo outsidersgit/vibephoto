@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { z } from 'zod'
 import { broadcastCreditsUpdate, broadcastUserUpdate } from '@/lib/services/realtime-service'
 import { getCreditsLimitForPlan } from '@/lib/constants/plans'
+import { createInfluencerWithSubaccount } from '@/lib/services/influencer-service'
 
 async function ensureAdmin() {
   const session = await getServerSession(authOptions)
@@ -23,6 +24,18 @@ export async function GET() {
 const PlanEnum = z.enum(['STARTER','PREMIUM','GOLD'])
 const RoleEnumUpper = z.enum(['USER','ADMIN'])
 const SubscriptionStatusEnum = z.enum(['ACTIVE','CANCELLED','OVERDUE','EXPIRED','PENDING']).optional()
+const InfluencerSchema = z.object({
+  couponCode: z.string().min(3),
+  commissionPercentage: z.number().min(0).max(100).optional(),
+  commissionFixedValue: z.number().min(0).optional(),
+  cpfCnpj: z.string().min(11),
+  postalCode: z.string().min(8),
+  incomeValue: z.number().positive(),
+  phone: z.string().optional(),
+  mobilePhone: z.string().optional(),
+  personType: z.enum(['FISICA', 'JURIDICA']).optional(),
+  companyType: z.string().optional()
+}).optional()
 
 export async function POST(request: NextRequest) {
   const ok = await ensureAdmin()
@@ -44,12 +57,16 @@ export async function POST(request: NextRequest) {
         z.string().transform(v => v.toUpperCase()),
         SubscriptionStatusEnum
       ])
-      .pipe(SubscriptionStatusEnum)
+      .pipe(SubscriptionStatusEnum),
+    cpfCnpj: z.string().optional(),
+    phone: z.string().optional(),
+    postalCode: z.string().optional(),
+    influencer: InfluencerSchema
   })
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload', issues: parsed.error.issues }, { status: 400 })
   const payload = parsed.data as any
-  const data: any = {
+  const data: Record<string, any> = {
     name: payload.name,
     email: payload.email,
     subscriptionStatus: payload.subscriptionStatus,
@@ -59,8 +76,45 @@ export async function POST(request: NextRequest) {
   // Map plan if provided to Prisma enum (STARTER | PREMIUM | GOLD)
   if (payload.plan) data.plan = String(payload.plan).toUpperCase()
   if (payload.subscriptionStatus) data.subscriptionStatus = String(payload.subscriptionStatus).toUpperCase()
+  if (payload.cpfCnpj) data.cpfCnpj = String(payload.cpfCnpj).replace(/\D/g, '')
+  if (payload.phone) data.phone = String(payload.phone).replace(/\D/g, '')
+  if (payload.postalCode) data.postalCode = String(payload.postalCode).replace(/\D/g, '')
 
-  const created = await prisma.user.create({ data })
+  let created
+  try {
+    created = await prisma.user.create({ data })
+  } catch (error) {
+    console.error('❌ [Admin Users] Erro ao criar usuário base:', error)
+    return NextResponse.json({ error: 'Falha ao criar usuário.' }, { status: 500 })
+  }
+
+  if (payload.influencer) {
+    const influencerData = payload.influencer
+    try {
+      await createInfluencerWithSubaccount({
+        userId: created.id,
+        name: payload.name || created.name || created.email,
+        email: created.email,
+        cpfCnpj: influencerData.cpfCnpj,
+        postalCode: influencerData.postalCode,
+        incomeValue: influencerData.incomeValue,
+        phone: influencerData.phone,
+        mobilePhone: influencerData.mobilePhone,
+        personType: influencerData.personType,
+        companyType: influencerData.companyType,
+        couponCode: influencerData.couponCode.toUpperCase(),
+        commissionPercentage: influencerData.commissionPercentage,
+        commissionFixedValue: influencerData.commissionFixedValue ?? undefined
+      })
+    } catch (error) {
+      console.error('❌ [Admin Users] Erro ao configurar influenciador:', error)
+      await prisma.user.delete({ where: { id: created.id } }).catch(() => null)
+      return NextResponse.json({
+        error: error instanceof Error ? error.message : 'Falha ao criar influenciador'
+      }, { status: 500 })
+    }
+  }
+
   return NextResponse.json({ user: created })
 }
 

@@ -121,6 +121,18 @@ interface AsaasSubscription {
   creditCardToken?: string
 }
 
+interface AsaasSubaccountRequest {
+  name: string
+  email: string
+  cpfCnpj: string
+  postalCode: string
+  incomeValue: number
+  phone?: string
+  mobilePhone?: string
+  personType?: 'FISICA' | 'JURIDICA'
+  companyType?: string
+}
+
 class AsaasAPI {
   private apiKey: string
   private baseURL: string
@@ -306,6 +318,56 @@ class AsaasAPI {
     return this.request(path, {
       method: 'DELETE',
     })
+  }
+
+  async createSubaccount(data: AsaasSubaccountRequest) {
+    const cleanPostalCode = data.postalCode.replace(/\D/g, '')
+    if (cleanPostalCode.length !== 8) {
+      throw new Error('O CEP informado para criação da subconta é inválido.')
+    }
+
+    const sanitizedDocument = data.cpfCnpj.replace(/\D/g, '')
+    const personType =
+      data.personType || (sanitizedDocument.length > 11 ? 'JURIDICA' : 'FISICA')
+
+    const payload = {
+      name: data.name,
+      email: data.email,
+      cpfCnpj: sanitizedDocument,
+      personType,
+      phone: data.phone,
+      mobilePhone: data.mobilePhone ?? data.phone,
+      postalCode: cleanPostalCode,
+      incomeValue: data.incomeValue,
+      notificationDisabled: true,
+      ...(personType === 'JURIDICA' && data.companyType
+        ? { companyType: data.companyType }
+        : {})
+    }
+
+    console.log('🌐 Asaas API - Create Subaccount:', {
+      method: 'POST',
+      path: '/accounts',
+      fullUrl: `${this.baseURL}/accounts`,
+      payload
+    })
+
+    const response: any = await this.request('/accounts', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
+
+    if (!response?.walletId) {
+      throw new Error(
+        'A criação da subconta não retornou um walletId válido no Asaas.'
+      )
+    }
+
+    return {
+      walletId: String(response.walletId),
+      apiKey: response.apiKey ? String(response.apiKey) : null,
+      raw: response
+    }
   }
 
   // Update subscription credit card
