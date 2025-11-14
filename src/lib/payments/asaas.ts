@@ -50,7 +50,7 @@ interface AsaasPayment {
   split?: Array<{
     walletId: string
     fixedValue?: number
-    percentualValue?: number
+    percentageValue?: number
   }>
   callback?: {
     successUrl?: string
@@ -97,7 +97,7 @@ interface AsaasSubscription {
   split?: Array<{
     walletId: string
     fixedValue?: number
-    percentualValue?: number
+    percentageValue?: number
   }>
   creditCard?: {
     holderName: string

@@ -412,16 +412,16 @@ export async function createSubscriptionCheckout(
     if (fixedValue && fixedValue > 0) {
       influencerSplit.fixedValue = fixedValue
     } else if (percentage && percentage > 0) {
-      influencerSplit.percentualValue = percentage
+      influencerSplit.percentageValue = percentage
     }
 
-    if (influencerSplit.fixedValue || influencerSplit.percentualValue) {
+    if (influencerSplit.fixedValue || influencerSplit.percentageValue) {
       if (!checkoutData.splits) {
         checkoutData.splits = []
       }
       checkoutData.splits.push(influencerSplit)
     } else {
-      console.warn('⚠️ [CHECKOUT] Influenciador sem fixedValue/percentualValue válido, split ignorado:', influencer.id)
+      console.warn('⚠️ [CHECKOUT] Influenciador sem fixedValue/percentageValue válido, split ignorado:', influencer.id)
     }
   }
 

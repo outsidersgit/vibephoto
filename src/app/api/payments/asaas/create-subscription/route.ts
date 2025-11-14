@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       if (fixedValue && fixedValue > 0) {
         influencerSplit.fixedValue = fixedValue
       } else if (percentValue && percentValue > 0) {
-        influencerSplit.percentualValue = percentValue
+        influencerSplit.percentageValue = percentValue
       }
 
       subscriptionData.splits = [influencerSplit]
