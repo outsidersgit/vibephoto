@@ -89,7 +89,7 @@ model User {
 
 model Influencer {
   id                   String   @id @default(cuid())
-  userId               String   @unique
+  userId               String   @unique @map("user_id")
   couponCode           String   @unique @map("codigo_cupom")
   asaasWalletId        String   @unique @map("asaas_wallet_id")
   asaasApiKey          String?  @map("asaas_api_key")
