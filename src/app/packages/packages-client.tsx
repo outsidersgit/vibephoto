@@ -230,32 +230,26 @@ export function PackagesPageClient({ initialPackages = [] }: PackagesPageClientP
           </div>
         </div>
 
-        {/* Category Chips */}
-        <div className="flex flex-wrap gap-2">
-          {categoryOptions.map(({ id, label }) => {
-            const isActive = selectedCategories.includes(id)
-            return (
-              <Button
-                key={id}
-                variant={isActive ? 'default' : 'outline'}
-                className={`text-xs ${
-                  isActive
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white'
-                }`}
-                onClick={() => {
-                  if (isActive) {
-                    setSelectedCategories(selectedCategories.filter((cat) => cat !== id))
-                  } else {
-                    setSelectedCategories([...selectedCategories, id])
-                  }
-                }}
-              >
-                {label}
-              </Button>
-            )
-          })}
-          {selectedCategories.length > 0 && (
+        {/* Active Category Chips */}
+        {selectedCategories.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {selectedCategories.map((categoryId) => {
+              const option = categoryOptions.find(option => option.id === categoryId)
+              if (!option) return null
+
+              return (
+                <Button
+                  key={categoryId}
+                  variant="default"
+                  className="text-xs bg-blue-600 text-white hover:bg-blue-700"
+                  onClick={() => setSelectedCategories(
+                    selectedCategories.filter(cat => cat !== categoryId)
+                  )}
+                >
+                  {option.label}
+                </Button>
+              )
+            })}
             <Button
               variant="ghost"
               className="text-xs text-gray-400 hover:text-white"
@@ -263,8 +257,8 @@ export function PackagesPageClient({ initialPackages = [] }: PackagesPageClientP
             >
               Limpar categorias
             </Button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Results */}
         <div className="flex gap-6">
