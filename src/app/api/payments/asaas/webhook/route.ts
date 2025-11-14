@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       body = await request.json()
     }
 
-    const { event, payment, subscription } = body
+    const { event, payment, subscription, checkout } = body
 
     console.log('Asaas Webhook received:', {
       event,
@@ -173,6 +173,15 @@ export async function POST(request: NextRequest) {
 
       case 'SUBSCRIPTION_REACTIVATED':
         await handleSubscriptionReactivated(subscription)
+        break
+
+      // Checkout session events
+      case 'CHECKOUT_APPROVED':
+      case 'CHECKOUT_CREATED':
+        // informational only for now
+        break
+      case 'CHECKOUT_PAID':
+        await handleCheckoutPaid(checkout)
         break
 
       default:
@@ -387,6 +396,130 @@ async function handlePaymentSuccess(payment: any) {
     console.log('Payment confirmed for user:', user.id)
   } catch (error) {
     console.error('Error handling payment success:', error)
+  }
+}
+
+async function handleCheckoutPaid(checkout: any) {
+  try {
+    if (!checkout?.customer) {
+      console.warn('Checkout webhook without customer:', checkout?.id)
+      return
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { asaasCustomerId: checkout.customer },
+      select: {
+        id: true,
+        plan: true,
+        billingCycle: true,
+        subscriptionId: true
+      }
+    })
+
+    if (!user) {
+      console.error('User not found for checkout:', checkout.id)
+      return
+    }
+
+    let plan: 'STARTER' | 'PREMIUM' | 'GOLD' | undefined =
+      (user.plan as 'STARTER' | 'PREMIUM' | 'GOLD' | undefined) || undefined
+
+    let billingCycle: 'MONTHLY' | 'YEARLY' | undefined =
+      (user.billingCycle === 'MONTHLY' || user.billingCycle === 'YEARLY')
+        ? (user.billingCycle as 'MONTHLY' | 'YEARLY')
+        : undefined
+
+    if (!billingCycle && checkout?.subscription?.cycle) {
+      const cycle = checkout.subscription.cycle.toUpperCase()
+      if (cycle === 'MONTHLY' || cycle === 'YEARLY') {
+        billingCycle = cycle
+      }
+    }
+
+    if (!plan && checkout?.items?.length) {
+      const itemText = `${checkout.items[0]?.name ?? ''} ${checkout.items[0]?.description ?? ''}`.toLowerCase()
+      if (itemText.includes('starter')) plan = 'STARTER'
+      else if (itemText.includes('premium')) plan = 'PREMIUM'
+      else if (itemText.includes('gold')) plan = 'GOLD'
+    }
+
+    const periodEnd = checkout?.subscription?.nextDueDate
+      ? new Date(checkout.subscription.nextDueDate)
+      : undefined
+
+    await updateSubscriptionStatus(
+      user.id,
+      'ACTIVE',
+      periodEnd,
+      plan,
+      billingCycle
+    )
+
+    let paymentRecord = await prisma.payment.findFirst({
+      where: {
+        userId: user.id,
+        asaasCheckoutId: checkout.id || checkout?.code || undefined
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    if (!paymentRecord && checkout.subscription) {
+      paymentRecord = await prisma.payment.findFirst({
+        where: {
+          userId: user.id,
+          subscriptionId: checkout.subscription
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    }
+
+    const totalValue =
+      checkout?.items?.reduce((sum: number, item: any) => sum + (item?.value ?? 0), 0) ?? 0
+
+    if (paymentRecord) {
+      await prisma.payment.update({
+        where: { id: paymentRecord.id },
+        data: {
+          status: 'CONFIRMED',
+          confirmedDate: new Date(),
+          planType: plan,
+          billingCycle,
+          value: totalValue || paymentRecord.value,
+          asaasCheckoutId: checkout.id || paymentRecord.asaasCheckoutId
+        }
+      })
+    } else {
+      await prisma.payment.create({
+        data: {
+          userId: user.id,
+          asaasCheckoutId: checkout.id,
+          type: 'SUBSCRIPTION',
+          status: 'CONFIRMED',
+          billingType: 'CREDIT_CARD',
+          value: totalValue,
+          description: checkout.items?.[0]?.name || 'Assinatura via checkout',
+          dueDate: periodEnd || new Date(),
+          confirmedDate: new Date(),
+          planType: plan,
+          billingCycle,
+          subscriptionId: checkout.subscription || user.subscriptionId || undefined
+        }
+      })
+    }
+
+    await logUsage({
+      userId: user.id,
+      action: 'CHECKOUT_PAID',
+      creditsUsed: 0,
+      details: {
+        checkoutId: checkout.id,
+        subscriptionId: checkout.subscription,
+        plan,
+        billingCycle
+      }
+    })
+  } catch (error) {
+    console.error('Error handling checkout paid webhook:', error)
   }
 }
 
