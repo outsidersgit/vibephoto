@@ -10,6 +10,12 @@ export interface GenerationBatchParams {
   modelId?: string
   searchQuery?: string
   sortBy?: 'newest' | 'oldest'
+  /**
+   * Legacy flag:
+   * - true  => apenas gerações provenientes de pacotes
+   * - false => apenas gerações comuns (sem pacote)
+   * - undefined => todas as gerações
+   */
   includePackages?: boolean
 }
 
@@ -28,7 +34,7 @@ export async function fetchGenerationBatch({
   modelId,
   searchQuery,
   sortBy = 'newest',
-  includePackages = false
+  includePackages
 }: GenerationBatchParams): Promise<GenerationBatchResult> {
   const page = Math.max(requestedPage ?? 1, 1)
   const skip = (page - 1) * limit
@@ -36,11 +42,22 @@ export async function fetchGenerationBatch({
   const where: Prisma.GenerationWhereInput = {
     userId,
     status: GenerationStatus.COMPLETED,
-    ...(includePackages ? { packageId: { not: null } } : { packageId: null }),
     ...(modelId && { modelId }),
     ...(searchQuery && {
       prompt: { contains: searchQuery, mode: 'insensitive' }
     })
+  }
+
+  const packageMode = includePackages === true
+    ? 'only'
+    : includePackages === false
+      ? 'exclude'
+      : 'all'
+
+  if (packageMode === 'only') {
+    where.packageId = { not: null }
+  } else if (packageMode === 'exclude') {
+    where.packageId = null
   }
 
   const orderBy: Prisma.GenerationOrderByWithRelationInput[] =

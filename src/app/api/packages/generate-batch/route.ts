@@ -165,8 +165,15 @@ export async function POST(request: NextRequest) {
             packageId: userPackageId,
             packagePromptIndex: promptIndex,
             packageVariationIndex: 0,
-            operationType: 'package',
-            storageContext: 'packages'
+            operationType: 'generation',
+            storageContext: 'generated',
+            metadata: {
+              source: 'package',
+              packageId: userPackage.packageId,
+              packageName: userPackage.package?.name,
+              packagePromptIndex: promptIndex,
+              aspectRatio
+            }
           }
         })
 
