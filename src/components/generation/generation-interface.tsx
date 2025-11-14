@@ -686,18 +686,19 @@ export function GenerationInterface({
       if (data.success) {
         // Refresh the current generation status
         const statusResponse = await fetch(`/api/generations/${generationId}`)
-        const statusData = await statusResponse.json()
+        const statusPayload = await statusResponse.json()
+        const refreshedGeneration = statusPayload?.generation || statusPayload
 
-        if (statusData.generation) {
-          setCurrentGeneration(statusData.generation)
+        if (refreshedGeneration) {
+          setCurrentGeneration(refreshedGeneration)
 
           // If completed, add to results gallery
-          if (statusData.generation.status === 'COMPLETED') {
+          if (refreshedGeneration.status === 'COMPLETED') {
             setGenerationResults(prev => {
               // Avoid duplicates
-              const exists = prev.find(g => g.id === statusData.generation.id)
+              const exists = prev.find(g => g.id === refreshedGeneration.id)
               if (!exists) {
-                return [statusData.generation, ...prev]
+                return [refreshedGeneration, ...prev]
               }
               return prev
             })
@@ -729,8 +730,8 @@ export function GenerationInterface({
             }
 
             let { temp: fallbackTempUrl, perm: fallbackPermanentUrl } = {
-              temp: statusData.generation.temporaryUrls?.[0] || null,
-              perm: statusData.generation.imageUrls?.[0] || null
+              temp: refreshedGeneration.temporaryUrls?.[0] || null,
+              perm: refreshedGeneration.imageUrls?.[0] || null
             }
 
             if (!fallbackPermanentUrl && !fallbackTempUrl) {
