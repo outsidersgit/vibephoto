@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
         // Se TRAINING, iniciar polling
         if (internalStatus === 'TRAINING') {
           setTimeout(() => {
-            startTrainingPolling(foundTune.id, model.id, model.userId).catch(err => {
+            startTrainingPolling(foundTune.id, model.id, model.userId, 240, 5000, 'astria').catch(err => {
               console.error(`Failed to start polling for recovered model ${model.id}:`, err)
             })
           }, 2000)

@@ -211,11 +211,12 @@ export async function POST(request: NextRequest) {
 
     // Get AI provider
     const aiProvider = getAIProvider()
-    const currentProvider = process.env.AI_PROVIDER || 'replicate'
+    const runtimeProvider = process.env.AI_PROVIDER || 'replicate'
+    const trainingProvider = runtimeProvider === 'hybrid' ? 'astria' : runtimeProvider
 
     // Determine correct webhook URL based on provider
     // Para Astria, usar undefined para forçar polling via auto-storage service
-    const webhookUrl = currentProvider === 'astria'
+    const webhookUrl = trainingProvider === 'astria'
       ? undefined // Force polling for Astria
       : `${process.env.NEXTAUTH_URL}/api/webhooks/replicate?type=training&modelId=${model.id}&userId=${session.user.id}`
 
@@ -272,8 +273,6 @@ export async function POST(request: NextRequest) {
     // Update model in database
     await prisma.$transaction(async (tx) => {
       // Determine AI provider being used
-      const currentProvider = process.env.AI_PROVIDER || 'replicate'
-
       // Update model status and training info
       await tx.aIModel.update({
         where: { id: model.id },
@@ -282,12 +281,12 @@ export async function POST(request: NextRequest) {
           progress: 0,
           trainingConfig: finalParams as any,
           // Store provider and training job info
-          aiProvider: currentProvider,
+          aiProvider: trainingProvider === 'astria' ? 'astria' : runtimeProvider,
           trainingJobId: trainingResponse.id,
           triggerWord: triggerWord || 'ohwx', // Padrão Astria
           classWord: classWord || model.class.toLowerCase(),
           // Store Astria specific info if using Astria
-          astriaModelType: currentProvider === 'astria' ? 'faceid' : null
+          astriaModelType: trainingProvider === 'astria' ? 'faceid' : null
         }
       })
 
@@ -308,7 +307,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Start polling for training completion if using Astria (no webhook)
-    if (currentProvider === 'astria' && trainingResponse.id) {
+    if (trainingProvider === 'astria' && trainingResponse.id) {
       console.log(`🔄 Starting training polling for Astria model ${model.id}`)
 
       try {
@@ -318,7 +317,7 @@ export async function POST(request: NextRequest) {
         // Start polling in background
         setTimeout(async () => {
           try {
-            await startTrainingPolling(trainingResponse.id, model.id, session.user.id)
+            await startTrainingPolling(trainingResponse.id, model.id, session.user.id, 240, 5000, trainingProvider)
             console.log(`📝 Training polling started for model ${model.id}`)
           } catch (pollingError) {
             console.error(`❌ Failed to start training polling for ${model.id}:`, pollingError)

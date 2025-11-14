@@ -9,6 +9,7 @@ interface TrainingPollingJob {
   maxAttempts: number
   attempts: number
   intervalMs: number
+  provider?: string
   timeoutId?: NodeJS.Timeout
 }
 
@@ -23,10 +24,12 @@ export async function startTrainingPolling(
   modelId: string,
   userId: string,
   maxAttempts: number = 240, // 20 minutes at 5s intervals (training takes longer)
-  intervalMs: number = 5000   // 5 seconds
+  intervalMs: number = 5000,  // 5 seconds
+  providerHint?: string
 ) {
-  const currentProvider = process.env.AI_PROVIDER || 'replicate'
-  console.log(`🔄 Starting training polling for ${currentProvider} training ${trainingId}`)
+  const runtimeProvider = providerHint || process.env.AI_PROVIDER || 'replicate'
+  const effectiveProvider = runtimeProvider === 'hybrid' ? 'astria' : runtimeProvider
+  console.log(`🔄 Starting training polling for ${effectiveProvider} training ${trainingId}`)
 
   // Stop existing polling for this training if any
   stopTrainingPolling(trainingId)
@@ -37,7 +40,8 @@ export async function startTrainingPolling(
     userId,
     maxAttempts,
     attempts: 0,
-    intervalMs
+    intervalMs,
+    provider: providerHint
   }
 
   activeTrainingJobs.set(trainingId, job)
@@ -73,12 +77,11 @@ async function pollTraining(job: TrainingPollingJob) {
     }
 
     // Get training status from current AI provider
-    const currentProvider = process.env.AI_PROVIDER || 'replicate'
-    const training = currentProvider === 'astria'
-      ? await aiProvider.getTrainingStatus(trainingId)
-      : await aiProvider.getTrainingStatus(trainingId)
+    const runtimeProvider = job.provider || process.env.AI_PROVIDER || 'replicate'
+    const effectiveProvider = runtimeProvider === 'hybrid' ? 'astria' : runtimeProvider
+    const training = await aiProvider.getTrainingStatus(trainingId)
 
-    console.log(`📊 ${currentProvider} training status: ${training.status}`)
+    console.log(`📊 ${effectiveProvider} training status: ${training.status}`)
 
     // Find the model in database
     const model = await prisma.aIModel.findUnique({
@@ -117,9 +120,10 @@ async function pollTraining(job: TrainingPollingJob) {
         updateData.progress = 100
         updateData.trainedAt = new Date()
 
-        // For Astria, the training ID becomes the model URL
-        if (currentProvider === 'astria') {
+        const isAstria = effectiveProvider === 'astria'
+        if (isAstria) {
           updateData.modelUrl = trainingId
+          updateData.aiProvider = 'astria'
 
           // CRÍTICO: Buscar dados completos do tune no Astria para pegar token e class_word
           try {
@@ -137,13 +141,11 @@ async function pollTraining(job: TrainingPollingJob) {
               if (tuneResponse.ok) {
                 const tuneData = await tuneResponse.json()
 
-                // Capturar token (usado na geração: [token] [class_name], [prompt])
                 if (tuneData.token) {
                   updateData.triggerWord = tuneData.token
                   console.log(`📝 Astria token captured: "${tuneData.token}"`)
                 }
 
-                // Capturar class_word (name do tune, usado na geração)
                 if (tuneData.name) {
                   updateData.classWord = tuneData.name
                   console.log(`📝 Astria class name captured: "${tuneData.name}"`)
@@ -165,7 +167,6 @@ async function pollTraining(job: TrainingPollingJob) {
             console.error(`❌ Error fetching Astria tune data:`, fetchError)
           }
 
-          // Log final
           console.log(`✅ Astria training completed:`, {
             modelId,
             tuneId: trainingId,
@@ -174,6 +175,7 @@ async function pollTraining(job: TrainingPollingJob) {
           })
         } else if (training.model?.url) {
           updateData.modelUrl = training.model.url
+          updateData.aiProvider = effectiveProvider
         }
 
         console.log(`✅ Training completed for model ${modelId}`)
@@ -186,6 +188,7 @@ async function pollTraining(job: TrainingPollingJob) {
       case 'cancelled': // Astria status
         updateData.status = 'FAILED'
         updateData.progress = 0
+        updateData.aiProvider = effectiveProvider === 'astria' ? 'astria' : effectiveProvider
 
         // Handle error message from different providers
         if (training.error) {
@@ -203,6 +206,10 @@ async function pollTraining(job: TrainingPollingJob) {
         // Continue polling for unknown statuses
         scheduleNextTrainingPoll(job)
         break
+    }
+
+    if (!updateData.aiProvider) {
+      updateData.aiProvider = effectiveProvider === 'astria' ? 'astria' : effectiveProvider
     }
 
     // Update model in database

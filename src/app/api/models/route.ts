@@ -245,6 +245,8 @@ export async function POST(request: NextRequest) {
     // Step 4: Get AI provider (antes do try para usar na recuperação)
     console.log('🤖 Getting AI provider...')
     const aiProvider = getAIProvider()
+    const runtimeProvider = process.env.AI_PROVIDER || 'replicate'
+    const trainingProvider = runtimeProvider === 'hybrid' ? 'astria' : runtimeProvider
 
     try {
       // Step 3: As fotos já estão no storage; seguimos para processamento
@@ -285,6 +287,7 @@ export async function POST(request: NextRequest) {
           status: 'TRAINING',
           progress: 20,
           trainingJobId: String(trainingResponse.id),
+          aiProvider: trainingProvider === 'astria' ? 'astria' : runtimeProvider,
           trainingConfig: {
             trainingId: String(trainingResponse.id),
             fluxModel: true,
@@ -296,16 +299,14 @@ export async function POST(request: NextRequest) {
       })
 
       // Iniciar polling como fallback caso webhook não funcione
-      if (aiProvider instanceof AstriaProvider) {
-        setTimeout(async () => {
-          try {
-            await startTrainingPolling(String(trainingResponse.id), model.id, session.user.id)
-            console.log(`📡 Training polling started for model ${model.id}`)
-          } catch (pollError) {
-            console.error(`❌ Failed to start polling for model ${model.id}:`, pollError)
-          }
-        }, 5000) // Esperar 5 segundos antes de iniciar polling
-      }
+      setTimeout(async () => {
+        try {
+          await startTrainingPolling(String(trainingResponse.id), model.id, session.user.id, 240, 5000, trainingProvider)
+          console.log(`📡 Training polling started for model ${model.id}`)
+        } catch (pollError) {
+          console.error(`❌ Failed to start polling for model ${model.id}:`, pollError)
+        }
+      }, 5000)
 
       console.log('🎉 Model creation process completed successfully!')
 
@@ -323,10 +324,15 @@ export async function POST(request: NextRequest) {
       
       // TENTATIVA DE RECUPERAÇÃO: buscar tune no Astria usando idempotência (title = modelId)
       let recoverySuccess = false
-      if (aiProvider instanceof AstriaProvider) {
+      const astriaRecoveryProvider =
+        aiProvider instanceof AstriaProvider
+          ? aiProvider
+          : (trainingProvider === 'astria' ? new AstriaProvider() : null)
+
+      if (astriaRecoveryProvider) {
         try {
           console.log(`🔄 Attempting Astria tune recovery for model ${model.id}...`)
-          const foundTune = await aiProvider.findTuneByTitle(model.id)
+          const foundTune = await astriaRecoveryProvider.findTuneByTitle(model.id)
           
           if (foundTune) {
             console.log(`✅ Found tune in Astria! ID: ${foundTune.id}, Status: ${foundTune.status}`)
@@ -375,7 +381,7 @@ export async function POST(request: NextRequest) {
             // Se TRAINING, iniciar polling
             if (internalStatus === 'TRAINING') {
               setTimeout(() => {
-                startTrainingPolling(foundTune.id, model.id, session.user.id).catch(err => {
+                startTrainingPolling(foundTune.id, model.id, session.user.id, 240, 5000, trainingProvider).catch(err => {
                   console.error('Failed to start polling after recovery:', err)
                 })
               }, 2000)

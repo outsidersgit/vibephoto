@@ -214,7 +214,8 @@ async function handleTuneWebhook(payload: AstriaWebhookPayload) {
     const updateData: any = {
       status: internalStatus as any,
       progress: internalStatus === 'READY' ? 100 : (internalStatus === 'TRAINING' ? model.progress || 20 : 0),
-      errorMessage: payload.error_message || undefined
+      errorMessage: payload.error_message || undefined,
+      aiProvider: 'astria'
     }
 
     if (statusLower === 'trained') {
