@@ -927,7 +927,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           {/* Preview inline */}
           {previewMedia && (
             <div className="mt-6">
-              <h3 className="text-base font-semibold text-gray-800 mb-3 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+          <h3 className="text-base font-semibold text-gray-800 mb-3 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
                 Resultado recente
               </h3>
               <div
