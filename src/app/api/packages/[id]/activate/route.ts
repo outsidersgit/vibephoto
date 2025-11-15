@@ -128,7 +128,9 @@ export async function POST(
         type: 'PHOTO_PACKAGE',
         userPackageId: userPackage.id,
         packageName: photoPackage.name
-      }
+      },
+      undefined,
+      { timeout: 20000 }
     )
 
     if (!chargeResult.success) {

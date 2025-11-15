@@ -152,7 +152,8 @@ export class CreditManager {
     amount: number,
     description: string,
     metadata?: DeductCreditsMetadata,
-    tx?: Prisma.TransactionClient
+    tx?: Prisma.TransactionClient,
+    transactionOptions?: Prisma.TransactionOptions
   ): Promise<{
     success: boolean
     user?: { creditsUsed: number; creditsLimit: number; creditsBalance: number }
@@ -286,9 +287,12 @@ export class CreditManager {
       if (tx) {
         await execute(tx)
       } else {
-        await prisma.$transaction(async (transaction) => {
-          await execute(transaction)
-        })
+        await prisma.$transaction(
+          async (transaction) => {
+            await execute(transaction)
+          },
+          transactionOptions
+        )
       }
 
       if (updatedUserRecord) {
