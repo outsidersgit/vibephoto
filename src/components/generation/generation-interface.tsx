@@ -10,9 +10,7 @@ import { useImageGeneration, useManualSync, useGenerationPolling } from '@/hooks
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
-  Play,
-  Image,
-  RefreshCw,
+  Loader2,
   ChevronDown,
   ChevronUp,
   X,
@@ -20,7 +18,6 @@ import {
 } from 'lucide-react'
 import { PromptInput } from './prompt-input'
 import { GenerationSettings } from './generation-settings'
-import { ResultsGallery } from './results-gallery'
 import { PromptExamples } from './prompt-examples'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
@@ -63,7 +60,6 @@ export function GenerationInterface({
   const [negativePrompt, setNegativePrompt] = useState('')
   const [isLastBlockSelected, setIsLastBlockSelected] = useState(false)
   const [isGuidedMode, setIsGuidedMode] = useState(false)
-  const [generationResults, setGenerationResults] = useState<any[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [currentGeneration, setCurrentGeneration] = useState<any>(null)
   const [showExamples, setShowExamples] = useState(false)
@@ -213,6 +209,14 @@ export function GenerationInterface({
     setIsButtonLocked(false)
   }, [])
 
+  const resetFormAfterPreview = useCallback(() => {
+    setPrompt('')
+    setNegativePrompt('')
+    setIsLastBlockSelected(false)
+    setIsGuidedMode(false)
+    setCurrentGeneration(null)
+  }, [])
+
   // Função para abrir modal com validação de URL
   const openModalWithValidation = useCallback(async (
     temporaryUrl: string | null,
@@ -250,19 +254,13 @@ export function GenerationInterface({
       setPreviewMedia({ url: urlToUse, type: 'image' })
       setIsPreviewLightboxOpen(false)
       clearGenerationLock()
+      resetFormAfterPreview()
       invalidateBalance()
-      // clearFormAfterSuccess() // This is now handled by the validation helper
     } else {
       console.error('❌ [GENERATION] No valid URL')
-      addToast({
-        type: 'warning',
-        title: 'Aviso',
-        description: 'Imagem processada mas ainda não disponível. Verifique a galeria em alguns instantes.',
-        duration: 6000
-      })
       clearGenerationLock()
     }
-  }, [addToast, testImageUrl, clearGenerationLock, invalidateBalance])
+  }, [testImageUrl, clearGenerationLock, resetFormAfterPreview, invalidateBalance])
 
   const fetchGenerationPreviewUrls = useCallback(async (
     generationId: string,
@@ -354,22 +352,21 @@ export function GenerationInterface({
       return next
     })
 
-    if (showToast) {
-      const count = (imageUrls?.length || 0) || (temporaryUrls?.length || 0) || 1
-      addToast({
-        type: 'success',
-        title: '🎉 Sua imagem está pronta!',
-        description: `${count} imagem${count > 1 ? 's' : ''} disponível${count > 1 ? 'eis' : ''} na galeria`,
-        duration: 4000
-      })
-    }
-
     try {
       await openModalWithValidation(tempUrl, permUrl)
     } catch (error) {
       console.error('❌ [GENERATION] Error opening preview modal:', error)
       clearGenerationLock()
       return false
+    }
+
+    if (showToast) {
+      addToast({
+        type: 'success',
+        title: 'Sucesso!',
+        description: 'Imagem processada e salva com sucesso',
+        duration: 4000
+      })
     }
 
     return true
@@ -544,44 +541,16 @@ export function GenerationInterface({
   const selectedModelData = models.find(m => m.id === selectedModel)
 
   // Função para limpar todos os campos após geração bem-sucedida
-  const clearFormAfterSuccess = () => {
-    setPrompt('')
-    setNegativePrompt('')
-    setIsLastBlockSelected(false)
-    setIsGuidedMode(false)
-    setCurrentGeneration(null)
-    setPreviewMedia(null)
-    setIsPreviewLightboxOpen(false)
-    // Reset settings to defaults
-    setSettings({
-      aspectRatio: '1:1',
-      resolution: '1024x1024',
-      variations: 1,
-      strength: 0.8,
-      seed: undefined,
-      style: 'photographic',
-      steps: undefined,
-      guidance_scale: undefined,
-      raw_mode: false,
-      output_quality: 95,
-      safety_tolerance: 2,
-      output_format: 'jpg',
-      aiProvider: 'replicate',
-      astria_super_resolution: true,
-      astria_inpaint_faces: true,
-      astria_face_correct: true,
-      astria_face_swap: true,
-      astria_hires_fix: true,
-      astria_model_type: 'faceid'
-    })
-
-    clearGenerationLock()
-  }
-
   const handleGenerate = async () => {
     if (!prompt.trim() || !canUseCredits) return
 
     setIsButtonLocked(true)
+
+    addToast({
+      type: 'info',
+      title: 'Processando...',
+      description: 'Sua imagem está sendo processada, você será notificado quando estiver pronta'
+    })
 
     // Log do prompt que será enviado
     console.log('🚀 [GENERATION] Starting generation with prompt:', {
@@ -721,72 +690,16 @@ export function GenerationInterface({
         if (refreshedGeneration) {
           setCurrentGeneration(refreshedGeneration)
 
-          // If completed, add to results gallery
           if (refreshedGeneration.status === 'COMPLETED') {
-            setGenerationResults(prev => {
-              // Avoid duplicates
-              const exists = prev.find(g => g.id === refreshedGeneration.id)
-              if (!exists) {
-                return [refreshedGeneration, ...prev]
-              }
-              return prev
+            await handleGenerationPreview({
+              generationId: refreshedGeneration.id,
+              imageUrls: refreshedGeneration.imageUrls || (refreshedGeneration.metadata as any)?.permanentUrls || [],
+              temporaryUrls: (refreshedGeneration.metadata as any)?.temporaryUrls || []
             })
-
-            const fetchGenerationWithRetry = async (attempts = 5): Promise<{ temp: string | null; perm: string | null }> => {
-              for (let attempt = 1; attempt <= attempts; attempt++) {
-                try {
-                  const response = await fetch(`/api/generations/${generationId}`)
-                  if (response.ok) {
-                    const generationDetails = await response.json()
-                    const tempUrl = generationDetails.temporaryUrls?.[0] || null
-                    const permUrl = generationDetails.imageUrls?.[0] || null
-
-                    if (permUrl || tempUrl) {
-                      return { temp: tempUrl, perm: permUrl }
-                    }
-                  } else {
-                    console.warn(`⚠️ [GENERATION] Retry ${attempt} failed with status ${response.status}`)
-                  }
-                } catch (error) {
-                  console.error(`❌ [GENERATION] Retry ${attempt} error:`, error)
-                }
-
-                const backoff = attempt * 1500
-                await new Promise(resolve => setTimeout(resolve, backoff))
-              }
-
-              return { temp: null, perm: null }
-            }
-
-            let { temp: fallbackTempUrl, perm: fallbackPermanentUrl } = {
-              temp: refreshedGeneration.temporaryUrls?.[0] || null,
-              perm: refreshedGeneration.imageUrls?.[0] || null
-            }
-
-            if (!fallbackPermanentUrl && !fallbackTempUrl) {
-              console.warn('⚠️ [GENERATION] Manual sync missing URLs, retrying generation fetch...')
-              const retryResult = await fetchGenerationWithRetry()
-              fallbackTempUrl = retryResult.temp
-              fallbackPermanentUrl = retryResult.perm
-            }
-
-            if (fallbackTempUrl || fallbackPermanentUrl) {
-              console.log('✅ [GENERATION] Manual sync located URLs after retry, opening preview')
-              await openModalWithValidation(fallbackTempUrl, fallbackPermanentUrl)
-              invalidateBalance()
-            } else {
-              console.warn('⚠️ [GENERATION] Manual sync completed but no URLs available after retries')
-              clearGenerationLock()
-            }
           } else {
             clearGenerationLock()
           }
 
-          addToast({
-            type: 'success',
-            title: '✅ Geração sincronizada com sucesso!',
-            description: `Status atualizado`
-          })
         }
       } else {
         alert(data.error || 'Falha ao sincronizar status da geração')
@@ -794,14 +707,9 @@ export function GenerationInterface({
       }
     } catch (error) {
       console.error('Error syncing generation:', error)
-      addToast({
-        type: 'error',
-        title: 'Falha ao sincronizar',
-        description: error instanceof Error ? error.message : 'Erro desconhecido'
-      })
       clearGenerationLock()
     }
-  }, [addToast, clearGenerationLock, manualSync, openModalWithValidation, invalidateBalance])
+  }, [clearGenerationLock, manualSync, handleGenerationPreview])
 
   const handleDownloadPreview = useCallback(async () => {
     if (!previewMedia?.url) return
@@ -992,12 +900,11 @@ export function GenerationInterface({
                 >
                   {isGenerating ? (
                     <>
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                      Gerando...
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processando...
                     </>
                   ) : (
                     <>
-                      <Play className="w-4 h-4 mr-2" />
                       {isMobile ? mobileButtonLabel : desktopButtonLabel}
                     </>
                   )}
@@ -1076,50 +983,27 @@ export function GenerationInterface({
 
       {/* Inline preview */}
       {previewMedia && (
-        <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center text-base font-semibold text-gray-900">
-              <Image className="w-5 h-5 mr-2" />
-              Resultado recente
-            </CardTitle>
-            <CardDescription className="text-sm text-gray-500">
-              Clique na imagem para visualizar em tela cheia
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div
-              className="relative group cursor-pointer rounded-2xl overflow-hidden border border-gray-200 bg-white"
-              onClick={() => setIsPreviewLightboxOpen(true)}
-            >
-              <img
-                src={previewMedia.url}
-                alt="Resultado gerado"
-                className="w-full h-auto max-h-[28rem] object-cover"
-              />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="px-4 py-2 bg-white/85 text-gray-900 text-sm font-semibold rounded-full">
-                  Ver em tela cheia
-                </span>
-              </div>
+        <div className="max-w-4xl mx-auto px-6 mt-8 mb-12">
+          <h3 className="text-base font-semibold text-gray-800 mb-3">
+            Resultado recente
+          </h3>
+          <div
+            className="relative group cursor-pointer rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm"
+            onClick={() => setIsPreviewLightboxOpen(true)}
+          >
+            <img
+              src={previewMedia.url}
+              alt="Resultado gerado"
+              className="w-full h-auto object-cover max-h-72"
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="px-3 py-1 bg-white/85 text-gray-900 text-xs font-semibold rounded-full">
+                Clique para ampliar
+              </span>
             </div>
-          </CardContent>
-        </Card>
-        )}
-
-        {/* Recent Results */}
-        {generationResults.length > 0 && (
-        <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
-            <CardHeader>
-            <CardTitle className="flex items-center text-base font-semibold text-gray-900">
-                <Image className="w-5 h-5 mr-2" />
-                Resultados Recentes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResultsGallery generations={generationResults.slice(0, 6)} />
-            </CardContent>
-          </Card>
-        )}
+          </div>
+        </div>
+      )}
 
       <Dialog open={isPreviewLightboxOpen} onOpenChange={setIsPreviewLightboxOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden p-0">
