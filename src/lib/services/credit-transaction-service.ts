@@ -54,16 +54,16 @@ export async function createCreditTransaction(
   const newBalance = planCreditsAvailable + user.creditsBalance
 
   // Criar transação
-  const transactions = await client.creditTransaction.findMany({
+  // Optimized: Use findFirst instead of findMany for better performance
+  const lastTransaction = await client.creditTransaction.findFirst({
     where: { userId },
     orderBy: { createdAt: 'desc' },
-    take: 1,
     select: { balanceAfter: true }
   })
 
   let balanceBefore = newBalance
-  if (transactions.length > 0) {
-    const lastBalance = Number(transactions[0].balanceAfter) || 0
+  if (lastTransaction) {
+    const lastBalance = Number(lastTransaction.balanceAfter) || 0
     balanceBefore = lastBalance
   }
 
