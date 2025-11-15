@@ -68,9 +68,14 @@ export function GenerationInterface({
   const buttonFallbackTimerRef = useRef<NodeJS.Timeout | null>(null)
   const pendingGenerationIdRef = useRef<string | null>(null)
 
-  // Inline preview state
+  const previewContainerRef = useRef<HTMLDivElement | null>(null)
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' } | null>(null)
   const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
+  useEffect(() => {
+    if (previewMedia && previewContainerRef.current) {
+      previewContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [previewMedia])
   // Flag para evitar toasts e previews duplicados
   const [completedGenerationIds, setCompletedGenerationIds] = useState<Set<string>>(new Set())
   const completedGenerationIdsRef = useRef<Set<string>>(completedGenerationIds)
@@ -983,7 +988,10 @@ export function GenerationInterface({
 
       {/* Inline preview */}
       {previewMedia && (
-        <div className="max-w-4xl mx-auto px-6 mt-6 mb-12">
+        <div
+          ref={previewContainerRef}
+          className="max-w-3xl mx-auto px-6 mt-6 pb-12"
+        >
           <h3 className="text-base font-semibold text-gray-800 mb-3 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
             Resultado recente
           </h3>
