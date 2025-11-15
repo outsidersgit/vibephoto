@@ -222,13 +222,28 @@ export function GenerationInterface({
 
     let urlToUse: string | null = null
 
-    // Test temporary URL first
-    if (temporaryUrl && await testImageUrl(temporaryUrl)) {
-      urlToUse = temporaryUrl
-      console.log('✅ [GENERATION] Using temporary URL')
-    } else if (permanentUrl && await testImageUrl(permanentUrl)) {
-      urlToUse = permanentUrl
-      console.log('✅ [GENERATION] Using permanent URL')
+    const candidates: Array<{ url: string | null; type: 'temporary' | 'permanent' }> = [
+      { url: temporaryUrl, type: 'temporary' },
+      { url: permanentUrl, type: 'permanent' }
+    ]
+
+    for (const candidate of candidates) {
+      if (!candidate.url) continue
+      const isAccessible = await testImageUrl(candidate.url)
+      if (isAccessible) {
+        urlToUse = candidate.url
+        console.log(`✅ [GENERATION] Using ${candidate.type} URL (validated)`)
+        break
+      }
+    }
+
+    // Se nenhum candidato passou no teste, mas temos alguma URL, usa assim mesmo
+    if (!urlToUse) {
+      const fallbackCandidate = candidates.find(c => c.url)?.url || null
+      if (fallbackCandidate) {
+        console.warn('⚠️ [GENERATION] Image validation failed, but fallback URL exists. Using fallback without validation.')
+        urlToUse = fallbackCandidate
+      }
     }
 
     if (urlToUse) {
@@ -319,7 +334,7 @@ export function GenerationInterface({
     }
 
     if (!tempUrl && !permUrl) {
-      console.warn('⚠️ [GENERATION] Preview postponed - still no URLs available', {
+      console.warn('⚠️ [GENERATION] Preview postponed - still no URLs available after retries', {
         generationId
       })
       return false
