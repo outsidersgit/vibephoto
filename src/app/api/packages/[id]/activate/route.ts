@@ -120,6 +120,43 @@ export async function POST(
     })
 
     if (existingUserPackage) {
+      // Check how many generations are actually being processed for this package
+      const activeGenerations = await prisma.generation.count({
+        where: {
+          userId,
+          packageId: existingUserPackage.id,
+          status: {
+            in: ['PENDING', 'PROCESSING']
+          }
+        }
+      })
+
+      const completedGenerations = await prisma.generation.count({
+        where: {
+          userId,
+          packageId: existingUserPackage.id,
+          status: 'COMPLETED'
+        }
+      })
+
+      const failedGenerations = await prisma.generation.count({
+        where: {
+          userId,
+          packageId: existingUserPackage.id,
+          status: 'FAILED'
+        }
+      })
+
+      console.log('📊 Existing package status:', {
+        userPackageId: existingUserPackage.id,
+        status: existingUserPackage.status,
+        totalImages: existingUserPackage.totalImages,
+        generatedImages: existingUserPackage.generatedImages,
+        activeGenerations,
+        completedGenerations,
+        failedGenerations
+      })
+
       // User already has an active package
       if (existingUserPackage.status === 'GENERATING') {
         return NextResponse.json({
@@ -128,17 +165,49 @@ export async function POST(
             id: existingUserPackage.id,
             status: existingUserPackage.status,
             generatedImages: existingUserPackage.generatedImages,
-            totalImages: existingUserPackage.totalImages
+            totalImages: existingUserPackage.totalImages,
+            progress: {
+              active: activeGenerations,
+              completed: completedGenerations,
+              failed: failedGenerations,
+              percentage: Math.round((completedGenerations / existingUserPackage.totalImages) * 100)
+            }
           }
         }, { status: 409 }) // 409 Conflict
       } else if (existingUserPackage.status === 'ACTIVE') {
+        // If status is ACTIVE but no generations are processing, it might be stuck
+        if (activeGenerations === 0 && completedGenerations === 0) {
+          console.warn('⚠️ Package is ACTIVE but has no generations. It might be stuck.')
+          // Optionally, we could trigger batch generation here, but for now just inform the user
+          return NextResponse.json({
+            error: 'Este pacote está ativo mas não há gerações em andamento. Entre em contato com o suporte ou aguarde alguns minutos.',
+            existingPackage: {
+              id: existingUserPackage.id,
+              status: existingUserPackage.status,
+              generatedImages: existingUserPackage.generatedImages,
+              totalImages: existingUserPackage.totalImages,
+              progress: {
+                active: activeGenerations,
+                completed: completedGenerations,
+                failed: failedGenerations
+              }
+            }
+          }, { status: 409 })
+        }
+        
         return NextResponse.json({
           error: 'Este pacote já está ativo. Você não pode ativar o mesmo pacote múltiplas vezes.',
           existingPackage: {
             id: existingUserPackage.id,
             status: existingUserPackage.status,
             generatedImages: existingUserPackage.generatedImages,
-            totalImages: existingUserPackage.totalImages
+            totalImages: existingUserPackage.totalImages,
+            progress: {
+              active: activeGenerations,
+              completed: completedGenerations,
+              failed: failedGenerations,
+              percentage: Math.round((completedGenerations / existingUserPackage.totalImages) * 100)
+            }
           }
         }, { status: 409 }) // 409 Conflict
       }
