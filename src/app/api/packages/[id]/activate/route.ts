@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { CreditManager } from '@/lib/credits/manager'
 import { Plan } from '@prisma/client'
 import { scanPackagesDirectory } from '@/lib/packages/scanner'
+import { reconcileUserPackageStatus } from '@/lib/services/package-reconciliation'
 
 export async function POST(
   request: NextRequest,
@@ -120,165 +121,174 @@ export async function POST(
     })
 
     if (existingUserPackage) {
-      // Check how many generations are actually being processed for this package
-      const activeGenerations = await prisma.generation.count({
-        where: {
-          userId,
-          packageId: existingUserPackage.id,
-          status: {
-            in: ['PENDING', 'PROCESSING']
+      // CRITICAL: Reconcile package status first to ensure it's accurate
+      console.log('🔄 Reconciling existing package status before checking...')
+      const reconciliation = await reconcileUserPackageStatus(existingUserPackage.id)
+      
+      // Refresh the package data after reconciliation
+      const reconciledPackage = await prisma.userPackage.findUnique({
+        where: { id: existingUserPackage.id },
+        include: { package: true }
+      })
+
+      if (!reconciledPackage) {
+        // Package was deleted during reconciliation (shouldn't happen, but handle it)
+        console.warn('⚠️ Package was not found after reconciliation, proceeding with new activation')
+        // Continue to create new package
+      } else {
+        // Update existingUserPackage with reconciled data
+        existingUserPackage.status = reconciledPackage.status
+        existingUserPackage.generatedImages = reconciledPackage.generatedImages
+        existingUserPackage.failedImages = reconciledPackage.failedImages
+
+        console.log('📊 Existing package status (after reconciliation):', {
+          userPackageId: existingUserPackage.id,
+          status: existingUserPackage.status,
+          totalImages: existingUserPackage.totalImages,
+          generatedImages: existingUserPackage.generatedImages,
+          failedImages: existingUserPackage.failedImages,
+          reconciliation: {
+            previousStatus: reconciliation.previousStatus,
+            newStatus: reconciliation.newStatus,
+            updated: reconciliation.updated,
+            stats: reconciliation.stats
           }
-        }
-      })
+        })
 
-      const completedGenerations = await prisma.generation.count({
-        where: {
-          userId,
-          packageId: existingUserPackage.id,
-          status: 'COMPLETED'
-        }
-      })
+        // If package is now COMPLETED or FAILED, allow new activation
+        if (reconciledPackage.status === 'COMPLETED' || reconciledPackage.status === 'FAILED') {
+          console.log(`✅ Package is ${reconciledPackage.status}, allowing new activation`)
+          // Continue to create new package (break out of this if block)
+        } else {
+          // Package is still ACTIVE or GENERATING, check generations
+          const activeGenerations = reconciliation.stats.pending + reconciliation.stats.processing
+          const completedGenerations = reconciliation.stats.completed
+          const failedGenerations = reconciliation.stats.failed
+          const totalGenerations = reconciliation.stats.total
 
-      const failedGenerations = await prisma.generation.count({
-        where: {
-          userId,
-          packageId: existingUserPackage.id,
-          status: 'FAILED'
-        }
-      })
-
-      console.log('📊 Existing package status:', {
-        userPackageId: existingUserPackage.id,
-        status: existingUserPackage.status,
-        totalImages: existingUserPackage.totalImages,
-        generatedImages: existingUserPackage.generatedImages,
-        activeGenerations,
-        completedGenerations,
-        failedGenerations
-      })
-
-      // User already has an active package
-      if (existingUserPackage.status === 'GENERATING') {
-        return NextResponse.json({
-          error: 'Este pacote já está sendo processado. Aguarde a conclusão da geração anterior.',
-          existingPackage: {
-            id: existingUserPackage.id,
-            status: existingUserPackage.status,
-            generatedImages: existingUserPackage.generatedImages,
-            totalImages: existingUserPackage.totalImages,
-            progress: {
-              active: activeGenerations,
-              completed: completedGenerations,
-              failed: failedGenerations,
-              percentage: Math.round((completedGenerations / existingUserPackage.totalImages) * 100)
-            }
-          }
-        }, { status: 409 }) // 409 Conflict
-      } else if (existingUserPackage.status === 'ACTIVE' || existingUserPackage.status === 'GENERATING') {
-        // Check if package is stuck (no generations created or all failed)
-        const totalGenerations = activeGenerations + completedGenerations + failedGenerations
-        
-        if (totalGenerations === 0) {
-          // Package is stuck - no generations were ever created
-          console.warn('⚠️ Package is stuck - no generations were created. Attempting to restart batch generation...')
-          
-          // Try to restart batch generation
-          try {
-            const baseUrl = process.env.NEXTAUTH_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-            const batchGenerationUrl = `${baseUrl}/api/packages/generate-batch`
-            
-            console.log('🔄 Retrying batch generation for stuck package...', {
-              userPackageId: existingUserPackage.id,
-              url: batchGenerationUrl
-            })
-            
-            const batchResponse = await fetch(batchGenerationUrl, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Internal-Request': 'true'
-              },
-              body: JSON.stringify({
-                userPackageId: existingUserPackage.id,
-                userId,
-                packageId,
-                modelId,
-                aspectRatio
-              })
-            })
-
-            if (batchResponse.ok) {
-              const batchResult = await batchResponse.json()
-              console.log('✅ Successfully restarted batch generation:', batchResult)
-              
-              // Update package status to GENERATING
-              await prisma.userPackage.update({
-                where: { id: existingUserPackage.id },
-                data: { status: 'GENERATING' }
-              })
-              
-              return NextResponse.json({
-                success: true,
-                message: 'Pacote travado detectado. Geração reiniciada com sucesso!',
-                existingPackage: {
-                  id: existingUserPackage.id,
-                  status: 'GENERATING',
-                  generatedImages: existingUserPackage.generatedImages,
-                  totalImages: existingUserPackage.totalImages
-                }
-              })
-            } else {
-              const errorText = await batchResponse.text()
-              console.error('❌ Failed to restart batch generation:', errorText)
-              
-              return NextResponse.json({
-                error: 'Pacote travado detectado, mas não foi possível reiniciar a geração. Entre em contato com o suporte.',
-                existingPackage: {
-                  id: existingUserPackage.id,
-                  status: existingUserPackage.status,
-                  generatedImages: existingUserPackage.generatedImages,
-                  totalImages: existingUserPackage.totalImages,
-                  progress: {
-                    active: activeGenerations,
-                    completed: completedGenerations,
-                    failed: failedGenerations
-                  }
-                },
-                retryError: errorText.substring(0, 200)
-              }, { status: 500 })
-            }
-          } catch (retryError) {
-            console.error('💥 Error retrying batch generation:', retryError)
+          // User already has an active package that's still processing
+          if (existingUserPackage.status === 'GENERATING') {
             return NextResponse.json({
-              error: 'Pacote travado detectado, mas ocorreu um erro ao tentar reiniciar. Entre em contato com o suporte.',
+              error: 'Este pacote já está sendo processado. Aguarde a conclusão da geração anterior.',
               existingPackage: {
                 id: existingUserPackage.id,
                 status: existingUserPackage.status,
                 generatedImages: existingUserPackage.generatedImages,
-                totalImages: existingUserPackage.totalImages
+                totalImages: existingUserPackage.totalImages,
+                progress: {
+                  active: activeGenerations,
+                  completed: completedGenerations,
+                  failed: failedGenerations,
+                  percentage: Math.round((completedGenerations / existingUserPackage.totalImages) * 100)
+                }
               }
-            }, { status: 500 })
+            }, { status: 409 }) // 409 Conflict
+          } else if (existingUserPackage.status === 'ACTIVE' || existingUserPackage.status === 'GENERATING') {
+            // Check if package is stuck (no generations created or all failed)
+            
+            if (totalGenerations === 0) {
+              // Package is stuck - no generations were ever created
+              console.warn('⚠️ Package is stuck - no generations were created. Attempting to restart batch generation...')
+              
+              // Try to restart batch generation
+              try {
+                const baseUrl = process.env.NEXTAUTH_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+                const batchGenerationUrl = `${baseUrl}/api/packages/generate-batch`
+                
+                console.log('🔄 Retrying batch generation for stuck package...', {
+                  userPackageId: existingUserPackage.id,
+                  url: batchGenerationUrl
+                })
+                
+                const batchResponse = await fetch(batchGenerationUrl, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-Internal-Request': 'true'
+                  },
+                  body: JSON.stringify({
+                    userPackageId: existingUserPackage.id,
+                    userId,
+                    packageId,
+                    modelId,
+                    aspectRatio
+                  })
+                })
+
+                if (batchResponse.ok) {
+                  const batchResult = await batchResponse.json()
+                  console.log('✅ Successfully restarted batch generation:', batchResult)
+                  
+                  // Update package status to GENERATING
+                  await prisma.userPackage.update({
+                    where: { id: existingUserPackage.id },
+                    data: { status: 'GENERATING' }
+                  })
+                  
+                  return NextResponse.json({
+                    success: true,
+                    message: 'Pacote travado detectado. Geração reiniciada com sucesso!',
+                    existingPackage: {
+                      id: existingUserPackage.id,
+                      status: 'GENERATING',
+                      generatedImages: existingUserPackage.generatedImages,
+                      totalImages: existingUserPackage.totalImages
+                    }
+                  })
+                } else {
+                  const errorText = await batchResponse.text()
+                  console.error('❌ Failed to restart batch generation:', errorText)
+                  
+                  return NextResponse.json({
+                    error: 'Pacote travado detectado, mas não foi possível reiniciar a geração. Entre em contato com o suporte.',
+                    existingPackage: {
+                      id: existingUserPackage.id,
+                      status: existingUserPackage.status,
+                      generatedImages: existingUserPackage.generatedImages,
+                      totalImages: existingUserPackage.totalImages,
+                      progress: {
+                        active: activeGenerations,
+                        completed: completedGenerations,
+                        failed: failedGenerations
+                      }
+                    },
+                    retryError: errorText.substring(0, 200)
+                  }, { status: 500 })
+                }
+              } catch (retryError) {
+                console.error('💥 Error retrying batch generation:', retryError)
+                return NextResponse.json({
+                  error: 'Pacote travado detectado, mas ocorreu um erro ao tentar reiniciar. Entre em contato com o suporte.',
+                  existingPackage: {
+                    id: existingUserPackage.id,
+                    status: existingUserPackage.status,
+                    generatedImages: existingUserPackage.generatedImages,
+                    totalImages: existingUserPackage.totalImages
+                  }
+                }, { status: 500 })
+              }
+            }
+            
+            // Package has generations, return normal conflict message
+            return NextResponse.json({
+              error: existingUserPackage.status === 'GENERATING' 
+                ? 'Este pacote já está sendo processado. Aguarde a conclusão da geração anterior.'
+                : 'Este pacote já está ativo. Você não pode ativar o mesmo pacote múltiplas vezes.',
+              existingPackage: {
+                id: existingUserPackage.id,
+                status: existingUserPackage.status,
+                generatedImages: existingUserPackage.generatedImages,
+                totalImages: existingUserPackage.totalImages,
+                progress: {
+                  active: activeGenerations,
+                  completed: completedGenerations,
+                  failed: failedGenerations,
+                  percentage: Math.round((completedGenerations / existingUserPackage.totalImages) * 100)
+                }
+              }
+            }, { status: 409 }) // 409 Conflict
           }
         }
-        
-        // Package has generations, return normal conflict message
-        return NextResponse.json({
-          error: existingUserPackage.status === 'GENERATING' 
-            ? 'Este pacote já está sendo processado. Aguarde a conclusão da geração anterior.'
-            : 'Este pacote já está ativo. Você não pode ativar o mesmo pacote múltiplas vezes.',
-          existingPackage: {
-            id: existingUserPackage.id,
-            status: existingUserPackage.status,
-            generatedImages: existingUserPackage.generatedImages,
-            totalImages: existingUserPackage.totalImages,
-            progress: {
-              active: activeGenerations,
-              completed: completedGenerations,
-              failed: failedGenerations,
-              percentage: Math.round((completedGenerations / existingUserPackage.totalImages) * 100)
-            }
-          }
-        }, { status: 409 }) // 409 Conflict
       }
     }
 

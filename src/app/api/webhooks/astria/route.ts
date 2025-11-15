@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { broadcastModelStatusChange } from '@/lib/services/realtime-service'
 import { refundModelCreationCredits } from '@/lib/services/model-credit-service'
+import { reconcileUserPackageStatus } from '@/lib/services/package-reconciliation'
 
 interface AstriaWebhookPayload {
   id: string
@@ -462,6 +463,21 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
         stack: broadcastError instanceof Error ? broadcastError.stack : undefined
       })
       // Don't fail the webhook for broadcast errors, but log them for debugging
+    }
+
+    // CRITICAL: Reconcile UserPackage status if this generation belongs to a package
+    // This ensures package status is automatically updated when generations complete/fail
+    if (generation.packageId) {
+      try {
+        console.log(`🔄 Reconciling UserPackage status for generation ${generation.id} (packageId: ${generation.packageId})`)
+        const reconciliation = await reconcileUserPackageStatus(generation.packageId)
+        if (reconciliation.updated) {
+          console.log(`✅ UserPackage ${generation.packageId} status updated: ${reconciliation.previousStatus} → ${reconciliation.newStatus}`)
+        }
+      } catch (reconcileError) {
+        console.error('❌ Failed to reconcile UserPackage status:', reconcileError)
+        // Don't fail the webhook for reconciliation errors
+      }
     }
 
     return updatedGeneration
