@@ -105,6 +105,45 @@ export async function POST(
       }, { status: 402 })
     }
 
+    // Check if user already has an active package for this packageId
+    const existingUserPackage = await prisma.userPackage.findFirst({
+      where: {
+        userId,
+        packageId,
+        status: {
+          in: ['ACTIVE', 'GENERATING'] // Check for active or generating packages
+        }
+      },
+      include: {
+        package: true
+      }
+    })
+
+    if (existingUserPackage) {
+      // User already has an active package
+      if (existingUserPackage.status === 'GENERATING') {
+        return NextResponse.json({
+          error: 'Este pacote já está sendo processado. Aguarde a conclusão da geração anterior.',
+          existingPackage: {
+            id: existingUserPackage.id,
+            status: existingUserPackage.status,
+            generatedImages: existingUserPackage.generatedImages,
+            totalImages: existingUserPackage.totalImages
+          }
+        }, { status: 409 }) // 409 Conflict
+      } else if (existingUserPackage.status === 'ACTIVE') {
+        return NextResponse.json({
+          error: 'Este pacote já está ativo. Você não pode ativar o mesmo pacote múltiplas vezes.',
+          existingPackage: {
+            id: existingUserPackage.id,
+            status: existingUserPackage.status,
+            generatedImages: existingUserPackage.generatedImages,
+            totalImages: existingUserPackage.totalImages
+          }
+        }, { status: 409 }) // 409 Conflict
+      }
+    }
+
     const userPackage = await prisma.userPackage.create({
       data: {
         userId,
