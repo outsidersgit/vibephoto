@@ -249,7 +249,48 @@ export function GenerationInterface({
     }
   }, [addToast, testImageUrl, clearGenerationLock, invalidateBalance])
 
-  const handleGenerationPreview = useCallback((
+  const fetchGenerationPreviewUrls = useCallback(async (
+    generationId: string,
+    attempts: number = 5,
+    backoffMs: number = 1500
+  ): Promise<{ temp: string | null; perm: string | null }> => {
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      try {
+        const response = await fetch(`/api/generations/${generationId}`)
+        if (response.ok) {
+          const payload = await response.json()
+          const details = payload?.generation || payload
+          const metadata = details?.metadata || {}
+
+          const temp =
+            details?.temporaryUrls?.[0] ||
+            metadata?.temporaryUrls?.[0] ||
+            metadata?.originalUrls?.[0] ||
+            null
+
+          const perm =
+            details?.imageUrls?.[0] ||
+            metadata?.permanentUrls?.[0] ||
+            null
+
+          if (temp || perm) {
+            return { temp, perm }
+          }
+        } else {
+          console.warn(`⚠️ [GENERATION] Retry ${attempt} fetch status ${response.status}`)
+        }
+      } catch (error) {
+        console.error(`❌ [GENERATION] Retry ${attempt} fetch error:`, error)
+      }
+
+      const delay = attempt * backoffMs
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+
+    return { temp: null, perm: null }
+  }, [])
+
+  const handleGenerationPreview = useCallback(async (
     params: {
       generationId?: string | null
       imageUrls?: string[] | null
@@ -263,14 +304,23 @@ export function GenerationInterface({
       return false
     }
 
-    const tempUrl = temporaryUrls?.[0] ?? null
-    const permUrl = imageUrls?.[0] ?? null
+    let tempUrl = temporaryUrls?.[0] ?? null
+    let permUrl = imageUrls?.[0] ?? null
 
     if (!tempUrl && !permUrl) {
-      console.log('⚠️ [GENERATION] Preview postponed - no URLs available yet', {
+      console.log('⚠️ [GENERATION] Preview missing URLs, fetching generation details...', {
         generationId,
         imageCount: imageUrls?.length || 0,
         tempCount: temporaryUrls?.length || 0
+      })
+      const fallback = await fetchGenerationPreviewUrls(generationId)
+      tempUrl = fallback.temp
+      permUrl = fallback.perm
+    }
+
+    if (!tempUrl && !permUrl) {
+      console.warn('⚠️ [GENERATION] Preview postponed - still no URLs available', {
+        generationId
       })
       return false
     }
@@ -299,13 +349,16 @@ export function GenerationInterface({
       })
     }
 
-    openModalWithValidation(tempUrl, permUrl).catch((error) => {
+    try {
+      await openModalWithValidation(tempUrl, permUrl)
+    } catch (error) {
       console.error('❌ [GENERATION] Error opening preview modal:', error)
       clearGenerationLock()
-    })
+      return false
+    }
 
     return true
-  }, [addToast, openModalWithValidation, clearGenerationLock])
+  }, [addToast, openModalWithValidation, clearGenerationLock, fetchGenerationPreviewUrls])
 
   // Real-time updates for generation status
   useRealtimeUpdates({
@@ -338,6 +391,8 @@ export function GenerationInterface({
             generationId,
             imageUrls: data.imageUrls,
             temporaryUrls: data.temporaryUrls
+          }).catch((error) => {
+            console.error('❌ [GENERATION] Failed to handle preview via SSE:', error)
           })
         }
 
@@ -398,6 +453,8 @@ export function GenerationInterface({
           generationId: payload.id,
           imageUrls: payload.imageUrls,
           temporaryUrls: payload.temporaryUrls
+        }).catch((error) => {
+          console.error('❌ [GENERATION] Failed to handle preview for orphan polling data:', error)
         })
       }
       return
@@ -427,6 +484,8 @@ export function GenerationInterface({
         generationId: currentGeneration?.id || payload.id,
         imageUrls: payload.imageUrls,
         temporaryUrls: payload.temporaryUrls
+      }).catch((error) => {
+        console.error('❌ [GENERATION] Failed to handle preview via polling:', error)
       })
     }
 
