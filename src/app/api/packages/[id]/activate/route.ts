@@ -106,14 +106,17 @@ export async function POST(
       }, { status: 402 })
     }
 
-    // Check if user already has an active package for this packageId
+    // Variable to hold the package (either created or reactivated)
+    let userPackage: any = null
+    let shouldSkipPackageCreation = false
+
+    // Check if user already has ANY package for this packageId (regardless of status)
+    // This is necessary because there's a unique constraint on (userId, packageId)
     const existingUserPackage = await prisma.userPackage.findFirst({
       where: {
         userId,
-        packageId,
-        status: {
-          in: ['ACTIVE', 'GENERATING'] // Check for active or generating packages
-        }
+        packageId
+        // No status filter - check ALL packages to handle unique constraint
       },
       include: {
         package: true
@@ -155,10 +158,89 @@ export async function POST(
           }
         })
 
-        // If package is now COMPLETED or FAILED, allow new activation
+        // If package is now COMPLETED or FAILED, allow reactivation
         if (reconciledPackage.status === 'COMPLETED' || reconciledPackage.status === 'FAILED') {
-          console.log(`✅ Package is ${reconciledPackage.status}, allowing new activation`)
-          // Continue to create new package (break out of this if block)
+          console.log(`✅ Package is ${reconciledPackage.status}, allowing reactivation by updating existing package`)
+          
+          // Check if credits were already deducted for this package
+          const existingCreditTransactions = await prisma.creditTransaction.findMany({
+            where: {
+              userId,
+              referenceId: reconciledPackage.id,
+              type: 'SPENT',
+              source: 'GENERATION'
+            },
+            orderBy: { createdAt: 'desc' }
+          })
+          
+          // Check if any transaction has PHOTO_PACKAGE metadata
+          const existingCreditTransaction = existingCreditTransactions.find(tx => {
+            const metadata = tx.metadata as any
+            return metadata?.type === 'PHOTO_PACKAGE'
+          })
+          
+          // Update the existing package to reactivate it
+          await prisma.userPackage.update({
+            where: { id: reconciledPackage.id },
+            data: {
+              status: 'ACTIVE',
+              generatedImages: 0,
+              failedImages: 0,
+              activatedAt: new Date(),
+              completedAt: null,
+              errorMessage: null,
+              totalImages: totalImages // Update total images in case package prompts changed
+            }
+          })
+          
+          // Get the reactivated package
+          const reactivatedPackage = await prisma.userPackage.findUnique({
+            where: { id: reconciledPackage.id },
+            include: {
+              package: true,
+              user: true
+            }
+          })
+          
+          if (!reactivatedPackage) {
+            return NextResponse.json({ error: 'Failed to reactivate package' }, { status: 500 })
+          }
+          
+          // If credits were not deducted yet, deduct them now
+          if (!existingCreditTransaction) {
+            console.log('💰 No previous credit transaction found, deducting credits for reactivated package')
+            const chargeResult = await CreditManager.deductCredits(
+              userId,
+              requiredCredits,
+              'Reativação de pacote de fotos',
+              {
+                type: 'PHOTO_PACKAGE',
+                userPackageId: reactivatedPackage.id,
+                packageName: photoPackage.name
+              },
+              undefined,
+              { timeout: 15000 }
+            )
+            
+            if (!chargeResult.success) {
+              console.error('❌ Failed to charge credits for package reactivation:', chargeResult.error)
+              // Revert package status
+              await prisma.userPackage.update({
+                where: { id: reactivatedPackage.id },
+                data: { status: reconciledPackage.status }
+              })
+              return NextResponse.json({
+                error: chargeResult.error || 'Insufficient credits to reactivate this package'
+              }, { status: 402 })
+            }
+          } else {
+            console.log('💰 Credits already deducted for this package, skipping deduction')
+          }
+          
+          // Use reactivated package for batch generation
+          userPackage = reactivatedPackage
+          shouldSkipPackageCreation = true
+          
         } else {
           // Package is still ACTIVE or GENERATING, check generations
           const activeGenerations = reconciliation.stats.pending + reconciliation.stats.processing
@@ -292,41 +374,44 @@ export async function POST(
       }
     }
 
-    const userPackage = await prisma.userPackage.create({
-      data: {
+    // Create new package if not reactivated
+    if (!shouldSkipPackageCreation) {
+      userPackage = await prisma.userPackage.create({
+        data: {
+          userId,
+          packageId,
+          status: 'ACTIVE',
+          totalImages: totalImages, // Calculated from prompts.length
+          generatedImages: 0,
+          failedImages: 0
+        },
+        include: {
+          package: true,
+          user: true
+        }
+      })
+
+      // Deduct credits - optimized to fetch data before transaction, so timeout can be shorter
+      const chargeResult = await CreditManager.deductCredits(
         userId,
-        packageId,
-        status: 'ACTIVE',
-        totalImages: totalImages, // Calculated from prompts.length
-        generatedImages: 0,
-        failedImages: 0
-      },
-      include: {
-        package: true,
-        user: true
+        requiredCredits,
+        'Ativação de pacote de fotos',
+        {
+          type: 'PHOTO_PACKAGE',
+          userPackageId: userPackage.id,
+          packageName: photoPackage.name
+        },
+        undefined,
+        { timeout: 15000 } // Reduced to 15s since transaction is now optimized
+      )
+
+      if (!chargeResult.success) {
+        console.error('❌ Failed to charge credits for package activation:', chargeResult.error)
+        await prisma.userPackage.delete({ where: { id: userPackage.id } })
+        return NextResponse.json({
+          error: chargeResult.error || 'Insufficient credits to activate this package'
+        }, { status: 402 })
       }
-    })
-
-    // Deduct credits - optimized to fetch data before transaction, so timeout can be shorter
-    const chargeResult = await CreditManager.deductCredits(
-      userId,
-      requiredCredits,
-      'Ativação de pacote de fotos',
-      {
-        type: 'PHOTO_PACKAGE',
-        userPackageId: userPackage.id,
-        packageName: photoPackage.name
-      },
-      undefined,
-      { timeout: 15000 } // Reduced to 15s since transaction is now optimized
-    )
-
-    if (!chargeResult.success) {
-      console.error('❌ Failed to charge credits for package activation:', chargeResult.error)
-      await prisma.userPackage.delete({ where: { id: userPackage.id } })
-      return NextResponse.json({
-        error: chargeResult.error || 'Insufficient credits to activate this package'
-      }, { status: 402 })
     }
 
     // Trigger batch generation (call the batch generation API internally)
