@@ -181,57 +181,111 @@ export async function POST(
       }, { status: 402 })
     }
 
-    // Trigger batch generation (call the batch generation API)
+    // Trigger batch generation (call the batch generation API internally)
+    // IMPORTANTE: Esta é uma chamada server-to-server, então não precisa de autenticação de sessão
+    // Mas precisamos garantir que a URL está correta
+    let baseUrl = process.env.NEXTAUTH_URL
+    if (!baseUrl) {
+      // Fallback para Vercel URL ou localhost
+      if (process.env.VERCEL_URL) {
+        baseUrl = `https://${process.env.VERCEL_URL}`
+      } else {
+        baseUrl = 'http://localhost:3000'
+      }
+    }
+    const batchGenerationUrl = `${baseUrl}/api/packages/generate-batch`
+    
     console.log('🚀 Triggering batch generation...', {
       userPackageId: userPackage.id,
       userId,
       packageId,
       modelId,
       aspectRatio,
-      url: `${process.env.NEXTAUTH_URL}/api/packages/generate-batch`
+      url: batchGenerationUrl,
+      nextAuthUrl: process.env.NEXTAUTH_URL,
+      vercelUrl: process.env.VERCEL_URL,
+      baseUrl
     })
 
     try {
-      const batchResponse = await fetch(`${process.env.NEXTAUTH_URL}/api/packages/generate-batch`, {
+      console.log('📤 Sending batch generation request to:', batchGenerationUrl)
+      const requestBody = {
+        userPackageId: userPackage.id,
+        userId,
+        packageId,
+        modelId,
+        aspectRatio
+      }
+      console.log('📤 Request body:', requestBody)
+      
+      const batchResponse = await fetch(batchGenerationUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // Add internal request header to identify server-to-server calls
+          'X-Internal-Request': 'true'
         },
-        body: JSON.stringify({
-          userPackageId: userPackage.id,
-          userId,
-          packageId,
-          modelId,
-          aspectRatio
-        })
+        body: JSON.stringify(requestBody)
       })
 
       console.log('📡 Batch generation response status:', batchResponse.status)
+      console.log('📡 Batch generation response headers:', Object.fromEntries(batchResponse.headers.entries()))
 
       if (!batchResponse.ok) {
         const errorText = await batchResponse.text()
-        console.error('❌ Failed to trigger batch generation:', errorText)
-        // Don't fail the activation, just log the error
+        console.error('❌ Failed to trigger batch generation:', {
+          status: batchResponse.status,
+          statusText: batchResponse.statusText,
+          error: errorText
+        })
+        // Update package status to FAILED
         await prisma.userPackage.update({
           where: { id: userPackage.id },
           data: {
             status: 'FAILED',
-            errorMessage: 'Failed to start image generation'
+            errorMessage: `Failed to start image generation: ${errorText.substring(0, 200)}`
           }
         })
+        // Return error to user
+        return NextResponse.json({
+          success: false,
+          error: 'Falha ao iniciar geração de imagens. Verifique os logs para mais detalhes.',
+          details: errorText.substring(0, 200)
+        }, { status: 500 })
       } else {
         const batchResult = await batchResponse.json()
-        console.log('✅ Batch generation triggered successfully:', batchResult)
+        console.log('✅ Batch generation triggered successfully:', {
+          success: batchResult.success,
+          generationsCreated: batchResult.generationsCreated,
+          totalImagesExpected: batchResult.totalImagesExpected
+        })
+        
+        // Update package status to GENERATING
+        await prisma.userPackage.update({
+          where: { id: userPackage.id },
+          data: {
+            status: 'GENERATING'
+          }
+        })
       }
     } catch (error) {
-      console.error('💥 Error triggering batch generation:', error)
+      console.error('💥 Error triggering batch generation:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      })
       await prisma.userPackage.update({
         where: { id: userPackage.id },
         data: {
           status: 'FAILED',
-          errorMessage: 'Failed to start image generation'
+          errorMessage: error instanceof Error ? error.message : 'Failed to start image generation'
         }
       })
+      // Return error to user
+      return NextResponse.json({
+        success: false,
+        error: 'Erro ao iniciar geração de imagens. Tente novamente.',
+        details: error instanceof Error ? error.message : String(error)
+      }, { status: 500 })
     }
 
     return NextResponse.json({
