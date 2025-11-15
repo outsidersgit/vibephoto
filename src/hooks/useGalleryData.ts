@@ -8,6 +8,7 @@ export interface GalleryFilters {
   sort?: string
   limit?: number
   page?: number
+  package?: string
 }
 
 export interface GalleryData {
@@ -46,6 +47,7 @@ export function useGalleryData(filters: GalleryFilters, placeholderData?: Galler
       if (filters.sort) params.append('sort', filters.sort)
       if (filters.limit) params.append('limit', filters.limit.toString())
       if (filters.page) params.append('page', filters.page.toString())
+      if (filters.package) params.append('package', filters.package)
 
       const response = await fetch(`/api/gallery/data?${params.toString()}`)
 

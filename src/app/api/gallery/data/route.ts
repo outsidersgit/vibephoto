@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
     const tab = searchParams.get('tab') || 'generated'
     const statusParam = searchParams.get('status') || undefined
     const qualityParam = searchParams.get('quality') || undefined
+    const packageFilter = searchParams.get('package') || undefined
 
     if (tab === 'videos') {
       const videoResult = await fetchVideoBatch({
@@ -77,7 +78,8 @@ export async function GET(request: NextRequest) {
       page,
       modelId: modelFilter,
       searchQuery,
-        sortBy: sortParam
+      sortBy: sortParam,
+      packageId: packageFilter
     })
 
     return NextResponse.json({

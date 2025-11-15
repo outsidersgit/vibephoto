@@ -8,6 +8,7 @@ export interface GenerationBatchParams {
   limit?: number
   page?: number
   modelId?: string
+  packageId?: string
   searchQuery?: string
   sortBy?: 'newest' | 'oldest'
   /**
@@ -32,6 +33,7 @@ export async function fetchGenerationBatch({
   limit = 24,
   page: requestedPage,
   modelId,
+  packageId,
   searchQuery,
   sortBy = 'newest',
   includePackages
@@ -43,6 +45,7 @@ export async function fetchGenerationBatch({
     userId,
     status: GenerationStatus.COMPLETED,
     ...(modelId && { modelId }),
+    ...(packageId && { packageId }),
     ...(searchQuery && {
       prompt: { contains: searchQuery, mode: 'insensitive' }
     })

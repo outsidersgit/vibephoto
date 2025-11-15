@@ -191,13 +191,15 @@ export function AutoSyncGalleryInterface({
   const currentModel = searchParams.get('model') || filters.model || undefined
   const currentSearchParam = searchParams.get('search') || filters.search || ''
   const currentSort = searchParams.get('sort') || filters.sort || 'newest'
+  const currentPackage = searchParams.get('package') || undefined
 
   const galleryFilters = {
     tab: activeTab,
     model: currentModel,
     search: currentSearchParam || undefined,
     sort: currentSort,
-    limit: Number(searchParams.get('limit') || DEFAULT_LOAD_LIMIT.toString())
+    limit: Number(searchParams.get('limit') || DEFAULT_LOAD_LIMIT.toString()),
+    package: currentPackage
   }
 
   // CRITICAL: Só usar initialGenerations se autorizado e tem sessão
@@ -759,6 +761,7 @@ export function AutoSyncGalleryInterface({
     router.push('/gallery')
     setSearchQuery('')
     setShowFavoritesOnly(false)
+    // Note: package filter is cleared via URL params update
   }
 
   // Funções para gerenciar favoritos
@@ -1398,7 +1401,8 @@ export function AutoSyncGalleryInterface({
     currentModel,
     currentSearchParam ? 'search' : null,
     showFavoritesOnly ? 'favorites' : null,
-    sortIsDefault ? null : galleryFilters.sort
+    sortIsDefault ? null : galleryFilters.sort,
+    currentPackage ? 'package' : null
   ].filter(Boolean).length
   const hasActiveFilters = activeFiltersCount > 0
 
@@ -1783,6 +1787,15 @@ export function AutoSyncGalleryInterface({
                   <Badge variant="secondary" className="flex items-center gap-1">
                     Favoritas
                     <button onClick={toggleFavoritesFilter}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+
+                {currentPackage && (
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    Pacote: {currentPackage}
+                    <button onClick={() => updateFilter('package', null)}>
                       <X className="w-3 h-3" />
                     </button>
                   </Badge>

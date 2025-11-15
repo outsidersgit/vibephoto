@@ -32,6 +32,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
   const sortParam = params.sort === 'oldest' ? 'oldest' : 'newest'
   const viewMode = params.view || 'grid'
   const activeTab = params.tab || 'generated'
+  const packageFilter = params.package
   const videoStatus = params.status
   const videoQuality = params.quality
 
@@ -95,7 +96,8 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
         page,
         modelId: modelFilter,
         searchQuery: searchQuery || undefined,
-        sortBy: sortParam
+        sortBy: sortParam,
+        packageId: packageFilter
       }).catch((err) => {
         console.error('❌ Error fetching generations:', err)
         return { items: [], totalCount: 0, page: 1, totalPages: 1, hasMore: false }

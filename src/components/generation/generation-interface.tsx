@@ -19,6 +19,7 @@ import {
 import { PromptInput } from './prompt-input'
 import { GenerationSettings } from './generation-settings'
 import { PromptExamples } from './prompt-examples'
+import { PackageProgressPanel } from './package-progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useInvalidateCredits } from '@/hooks/useCredits'
@@ -986,32 +987,9 @@ export function GenerationInterface({
         </div>
       </div>
 
-      {/* Inline preview */}
-      {previewMedia && (
-        <div
-          ref={previewContainerRef}
-          className="max-w-3xl mx-auto px-6 mt-6 pb-12"
-        >
-          <h3 className="text-base font-semibold text-gray-800 mb-3 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-            Resultado recente
-          </h3>
-          <div
-            className="relative group cursor-pointer rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm"
-            onClick={() => setIsPreviewLightboxOpen(true)}
-          >
-            <img
-              src={previewMedia.url}
-              alt="Resultado gerado"
-              className="w-full h-auto object-cover max-h-72"
-            />
-            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-              <span className="px-3 py-1 bg-white/85 text-gray-900 text-xs font-semibold rounded-full">
-                Clique para ampliar
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="mt-10">
+        <PackageProgressPanel />
+      </div>
 
       <Dialog open={isPreviewLightboxOpen} onOpenChange={setIsPreviewLightboxOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden p-0">
