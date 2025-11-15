@@ -105,51 +105,38 @@ export async function POST(
       }, { status: 402 })
     }
 
-    let userPackage
-    try {
-      userPackage = await prisma.$transaction(async (tx) => {
-        const createdPackage = await tx.userPackage.create({
-          data: {
-            userId,
-            packageId,
-            status: 'ACTIVE',
-            totalImages: totalImages, // Calculated from prompts.length
-            generatedImages: 0,
-            failedImages: 0
-          },
-          include: {
-            package: true,
-            user: true
-          }
-        })
-
-        const chargeResult = await CreditManager.deductCredits(
-          userId,
-          requiredCredits,
-          'Ativação de pacote de fotos',
-          {
-            type: 'PHOTO_PACKAGE',
-            userPackageId: createdPackage.id,
-            packageName: photoPackage.name
-          },
-          tx
-        )
-
-        if (!chargeResult.success) {
-          throw new Error(`CREDITS:${chargeResult.error || 'Insufficient credits to activate this package'}`)
-        }
-
-        return createdPackage
-      }, { timeout: 15000 })
-    } catch (transactionError) {
-      const message = transactionError instanceof Error ? transactionError.message : 'Failed to activate package'
-      if (message.startsWith('CREDITS:')) {
-        const cleanMessage = message.replace('CREDITS:', '')
-        return NextResponse.json({ error: cleanMessage }, { status: 402 })
+    const userPackage = await prisma.userPackage.create({
+      data: {
+        userId,
+        packageId,
+        status: 'ACTIVE',
+        totalImages: totalImages, // Calculated from prompts.length
+        generatedImages: 0,
+        failedImages: 0
+      },
+      include: {
+        package: true,
+        user: true
       }
+    })
 
-      console.error('❌ Failed to charge credits for package activation:', transactionError)
-      return NextResponse.json({ error: 'Failed to activate package. Please try again.' }, { status: 500 })
+    const chargeResult = await CreditManager.deductCredits(
+      userId,
+      requiredCredits,
+      'Ativação de pacote de fotos',
+      {
+        type: 'PHOTO_PACKAGE',
+        userPackageId: userPackage.id,
+        packageName: photoPackage.name
+      }
+    )
+
+    if (!chargeResult.success) {
+      console.error('❌ Failed to charge credits for package activation:', chargeResult.error)
+      await prisma.userPackage.delete({ where: { id: userPackage.id } })
+      return NextResponse.json({
+        error: chargeResult.error || 'Insufficient credits to activate this package'
+      }, { status: 402 })
     }
 
     // Trigger batch generation (call the batch generation API)
