@@ -983,8 +983,8 @@ export function GenerationInterface({
 
       {/* Inline preview */}
       {previewMedia && (
-        <div className="max-w-4xl mx-auto px-6 mt-8 mb-12">
-          <h3 className="text-base font-semibold text-gray-800 mb-3">
+        <div className="max-w-4xl mx-auto px-6 mt-6 mb-12">
+          <h3 className="text-base font-semibold text-gray-800 mb-3 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
             Resultado recente
           </h3>
           <div
