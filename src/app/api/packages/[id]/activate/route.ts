@@ -120,8 +120,7 @@ export async function POST(
       }
     })
 
-    // Deduct credits with extended timeout to handle complex credit calculations
-    // This includes checking plan credits, package credits, and updating multiple records
+    // Deduct credits - optimized to fetch data before transaction, so timeout can be shorter
     const chargeResult = await CreditManager.deductCredits(
       userId,
       requiredCredits,
@@ -132,7 +131,7 @@ export async function POST(
         packageName: photoPackage.name
       },
       undefined,
-      { timeout: 40000 } // Increased to 40s to handle complex credit calculations
+      { timeout: 15000 } // Reduced to 15s since transaction is now optimized
     )
 
     if (!chargeResult.success) {

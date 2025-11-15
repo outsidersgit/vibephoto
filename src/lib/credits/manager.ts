@@ -162,38 +162,72 @@ export class CreditManager {
     try {
       let updatedUserRecord: { creditsUsed: number; creditsLimit: number; creditsBalance: number } | null = null
 
-      const execute = async (client: Prisma.TransactionClient) => {
-        // Busca informações do usuário
-        const user = await client.user.findUnique({
-          where: { id: userId },
+      // OPTIMIZATION: Fetch user data and credit packages BEFORE the transaction
+      // This reduces the work inside the transaction and prevents timeout
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          creditsUsed: true,
+          creditsLimit: true,
+          creditsBalance: true,
+          creditsExpiresAt: true,
+          billingCycle: true
+        }
+      })
+
+      if (!user) {
+        return { success: false, error: 'User not found' }
+      }
+
+      // VALIDAÇÃO: Créditos do plano (mensais ou anuais) expirados não podem ser usados
+      const now = new Date()
+      let planCreditsAvailable = 0
+
+      if (user.creditsExpiresAt && user.creditsExpiresAt < now) {
+        planCreditsAvailable = 0
+      } else {
+        planCreditsAvailable = Math.max(0, user.creditsLimit - user.creditsUsed)
+      }
+
+      // Pre-fetch credit packages if needed (outside transaction)
+      let validPackages: Array<{ id: string; creditAmount: number; usedCredits: number }> = []
+      let creditsNeededFromPackages = 0
+
+      if (planCreditsAvailable < amount) {
+        creditsNeededFromPackages = amount - planCreditsAvailable
+
+        // Fetch packages BEFORE transaction to reduce transaction time
+        const potentialPackages = await prisma.creditPurchase.findMany({
+          where: {
+            userId,
+            status: 'CONFIRMED',
+            isExpired: false,
+            validUntil: { gte: now },
+          },
+          orderBy: { validUntil: 'asc' },
           select: {
-            creditsUsed: true,
-            creditsLimit: true,
-            creditsBalance: true,
-            creditsExpiresAt: true,
-            billingCycle: true
+            id: true,
+            creditAmount: true,
+            usedCredits: true
           }
         })
 
-        if (!user) {
-          throw new Error('User not found')
+        validPackages = potentialPackages.filter((pkg) => pkg.usedCredits < pkg.creditAmount)
+
+        const totalPackageCredits = validPackages.reduce(
+          (sum, pkg) => sum + (pkg.creditAmount - pkg.usedCredits),
+          0
+        )
+
+        if (totalPackageCredits < creditsNeededFromPackages) {
+          return { success: false, error: 'Insufficient credits' }
         }
+      }
 
-        // VALIDAÇÃO: Créditos do plano (mensais ou anuais) expirados não podem ser usados
-        const now = new Date()
-        let planCreditsAvailable = 0
-
-        if (user.creditsExpiresAt && user.creditsExpiresAt < now) {
-          // Créditos do plano expiraram (tanto MONTHLY quanto YEARLY) - zera créditos disponíveis do plano
-          planCreditsAvailable = 0
-        } else {
-          // Calcula créditos disponíveis do PLANO (prioridade 1)
-          planCreditsAvailable = Math.max(0, user.creditsLimit - user.creditsUsed)
-        }
-
-        // Usa créditos do plano primeiro
+      // OPTIMIZED: Transaction only does the critical updates
+      const execute = async (client: Prisma.TransactionClient) => {
         if (planCreditsAvailable >= amount) {
-          // Tem créditos suficientes no plano
+          // Simple case: only plan credits needed
           updatedUserRecord = await client.user.update({
             where: { id: userId },
             data: {
@@ -202,33 +236,8 @@ export class CreditManager {
             select: { creditsUsed: true, creditsLimit: true, creditsBalance: true }
           })
         } else {
-          // Precisa usar créditos de pacotes avulsos também
-          const creditsNeededFromPackages = amount - planCreditsAvailable
-
-          // Busca pacotes de créditos válidos (não expirados)
-        const potentialPackages = await client.creditPurchase.findMany({
-            where: {
-              userId,
-              status: 'CONFIRMED',
-              isExpired: false,
-              validUntil: { gte: new Date() },
-            },
-            orderBy: { validUntil: 'asc' } // Usa os que expiram primeiro
-          })
-
-        const validPackages = potentialPackages.filter((pkg) => pkg.usedCredits < pkg.creditAmount)
-
-          // Calcula total de créditos disponíveis em pacotes
-          const totalPackageCredits = validPackages.reduce(
-            (sum, pkg) => sum + (pkg.creditAmount - pkg.usedCredits),
-            0
-          )
-
-          if (totalPackageCredits < creditsNeededFromPackages) {
-            throw new Error('Insufficient credits')
-          }
-
-          // Deduz créditos dos pacotes
+          // Complex case: need to use package credits
+          // Update credit packages (already validated outside transaction)
           let remaining = creditsNeededFromPackages
           for (const pkg of validPackages) {
             if (remaining <= 0) break
@@ -244,46 +253,21 @@ export class CreditManager {
             remaining -= toUse
           }
 
-          // Usa todos os créditos do plano
+          // Update user
           updatedUserRecord = await client.user.update({
             where: { id: userId },
             data: {
-              creditsUsed: user.creditsLimit, // Usa todo o limite
+              creditsUsed: user.creditsLimit, // Use all plan credits
               creditsBalance: { decrement: creditsNeededFromPackages }
             },
             select: { creditsUsed: true, creditsLimit: true, creditsBalance: true }
           })
         }
 
-        // Registrar transação de crédito após a dedução bem-sucedida
-        if (metadata?.type === 'IMAGE_GENERATION' && metadata.generationId) {
-          await recordImageGenerationCost(userId, metadata.generationId, amount, {
-            prompt: metadata.prompt,
-            variations: metadata.variations,
-            resolution: metadata.resolution
-          }, client)
-        } else if (metadata?.type === 'TRAINING' && metadata.modelId) {
-          await recordModelTrainingCost(userId, metadata.modelId, amount, undefined, client)
-        } else if (metadata?.type === 'IMAGE_EDIT' && metadata.editId) {
-          await recordImageEditCost(userId, metadata.editId, amount, {
-            prompt: metadata.prompt
-          }, client)
-        } else if (metadata?.type === 'VIDEO_GENERATION' && metadata.videoId) {
-          await recordVideoGenerationCost(userId, metadata.videoId, amount, {
-            duration: metadata.duration,
-            resolution: metadata.resolution
-          }, client)
-        } else if (metadata?.type === 'UPSCALE' && metadata.upscaleId) {
-          await recordUpscaleCost(userId, metadata.upscaleId, amount, undefined, client)
-        } else if (metadata?.type === 'PHOTO_PACKAGE' && metadata.userPackageId) {
-          await recordPhotoPackagePurchase(userId, metadata.userPackageId, amount, {
-            packageName: metadata.packageName
-          }, client)
-        }
-
         return updatedUserRecord
       }
 
+      // Execute transaction (now much faster since we pre-fetched data)
       if (tx) {
         await execute(tx)
       } else {
@@ -291,18 +275,57 @@ export class CreditManager {
           async (transaction) => {
             await execute(transaction)
           },
-          transactionOptions
+          transactionOptions || { timeout: 10000 } // Reduced timeout since transaction is now faster
         )
       }
 
+      // Record credit transaction OUTSIDE the main transaction (can be async)
+      // This prevents the transaction from timing out
       if (updatedUserRecord) {
-        await broadcastCreditsUpdate(
-          userId,
-          updatedUserRecord.creditsUsed,
-          updatedUserRecord.creditsLimit,
-          metadata?.type || 'GENERATION',
-          updatedUserRecord.creditsBalance
-        )
+        // Fire and forget - don't wait for this to complete
+        Promise.all([
+          // Record transaction (async, non-blocking)
+          (async () => {
+            try {
+              if (metadata?.type === 'IMAGE_GENERATION' && metadata.generationId) {
+                await recordImageGenerationCost(userId, metadata.generationId, amount, {
+                  prompt: metadata.prompt,
+                  variations: metadata.variations,
+                  resolution: metadata.resolution
+                })
+              } else if (metadata?.type === 'TRAINING' && metadata.modelId) {
+                await recordModelTrainingCost(userId, metadata.modelId, amount)
+              } else if (metadata?.type === 'IMAGE_EDIT' && metadata.editId) {
+                await recordImageEditCost(userId, metadata.editId, amount, {
+                  prompt: metadata.prompt
+                })
+              } else if (metadata?.type === 'VIDEO_GENERATION' && metadata.videoId) {
+                await recordVideoGenerationCost(userId, metadata.videoId, amount, {
+                  duration: metadata.duration,
+                  resolution: metadata.resolution
+                })
+              } else if (metadata?.type === 'UPSCALE' && metadata.upscaleId) {
+                await recordUpscaleCost(userId, metadata.upscaleId, amount)
+              } else if (metadata?.type === 'PHOTO_PACKAGE' && metadata.userPackageId) {
+                await recordPhotoPackagePurchase(userId, metadata.userPackageId, amount, {
+                  packageName: metadata.packageName
+                })
+              }
+            } catch (error) {
+              console.error('⚠️ Failed to record credit transaction (non-critical):', error)
+            }
+          })(),
+          // Broadcast update (async, non-blocking)
+          broadcastCreditsUpdate(
+            userId,
+            updatedUserRecord.creditsUsed,
+            updatedUserRecord.creditsLimit,
+            metadata?.type || 'GENERATION',
+            updatedUserRecord.creditsBalance
+          ).catch(err => console.error('⚠️ Failed to broadcast credits update:', err))
+        ]).catch(() => {
+          // Ignore errors in async operations
+        })
 
         try {
           revalidateTag(`user-${userId}-credits`)
