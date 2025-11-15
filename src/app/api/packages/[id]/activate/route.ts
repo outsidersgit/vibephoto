@@ -163,20 +163,21 @@ export async function POST(
           console.log(`✅ Package is ${reconciledPackage.status}, allowing reactivation by updating existing package`)
           
           // Check if credits were already deducted for this package
-          const existingCreditTransactions = await prisma.creditTransaction.findMany({
+          // Query all transactions for this package and filter manually to avoid Prisma type issues
+          const allTransactions = await prisma.creditTransaction.findMany({
             where: {
               userId,
-              referenceId: reconciledPackage.id,
-              type: 'SPENT',
-              source: 'GENERATION'
+              referenceId: reconciledPackage.id
             },
             orderBy: { createdAt: 'desc' }
           })
           
-          // Check if any transaction has PHOTO_PACKAGE metadata
-          const existingCreditTransaction = existingCreditTransactions.find(tx => {
+          // Filter for SPENT transactions with GENERATION source and PHOTO_PACKAGE metadata
+          const existingCreditTransaction = allTransactions.find(tx => {
             const metadata = tx.metadata as any
-            return metadata?.type === 'PHOTO_PACKAGE'
+            return tx.type === 'SPENT' && 
+                   tx.source === 'GENERATION' && 
+                   metadata?.type === 'PHOTO_PACKAGE'
           })
           
           // Update the existing package to reactivate it
