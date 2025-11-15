@@ -174,29 +174,98 @@ export async function POST(
             }
           }
         }, { status: 409 }) // 409 Conflict
-      } else if (existingUserPackage.status === 'ACTIVE') {
-        // If status is ACTIVE but no generations are processing, it might be stuck
-        if (activeGenerations === 0 && completedGenerations === 0) {
-          console.warn('⚠️ Package is ACTIVE but has no generations. It might be stuck.')
-          // Optionally, we could trigger batch generation here, but for now just inform the user
-          return NextResponse.json({
-            error: 'Este pacote está ativo mas não há gerações em andamento. Entre em contato com o suporte ou aguarde alguns minutos.',
-            existingPackage: {
-              id: existingUserPackage.id,
-              status: existingUserPackage.status,
-              generatedImages: existingUserPackage.generatedImages,
-              totalImages: existingUserPackage.totalImages,
-              progress: {
-                active: activeGenerations,
-                completed: completedGenerations,
-                failed: failedGenerations
-              }
+      } else if (existingUserPackage.status === 'ACTIVE' || existingUserPackage.status === 'GENERATING') {
+        // Check if package is stuck (no generations created or all failed)
+        const totalGenerations = activeGenerations + completedGenerations + failedGenerations
+        
+        if (totalGenerations === 0) {
+          // Package is stuck - no generations were ever created
+          console.warn('⚠️ Package is stuck - no generations were created. Attempting to restart batch generation...')
+          
+          // Try to restart batch generation
+          try {
+            const baseUrl = process.env.NEXTAUTH_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+            const batchGenerationUrl = `${baseUrl}/api/packages/generate-batch`
+            
+            console.log('🔄 Retrying batch generation for stuck package...', {
+              userPackageId: existingUserPackage.id,
+              url: batchGenerationUrl
+            })
+            
+            const batchResponse = await fetch(batchGenerationUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Internal-Request': 'true'
+              },
+              body: JSON.stringify({
+                userPackageId: existingUserPackage.id,
+                userId,
+                packageId,
+                modelId,
+                aspectRatio
+              })
+            })
+
+            if (batchResponse.ok) {
+              const batchResult = await batchResponse.json()
+              console.log('✅ Successfully restarted batch generation:', batchResult)
+              
+              // Update package status to GENERATING
+              await prisma.userPackage.update({
+                where: { id: existingUserPackage.id },
+                data: { status: 'GENERATING' }
+              })
+              
+              return NextResponse.json({
+                success: true,
+                message: 'Pacote travado detectado. Geração reiniciada com sucesso!',
+                existingPackage: {
+                  id: existingUserPackage.id,
+                  status: 'GENERATING',
+                  generatedImages: existingUserPackage.generatedImages,
+                  totalImages: existingUserPackage.totalImages
+                }
+              })
+            } else {
+              const errorText = await batchResponse.text()
+              console.error('❌ Failed to restart batch generation:', errorText)
+              
+              return NextResponse.json({
+                error: 'Pacote travado detectado, mas não foi possível reiniciar a geração. Entre em contato com o suporte.',
+                existingPackage: {
+                  id: existingUserPackage.id,
+                  status: existingUserPackage.status,
+                  generatedImages: existingUserPackage.generatedImages,
+                  totalImages: existingUserPackage.totalImages,
+                  progress: {
+                    active: activeGenerations,
+                    completed: completedGenerations,
+                    failed: failedGenerations
+                  }
+                },
+                retryError: errorText.substring(0, 200)
+              }, { status: 500 })
             }
-          }, { status: 409 })
+          } catch (retryError) {
+            console.error('💥 Error retrying batch generation:', retryError)
+            return NextResponse.json({
+              error: 'Pacote travado detectado, mas ocorreu um erro ao tentar reiniciar. Entre em contato com o suporte.',
+              existingPackage: {
+                id: existingUserPackage.id,
+                status: existingUserPackage.status,
+                generatedImages: existingUserPackage.generatedImages,
+                totalImages: existingUserPackage.totalImages
+              }
+            }, { status: 500 })
+          }
         }
         
+        // Package has generations, return normal conflict message
         return NextResponse.json({
-          error: 'Este pacote já está ativo. Você não pode ativar o mesmo pacote múltiplas vezes.',
+          error: existingUserPackage.status === 'GENERATING' 
+            ? 'Este pacote já está sendo processado. Aguarde a conclusão da geração anterior.'
+            : 'Este pacote já está ativo. Você não pode ativar o mesmo pacote múltiplas vezes.',
           existingPackage: {
             id: existingUserPackage.id,
             status: existingUserPackage.status,
