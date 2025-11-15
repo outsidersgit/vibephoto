@@ -295,3 +295,115 @@ export async function recordPhotoPackagePurchase(
     metadata
   })
 }
+
+/**
+ * Reembolsa créditos de um pacote de fotos quando todas as gerações falham
+ * IMPORTANTE: Esta função deve ser chamada apenas quando TODAS as gerações do pacote falharam
+ */
+export async function refundPhotoPackageCredits(
+  userId: string,
+  userPackageId: string,
+  creditsToRefund: number,
+  metadata?: { packageName?: string; reason?: string }
+) {
+  // Verificar se já houve reembolso para este pacote (evitar duplicação)
+  // Buscar transações de reembolso para este pacote
+  const existingRefunds = await prisma.creditTransaction.findMany({
+    where: {
+      userId,
+      type: 'REFUNDED',
+      source: 'REFUND',
+      referenceId: userPackageId
+    }
+  })
+
+  // Verificar se alguma transação tem metadata indicando reembolso de pacote
+  const existingRefund = existingRefunds.find(tx => {
+    const metadata = tx.metadata as any
+    return metadata?.type === 'PHOTO_PACKAGE_REFUND'
+  })
+
+  if (existingRefund) {
+    console.log(`⚠️ Package ${userPackageId} already refunded, skipping duplicate refund`)
+    return {
+      success: false,
+      message: 'Pacote já foi reembolsado anteriormente',
+      transaction: existingRefund
+    }
+  }
+
+  // Buscar o usuário para atualizar créditos
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      creditsUsed: true,
+      creditsLimit: true,
+      creditsBalance: true
+    }
+  })
+
+  if (!user) {
+    throw new Error('Usuário não encontrado')
+  }
+
+  // Calcular como reembolsar (priorizar créditos do plano, depois créditos avulsos)
+  const planCreditsUsed = user.creditsUsed
+  const planCreditsLimit = user.creditsLimit
+  const purchasedCredits = user.creditsBalance || 0
+
+  // Reembolsar primeiro os créditos do plano (se foram usados)
+  let planCreditsToRefund = 0
+  let purchasedCreditsToRefund = 0
+
+  if (planCreditsUsed > 0) {
+    // Se o usuário usou créditos do plano, reembolsar esses primeiro
+    planCreditsToRefund = Math.min(creditsToRefund, planCreditsUsed)
+    purchasedCreditsToRefund = creditsToRefund - planCreditsToRefund
+  } else {
+    // Se não usou créditos do plano, reembolsar créditos avulsos
+    purchasedCreditsToRefund = creditsToRefund
+  }
+
+  // Atualizar créditos do usuário
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      creditsUsed: {
+        decrement: planCreditsToRefund
+      },
+      creditsBalance: {
+        increment: purchasedCreditsToRefund
+      }
+    }
+  })
+
+  // Registrar transação de reembolso
+  const transaction = await createCreditTransaction({
+    userId,
+    type: 'REFUNDED',
+    source: 'REFUND',
+    amount: Math.abs(creditsToRefund), // Sempre positivo (reembolso adiciona créditos)
+    description: `Reembolso de pacote de fotos${metadata?.packageName ? `: ${metadata.packageName}` : ''}${metadata?.reason ? ` - ${metadata.reason}` : ''}`,
+    referenceId: userPackageId,
+    metadata: {
+      type: 'PHOTO_PACKAGE_REFUND',
+      packageName: metadata?.packageName,
+      reason: metadata?.reason || 'Todas as gerações falharam',
+      planCreditsRefunded: planCreditsToRefund,
+      purchasedCreditsRefunded: purchasedCreditsToRefund
+    }
+  })
+
+  console.log(`💰 Refunded ${creditsToRefund} credits for package ${userPackageId} (plan: ${planCreditsToRefund}, purchased: ${purchasedCreditsToRefund})`)
+
+  return {
+    success: true,
+    message: 'Créditos reembolsados com sucesso',
+    transaction,
+    refundDetails: {
+      total: creditsToRefund,
+      planCredits: planCreditsToRefund,
+      purchasedCredits: purchasedCreditsToRefund
+    }
+  }
+}

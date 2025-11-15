@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { broadcastModelStatusChange } from '@/lib/services/realtime-service'
 import { refundModelCreationCredits } from '@/lib/services/model-credit-service'
 import { reconcileUserPackageStatus } from '@/lib/services/package-reconciliation'
+import { refundPhotoPackageCredits } from '@/lib/services/credit-transaction-service'
 
 interface AstriaWebhookPayload {
   id: string
@@ -473,6 +474,61 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
         const reconciliation = await reconcileUserPackageStatus(generation.packageId)
         if (reconciliation.updated) {
           console.log(`✅ UserPackage ${generation.packageId} status updated: ${reconciliation.previousStatus} → ${reconciliation.newStatus}`)
+        }
+
+        // CRITICAL: If generation failed, check if all package generations failed and refund credits
+        if (internalStatus === 'FAILED') {
+          // Get the user package to check status and price
+          const userPackage = await prisma.userPackage.findUnique({
+            where: { id: generation.packageId },
+            include: {
+              package: true
+            }
+          })
+
+          if (userPackage) {
+            // Check if all generations failed (no pending/processing, no completed, only failed)
+            const stats = reconciliation.stats
+            const allFailed = stats.total > 0 && 
+                             stats.completed === 0 && 
+                             stats.pending === 0 && 
+                             stats.processing === 0 && 
+                             stats.failed === stats.total
+
+            if (allFailed) {
+              console.log(`💰 All ${stats.total} generations failed for package ${generation.packageId}, processing refund...`)
+              
+              // Get package price (credits to refund)
+              const packagePrice = userPackage.package?.price || 0
+              
+              if (packagePrice > 0) {
+                try {
+                  const refundResult = await refundPhotoPackageCredits(
+                    generation.userId,
+                    generation.packageId,
+                    packagePrice,
+                    {
+                      packageName: userPackage.package?.name,
+                      reason: `Todas as ${stats.total} gerações falharam`
+                    }
+                  )
+
+                  if (refundResult.success) {
+                    console.log(`✅ Successfully refunded ${packagePrice} credits for failed package ${generation.packageId}`)
+                  } else {
+                    console.warn(`⚠️ Refund skipped for package ${generation.packageId}: ${refundResult.message}`)
+                  }
+                } catch (refundError) {
+                  console.error('❌ Failed to refund package credits:', refundError)
+                  // Don't fail the webhook for refund errors, but log them
+                }
+              } else {
+                console.warn(`⚠️ Package ${generation.packageId} has no price set, cannot refund`)
+              }
+            } else {
+              console.log(`ℹ️ Package ${generation.packageId} has ${stats.completed} completed generations, no refund needed`)
+            }
+          }
         }
       } catch (reconcileError) {
         console.error('❌ Failed to reconcile UserPackage status:', reconcileError)
