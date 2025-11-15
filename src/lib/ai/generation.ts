@@ -46,9 +46,31 @@ export async function generateImage(params: SimpleGenerationParams, generationId
     where: { id: modelId }
   })
 
-  if (!model || !model.modelUrl) {
-    throw new Error('Model not found or not ready')
+  if (!model) {
+    throw new Error('Model not found')
   }
+
+  // Check if model is ready
+  if (model.status !== 'READY') {
+    throw new Error(`Model is not ready for generation. Current status: ${model.status}`)
+  }
+
+  // Para Astria, o modelUrl deve ser o trainingJobId (tune ID)
+  // Se modelUrl não existir, usar trainingJobId como fallback (same as normal generations)
+  const effectiveModelUrl = model.modelUrl || model.trainingJobId
+
+  if (!effectiveModelUrl) {
+    console.error(`❌ Model ${modelId} is READY but has no modelUrl or trainingJobId`)
+    throw new Error('Model configuration error: missing model URL. Please contact support.')
+  }
+
+  console.log(`✅ Model URL resolved for package generation:`, {
+    modelId: model.id,
+    modelUrl: model.modelUrl || '(null)',
+    trainingJobId: model.trainingJobId || '(null)',
+    effectiveModelUrl,
+    provider: process.env.AI_PROVIDER || 'hybrid'
+  })
 
   // Get AI provider
   const aiProvider = getAIProvider()
@@ -65,7 +87,7 @@ export async function generateImage(params: SimpleGenerationParams, generationId
 
   // Build generation request with same parameters as normal generations
   const generationRequest: GenerationRequest = {
-    modelUrl: model.modelUrl,
+    modelUrl: effectiveModelUrl,
     prompt,
     negativePrompt,
     triggerWord: model.triggerWord || undefined,
