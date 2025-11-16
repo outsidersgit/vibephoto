@@ -181,6 +181,7 @@ export async function POST(
           })
           
           // Update the existing package to reactivate it
+          console.log('🔄 Reactivating UserPackage...', { id: reconciledPackage.id })
           await prisma.userPackage.update({
             where: { id: reconciledPackage.id },
             data: {
@@ -193,6 +194,7 @@ export async function POST(
               totalImages: totalImages // Update total images in case package prompts changed
             }
           })
+          console.log('✅ UserPackage reactivated successfully')
           
           // Get the reactivated package
           const reactivatedPackage = await prisma.userPackage.findUnique({
@@ -204,8 +206,11 @@ export async function POST(
           })
           
           if (!reactivatedPackage) {
+            console.error('❌ Reactivated package not found after update')
             return NextResponse.json({ error: 'Failed to reactivate package' }, { status: 500 })
           }
+          
+          console.log('✅ Reactivated package retrieved:', { id: reactivatedPackage.id, status: reactivatedPackage.status })
           
           // If credits were not deducted yet, deduct them now
           if (!existingCreditTransaction) {
@@ -377,6 +382,7 @@ export async function POST(
 
     // Create new package if not reactivated
     if (!shouldSkipPackageCreation) {
+      console.log('📦 Creating new UserPackage...', { userId, packageId, totalImages })
       userPackage = await prisma.userPackage.create({
         data: {
           userId,
@@ -391,6 +397,7 @@ export async function POST(
           user: true
         }
       })
+      console.log('✅ UserPackage created successfully:', { id: userPackage.id, status: userPackage.status })
 
       // Deduct credits - optimized to fetch data before transaction, so timeout can be shorter
       const chargeResult = await CreditManager.deductCredits(

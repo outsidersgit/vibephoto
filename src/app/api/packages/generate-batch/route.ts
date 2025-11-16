@@ -139,8 +139,27 @@ export async function POST(request: NextRequest) {
     for (let promptIndex = 0; promptIndex < packagePrompts.length; promptIndex++) {
       const promptData = packagePrompts[promptIndex]
 
-      // Inject token and className into prompt
-      const fullPrompt = `${promptPrefix} ${promptData.text}`
+      // Remove "ohwx" and className from prompt if already present (to avoid duplication)
+      // The backend should add it automatically, so we clean the prompt first
+      let cleanPrompt = promptData.text.trim()
+      
+      // Remove "ohwx" if present (case insensitive)
+      cleanPrompt = cleanPrompt.replace(/^ohwx\s+/i, '')
+      
+      // Remove className if present at the start (common patterns: "woman,", "man,", etc.)
+      if (className) {
+        const classNamePattern = new RegExp(`^${className}\\s*,?\\s*`, 'i')
+        cleanPrompt = cleanPrompt.replace(classNamePattern, '')
+      }
+      
+      // Remove "ohwx {className}," pattern if present
+      if (className) {
+        const fullPattern = new RegExp(`^ohwx\\s+${className}\\s*,?\\s*`, 'i')
+        cleanPrompt = cleanPrompt.replace(fullPattern, '')
+      }
+
+      // Inject token and className into prompt (backend adds it)
+      const fullPrompt = `${promptPrefix} ${cleanPrompt}`
 
       console.log(`📝 Prompt ${promptIndex + 1}/20:`, {
         original: promptData.text,
@@ -207,18 +226,39 @@ export async function POST(request: NextRequest) {
         })
 
       } catch (error) {
-        console.error(`Failed to create generation for prompt ${promptIndex}:`, error)
+        console.error(`❌ Failed to create generation for prompt ${promptIndex + 1}/${packagePrompts.length}:`, error)
+        console.error(`❌ Error details:`, {
+          promptIndex,
+          promptText: promptData.text.substring(0, 100),
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
+        })
 
         // Update failed images count (increment by 1 since each prompt generates 1 image)
-        await prisma.userPackage.update({
-          where: { id: userPackageId },
-          data: {
-            failedImages: {
-              increment: 1
+        try {
+          await prisma.userPackage.update({
+            where: { id: userPackageId },
+            data: {
+              failedImages: {
+                increment: 1
+              }
             }
-          }
-        })
+          })
+        } catch (updateError) {
+          console.error(`❌ Failed to update failedImages count:`, updateError)
+        }
       }
+    }
+
+    console.log(`✅ Batch generation summary:`, {
+      totalPrompts: packagePrompts.length,
+      generationsCreated: generations.length,
+      expectedImages: userPackage.totalImages,
+      successRate: `${Math.round((generations.length / packagePrompts.length) * 100)}%`
+    })
+
+    if (generations.length < packagePrompts.length) {
+      console.warn(`⚠️ Only ${generations.length} of ${packagePrompts.length} generations were created successfully`)
     }
 
     return NextResponse.json({
@@ -227,6 +267,7 @@ export async function POST(request: NextRequest) {
       userPackageId,
       generationsCreated: generations.length,
       totalImagesExpected: userPackage.totalImages, // Use totalImages from UserPackage
+      totalPrompts: packagePrompts.length,
       generations: generations.map(g => ({
         id: g.id,
         promptIndex: g.packagePromptIndex,
