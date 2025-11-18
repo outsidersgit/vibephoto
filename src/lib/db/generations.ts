@@ -177,6 +177,8 @@ export async function createGeneration(data: {
     })
 
     return generation
+  }, {
+    timeout: 15000 // 15 seconds - enough time for credit deduction and usage log creation
   })
 }
 
