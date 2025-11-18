@@ -111,7 +111,7 @@ export function PackageProgressPanel() {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-gray-800">Pacotes em andamento</h3>
+      <h3 className="text-sm font-semibold text-white">Pacotes em andamento</h3>
       <div className="grid gap-3">
         {visiblePackages.map((pkg) => {
           const progress = Math.min(100, Math.round(((pkg.generatedImages || 0) / (pkg.totalImages || 1)) * 100))
