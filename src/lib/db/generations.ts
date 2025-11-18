@@ -162,24 +162,32 @@ export async function createGeneration(data: {
       throw new Error(chargeResult.error || 'Failed to deduct credits')
     }
 
-    await tx.usageLog.create({
-      data: {
-        userId: data.userId,
-        action: 'generation',
-        details: {
-          generationId: generation.id,
-          modelId: data.modelId,
-          variations: data.variations,
-          resolution: data.resolution
-        },
-        creditsUsed: creditsNeeded
-      }
-    })
+    // Note: usageLog creation moved outside transaction for performance
+    // It's not critical for atomicity and can be created asynchronously
 
     return generation
   }, {
-    timeout: 15000 // 15 seconds - enough time for credit deduction and usage log creation
+    timeout: 20000 // 20 seconds - enough time for credit deduction
   })
+
+  // Create usage log outside transaction (non-blocking, fire-and-forget)
+  prisma.usageLog.create({
+    data: {
+      userId: data.userId,
+      action: 'generation',
+      details: {
+        generationId: generation.id,
+        modelId: data.modelId,
+        variations: data.variations,
+        resolution: data.resolution
+      },
+      creditsUsed: creditsNeeded
+    }
+  }).catch(error => {
+    console.error('⚠️ Failed to create usage log (non-critical):', error)
+  })
+
+  return generation
 }
 
 export async function getGenerationsByUserId(

@@ -23,6 +23,7 @@ import {
 import { EnhancedPhotoPackage } from '@/types'
 import { usePackages } from '@/hooks/usePackages'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
+import { PackageProgressPanel } from '@/components/generation/package-progress'
 
 interface PackagesPageClientProps {
   initialPackages?: EnhancedPhotoPackage[]
@@ -116,6 +117,9 @@ export function PackagesPageClient({ initialPackages = [] }: PackagesPageClientP
 
   return (
     <div className="space-y-6">
+      {/* Package Progress Panel - Mostra apenas pacotes em andamento (ACTIVE ou GENERATING) */}
+      <PackageProgressPanel />
+
       {/* Loading Skeleton (apenas se não há dados iniciais) */}
       {showLoadingSkeleton && (
         <>

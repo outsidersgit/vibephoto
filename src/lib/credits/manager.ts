@@ -238,20 +238,29 @@ export class CreditManager {
         } else {
           // Complex case: need to use package credits
           // Update credit packages (already validated outside transaction)
+          // OPTIMIZED: Calculate all updates first, then execute in parallel
+          const packageUpdates: Array<{ id: string; amount: number }> = []
           let remaining = creditsNeededFromPackages
+          
           for (const pkg of validPackages) {
             if (remaining <= 0) break
 
             const available = pkg.creditAmount - pkg.usedCredits
             const toUse = Math.min(available, remaining)
 
-            await client.creditPurchase.update({
-              where: { id: pkg.id },
-              data: { usedCredits: { increment: toUse } }
-            })
-
+            packageUpdates.push({ id: pkg.id, amount: toUse })
             remaining -= toUse
           }
+
+          // OPTIMIZED: Execute all package updates in parallel
+          await Promise.all(
+            packageUpdates.map(update =>
+              client.creditPurchase.update({
+                where: { id: update.id },
+                data: { usedCredits: { increment: update.amount } }
+              })
+            )
+          )
 
           // Update user
           updatedUserRecord = await client.user.update({

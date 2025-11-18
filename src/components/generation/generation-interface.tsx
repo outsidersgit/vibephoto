@@ -19,7 +19,6 @@ import {
 import { PromptInput } from './prompt-input'
 import { GenerationSettings } from './generation-settings'
 import { PromptExamples } from './prompt-examples'
-import { PackageProgressPanel } from './package-progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useInvalidateCredits } from '@/hooks/useCredits'
@@ -987,9 +986,6 @@ export function GenerationInterface({
         </div>
       </div>
 
-      <div className="mt-10">
-        <PackageProgressPanel />
-      </div>
 
       <Dialog open={isPreviewLightboxOpen} onOpenChange={setIsPreviewLightboxOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden p-0">
