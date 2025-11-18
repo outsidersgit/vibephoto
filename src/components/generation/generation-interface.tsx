@@ -986,6 +986,31 @@ export function GenerationInterface({
         </div>
       </div>
 
+      {/* Preview Block - Centralized, same format as image-editor */}
+      {previewMedia && (
+        <div ref={previewContainerRef} className="mt-10">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+            Resultado recente
+          </h3>
+          <div className="max-w-3xl mx-auto">
+            <div
+              className="relative group cursor-pointer rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-md"
+              onClick={() => setIsPreviewLightboxOpen(true)}
+            >
+              <img
+                src={previewMedia.url}
+                alt="Resultado gerado"
+                className="w-full h-auto object-cover max-h-96"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="px-4 py-2 bg-white/85 text-gray-900 text-sm font-semibold rounded-full">
+                  Clique para ver em tela cheia
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Dialog open={isPreviewLightboxOpen} onOpenChange={setIsPreviewLightboxOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden p-0">
