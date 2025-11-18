@@ -116,56 +116,52 @@ export async function createGeneration(data: {
   // Calculate credits needed (10 credits per image, variations determines how many images)
   const creditsNeeded = getImageGenerationCost(data.variations || 1)
 
-  // Start transaction to ensure atomicity
-  return prisma.$transaction(async (tx) => {
-    // Create the generation (credits will be debited after creation using same transaction)
-    // OPTIMIZED: Removed include to reduce transaction time (model data not needed in transaction)
-    const generation = await tx.generation.create({
-      data: {
-        ...data,
-        status: GenerationStatus.PENDING,
-        imageUrls: [],
-        thumbnailUrls: [],
-        estimatedCost: creditsNeeded,
-        operationType: 'generation',
-        metadata: {
-          source: 'generation',
-          variations: data.variations || 1,
-          prompt: data.prompt,
-          aiProvider: data.aiProvider || 'hybrid'
-        },
-        // Set AI provider based on current configuration
-        aiProvider: data.aiProvider || 'hybrid',
-        astriaEnhancements: data.astriaEnhancements
-      }
-      // Removed include - not needed in transaction, can be fetched later if needed
-    })
-
-    const chargeResult = await CreditManager.deductCredits(
-      data.userId,
-      creditsNeeded,
-      'Geração de imagem',
-      {
-        type: 'IMAGE_GENERATION',
-        generationId: generation.id,
+  // REFACTORED: Create generation first (fast transaction, no credit deduction)
+  // Then deduct credits outside transaction (with rollback if fails)
+  const generation = await prisma.generation.create({
+    data: {
+      ...data,
+      status: GenerationStatus.PENDING,
+      imageUrls: [],
+      thumbnailUrls: [],
+      estimatedCost: creditsNeeded,
+      operationType: 'generation',
+      metadata: {
+        source: 'generation',
+        variations: data.variations || 1,
         prompt: data.prompt,
-        variations: data.variations,
-        resolution: data.resolution
+        aiProvider: data.aiProvider || 'hybrid'
       },
-      tx
-    )
-
-    if (!chargeResult.success) {
-      throw new Error(chargeResult.error || 'Failed to deduct credits')
+      // Set AI provider based on current configuration
+      aiProvider: data.aiProvider || 'hybrid',
+      astriaEnhancements: data.astriaEnhancements
     }
-
-    // Note: usageLog creation moved outside transaction for performance
-    // It's not critical for atomicity and can be created asynchronously
-
-    return generation
-  }, {
-    timeout: 30000 // 30 seconds - enough time for credit deduction and usage log creation
   })
+
+  // Deduct credits OUTSIDE transaction (much faster, avoids timeout)
+  const chargeResult = await CreditManager.deductCredits(
+    data.userId,
+    creditsNeeded,
+    'Geração de imagem',
+    {
+      type: 'IMAGE_GENERATION',
+      generationId: generation.id,
+      prompt: data.prompt,
+      variations: data.variations,
+      resolution: data.resolution
+    }
+    // No transaction client - creates its own fast transaction
+  )
+
+  // If credit deduction fails, rollback by deleting the generation
+  if (!chargeResult.success) {
+    await prisma.generation.delete({
+      where: { id: generation.id }
+    }).catch(deleteError => {
+      console.error('⚠️ Failed to delete generation after credit deduction failure:', deleteError)
+    })
+    throw new Error(chargeResult.error || 'Failed to deduct credits')
+  }
 
   // Create usage log outside transaction (non-blocking, fire-and-forget)
   prisma.usageLog.create({
