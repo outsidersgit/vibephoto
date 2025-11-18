@@ -197,14 +197,17 @@ export class CreditManager {
         creditsNeededFromPackages = amount - planCreditsAvailable
 
         // Fetch packages BEFORE transaction to reduce transaction time
+        // OPTIMIZED: Limit to first 50 packages to avoid slow queries
+        // This should be more than enough for any user
         const potentialPackages = await prisma.creditPurchase.findMany({
           where: {
             userId,
             status: 'CONFIRMED',
             isExpired: false,
-            validUntil: { gte: now },
+            validUntil: { gte: now }
           },
           orderBy: { validUntil: 'asc' },
+          take: 50, // Limit to 50 packages max (should be more than enough)
           select: {
             id: true,
             creditAmount: true,

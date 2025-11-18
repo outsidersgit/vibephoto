@@ -26,6 +26,7 @@ export function PackageProgressPanel() {
   const [isLoading, setIsLoading] = useState(true)
   const [completedPackages, setCompletedPackages] = useState<Set<string>>(new Set())
   const previousPackagesRef = useRef<UserPackageSummary[]>([])
+  const isInitialLoadRef = useRef(true) // Flag para identificar primeira carga
   const { addToast } = useToast()
 
   const loadPackages = async () => {
@@ -35,7 +36,15 @@ export function PackageProgressPanel() {
         throw new Error('Failed to load packages')
       }
       const payload = await response.json()
-      setPackages(payload.userPackages || [])
+      const loadedPackages = payload.userPackages || []
+      setPackages(loadedPackages)
+      
+      // Na primeira carga, inicializar previousPackagesRef com os dados carregados
+      // Isso evita que pacotes já completados sejam tratados como "novos"
+      if (isInitialLoadRef.current) {
+        previousPackagesRef.current = loadedPackages
+        isInitialLoadRef.current = false
+      }
     } catch (error) {
       console.error('Failed to load user packages:', error)
     } finally {
@@ -50,7 +59,13 @@ export function PackageProgressPanel() {
   }, [])
 
   // Detectar quando um pacote completa e mostrar notificação
+  // IMPORTANTE: Só detectar mudanças REAIS de status (não na primeira carga)
   useEffect(() => {
+    // Ignorar primeira carga (já foi tratada no loadPackages)
+    if (isInitialLoadRef.current || isLoading) {
+      return
+    }
+
     const previousPackages = previousPackagesRef.current
     const currentPackages = packages
 
@@ -59,8 +74,15 @@ export function PackageProgressPanel() {
       if (currentPkg.status === 'COMPLETED') {
         const previousPkg = previousPackages.find((p) => p.id === currentPkg.id)
         
-        // Se o pacote não estava COMPLETED antes, é uma nova conclusão
-        if (!previousPkg || previousPkg.status !== 'COMPLETED') {
+        // Só considerar uma mudança real se:
+        // 1. O pacote existia antes E estava em ACTIVE ou GENERATING
+        // 2. Agora está COMPLETED
+        // Isso evita mostrar pacotes já completados na primeira carga
+        const wasInProgress = previousPkg && 
+          (previousPkg.status === 'ACTIVE' || previousPkg.status === 'GENERATING')
+        const isNowCompleted = currentPkg.status === 'COMPLETED'
+        
+        if (wasInProgress && isNowCompleted) {
           // Adicionar aos pacotes completados para mostrar por mais tempo
           setCompletedPackages((prev) => new Set(prev).add(currentPkg.id))
           
@@ -93,7 +115,7 @@ export function PackageProgressPanel() {
 
     // Atualizar referência para próxima verificação
     previousPackagesRef.current = currentPackages
-  }, [packages, addToast])
+  }, [packages, addToast, isLoading])
 
   const visiblePackages = useMemo(() => {
     // Mostrar pacotes em andamento (ACTIVE ou GENERATING)

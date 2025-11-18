@@ -119,6 +119,7 @@ export async function createGeneration(data: {
   // Start transaction to ensure atomicity
   return prisma.$transaction(async (tx) => {
     // Create the generation (credits will be debited after creation using same transaction)
+    // OPTIMIZED: Removed include to reduce transaction time (model data not needed in transaction)
     const generation = await tx.generation.create({
       data: {
         ...data,
@@ -136,12 +137,8 @@ export async function createGeneration(data: {
         // Set AI provider based on current configuration
         aiProvider: data.aiProvider || 'hybrid',
         astriaEnhancements: data.astriaEnhancements
-      },
-      include: {
-        model: {
-          select: { id: true, name: true, class: true }
-        }
       }
+      // Removed include - not needed in transaction, can be fetched later if needed
     })
 
     const chargeResult = await CreditManager.deductCredits(
@@ -167,7 +164,7 @@ export async function createGeneration(data: {
 
     return generation
   }, {
-    timeout: 20000 // 20 seconds - enough time for credit deduction
+    timeout: 30000 // 30 seconds - enough time for credit deduction and usage log creation
   })
 
   // Create usage log outside transaction (non-blocking, fire-and-forget)
