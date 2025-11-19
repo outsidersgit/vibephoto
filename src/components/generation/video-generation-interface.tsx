@@ -49,6 +49,14 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
   const [monitoringVideoId, setMonitoringVideoId] = useState<string | null>(null)
   const { invalidateBalance } = useInvalidateCredits()
+  const previewContainerRef = useRef<HTMLDivElement | null>(null)
+  
+  // Auto-scroll to preview when it appears (same as image generation)
+  useEffect(() => {
+    if (previewMedia && previewContainerRef.current) {
+      previewContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [previewMedia])
 
   const resetFormAfterSuccess = () => {
     setFormData({
@@ -877,29 +885,30 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         </div>
                   </div>
 
+      {/* Preview Block - Centralized, same format as image generation */}
       {previewMedia && (
-        <Card className="mt-6 border-gray-200 bg-white rounded-lg shadow-lg">
-          <CardContent className="p-4">
-            <h3 className="text-base font-semibold text-gray-900 mb-3 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-              Vídeo gerado recentemente
-                    </h3>
+        <div ref={previewContainerRef} className="mt-10">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+            Resultado recente
+          </h3>
+          <div className="max-w-3xl mx-auto">
             <div
-              className="relative group cursor-pointer rounded-2xl overflow-hidden border border-gray-200 bg-black"
+              className="relative group cursor-pointer rounded-2xl overflow-hidden border border-gray-200 bg-black shadow-md"
               onClick={() => setIsPreviewLightboxOpen(true)}
             >
               <video
                 src={previewMedia.url}
-                className="w-full h-auto max-h-[24rem] object-cover"
+                className="w-full h-auto object-cover max-h-96"
                 controls
               />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="px-4 py-2 bg-white/90 text-gray-900 text-sm font-semibold rounded-full">
-                  Tocar em tela cheia
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="px-4 py-2 bg-white/85 text-gray-900 text-sm font-semibold rounded-full">
+                  Clique para ver em tela cheia
                 </span>
               </div>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+        </div>
       )}
 
       <Dialog open={isPreviewLightboxOpen} onOpenChange={setIsPreviewLightboxOpen}>
