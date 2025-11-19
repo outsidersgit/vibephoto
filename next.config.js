@@ -61,6 +61,31 @@ const nextConfig = {
     // 👇 desativa o sistema de rotas tipadas (origem do bug no Next 15)
     typedRoutes: false,
   },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Exclude ffmpeg-related modules from server bundle to avoid build issues
+      // These will be loaded dynamically at runtime if needed
+      config.externals = config.externals || []
+      
+      // Make externals a function that checks the request
+      const originalExternals = config.externals
+      config.externals = [
+        ...(Array.isArray(originalExternals) ? originalExternals : [originalExternals]),
+        ({ request }, callback) => {
+          // Exclude ffmpeg modules
+          if (
+            request === 'fluent-ffmpeg' ||
+            request === '@ffmpeg-installer/ffmpeg' ||
+            request?.includes('@ffmpeg-installer')
+          ) {
+            return callback(null, `commonjs ${request}`)
+          }
+          callback()
+        }
+      ]
+    }
+    return config
+  },
 }
 
 module.exports = withBundleAnalyzer(nextConfig)

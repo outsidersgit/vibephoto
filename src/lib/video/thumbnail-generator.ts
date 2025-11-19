@@ -1,7 +1,5 @@
 import sharp from 'sharp'
 import { getStorageProvider } from '../storage/utils'
-import ffmpeg from 'fluent-ffmpeg'
-import { path as ffmpegPath } from '@ffmpeg-installer/ffmpeg'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
@@ -95,6 +93,7 @@ async function tryFindExistingThumbnail(videoUrl: string): Promise<string | null
 
 /**
  * Extract frame from video and upload as thumbnail using ffmpeg
+ * Uses dynamic import to avoid build-time issues with ffmpeg binaries
  */
 async function extractVideoFrame(
   videoUrl: string,
@@ -104,89 +103,22 @@ async function extractVideoFrame(
   try {
     console.log('🎬 Attempting to extract video frame using ffmpeg...')
 
-    // Set ffmpeg path
-    ffmpeg.setFfmpegPath(ffmpegPath)
-
-    // Download video to temporary file
-    const videoResponse = await fetch(videoUrl, {
-      headers: { 'User-Agent': 'VibePhoto/1.0' }
-    })
-
-    if (!videoResponse.ok) {
-      console.log('⚠️ Could not download video for frame extraction')
-      return await generateSmartThumbnail(videoGenId, userId, videoUrl) // Fallback to placeholder
+    // Check if we're in a serverless environment (Vercel) - ffmpeg may not be available
+    // In serverless, we'll use the fallback thumbnail generator
+    const isServerless = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME
+    
+    if (isServerless) {
+      console.log('⚠️ Serverless environment detected, using fallback thumbnail (ffmpeg not available)')
+      return await generateSmartThumbnail(videoGenId, userId, videoUrl)
     }
 
-    // Create temporary files
-    const tempDir = os.tmpdir()
-    const tempVideoPath = path.join(tempDir, `video_${videoGenId}_${Date.now()}.mp4`)
-    const tempThumbnailPath = path.join(tempDir, `thumb_${videoGenId}_${Date.now()}.jpg`)
-
+    // Dynamic import of ffmpeg extractor (only at runtime, never during build)
     try {
-      // Download video to temp file
-      const videoBuffer = Buffer.from(await videoResponse.arrayBuffer())
-      await fs.promises.writeFile(tempVideoPath, videoBuffer)
-
-      // Extract frame at 1 second (or 10% of video duration, whichever is smaller)
-      await new Promise<void>((resolve, reject) => {
-        ffmpeg(tempVideoPath)
-          .screenshots({
-            timestamps: ['00:00:01'], // Extract frame at 1 second
-            filename: path.basename(tempThumbnailPath),
-            folder: path.dirname(tempThumbnailPath),
-            size: '640x360' // 16:9 aspect ratio
-          })
-          .on('end', () => {
-            console.log('✅ Frame extracted successfully')
-            resolve()
-          })
-          .on('error', (err) => {
-            console.error('❌ FFmpeg error:', err)
-            reject(err)
-          })
-      })
-
-      // Read extracted thumbnail
-      const thumbnailBuffer = await fs.promises.readFile(tempThumbnailPath)
-
-      // Upload thumbnail
-      const storage = getStorageProvider()
-      const thumbnailKey = `generated/${userId}/videos/${videoGenId}_thumbnail.jpg`
-
-      let uploadResult
-      if (storage.uploadStandardized) {
-        uploadResult = await storage.uploadStandardized(
-          thumbnailBuffer,
-          userId,
-          'videos',
-          {
-            filename: `${videoGenId}_thumbnail.jpg`,
-            makePublic: true,
-            isVideo: false
-          }
-        )
-      } else {
-        uploadResult = await storage.upload(
-          thumbnailBuffer,
-          thumbnailKey,
-          {
-            filename: `thumb_${videoGenId}.jpg`,
-            makePublic: true
-          }
-        )
-      }
-
-      console.log(`✅ Video frame extracted and uploaded: ${uploadResult.url}`)
-      return uploadResult.url
-
-    } finally {
-      // Clean up temporary files
-      try {
-        await fs.promises.unlink(tempVideoPath).catch(() => {})
-        await fs.promises.unlink(tempThumbnailPath).catch(() => {})
-      } catch (cleanupError) {
-        console.warn('⚠️ Failed to cleanup temp files:', cleanupError)
-      }
+      const { extractFrameFromVideo } = await import('./ffmpeg-extractor')
+      return await extractFrameFromVideo(videoUrl, videoGenId, userId)
+    } catch (importError) {
+      console.warn('⚠️ FFmpeg extractor not available, using fallback thumbnail:', importError)
+      return await generateSmartThumbnail(videoGenId, userId, videoUrl)
     }
 
   } catch (error) {
