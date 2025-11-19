@@ -564,13 +564,13 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
     }
 
     // CRITICAL: Reconcile UserPackage status if this generation belongs to a package
-    // This ensures package status is automatically updated when generations complete/fail
-    // Check metadata first (new approach), then packageId as fallback (legacy)
-    const generationMetadata = generation.metadata as any
-    const isPackageGeneration = generationMetadata?.source === 'package' && generationMetadata?.userPackageId
-    const userPackageId = isPackageGeneration 
-      ? generationMetadata.userPackageId 
-      : generation.packageId // Legacy fallback
+        // This ensures package status is automatically updated when generations complete/fail
+        // Check metadata first (new approach), then packageId as fallback (legacy)
+        // Reuse generationMetadata already declared above
+        const isPackageGeneration = generationMetadata?.source === 'package' && generationMetadata?.userPackageId
+        const userPackageId = isPackageGeneration 
+          ? generationMetadata.userPackageId 
+          : generation.packageId // Legacy fallback
 
     if (userPackageId) {
       try {
