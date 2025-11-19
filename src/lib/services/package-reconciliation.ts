@@ -92,7 +92,8 @@ export async function reconcileUserPackageStatus(userPackageId: string): Promise
     let newStatus: PackageStatus = userPackage.status
     let shouldUpdate = false
 
-    if (total === 0) {
+    // CRITICAL: Use stats object properties, not undefined variables
+    if (stats.total === 0) {
       // No generations created - package is stuck in ACTIVE/GENERATING
       // If it's been more than 5 minutes since creation, mark as FAILED
       const createdAt = new Date(userPackage.createdAt)
@@ -108,17 +109,17 @@ export async function reconcileUserPackageStatus(userPackageId: string): Promise
         newStatus = 'ACTIVE'
         shouldUpdate = userPackage.status !== 'ACTIVE'
       }
-    } else if (pending > 0 || processing > 0) {
+    } else if (stats.pending > 0 || stats.processing > 0) {
       // Has generations in progress
       newStatus = 'GENERATING'
       shouldUpdate = userPackage.status !== 'GENERATING'
-    } else if (completed + failed === total) {
+    } else if (stats.completed + stats.failed === stats.total) {
       // All generations finished
-      if (failed === total) {
+      if (stats.failed === stats.total) {
         // All failed
         newStatus = 'FAILED'
         shouldUpdate = userPackage.status !== 'FAILED'
-      } else if (completed > 0) {
+      } else if (stats.completed > 0) {
         // At least some completed
         newStatus = 'COMPLETED'
         shouldUpdate = userPackage.status !== 'COMPLETED'
@@ -126,18 +127,18 @@ export async function reconcileUserPackageStatus(userPackageId: string): Promise
     }
 
     // Update if needed
-    if (shouldUpdate || userPackage.generatedImages !== completed || userPackage.failedImages !== failed) {
+    if (shouldUpdate || userPackage.generatedImages !== stats.completed || userPackage.failedImages !== stats.failed) {
       await prisma.userPackage.update({
         where: { id: userPackageId },
         data: {
           status: newStatus,
-          generatedImages: completed,
-          failedImages: failed,
+          generatedImages: stats.completed,
+          failedImages: stats.failed,
           ...(newStatus === 'COMPLETED' && { completedAt: new Date() }),
           ...(newStatus === 'FAILED' && !userPackage.errorMessage && {
-            errorMessage: total === 0 
+            errorMessage: stats.total === 0 
               ? 'Nenhuma geração foi criada. O pacote pode ter falhado ao iniciar.'
-              : failed === total
+              : stats.failed === stats.total
               ? 'Todas as gerações falharam.'
               : 'Pacote concluído com falhas.'
           })
@@ -146,8 +147,8 @@ export async function reconcileUserPackageStatus(userPackageId: string): Promise
 
       console.log(`✅ Reconciled package ${userPackageId}: ${previousStatus} → ${newStatus}`, {
         stats,
-        generatedImages: completed,
-        failedImages: failed
+        generatedImages: stats.completed,
+        failedImages: stats.failed
       })
 
       return {

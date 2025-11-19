@@ -226,41 +226,90 @@ export class CreditManager {
         planCreditsAvailable = Math.max(0, user.creditsLimit - user.creditsUsed)
       }
 
+      // CRITICAL: Calculate total available credits (same logic as getUserCredits)
+      const purchasedCredits = user.creditsBalance || 0
+      const totalAvailableCredits = planCreditsAvailable + purchasedCredits
+      
+      console.log(`💰 [deductCredits] Checking availability for ${amount} credits:`, {
+        userId,
+        planCreditsAvailable,
+        purchasedCredits,
+        totalAvailableCredits,
+        amount,
+        canAfford: totalAvailableCredits >= amount
+      })
+
+      // CRITICAL: Check if user has enough credits BEFORE trying to deduct
+      if (totalAvailableCredits < amount) {
+        console.error(`❌ [deductCredits] Insufficient credits:`, {
+          required: amount,
+          available: totalAvailableCredits,
+          planCredits: planCreditsAvailable,
+          purchasedCredits: purchasedCredits
+        })
+        return { 
+          success: false, 
+          error: `Insufficient credits. Required: ${amount}, Available: ${totalAvailableCredits} (Plan: ${planCreditsAvailable}, Purchased: ${purchasedCredits})`
+        }
+      }
+
       // Pre-fetch credit packages if needed (outside transaction)
+      // NOTE: We use CreditPurchase for tracking, but creditsBalance is the actual available balance
+      // If planCreditsAvailable is not enough, we need to use creditsBalance
       let validPackages: Array<{ id: string; creditAmount: number; usedCredits: number }> = []
       let creditsNeededFromPackages = 0
 
       if (planCreditsAvailable < amount) {
         creditsNeededFromPackages = amount - planCreditsAvailable
 
-        // Fetch packages BEFORE transaction to reduce transaction time
-        // OPTIMIZED: Limit to first 50 packages to avoid slow queries
-        // This should be more than enough for any user
-        const potentialPackages = await prisma.creditPurchase.findMany({
-          where: {
-            userId,
-            status: 'CONFIRMED',
-            isExpired: false,
-            validUntil: { gte: now }
-          },
-          orderBy: { validUntil: 'asc' },
-          take: 50, // Limit to 50 packages max (should be more than enough)
-          select: {
-            id: true,
-            creditAmount: true,
-            usedCredits: true
+        // CRITICAL: First check if creditsBalance is enough
+        if (purchasedCredits >= creditsNeededFromPackages) {
+          // creditsBalance is enough, no need to check CreditPurchase
+          console.log(`✅ [deductCredits] creditsBalance (${purchasedCredits}) is sufficient for additional ${creditsNeededFromPackages} credits`)
+        } else {
+          // creditsBalance not enough, check CreditPurchase packages
+          console.log(`⚠️ [deductCredits] creditsBalance (${purchasedCredits}) not enough, checking CreditPurchase packages...`)
+          
+          // Fetch packages BEFORE transaction to reduce transaction time
+          // OPTIMIZED: Limit to first 50 packages to avoid slow queries
+          const potentialPackages = await prisma.creditPurchase.findMany({
+            where: {
+              userId,
+              status: 'CONFIRMED',
+              isExpired: false,
+              validUntil: { gte: now }
+            },
+            orderBy: { validUntil: 'asc' },
+            take: 50, // Limit to 50 packages max (should be more than enough)
+            select: {
+              id: true,
+              creditAmount: true,
+              usedCredits: true
+            }
+          })
+
+          validPackages = potentialPackages.filter((pkg) => pkg.usedCredits < pkg.creditAmount)
+
+          const totalPackageCredits = validPackages.reduce(
+            (sum, pkg) => sum + (pkg.creditAmount - pkg.usedCredits),
+            0
+          )
+
+          // Total available = creditsBalance + CreditPurchase credits
+          const totalPurchasedAvailable = purchasedCredits + totalPackageCredits
+          
+          if (totalPurchasedAvailable < creditsNeededFromPackages) {
+            console.error(`❌ [deductCredits] Insufficient purchased credits:`, {
+              needed: creditsNeededFromPackages,
+              creditsBalance: purchasedCredits,
+              creditPurchaseCredits: totalPackageCredits,
+              totalPurchased: totalPurchasedAvailable
+            })
+            return { 
+              success: false, 
+              error: `Insufficient credits. Required: ${amount}, Available: ${totalAvailableCredits} (Plan: ${planCreditsAvailable}, Purchased: ${totalPurchasedAvailable})`
+            }
           }
-        })
-
-        validPackages = potentialPackages.filter((pkg) => pkg.usedCredits < pkg.creditAmount)
-
-        const totalPackageCredits = validPackages.reduce(
-          (sum, pkg) => sum + (pkg.creditAmount - pkg.usedCredits),
-          0
-        )
-
-        if (totalPackageCredits < creditsNeededFromPackages) {
-          return { success: false, error: 'Insufficient credits' }
         }
       }
 
@@ -268,6 +317,7 @@ export class CreditManager {
       const execute = async (client: Prisma.TransactionClient) => {
         if (planCreditsAvailable >= amount) {
           // Simple case: only plan credits needed
+          console.log(`💰 [deductCredits] Using only plan credits: ${amount}`)
           updatedUserRecord = await client.user.update({
             where: { id: userId },
             data: {
@@ -276,40 +326,72 @@ export class CreditManager {
             select: { creditsUsed: true, creditsLimit: true, creditsBalance: true }
           })
         } else {
-          // Complex case: need to use package credits
-          // Update credit packages (already validated outside transaction)
-          // OPTIMIZED: Calculate all updates first, then execute in parallel
-          const packageUpdates: Array<{ id: string; amount: number }> = []
-          let remaining = creditsNeededFromPackages
+          // Complex case: need to use purchased credits (creditsBalance or CreditPurchase)
+          console.log(`💰 [deductCredits] Using plan credits (${planCreditsAvailable}) + purchased credits (${creditsNeededFromPackages})`)
           
-          for (const pkg of validPackages) {
-            if (remaining <= 0) break
+          // First, use all available plan credits
+          const planCreditsToUse = planCreditsAvailable
+          const purchasedCreditsToUse = creditsNeededFromPackages
+          
+          // CRITICAL: Use creditsBalance first (it's the actual available balance)
+          // Only use CreditPurchase if creditsBalance is not enough
+          let remainingFromPurchased = purchasedCreditsToUse
+          const packageUpdates: Array<{ id: string; amount: number }> = []
+          
+          // Use creditsBalance first
+          if (purchasedCredits >= remainingFromPurchased) {
+            // creditsBalance is enough, just decrement it
+            console.log(`💰 [deductCredits] Using ${remainingFromPurchased} from creditsBalance`)
+            remainingFromPurchased = 0
+          } else {
+            // Use all creditsBalance, then use CreditPurchase for the rest
+            const fromBalance = purchasedCredits
+            remainingFromPurchased -= fromBalance
+            console.log(`💰 [deductCredits] Using ${fromBalance} from creditsBalance, ${remainingFromPurchased} from CreditPurchase`)
+            
+            // Use CreditPurchase packages for remaining
+            for (const pkg of validPackages) {
+              if (remainingFromPurchased <= 0) break
 
-            const available = pkg.creditAmount - pkg.usedCredits
-            const toUse = Math.min(available, remaining)
+              const available = pkg.creditAmount - pkg.usedCredits
+              const toUse = Math.min(available, remainingFromPurchased)
 
-            packageUpdates.push({ id: pkg.id, amount: toUse })
-            remaining -= toUse
+              packageUpdates.push({ id: pkg.id, amount: toUse })
+              remainingFromPurchased -= toUse
+            }
+            
+            if (remainingFromPurchased > 0) {
+              throw new Error(`Insufficient purchased credits. Needed: ${purchasedCreditsToUse}, Available: ${purchasedCredits}`)
+            }
           }
 
-          // OPTIMIZED: Execute all package updates in parallel
-          await Promise.all(
-            packageUpdates.map(update =>
-              client.creditPurchase.update({
-                where: { id: update.id },
-                data: { usedCredits: { increment: update.amount } }
-              })
+          // OPTIMIZED: Execute all package updates in parallel (if any)
+          if (packageUpdates.length > 0) {
+            await Promise.all(
+              packageUpdates.map(update =>
+                client.creditPurchase.update({
+                  where: { id: update.id },
+                  data: { usedCredits: { increment: update.amount } }
+                })
+              )
             )
-          )
+          }
 
-          // Update user
+          // Update user: use all plan credits + decrement creditsBalance
           updatedUserRecord = await client.user.update({
             where: { id: userId },
             data: {
               creditsUsed: user.creditsLimit, // Use all plan credits
-              creditsBalance: { decrement: creditsNeededFromPackages }
+              creditsBalance: { decrement: purchasedCreditsToUse } // Decrement purchased credits used
             },
             select: { creditsUsed: true, creditsLimit: true, creditsBalance: true }
+          })
+          
+          console.log(`✅ [deductCredits] Updated user:`, {
+            creditsUsed: updatedUserRecord.creditsUsed,
+            creditsBalance: updatedUserRecord.creditsBalance,
+            planCreditsUsed: planCreditsToUse,
+            purchasedCreditsUsed: purchasedCreditsToUse
           })
         }
 
