@@ -395,31 +395,63 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
 
     // If generation completed successfully, store images permanently BEFORE updating database
     let finalImageUrls = imageUrls
+    
+    // CRITICAL: Check if this is a package generation for logging
+    const generationMetadata = generation.metadata as any
+    const isPackageGeneration = generationMetadata?.source === 'package' && generationMetadata?.userPackageId
+    
+    console.log(`💾 [WEBHOOK_ASTRIA] Storage check for generation ${generation.id}:`, {
+      status: internalStatus,
+      imageUrlsCount: imageUrls.length,
+      isPackageGeneration,
+      userPackageId: isPackageGeneration ? generationMetadata.userPackageId : null,
+      packageId: generation.packageId || null
+    })
+    
     if (internalStatus === 'COMPLETED' && imageUrls.length > 0) {
       try {
-        console.log(`💾 Storing images permanently for generation: ${generation.id}`)
+        console.log(`💾 [WEBHOOK_ASTRIA] Storing ${imageUrls.length} images permanently for generation: ${generation.id}${isPackageGeneration ? ` (PACKAGE: ${generationMetadata.userPackageId})` : ''}`)
 
         // Import storage utility
         const { downloadAndStoreImages } = await import('@/lib/storage/utils')
 
         // Download and store images permanently
+        console.log(`📥 [WEBHOOK_ASTRIA] Calling downloadAndStoreImages with:`, {
+          imageUrlsCount: imageUrls.length,
+          generationId: generation.id,
+          userId: generation.userId,
+          firstUrl: imageUrls[0]?.substring(0, 100) + '...'
+        })
+        
         const storageResult = await downloadAndStoreImages(
           imageUrls,
           generation.id,
           generation.userId
         )
 
+        console.log(`📊 [WEBHOOK_ASTRIA] Storage result:`, {
+          success: storageResult.success,
+          permanentUrlsCount: storageResult.permanentUrls?.length || 0,
+          error: storageResult.error,
+          hasPermanentUrls: !!(storageResult.permanentUrls && storageResult.permanentUrls.length > 0)
+        })
+
         if (storageResult.success && storageResult.permanentUrls && storageResult.permanentUrls.length > 0) {
-          console.log(`✅ Successfully stored ${storageResult.permanentUrls.length} images permanently`)
+          console.log(`✅ [WEBHOOK_ASTRIA] Successfully stored ${storageResult.permanentUrls.length} images permanently for generation ${generation.id}`)
           // Use permanent URLs for database update
           finalImageUrls = storageResult.permanentUrls
         } else {
-          console.error(`⚠️ Storage failed, keeping original URLs:`, storageResult.error)
+          console.error(`❌ [WEBHOOK_ASTRIA] Storage failed for generation ${generation.id}:`, {
+            success: storageResult.success,
+            error: storageResult.error,
+            hasPermanentUrls: !!(storageResult.permanentUrls && storageResult.permanentUrls.length > 0),
+            permanentUrlsCount: storageResult.permanentUrls?.length || 0
+          })
           // Keep original URLs if storage fails
           finalImageUrls = imageUrls
         }
       } catch (storageError) {
-        console.error('❌ Storage failed with exception:', storageError)
+        console.error(`❌ [WEBHOOK_ASTRIA] Storage failed with exception for generation ${generation.id}:`, storageError)
         console.error('❌ Error name:', storageError instanceof Error ? storageError.name : 'Unknown')
         console.error('❌ Error message:', storageError instanceof Error ? storageError.message : 'Unknown')
         console.error('❌ Error stack:', storageError instanceof Error ? storageError.stack : 'No stack')
@@ -436,6 +468,12 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
           }
         })
       }
+    } else {
+      console.warn(`⚠️ [WEBHOOK_ASTRIA] Skipping storage for generation ${generation.id}:`, {
+        status: internalStatus,
+        imageUrlsCount: imageUrls.length,
+        reason: internalStatus !== 'COMPLETED' ? 'Status is not COMPLETED' : 'No image URLs'
+      })
     }
 
     // Store temporary URLs in metadata for modal display

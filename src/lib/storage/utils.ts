@@ -151,8 +151,20 @@ export async function downloadAndStoreImages(
           quality: 90
         })
 
+        if (!uploadResult || !uploadResult.url) {
+          throw new Error(`Upload failed: No URL returned from storage provider`)
+        }
+
+        if (!uploadResult || !uploadResult.url) {
+          throw new Error(`Upload failed: No URL returned from storage provider for image ${i + 1}`)
+        }
+
+        if (!uploadResult.url.startsWith('http')) {
+          throw new Error(`Upload failed: Invalid URL format returned: ${uploadResult.url}`)
+        }
+
         permanentUrls.push(uploadResult.url)
-        console.log(`✅ [STORAGE_SIMPLE] Image uploaded successfully: ${uploadResult.url}`)
+        console.log(`✅ [STORAGE_SIMPLE] Image ${i + 1} uploaded successfully: ${uploadResult.url.substring(0, 100)}...`)
 
         // Generate thumbnail using same approach
         const thumbnailBuffer = await generateThumbnailBuffer(imageBuffer)
@@ -166,8 +178,12 @@ export async function downloadAndStoreImages(
           quality: 90
         })
 
-        thumbnailUrls.push(thumbnailUpload.url)
-        console.log(`✅ [STORAGE_SIMPLE] Thumbnail uploaded: ${thumbnailUpload.url}`)
+        if (!thumbnailUpload || !thumbnailUpload.url) {
+          console.warn(`⚠️ [STORAGE_SIMPLE] Thumbnail upload failed for image ${i + 1}, continuing without thumbnail`)
+        } else {
+          thumbnailUrls.push(thumbnailUpload.url)
+          console.log(`✅ [STORAGE_SIMPLE] Thumbnail ${i + 1} uploaded: ${thumbnailUpload.url.substring(0, 100)}...`)
+        }
 
         // Add progressive delay between uploads to avoid S3 rate limits
         if (i < temporaryUrls.length - 1) {
@@ -192,6 +208,8 @@ export async function downloadAndStoreImages(
         : 'Failed to download and store any images using training pattern'
 
       console.error(`❌ [STORAGE_SIMPLE] Failed to store any images. Collected errors:`, errors)
+      console.error(`❌ [STORAGE_SIMPLE] Generation ID: ${generationId}, User ID: ${userId}`)
+      console.error(`❌ [STORAGE_SIMPLE] Temporary URLs attempted:`, temporaryUrls.map(url => url.substring(0, 100) + '...'))
       return {
         success: false,
         error: detailedError
@@ -199,6 +217,7 @@ export async function downloadAndStoreImages(
     }
 
     console.log(`🎉 [STORAGE_SIMPLE] SUCCESS! Stored ${permanentUrls.length}/${temporaryUrls.length} images using training pattern`)
+    console.log(`📊 [STORAGE_SIMPLE] Permanent URLs:`, permanentUrls.map(url => url.substring(0, 100) + '...'))
 
     return {
       success: true,
