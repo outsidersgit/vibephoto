@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { updateUserCredits } from '@/lib/db/users'
-import { generateImage } from '@/lib/ai/generation'
+import { executeGenerationFlow } from '@/lib/ai/generation-flow'
+import { Plan } from '@prisma/client'
 
 interface BatchGenerationRequest {
   userPackageId: string
@@ -132,8 +130,12 @@ export async function POST(request: NextRequest) {
       resolution
     })
 
+    // Get user plan for generation parameters
+    const userPlan = ((userPackage.user as any)?.plan || 'STARTER') as Plan
+
     // Cada prompt do pacote gera 1 foto (variations: 1)
     // Total de fotos = número de prompts do pacote
+    // Processamento SEQUENCIAL com delay de 1s entre requisições (evita rate limiting)
     const generations = []
 
     for (let promptIndex = 0; promptIndex < packagePrompts.length; promptIndex++) {
@@ -161,46 +163,17 @@ export async function POST(request: NextRequest) {
       // Inject token and className into prompt (backend adds it)
       const fullPrompt = `${promptPrefix} ${cleanPrompt}`
 
-      console.log(`📝 Prompt ${promptIndex + 1}/20:`, {
+      console.log(`📝 Prompt ${promptIndex + 1}/${packagePrompts.length}:`, {
         original: promptData.text,
         withTokenAndClass: fullPrompt
       })
 
       try {
-        // Create Generation record (one per prompt, with 1 output)
-        const generation = await prisma.generation.create({
-          data: {
-            userId,
-            modelId: aiModel.id,
-            prompt: fullPrompt,
-            negativePrompt: 'low quality, blurry, distorted, bad anatomy',
-            aspectRatio,
-            resolution,
-            variations: 1, // 1 output per generation for maximum variety
-            strength: 0.8,
-            style: promptData.style || 'photographic',
-            status: 'PENDING',
-            // Package-specific fields
-            packageId: userPackageId,
-            packagePromptIndex: promptIndex,
-            packageVariationIndex: 0,
-            operationType: 'generation',
-            storageContext: 'generated',
-            metadata: {
-              source: 'package',
-              packageId: userPackage.packageId,
-              packageName: userPackage.package?.name,
-              packagePromptIndex: promptIndex,
-              aspectRatio
-            }
-          }
-        })
-
-        generations.push(generation)
-
-        // Start generation asynchronously (don't await to allow parallel processing)
+        // Use executeGenerationFlow - same flow as normal generation
         console.log(`🎨 Starting generation ${promptIndex + 1}/${packagePrompts.length} for prompt: "${fullPrompt.substring(0, 100)}..."`)
-        generateImage({
+        
+        const result = await executeGenerationFlow({
+          userId,
           modelId: aiModel.id,
           prompt: fullPrompt,
           negativePrompt: 'low quality, blurry, distorted, bad anatomy',
@@ -208,22 +181,25 @@ export async function POST(request: NextRequest) {
           resolution,
           variations: 1, // 1 output per prompt
           strength: 0.8,
-          style: promptData.style || 'photographic'
-        }, generation.id).then(result => {
-          console.log(`✅ Generation ${promptIndex + 1} started successfully:`, result.id)
-        }).catch(error => {
-          console.error(`❌ Failed to generate image for generation ${generation.id}:`, error)
-          // Update generation status to failed
-          prisma.generation.update({
-            where: { id: generation.id },
-            data: {
-              status: 'FAILED',
-              errorMessage: error.message || 'Generation failed'
-            }
-          }).catch(updateError => {
-            console.error('Failed to update generation status:', updateError)
-          })
+          style: promptData.style || 'photographic',
+          userPlan,
+          skipCreditDeduction: true, // Credits already deducted in /activate
+          packageMetadata: {
+            source: 'package',
+            userPackageId,
+            packageId: userPackage.packageId,
+            packageName: userPackage.package?.name || undefined,
+            packagePromptIndex: promptIndex
+          }
         })
+
+        generations.push(result.generation)
+        console.log(`✅ Generation ${promptIndex + 1} started successfully:`, result.generation.id)
+
+        // Delay of 1 second between requests to avoid rate limiting (same as Astria batchGenerate)
+        if (promptIndex < packagePrompts.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        }
 
       } catch (error) {
         console.error(`❌ Failed to create generation for prompt ${promptIndex + 1}/${packagePrompts.length}:`, error)
@@ -270,7 +246,7 @@ export async function POST(request: NextRequest) {
       totalPrompts: packagePrompts.length,
       generations: generations.map(g => ({
         id: g.id,
-        promptIndex: g.packagePromptIndex,
+        promptIndex: (g.metadata as any)?.packagePromptIndex,
         variations: g.variations,
         status: g.status
       }))

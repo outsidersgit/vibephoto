@@ -41,45 +41,51 @@ export async function reconcileUserPackageStatus(userPackageId: string): Promise
 
     const previousStatus = userPackage.status
 
-    // Count generations by status
-    const [pending, processing, completed, failed, total] = await Promise.all([
-      prisma.generation.count({
-        where: {
-          packageId: userPackageId,
-          status: 'PENDING'
-        }
-      }),
-      prisma.generation.count({
-        where: {
-          packageId: userPackageId,
-          status: 'PROCESSING'
-        }
-      }),
-      prisma.generation.count({
-        where: {
-          packageId: userPackageId,
-          status: 'COMPLETED'
-        }
-      }),
-      prisma.generation.count({
-        where: {
-          packageId: userPackageId,
-          status: 'FAILED'
-        }
-      }),
-      prisma.generation.count({
-        where: {
-          packageId: userPackageId
-        }
-      })
-    ])
+    // Fetch all generations that might belong to this package
+    // Support both new approach (metadata.source === 'package' && metadata.userPackageId)
+    // and legacy approach (packageId field)
+    const allGenerations = await prisma.generation.findMany({
+      where: {
+        OR: [
+          { packageId: userPackageId }, // Legacy approach
+          {
+            metadata: {
+              path: ['source'],
+              equals: 'package'
+            }
+          }
+        ]
+      },
+      select: {
+        id: true,
+        status: true,
+        metadata: true,
+        packageId: true
+      }
+    })
 
+    // Filter by userPackageId in metadata for new approach
+    // Legacy generations use packageId field, new ones use metadata.userPackageId
+    const packageGenerations = allGenerations.filter(gen => {
+      // Legacy: has packageId matching userPackageId
+      if (gen.packageId === userPackageId) {
+        return true
+      }
+      // New: has metadata.source === 'package' and metadata.userPackageId === userPackageId
+      const metadata = gen.metadata as any
+      if (metadata?.source === 'package' && metadata?.userPackageId === userPackageId) {
+        return true
+      }
+      return false
+    })
+
+    // Count by status
     const stats = {
-      total,
-      pending,
-      processing,
-      completed,
-      failed
+      total: packageGenerations.length,
+      pending: packageGenerations.filter(g => g.status === 'PENDING').length,
+      processing: packageGenerations.filter(g => g.status === 'PROCESSING').length,
+      completed: packageGenerations.filter(g => g.status === 'COMPLETED').length,
+      failed: packageGenerations.filter(g => g.status === 'FAILED').length
     }
 
     // Determine new status based on generation states

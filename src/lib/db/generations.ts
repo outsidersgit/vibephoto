@@ -112,73 +112,102 @@ export async function createGeneration(data: {
   style?: string
   aiProvider?: string
   astriaEnhancements?: any
+  skipCreditDeduction?: boolean
+  packageMetadata?: {
+    source: 'package'
+    userPackageId: string
+    packageId: string
+    packageName?: string
+    packagePromptIndex?: number
+  }
 }) {
   // Calculate credits needed (10 credits per image, variations determines how many images)
   const creditsNeeded = getImageGenerationCost(data.variations || 1)
+
+  // Build base metadata
+  const baseMetadata: any = {
+    source: data.packageMetadata?.source || 'generation',
+    variations: data.variations || 1,
+    prompt: data.prompt,
+    aiProvider: data.aiProvider || 'hybrid'
+  }
+
+  // Merge package metadata if provided
+  if (data.packageMetadata) {
+    Object.assign(baseMetadata, data.packageMetadata)
+  }
 
   // REFACTORED: Create generation first (fast transaction, no credit deduction)
   // Then deduct credits outside transaction (with rollback if fails)
   const generation = await prisma.generation.create({
     data: {
-      ...data,
+      userId: data.userId,
+      modelId: data.modelId,
+      prompt: data.prompt,
+      negativePrompt: data.negativePrompt,
+      aspectRatio: data.aspectRatio,
+      resolution: data.resolution,
+      variations: data.variations,
+      strength: data.strength,
+      seed: data.seed,
+      style: data.style,
       status: GenerationStatus.PENDING,
       imageUrls: [],
       thumbnailUrls: [],
       estimatedCost: creditsNeeded,
       operationType: 'generation',
-      metadata: {
-        source: 'generation',
-        variations: data.variations || 1,
-        prompt: data.prompt,
-        aiProvider: data.aiProvider || 'hybrid'
-      },
+      metadata: baseMetadata,
       // Set AI provider based on current configuration
       aiProvider: data.aiProvider || 'hybrid',
       astriaEnhancements: data.astriaEnhancements
     }
   })
 
-  // Deduct credits OUTSIDE transaction (much faster, avoids timeout)
-  const chargeResult = await CreditManager.deductCredits(
-    data.userId,
-    creditsNeeded,
-    'Geração de imagem',
-    {
-      type: 'IMAGE_GENERATION',
-      generationId: generation.id,
-      prompt: data.prompt,
-      variations: data.variations,
-      resolution: data.resolution
-    }
-    // No transaction client - creates its own fast transaction
-  )
-
-  // If credit deduction fails, rollback by deleting the generation
-  if (!chargeResult.success) {
-    await prisma.generation.delete({
-      where: { id: generation.id }
-    }).catch(deleteError => {
-      console.error('⚠️ Failed to delete generation after credit deduction failure:', deleteError)
-    })
-    throw new Error(chargeResult.error || 'Failed to deduct credits')
-  }
-
-  // Create usage log outside transaction (non-blocking, fire-and-forget)
-  prisma.usageLog.create({
-    data: {
-      userId: data.userId,
-      action: 'generation',
-      details: {
+  // Deduct credits only if not skipped (packages already deducted credits in /activate)
+  if (!data.skipCreditDeduction) {
+    const chargeResult = await CreditManager.deductCredits(
+      data.userId,
+      creditsNeeded,
+      'Geração de imagem',
+      {
+        type: 'IMAGE_GENERATION',
         generationId: generation.id,
-        modelId: data.modelId,
+        prompt: data.prompt,
         variations: data.variations,
         resolution: data.resolution
-      },
-      creditsUsed: creditsNeeded
+      }
+      // No transaction client - creates its own fast transaction
+    )
+
+    // If credit deduction fails, rollback by deleting the generation
+    if (!chargeResult.success) {
+      await prisma.generation.delete({
+        where: { id: generation.id }
+      }).catch(deleteError => {
+        console.error('⚠️ Failed to delete generation after credit deduction failure:', deleteError)
+      })
+      throw new Error(chargeResult.error || 'Failed to deduct credits')
     }
-  }).catch(error => {
-    console.error('⚠️ Failed to create usage log (non-critical):', error)
-  })
+
+    // Create usage log outside transaction (non-blocking, fire-and-forget)
+    prisma.usageLog.create({
+      data: {
+        userId: data.userId,
+        action: 'generation',
+        details: {
+          generationId: generation.id,
+          modelId: data.modelId,
+          variations: data.variations,
+          resolution: data.resolution
+        },
+        creditsUsed: creditsNeeded
+      }
+    }).catch(error => {
+      console.error('⚠️ Failed to create usage log (non-critical):', error)
+    })
+  } else {
+    console.log(`💰 Skipping credit deduction for package generation: ${generation.id}`)
+  }
 
   return generation
 }

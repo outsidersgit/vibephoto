@@ -468,19 +468,26 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
 
     // CRITICAL: Reconcile UserPackage status if this generation belongs to a package
     // This ensures package status is automatically updated when generations complete/fail
-    if (generation.packageId) {
+    // Check metadata first (new approach), then packageId as fallback (legacy)
+    const generationMetadata = generation.metadata as any
+    const isPackageGeneration = generationMetadata?.source === 'package' && generationMetadata?.userPackageId
+    const userPackageId = isPackageGeneration 
+      ? generationMetadata.userPackageId 
+      : generation.packageId // Legacy fallback
+
+    if (userPackageId) {
       try {
-        console.log(`🔄 Reconciling UserPackage status for generation ${generation.id} (packageId: ${generation.packageId})`)
-        const reconciliation = await reconcileUserPackageStatus(generation.packageId)
+        console.log(`🔄 Reconciling UserPackage status for generation ${generation.id} (userPackageId: ${userPackageId})`)
+        const reconciliation = await reconcileUserPackageStatus(userPackageId)
         if (reconciliation.updated) {
-          console.log(`✅ UserPackage ${generation.packageId} status updated: ${reconciliation.previousStatus} → ${reconciliation.newStatus}`)
+          console.log(`✅ UserPackage ${userPackageId} status updated: ${reconciliation.previousStatus} → ${reconciliation.newStatus}`)
         }
 
         // CRITICAL: If generation failed, check if all package generations failed and refund credits
         if (internalStatus === 'FAILED') {
           // Get the user package to check status and price
           const userPackage = await prisma.userPackage.findUnique({
-            where: { id: generation.packageId },
+            where: { id: userPackageId },
             include: {
               package: true
             }
@@ -496,7 +503,7 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
                              stats.failed === stats.total
 
             if (allFailed) {
-              console.log(`💰 All ${stats.total} generations failed for package ${generation.packageId}, processing refund...`)
+              console.log(`💰 All ${stats.total} generations failed for package ${userPackageId}, processing refund...`)
               
               // Get package price (credits to refund)
               const packagePrice = userPackage.package?.price || 0
@@ -505,7 +512,7 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
                 try {
                   const refundResult = await refundPhotoPackageCredits(
                     generation.userId,
-                    generation.packageId,
+                    userPackageId,
                     packagePrice,
                     {
                       packageName: userPackage.package?.name,
@@ -514,19 +521,19 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
                   )
 
                   if (refundResult.success) {
-                    console.log(`✅ Successfully refunded ${packagePrice} credits for failed package ${generation.packageId}`)
+                    console.log(`✅ Successfully refunded ${packagePrice} credits for failed package ${userPackageId}`)
                   } else {
-                    console.warn(`⚠️ Refund skipped for package ${generation.packageId}: ${refundResult.message}`)
+                    console.warn(`⚠️ Refund skipped for package ${userPackageId}: ${refundResult.message}`)
                   }
                 } catch (refundError) {
                   console.error('❌ Failed to refund package credits:', refundError)
                   // Don't fail the webhook for refund errors, but log them
                 }
               } else {
-                console.warn(`⚠️ Package ${generation.packageId} has no price set, cannot refund`)
+                console.warn(`⚠️ Package ${userPackageId} has no price set, cannot refund`)
               }
             } else {
-              console.log(`ℹ️ Package ${generation.packageId} has ${stats.completed} completed generations, no refund needed`)
+              console.log(`ℹ️ Package ${userPackageId} has ${stats.completed} completed generations, no refund needed`)
             }
           }
         }
