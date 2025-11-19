@@ -497,23 +497,27 @@ export async function POST(request: NextRequest) {
                     updatedAt: new Date(),
                     // CRITICAL: Also set jobId if not already set (should be set, but ensure it)
                     jobId: jobId || updatedVideo.jobId || undefined,
-                      metadata: {
-                        ...metadata,
-                        originalUrl: videoUrl,
-                        temporaryVideoUrl: videoUrl,
-                        storageProvider: 'aws',
-                        storageType: 'public',
-                        processedAt: new Date().toISOString(),
-                        mimeType: storageResult.mimeType || 'video/mp4',
-                        fileExtension: 'mp4',
-                        stored: true,
-                        lastWebhookAt: new Date().toISOString(),
-                        webhookProcessed: true,
-                        completedAt: new Date().toISOString(), // Also save in metadata for compatibility
-                        duration: durationSec,
-                        sizeBytes: storageResult.sizeBytes
-                      }
+                    metadata: {
+                      ...metadata,
+                      originalUrl: videoUrl,
+                      temporaryVideoUrl: videoUrl,
+                      storageProvider: 'aws',
+                      storageType: 'public',
+                      processedAt: new Date().toISOString(),
+                      mimeType: storageResult.mimeType || 'video/mp4',
+                      fileExtension: 'mp4',
+                      stored: true,
+                      lastWebhookAt: new Date().toISOString(),
+                      webhookProcessed: true,
+                      completedAt: new Date().toISOString(), // Also save in metadata for compatibility
+                      duration: durationSec,
+                      sizeBytes: storageResult.sizeBytes
                     }
+                  }
+                  
+                  await tx.videoGeneration.update({
+                    where: { id: updatedVideo.id },
+                    data: updateData
                   })
                   
                   logger.successStage('UPDATE_DATABASE_FINAL', 'Banco atualizado com todos os campos', updatedVideo.id, jobId, {
