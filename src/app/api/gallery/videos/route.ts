@@ -30,8 +30,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: result.videos.map(video => ({
+      videos: result.videos.map(video => ({
         id: video.id,
+        jobId: video.jobId,
         videoUrl: video.videoUrl,
         thumbnailUrl: video.thumbnailUrl,
         prompt: video.prompt,

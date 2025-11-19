@@ -192,42 +192,171 @@ export default function VideoDiagnosePage() {
           <CardTitle>Executar Diagnóstico</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <Label htmlFor="videoId">ID do Vídeo</Label>
-              <Input
-                id="videoId"
-                type="text"
-                placeholder="Ex: cmixxxxxx"
-                value={videoId}
-                onChange={(e) => setVideoId(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !loading) {
-                    handleDiagnose()
-                  }
-                }}
-                className="mt-1"
-              />
-            </div>
-            <div className="flex items-end">
+          <div className="space-y-4">
+            {/* Toggle entre Video ID e Job ID */}
+            <div className="flex gap-2">
               <Button
-                onClick={handleDiagnose}
-                disabled={loading || !videoId.trim()}
-                className="min-w-[140px]"
+                variant={!searchByJobId ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  setSearchByJobId(false)
+                  setJobId('')
+                }}
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Analisando...
-                  </>
-                ) : (
-                  'Executar Diagnóstico'
-                )}
+                Por Video ID
               </Button>
+              <Button
+                variant={searchByJobId ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  setSearchByJobId(true)
+                  setVideoId('')
+                }}
+              >
+                Por Job ID (Replicate)
+              </Button>
+            </div>
+
+            {/* Campo de busca */}
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Label htmlFor="searchId">
+                  {searchByJobId ? 'Job ID (Replicate)' : 'ID do Vídeo'}
+                </Label>
+                <Input
+                  id="searchId"
+                  type="text"
+                  placeholder={searchByJobId ? 'Ex: jnj5z53c95rm80ctkjeth02vnm' : 'Ex: cmixxxxxx'}
+                  value={searchByJobId ? jobId : videoId}
+                  onChange={(e) => {
+                    if (searchByJobId) {
+                      setJobId(e.target.value)
+                    } else {
+                      setVideoId(e.target.value)
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !loading) {
+                      handleDiagnose()
+                    }
+                  }}
+                  className="mt-1"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  onClick={handleDiagnose}
+                  disabled={loading || (!videoId.trim() && !jobId.trim())}
+                  className="min-w-[140px]"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Analisando...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-4 h-4 mr-2" />
+                      Executar Diagnóstico
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Lista de vídeos recentes */}
+      {recentVideos.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Film className="w-5 h-5" />
+              Vídeos Recentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600 mb-3">
+                Clique em um vídeo para usar seu ID no diagnóstico:
+              </p>
+              {loadingRecent ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                  <span className="ml-2 text-sm text-gray-600">Carregando vídeos...</span>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {recentVideos.map((video) => (
+                    <div
+                      key={video.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => selectVideo(video.id)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge
+                            className={
+                              video.status === 'COMPLETED'
+                                ? 'bg-green-100 text-green-800'
+                                : video.status === 'PROCESSING'
+                                ? 'bg-blue-100 text-blue-800'
+                                : video.status === 'FAILED'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }
+                          >
+                            {video.status}
+                          </Badge>
+                          {video.jobId && (
+                            <span className="text-xs text-gray-500">Job: {video.jobId.substring(0, 12)}...</span>
+                          )}
+                        </div>
+                        <div className="text-sm font-mono text-gray-700 truncate">
+                          ID: {video.id}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate mt-1">
+                          {video.prompt || 'Sem prompt'}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {new Date(video.createdAt).toLocaleString('pt-BR')}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            copyToClipboard(video.id)
+                          }}
+                          title="Copiar ID"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        {video.jobId && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              copyToClipboard(video.jobId!)
+                            }}
+                            title="Copiar Job ID"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {error && (
         <Card className="mb-6 border-red-300 bg-red-50">
@@ -345,16 +474,49 @@ export default function VideoDiagnosePage() {
       {/* Instruções */}
       <Card className="mt-6 bg-gray-50">
         <CardHeader>
-          <CardTitle className="text-lg">ℹ️ Como usar</CardTitle>
+          <CardTitle className="text-lg">ℹ️ Onde encontrar o ID do vídeo?</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-gray-600 space-y-2">
-          <p>1. Cole o <strong>ID do vídeo</strong> (ex: <code className="bg-gray-200 px-1 rounded">cmixxxxxx</code>) no campo acima</p>
-          <p>2. Clique em <strong>"Executar Diagnóstico"</strong></p>
-          <p>3. Analise os resultados para identificar onde o fluxo está quebrando</p>
-          <p>4. Use as recomendações para corrigir os problemas encontrados</p>
-          <p className="mt-4 text-xs text-gray-500">
-            <strong>Dica:</strong> Você pode encontrar o ID do vídeo na URL da galeria ou no banco de dados na tabela <code className="bg-gray-200 px-1 rounded">video_generations</code>
-          </p>
+        <CardContent className="text-sm text-gray-600 space-y-3">
+          <div>
+            <strong className="text-gray-900">Opção 1: Lista de vídeos recentes (acima)</strong>
+            <p className="mt-1 ml-4">Clique em um vídeo da lista para usar seu ID automaticamente</p>
+          </div>
+          
+          <div>
+            <strong className="text-gray-900">Opção 2: Galeria de vídeos</strong>
+            <p className="mt-1 ml-4">
+              Acesse <code className="bg-gray-200 px-1 rounded">/gallery?tab=videos</code> e:
+            </p>
+            <ul className="ml-8 mt-1 list-disc space-y-1">
+              <li>Abra o console do navegador (F12)</li>
+              <li>Clique em um vídeo</li>
+              <li>O ID aparecerá nos logs do console</li>
+            </ul>
+          </div>
+
+          <div>
+            <strong className="text-gray-900">Opção 3: Banco de dados</strong>
+            <p className="mt-1 ml-4">
+              Na tabela <code className="bg-gray-200 px-1 rounded">video_generations</code>, coluna <code className="bg-gray-200 px-1 rounded">id</code>
+            </p>
+          </div>
+
+          <div>
+            <strong className="text-gray-900">Opção 4: Por Job ID (Replicate)</strong>
+            <p className="mt-1 ml-4">
+              Se você tem o <code className="bg-gray-200 px-1 rounded">jobId</code> do Replicate, use o botão "Por Job ID" acima
+            </p>
+            <p className="mt-1 ml-4 text-xs text-gray-500">
+              O Job ID aparece nos logs do Replicate ou no console do navegador durante a geração
+            </p>
+          </div>
+
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
+            <strong className="text-blue-900">💡 Dica rápida:</strong>
+            <p className="mt-1 text-blue-800">
+              Use a lista de "Vídeos Recentes" acima - é a forma mais fácil! Basta clicar no vídeo desejado.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
