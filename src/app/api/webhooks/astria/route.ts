@@ -146,17 +146,38 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ 
+      success: true,
+      message: 'Webhook processed successfully',
+      timestamp: new Date().toISOString()
+    })
   } catch (error) {
-    console.error('❌ Astria webhook error:', error)
+    console.error('❌ CRITICAL: Astria webhook error:', error)
     console.error('❌ Error details:', {
       message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : 'No stack trace'
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      name: error instanceof Error ? error.name : 'Unknown'
     })
-    // Return success to avoid webhook retries for unexpected errors
+    
+    // CRITICAL: Log the full error context for debugging
+    if (error instanceof Error) {
+      console.error('❌ Error name:', error.name)
+      console.error('❌ Error message:', error.message)
+      if (error.stack) {
+        console.error('❌ Error stack:', error.stack)
+      }
+    }
+    
+    // CRITICAL: Return 200 OK even on errors to prevent infinite retries
+    // But log the error so we can investigate
     return NextResponse.json(
-      { success: true, error: 'Webhook processing failed but acknowledged' },
-      { status: 200 }
+      { 
+        success: false, 
+        error: 'Webhook processing failed but acknowledged',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      },
+      { status: 200 } // Always return 200 to prevent retries
     )
   }
 }
@@ -194,6 +215,8 @@ async function handleTuneWebhook(payload: AstriaWebhookPayload) {
     }
 
     console.log(`🎯 Processing Astria tune webhook for model: ${model.id}`)
+    console.log(`📊 Current model status in DB: ${model.status}`)
+    console.log(`📊 Current model progress: ${model.progress}%`)
 
     // Map Astria status to our internal status
     console.log(`📊 Astria webhook payload status: "${payload.status}" (type: ${typeof payload.status})`)
@@ -212,38 +235,74 @@ async function handleTuneWebhook(payload: AstriaWebhookPayload) {
       console.log(`⏳ Mapping Astria "${payload.status}" → TRAINING`)
     }
 
+    // CRITICAL: Check idempotency - if model is already READY and we're receiving "trained" again, skip update
+    if (model.status === 'READY' && internalStatus === 'READY') {
+      console.log(`⏭️ Model ${model.id} is already READY, skipping duplicate update (idempotency check)`)
+      return model // Return existing model without updating
+    }
+
     // Update the model with the new status
     const updateData: any = {
       status: internalStatus as any,
       progress: internalStatus === 'READY' ? 100 : (internalStatus === 'TRAINING' ? model.progress || 20 : 0),
       errorMessage: payload.error_message || undefined,
-      aiProvider: 'astria'
+      aiProvider: 'astria',
+      updatedAt: new Date() // Explicitly set updatedAt
     }
 
     if (statusLower === 'trained') {
       updateData.modelUrl = String(payload.id) // Use tune ID as model URL
       updateData.trainedAt = payload.trained_at ? new Date(payload.trained_at) : new Date()
+      console.log(`📝 Setting modelUrl to: ${updateData.modelUrl}`)
+      console.log(`📝 Setting trainedAt to: ${updateData.trainedAt}`)
     }
 
     if (payload.logs) {
       updateData.trainingLogs = [payload.logs]
+      console.log(`📝 Adding training logs (length: ${payload.logs.length})`)
     }
 
-    const updatedModel = await prisma.aIModel.update({
-      where: { id: model.id },
-      data: updateData
+    console.log(`💾 Attempting to update model ${model.id} with data:`, {
+      status: updateData.status,
+      progress: updateData.progress,
+      hasModelUrl: !!updateData.modelUrl,
+      hasTrainedAt: !!updateData.trainedAt,
+      hasLogs: !!updateData.trainingLogs
     })
 
-    console.log(`✅ Astria tune ${payload.id} updated to status: ${internalStatus}, progress: ${updateData.progress}%`)
+    let updatedModel
+    try {
+      updatedModel = await prisma.aIModel.update({
+        where: { id: model.id },
+        data: updateData
+      })
+      console.log(`✅ Model ${model.id} successfully updated to status: ${updatedModel.status}, progress: ${updatedModel.progress}%`)
+    } catch (updateError) {
+      console.error(`❌ CRITICAL: Failed to update model ${model.id}:`, updateError)
+      console.error(`❌ Update error details:`, {
+        message: updateError instanceof Error ? updateError.message : String(updateError),
+        stack: updateError instanceof Error ? updateError.stack : undefined,
+        updateData: JSON.stringify(updateData, null, 2)
+      })
+      // Re-throw to be caught by outer try-catch
+      throw updateError
+    }
 
     // Broadcast model status change to the owner
     try {
+      console.log(`📡 Broadcasting model status change for model ${model.id}: ${updatedModel.status}`)
       await broadcastModelStatusChange(model.id, updatedModel.userId, updatedModel.status, {
         progress: updatedModel.status === 'READY' ? 100 : updatedModel.progress || 0,
         modelUrl: updatedModel.modelUrl
       })
+      console.log(`✅ Broadcast sent successfully for model ${model.id}`)
     } catch (e) {
-      console.warn('⚠️ Failed to broadcast model status change:', e)
+      console.error('❌ Failed to broadcast model status change:', e)
+      console.error('❌ Broadcast error details:', {
+        message: e instanceof Error ? e.message : String(e),
+        stack: e instanceof Error ? e.stack : undefined
+      })
+      // Don't fail the webhook for broadcast errors, but log them
     }
 
     // If training completed successfully, generate sample images
