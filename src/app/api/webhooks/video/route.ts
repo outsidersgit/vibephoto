@@ -7,19 +7,154 @@ import { generateVideoThumbnail } from '@/lib/video/thumbnail-generator'
 import { prisma } from '@/lib/db'
 import crypto from 'crypto'
 
+// Sistema de logging estruturado para debug
+interface FlowLog {
+  stage: string
+  timestamp: string
+  videoId?: string
+  jobId?: string
+  status: 'START' | 'SUCCESS' | 'ERROR' | 'WARNING'
+  message: string
+  data?: any
+  duration?: number
+}
+
+class VideoFlowLogger {
+  private logs: FlowLog[] = []
+  private startTimes: Map<string, number> = new Map()
+
+  startStage(stage: string, videoId?: string, jobId?: string, data?: any) {
+    const timestamp = new Date().toISOString()
+    const key = `${stage}_${timestamp}`
+    this.startTimes.set(key, Date.now())
+    
+    this.logs.push({
+      stage,
+      timestamp,
+      videoId,
+      jobId,
+      status: 'START',
+      message: `Iniciando etapa: ${stage}`,
+      data
+    })
+
+    console.log(`🔵 [FLOW_${stage}] START - ${videoId || 'unknown'} - ${jobId || 'no-job'}`)
+    if (data) {
+      console.log(`🔵 [FLOW_${stage}] Data:`, JSON.stringify(data, null, 2))
+    }
+  }
+
+  successStage(stage: string, message: string, videoId?: string, jobId?: string, data?: any) {
+    const timestamp = new Date().toISOString()
+    const key = Array.from(this.startTimes.keys()).find(k => k.startsWith(stage))
+    const duration = key ? Date.now() - (this.startTimes.get(key) || 0) : undefined
+    if (key) this.startTimes.delete(key)
+
+    this.logs.push({
+      stage,
+      timestamp,
+      videoId,
+      jobId,
+      status: 'SUCCESS',
+      message,
+      data,
+      duration
+    })
+
+    console.log(`✅ [FLOW_${stage}] SUCCESS - ${message}${duration ? ` (${duration}ms)` : ''}`)
+    if (data) {
+      console.log(`✅ [FLOW_${stage}] Result:`, JSON.stringify(data, null, 2))
+    }
+  }
+
+  errorStage(stage: string, message: string, error: any, videoId?: string, jobId?: string) {
+    const timestamp = new Date().toISOString()
+    const key = Array.from(this.startTimes.keys()).find(k => k.startsWith(stage))
+    const duration = key ? Date.now() - (this.startTimes.get(key) || 0) : undefined
+    if (key) this.startTimes.delete(key)
+
+    const errorData = {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    }
+
+    this.logs.push({
+      stage,
+      timestamp,
+      videoId,
+      jobId,
+      status: 'ERROR',
+      message,
+      data: errorData,
+      duration
+    })
+
+    console.error(`❌ [FLOW_${stage}] ERROR - ${message}${duration ? ` (${duration}ms)` : ''}`)
+    console.error(`❌ [FLOW_${stage}] Error details:`, errorData)
+  }
+
+  warningStage(stage: string, message: string, videoId?: string, jobId?: string, data?: any) {
+    const timestamp = new Date().toISOString()
+    
+    this.logs.push({
+      stage,
+      timestamp,
+      videoId,
+      jobId,
+      status: 'WARNING',
+      message,
+      data
+    })
+
+    console.warn(`⚠️ [FLOW_${stage}] WARNING - ${message}`)
+    if (data) {
+      console.warn(`⚠️ [FLOW_${stage}] Warning data:`, JSON.stringify(data, null, 2))
+    }
+  }
+
+  getLogs(): FlowLog[] {
+    return this.logs
+  }
+
+  getSummary() {
+    const total = this.logs.length
+    const success = this.logs.filter(l => l.status === 'SUCCESS').length
+    const errors = this.logs.filter(l => l.status === 'ERROR').length
+    const warnings = this.logs.filter(l => l.status === 'WARNING').length
+
+    return {
+      total,
+      success,
+      errors,
+      warnings,
+      stages: this.logs.map(l => ({
+        stage: l.stage,
+        status: l.status,
+        message: l.message,
+        duration: l.duration
+      }))
+    }
+  }
+}
+
 /**
  * POST /api/webhooks/video
  * Webhook endpoint for Replicate video generation updates
  */
 export async function POST(request: NextRequest) {
+  const logger = new VideoFlowLogger()
+  const webhookStartTime = Date.now()
+  
   try {
+    logger.startStage('WEBHOOK_RECEIVED')
+    
     const body = await request.text()
     const signature = request.headers.get('webhook-signature')
     
-    console.log('🎬 Received video webhook:', {
+    logger.successStage('WEBHOOK_RECEIVED', 'Webhook recebido e parseado', undefined, undefined, {
       hasSignature: !!signature,
-      bodyLength: body.length,
-      timestamp: new Date().toISOString()
+      bodyLength: body.length
     })
 
     // Verify webhook signature if secret is configured
@@ -39,23 +174,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse webhook data
+    logger.startStage('PARSE_WEBHOOK_DATA')
     let webhookData
     try {
       webhookData = JSON.parse(body)
+      logger.successStage('PARSE_WEBHOOK_DATA', 'Webhook data parseado com sucesso', undefined, webhookData.id, {
+        id: webhookData.id,
+        status: webhookData.status,
+        hasOutput: !!webhookData.output,
+        hasError: !!webhookData.error
+      })
     } catch (parseError) {
-      console.error('❌ Invalid webhook JSON:', parseError)
+      logger.errorStage('PARSE_WEBHOOK_DATA', 'Erro ao parsear JSON do webhook', parseError)
       return NextResponse.json(
-        { error: 'Invalid JSON' },
+        { error: 'Invalid JSON', logs: logger.getSummary() },
         { status: 400 }
       )
     }
-
-    console.log('📥 Video webhook data:', {
-      id: webhookData.id,
-      status: webhookData.status,
-      hasOutput: !!webhookData.output,
-      hasError: !!webhookData.error
-    })
 
     // Extract key information
     const jobId = webhookData.id
@@ -235,12 +370,27 @@ export async function POST(request: NextRequest) {
           }
 
           // Download and store video in our storage FIRST
-          console.log('📥 Downloading and storing video permanently...')
+          logger.startStage('DOWNLOAD_AND_STORE_VIDEO', updatedVideo.id, jobId, {
+            videoUrl: videoUrl.substring(0, 100) + '...',
+            videoId: updatedVideo.id,
+            userId
+          })
+          
           const storageResult = await downloadAndStoreVideo(
             videoUrl,
             updatedVideo.id,
             userId
           )
+          
+          if (storageResult.success) {
+            logger.successStage('DOWNLOAD_AND_STORE_VIDEO', 'Vídeo baixado e armazenado com sucesso', updatedVideo.id, jobId, {
+              permanentUrl: storageResult.videoUrl?.substring(0, 100) + '...',
+              storageKey: storageResult.storageKey,
+              sizeBytes: storageResult.sizeBytes
+            })
+          } else {
+            logger.errorStage('DOWNLOAD_AND_STORE_VIDEO', 'Falha ao baixar/armazenar vídeo', new Error(storageResult.error || 'Unknown error'), updatedVideo.id, jobId)
+          }
 
           // Generate thumbnail from video AFTER video is stored
           // Use permanent video URL if available, otherwise use temporary
@@ -248,7 +398,10 @@ export async function POST(request: NextRequest) {
             ? storageResult.videoUrl 
             : videoUrl
 
-          console.log('🖼️ Generating video thumbnail from:', videoUrlForThumbnail.substring(0, 100) + '...')
+          logger.startStage('GENERATE_THUMBNAIL', updatedVideo.id, jobId, {
+            sourceUrl: videoUrlForThumbnail.substring(0, 100) + '...'
+          })
+          
           const thumbnailResult = await generateVideoThumbnail(
             videoUrlForThumbnail,
             updatedVideo.id,
@@ -258,9 +411,13 @@ export async function POST(request: NextRequest) {
           let finalThumbnailUrl = undefined
           if (thumbnailResult.success && thumbnailResult.thumbnailUrl) {
             finalThumbnailUrl = thumbnailResult.thumbnailUrl
-            console.log(`✅ Thumbnail generated and saved: ${finalThumbnailUrl}`)
+            logger.successStage('GENERATE_THUMBNAIL', 'Thumbnail gerado com sucesso', updatedVideo.id, jobId, {
+              thumbnailUrl: finalThumbnailUrl.substring(0, 100) + '...'
+            })
           } else {
-            console.warn('⚠️ Thumbnail generation failed:', thumbnailResult.error)
+            logger.warningStage('GENERATE_THUMBNAIL', 'Falha ao gerar thumbnail (opcional)', updatedVideo.id, jobId, {
+              error: thumbnailResult.error
+            })
             // Thumbnail is optional, continue without it
           }
 
@@ -271,6 +428,11 @@ export async function POST(request: NextRequest) {
             
             // Update video with permanent URL, thumbnail, status COMPLETED, and metadata
             // Use transaction to ensure atomicity
+            logger.startStage('UPDATE_DATABASE_FINAL', updatedVideo.id, jobId, {
+              hasPermanentUrl: !!permanentVideoUrl,
+              hasThumbnail: !!finalThumbnailUrl
+            })
+            
             try {
               await prisma.$transaction(async (tx) => {
                 // Double-check status before updating (prevent race conditions)
@@ -316,27 +478,25 @@ export async function POST(request: NextRequest) {
                     }
                   }
 
-                  await tx.videoGeneration.update({
-                    where: { id: updatedVideo.id },
-                    data: {
-                      status: VideoStatus.COMPLETED,
-                      videoUrl: permanentVideoUrl,
-                      thumbnailUrl: finalThumbnailUrl || undefined,
-                      // CRITICAL: Fill all required fields for frontend
-                      storageProvider: 'aws',
-                      publicUrl: permanentVideoUrl, // Same as videoUrl for public videos
-                      storageKey: storageKey || undefined,
-                      storageBucket: storageBucket || undefined,
-                      mimeType: storageResult.mimeType || 'video/mp4',
-                      sizeBytes: storageResult.sizeBytes ? BigInt(storageResult.sizeBytes) : undefined,
-                      durationSec: durationSec,
-                      processingCompletedAt: new Date(),
-                      progress: 100,
-                      // Set processingStartedAt if not already set
-                      processingStartedAt: originalVideo?.processingStartedAt || (startedAt ? new Date(startedAt) : undefined),
-                      updatedAt: new Date(),
-                      // CRITICAL: Also set jobId if not already set (should be set, but ensure it)
-                      jobId: jobId || updatedVideo.jobId || undefined,
+                  const updateData = {
+                    status: VideoStatus.COMPLETED,
+                    videoUrl: permanentVideoUrl,
+                    thumbnailUrl: finalThumbnailUrl || undefined,
+                    // CRITICAL: Fill all required fields for frontend
+                    storageProvider: 'aws',
+                    publicUrl: permanentVideoUrl, // Same as videoUrl for public videos
+                    storageKey: storageKey || undefined,
+                    storageBucket: storageBucket || undefined,
+                    mimeType: storageResult.mimeType || 'video/mp4',
+                    sizeBytes: storageResult.sizeBytes ? BigInt(storageResult.sizeBytes) : undefined,
+                    durationSec: durationSec,
+                    processingCompletedAt: new Date(),
+                    progress: 100,
+                    // Set processingStartedAt if not already set
+                    processingStartedAt: originalVideo?.processingStartedAt || (startedAt ? new Date(startedAt) : undefined),
+                    updatedAt: new Date(),
+                    // CRITICAL: Also set jobId if not already set (should be set, but ensure it)
+                    jobId: jobId || updatedVideo.jobId || undefined,
                       metadata: {
                         ...metadata,
                         originalUrl: videoUrl,
@@ -355,13 +515,22 @@ export async function POST(request: NextRequest) {
                       }
                     }
                   })
-                  console.log(`✅ Video permanently stored and saved to database: ${permanentVideoUrl}`)
+                  
+                  logger.successStage('UPDATE_DATABASE_FINAL', 'Banco atualizado com todos os campos', updatedVideo.id, jobId, {
+                    permanentUrl: permanentVideoUrl.substring(0, 100) + '...',
+                    hasThumbnail: !!finalThumbnailUrl,
+                    hasStorageKey: !!storageKey,
+                    fieldsCount: Object.keys(updateData).length
+                  })
                 } else {
-                  console.log(`⏭️ Video ${updatedVideo.id} already updated by another process, skipping`)
+                  logger.warningStage('UPDATE_DATABASE_FINAL', 'Vídeo já atualizado por outro processo', updatedVideo.id, jobId, {
+                    currentStatus: current?.status,
+                    hasVideoUrl: !!current?.videoUrl
+                  })
                 }
               })
             } catch (updateError) {
-              console.error(`❌ Failed to update video with permanent URL:`, updateError)
+              logger.errorStage('UPDATE_DATABASE_FINAL', 'Erro ao atualizar banco com URL permanente', updateError, updatedVideo.id, jobId)
               // CRITICAL: Even if update fails, try one more time with simpler update
               try {
                 await prisma.videoGeneration.update({
@@ -459,38 +628,27 @@ export async function POST(request: NextRequest) {
       })
 
     } catch (dbError) {
-      console.error('❌ Database error processing video webhook:', dbError)
-      console.error('❌ Error details:', {
-        message: dbError instanceof Error ? dbError.message : String(dbError),
-        stack: dbError instanceof Error ? dbError.stack : undefined,
-        jobId: webhookData?.id
-      })
+      logger.errorStage('DATABASE_ERROR', 'Erro de banco de dados ao processar webhook', dbError, undefined, webhookData?.id)
       
       // CRITICAL: Return 200 OK even on database errors to prevent infinite retries
-      // The error is logged and can be handled manually if needed
-      // Returning 500 causes Replicate to retry indefinitely, creating duplicates
       return NextResponse.json({
         success: false,
         error: 'Database error processing webhook',
         message: 'Error logged but webhook acknowledged to prevent retries',
-        jobId: webhookData?.id
+        jobId: webhookData?.id,
+        logs: logger.getSummary()
       })
     }
 
   } catch (error) {
-    console.error('❌ Video webhook processing error:', error)
-    console.error('❌ Error details:', {
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    })
+    logger.errorStage('UNEXPECTED_ERROR', 'Erro inesperado ao processar webhook', error)
     
     // CRITICAL: Return 200 OK even on unexpected errors to prevent infinite retries
-    // The error is logged and can be handled manually if needed
-    // Returning 500 causes Replicate to retry indefinitely, creating duplicates
     return NextResponse.json({
       success: false,
       error: 'Internal server error',
-      message: 'Error logged but webhook acknowledged to prevent retries'
+      message: 'Error logged but webhook acknowledged to prevent retries',
+      logs: logger.getSummary()
     })
   }
 }
