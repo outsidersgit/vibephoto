@@ -395,6 +395,7 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
 
     // If generation completed successfully, store images permanently BEFORE updating database
     let finalImageUrls = imageUrls
+    let storageResult: any = null // Initialize storageResult
     
     // CRITICAL: Check if this is a package generation for logging
     const generationMetadata = generation.metadata as any
@@ -423,7 +424,7 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
           firstUrl: imageUrls[0]?.substring(0, 100) + '...'
         })
         
-        const storageResult = await downloadAndStoreImages(
+        storageResult = await downloadAndStoreImages(
           imageUrls,
           generation.id,
           generation.userId
@@ -459,6 +460,7 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
         // Don't fail the webhook for storage errors - images are still accessible via original URLs
         // But mark generation with error message for debugging
         finalImageUrls = imageUrls
+        storageResult = { success: false, error: storageError instanceof Error ? storageError.message : 'Unknown error' }
 
         // Store error in generation for debugging
         await prisma.generation.update({
@@ -482,7 +484,13 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
       ...existingMetadata,
       temporaryUrls: imageUrls.length > 0 ? imageUrls : existingMetadata.temporaryUrls || [],
       permanentUrls: finalImageUrls.length > 0 ? finalImageUrls : existingMetadata.permanentUrls || [],
-      originalUrls: imageUrls.length > 0 ? imageUrls : existingMetadata.originalUrls || []
+      originalUrls: imageUrls.length > 0 ? imageUrls : existingMetadata.originalUrls || [],
+      // 🔒 CRITICAL: Mark that webhook processed this generation
+      webhookProcessed: true,
+      processedVia: 'webhook',
+      processedAt: new Date().toISOString(),
+      stored: storageResult?.success && storageResult?.permanentUrls?.length > 0,
+      storedAt: storageResult?.success ? new Date().toISOString() : undefined
     }
     
     // Update the generation with the new status and final image URLs
@@ -494,7 +502,7 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
         completedAt: payload.completed_at ? new Date(payload.completed_at) : undefined,
         processingTime: processingTime,
         errorMessage: payload.error_message || undefined,
-        metadata: updatedMetadata as any, // Store temporary URLs for modal
+        metadata: updatedMetadata as any, // Includes webhookProcessed: true
         // Update seed if provided
         seed: payload.seed || generation.seed
       }

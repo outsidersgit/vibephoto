@@ -415,7 +415,8 @@ export async function POST(request: NextRequest) {
                   {
                     ...(metadata || {}),
                     lastWebhookAt: new Date().toISOString(),
-                    webhookProcessed: true
+                    webhookProcessed: true,
+                    processedVia: 'webhook' // 🔒 CRITICAL: Mark processing source
                   }
                 )
               } catch (updateError) {
@@ -604,6 +605,7 @@ export async function POST(request: NextRequest) {
                       processedAt: new Date().toISOString(),
                       lastWebhookAt: new Date().toISOString(),
                       webhookProcessed: true,
+                      processedVia: 'webhook', // 🔒 CRITICAL: Mark processing source
                       completedAt: new Date().toISOString(), // Also save in metadata for compatibility
                       duration: durationSec,
                       

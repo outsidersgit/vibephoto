@@ -99,6 +99,14 @@ async function pollTraining(job: TrainingPollingJob) {
       return
     }
 
+    // 🔒 CRITICAL: Check if webhook already processed BEFORE polling
+    // If model is already READY (processed by webhook), stop polling immediately
+    if (model.status === 'READY') {
+      console.log(`⏭️ [TRAINING_POLLING] Model ${modelId} already READY (webhook processed), stopping polling`)
+      stopTrainingPolling(trainingId)
+      return
+    }
+
     // Handle different statuses (supports both Replicate and Astria)
     const updateData: any = {}
 
@@ -107,15 +115,30 @@ async function pollTraining(job: TrainingPollingJob) {
       case 'processing':
       case 'queued':    // Astria status
       case 'training':  // Astria status
-        updateData.status = 'TRAINING'
-        updateData.progress = Math.min(job.attempts * 2, 95) // Simulated progress when provider não retorna
-
+        // 🔒 POLLING ONLY: Broadcast progress via SSE, DON'T update database
+        // Webhook will handle final status update
+        const progress = Math.min(job.attempts * 2, 95)
+        await broadcastTrainingProgress(modelId, userId, progress) // Only broadcast, no DB update
+        
         // Continue polling
         scheduleNextTrainingPoll(job)
         break
 
       case 'succeeded':
       case 'trained':   // Astria status
+        // 🔒 CRITICAL: Check again if webhook processed during this polling cycle
+        const recheckModel = await prisma.aIModel.findUnique({
+          where: { id: modelId },
+          select: { status: true }
+        })
+
+        if (recheckModel?.status === 'READY') {
+          console.log(`⏭️ [TRAINING_POLLING] Model ${modelId} became READY during polling (webhook processed), skipping polling update`)
+          stopTrainingPolling(trainingId)
+          return
+        }
+
+        // Only update if webhook hasn't processed yet
         updateData.status = 'READY'
         updateData.progress = 100
         updateData.trainedAt = new Date()
@@ -212,8 +235,23 @@ async function pollTraining(job: TrainingPollingJob) {
       updateData.aiProvider = effectiveProvider === 'astria' ? 'astria' : effectiveProvider
     }
 
-    // Update model in database
+    // 🔒 CRITICAL: Final check before updating database
+    // Only update if webhook hasn't processed during this polling cycle
     if (Object.keys(updateData).length > 0) {
+      // Final check before updating (prevent race condition with webhook)
+      const finalCheck = await prisma.aIModel.findUnique({
+        where: { id: modelId },
+        select: { status: true }
+      })
+
+      // If webhook processed (status is READY) and we're trying to set READY, skip update
+      if (finalCheck?.status === 'READY' && updateData.status === 'READY') {
+        console.log(`⏭️ [TRAINING_POLLING] Webhook processed model ${modelId} before polling update, skipping`)
+        stopTrainingPolling(trainingId)
+        return
+      }
+
+      // Update model in database
       const updated = await prisma.aIModel.update({
         where: { id: modelId },
         data: updateData

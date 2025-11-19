@@ -462,36 +462,80 @@ async function handleJobCompletion(job: PollingJob, status: string, urls: string
   const { predictionId, generationId, userId } = job
 
   try {
+    // 🔒 CRITICAL: Check if webhook already processed this job BEFORE doing anything
+    // This prevents race conditions and duplicate storage/updates for ALL job types
+    let existingRecord: any
+    if (isVideoJob) {
+      existingRecord = await prisma.videoGeneration.findUnique({
+        where: { id: generationId },
+        select: { 
+          status: true, 
+          videoUrl: true, 
+          metadata: true,
+          jobId: true
+        }
+      })
+    } else {
+      existingRecord = await prisma.generation.findUnique({
+        where: { id: generationId },
+        select: { 
+          status: true, 
+          imageUrls: true, 
+          metadata: true,
+          jobId: true
+        }
+      })
+    }
+
+    // 🚫 BLOCK: If webhook already processed (COMPLETED with URLs and webhookProcessed flag), skip polling entirely
+    if (existingRecord) {
+      const isCompleted = existingRecord.status === 'COMPLETED' || existingRecord.status === 'succeeded'
+      const metadata = existingRecord.metadata as any
+      const wasProcessedByWebhook = metadata?.webhookProcessed === true || metadata?.processedVia === 'webhook'
+      
+      // Check for permanent URLs (webhook saves to storage)
+      const hasPermanentUrls = isVideoJob 
+        ? (existingRecord.videoUrl && (
+            existingRecord.videoUrl.includes('amazonaws.com') || 
+            existingRecord.videoUrl.includes('cloudfront.net') ||
+            existingRecord.videoUrl.includes('s3')
+          ))
+        : (Array.isArray(existingRecord.imageUrls) && 
+           existingRecord.imageUrls.length > 0 &&
+           (existingRecord.imageUrls as string[]).some(url => 
+             url.includes('amazonaws.com') || 
+             url.includes('cloudfront.net') ||
+             url.includes('s3')
+           ))
+      
+      const hasUrls = isVideoJob 
+        ? !!existingRecord.videoUrl
+        : (Array.isArray(existingRecord.imageUrls) && existingRecord.imageUrls.length > 0)
+
+      // If webhook processed OR has permanent URLs, skip polling entirely
+      if ((isCompleted && wasProcessedByWebhook) || (isCompleted && hasPermanentUrls)) {
+        console.log(`⏭️ [POLLING] Job ${predictionId} already processed by webhook, skipping polling entirely`)
+        logger.info('Skipping polling - webhook already processed', {
+          service: 'polling-service',
+          action: 'webhook_already_processed',
+          predictionId,
+          generationId,
+          status: existingRecord.status,
+          hasUrls,
+          hasPermanentUrls,
+          webhookProcessed: wasProcessedByWebhook,
+          jobType: isVideoJob ? 'video' : 'image'
+        })
+        stopPolling(predictionId)
+        return // Exit without any processing
+      }
+    }
+
+    // Continue with normal polling processing only if webhook hasn't processed
     if (status === 'succeeded' && urls.length > 0) {
       let storageResult: any
 
       if (isVideoJob) {
-        // CRITICAL: Check if video was already processed by webhook to avoid duplication
-        const existingVideo = await prisma.videoGeneration.findUnique({
-          where: { id: generationId },
-          select: { status: true, videoUrl: true, metadata: true }
-        })
-        
-        // Check if already completed with permanent URL
-        if (existingVideo?.status === 'COMPLETED' && existingVideo.videoUrl) {
-          const metadata = existingVideo.metadata as any
-          const isPermanentUrl = existingVideo.videoUrl.includes('amazonaws.com') || 
-                                existingVideo.videoUrl.includes('cloudfront.net') ||
-                                existingVideo.videoUrl.includes('s3') ||
-                                metadata?.stored === true
-          
-          if (isPermanentUrl) {
-            console.log(`⏭️ [POLLING_VIDEO] Video ${generationId} already completed and stored by webhook, skipping polling storage`)
-            logger.info('Video already completed by webhook with permanent URL, skipping polling', {
-              service: 'polling-service',
-              action: 'video_already_completed',
-              generationId,
-              videoUrl: existingVideo.videoUrl.substring(0, 50) + '...'
-            })
-            return // Skip processing - webhook already handled it
-          }
-        }
-        
         // Use video-specific storage function
         console.log(`🎬 [POLLING_VIDEO] Processing video job with URL: ${urls[0]}`)
         storageResult = await downloadAndStoreVideo(urls[0], generationId, userId)
@@ -515,8 +559,16 @@ async function handleJobCompletion(job: PollingJob, status: string, urls: string
 
       if (isVideoJob) {
         // VideoGeneration table update
+        const existingMetadata = (existingRecord?.metadata as any) || {}
         updateData = {
-          status: 'COMPLETED'
+          status: 'COMPLETED',
+          metadata: {
+            ...existingMetadata,
+            processedVia: 'polling',
+            processedAt: new Date().toISOString(),
+            stored: storageResult.success && storageResult.permanentUrls?.length > 0,
+            storedAt: storageResult.success ? new Date().toISOString() : undefined
+          }
         }
 
         if (storageResult.success && storageResult.permanentUrls && storageResult.permanentUrls.length > 0) {
@@ -549,22 +601,26 @@ async function handleJobCompletion(job: PollingJob, status: string, urls: string
         }
       } else {
         // Generation table update (existing logic)
+        const existingMetadata = (existingRecord?.metadata as any) || {}
         updateData = {
           status: 'COMPLETED',
           completedAt: new Date(),
-          aiProvider: job.provider
+          aiProvider: job.provider,
+          metadata: {
+            ...existingMetadata,
+            originalUrls: urls,
+            processedAt: new Date().toISOString(),
+            storageProvider: storageResult.success ? 'aws' : 'temporary',
+            processedVia: 'polling',
+            stored: storageResult.success && storageResult.permanentUrls?.length > 0,
+            storedAt: storageResult.success ? new Date().toISOString() : undefined
+          }
         }
 
         if (storageResult.success && storageResult.permanentUrls && storageResult.permanentUrls.length > 0) {
           updateData.imageUrls = storageResult.permanentUrls
           updateData.thumbnailUrls = storageResult.thumbnailUrls || storageResult.permanentUrls
           updateData.storageProvider = 'aws'
-          updateData.metadata = {
-            originalUrls: urls,
-            processedAt: new Date().toISOString(),
-            storageProvider: 'aws',
-            processedVia: 'polling'
-          }
 
           logger.info('Job completed successfully with storage', {
             service: 'polling-service',
