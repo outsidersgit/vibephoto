@@ -116,12 +116,25 @@ export async function POST(request: NextRequest) {
       }
 
       // Update video generation in database (temporarily with URL, will be replaced with s3_key)
-      const updatedVideo = await updateVideoGenerationByJobId(
-        jobId,
-        internalStatus,
-        videoUrl,
-        errorMessage
-      )
+      let updatedVideo
+      try {
+        updatedVideo = await updateVideoGenerationByJobId(
+          jobId,
+          internalStatus,
+          videoUrl,
+          errorMessage
+        )
+      } catch (dbError) {
+        console.error(`❌ Database error updating video by jobId ${jobId}:`, dbError)
+        // Return 500 so Replicate will retry
+        return NextResponse.json(
+          { 
+            error: 'Database error updating video generation',
+            details: dbError instanceof Error ? dbError.message : String(dbError)
+          },
+          { status: 500 }
+        )
+      }
 
       if (!updatedVideo) {
         console.warn(`⚠️ Video generation not found for job ID: ${jobId}`)
@@ -143,23 +156,7 @@ export async function POST(request: NextRequest) {
         console.log(`🎉 Video generation completed for user ${updatedVideo.user.id}: ${updatedVideo.id}`)
 
         try {
-          // Generate thumbnail from video
-          console.log('🖼️ Generating video thumbnail...')
-          const thumbnailResult = await generateVideoThumbnail(
-            videoUrl,
-            updatedVideo.id,
-            updatedVideo.user.id
-          )
-
-          let finalThumbnailUrl = undefined
-          if (thumbnailResult.success && thumbnailResult.thumbnailUrl) {
-            finalThumbnailUrl = thumbnailResult.thumbnailUrl
-            console.log(`✅ Thumbnail generated: ${finalThumbnailUrl}`)
-          } else {
-            console.warn('⚠️ Thumbnail generation failed, will use video URL for preview')
-          }
-
-          // Download and store video in our storage
+          // Download and store video in our storage FIRST
           console.log('📥 Downloading and storing video permanently...')
           const storageResult = await downloadAndStoreVideo(
             videoUrl,
@@ -167,53 +164,111 @@ export async function POST(request: NextRequest) {
             updatedVideo.user.id
           )
 
-          if (storageResult.success && storageResult.videoUrl) {
-            // Extract s3 key from the storage result
-            // The downloadAndStoreVideo function should return s3 key, but currently returns URL
-            // We'll extract the key from the known pattern: generated/{userId}/{videoGenId}/0.mp4
-            const s3Key = `generated/${updatedVideo.user.id}/${updatedVideo.id}/0.mp4`
+          // Generate thumbnail from video AFTER video is stored
+          // Use permanent video URL if available, otherwise use temporary
+          const videoUrlForThumbnail = storageResult.success && storageResult.videoUrl 
+            ? storageResult.videoUrl 
+            : videoUrl
 
-            // Update video with metadata containing s3_key instead of storing URL directly
-            // CRITICAL: Store temporary URL for modal display
-            await updateVideoGenerationByJobId(
-              jobId,
-              VideoStatus.COMPLETED,
-              null, // Clear the direct videoUrl
-              undefined,
-              undefined, // Clear direct thumbnailUrl
-              {
-                s3Key: s3Key,
-                originalUrl: videoUrl,
-                temporaryVideoUrl: videoUrl, // Store temporary URL for modal
-                storageProvider: 'aws',
-                storageType: 'private',
-                processedAt: new Date().toISOString(),
-                mimeType: 'video/mp4',
-                fileExtension: 'mp4'
-              }
-            )
+          console.log('🖼️ Generating video thumbnail from:', videoUrlForThumbnail.substring(0, 100) + '...')
+          const thumbnailResult = await generateVideoThumbnail(
+            videoUrlForThumbnail,
+            updatedVideo.id,
+            updatedVideo.user.id
+          )
 
-            console.log(`✅ Video permanently stored with s3 key: ${s3Key}`)
+          let finalThumbnailUrl = undefined
+          if (thumbnailResult.success && thumbnailResult.thumbnailUrl) {
+            finalThumbnailUrl = thumbnailResult.thumbnailUrl
+            console.log(`✅ Thumbnail generated and saved: ${finalThumbnailUrl}`)
           } else {
-            // Store temporary URL in metadata with error flag
+            console.warn('⚠️ Thumbnail generation failed:', thumbnailResult.error)
+            // Thumbnail is optional, continue without it
+          }
+
+          if (storageResult.success && storageResult.videoUrl) {
+            // CRITICAL: Save the permanent videoUrl in the database field (not just metadata)
+            // This is required for frontend preview and gallery to work
+            const permanentVideoUrl = storageResult.videoUrl
+            
+            // Update video with permanent URL, thumbnail, status COMPLETED, and metadata
+            try {
+              await updateVideoGenerationByJobId(
+                jobId,
+                VideoStatus.COMPLETED,
+                permanentVideoUrl, // Save permanent URL in videoUrl field (CRITICAL for frontend)
+                undefined, // errorMessage
+                finalThumbnailUrl, // Save thumbnail URL
+                {
+                  originalUrl: videoUrl, // Original Replicate URL
+                  temporaryVideoUrl: videoUrl, // Temporary URL for fallback
+                  storageProvider: 'aws',
+                  storageType: 'public',
+                  processedAt: new Date().toISOString(),
+                  mimeType: 'video/mp4',
+                  fileExtension: 'mp4',
+                  stored: true
+                }
+              )
+
+              console.log(`✅ Video permanently stored and saved to database: ${permanentVideoUrl}`)
+            } catch (updateError) {
+              console.error(`❌ Failed to update video with permanent URL:`, updateError)
+              // Don't throw - video is stored, just DB update failed
+              // Return success to prevent webhook retries
+            }
+          } else {
+            // If storage failed, save temporary URL but mark as not stored
+            try {
+              await updateVideoGenerationByJobId(
+                jobId,
+                VideoStatus.COMPLETED,
+                videoUrl, // Use temporary URL as fallback (better than nothing)
+                undefined,
+                finalThumbnailUrl,
+                {
+                  temporaryVideoUrl: videoUrl,
+                  storageError: true,
+                  storageErrorDetails: storageResult.error,
+                  processedAt: new Date().toISOString(),
+                  stored: false
+                }
+              )
+              console.error(`❌ Failed to store video permanently: ${storageResult.error}`)
+            } catch (updateError) {
+              console.error(`❌ Failed to update video with temporary URL:`, updateError)
+              // Don't throw - at least we tried to save the temporary URL
+            }
+          }
+        } catch (storageError) {
+          console.error('❌ Error storing video permanently:', storageError)
+          // Update status to COMPLETED even if storage fails (use temporary URL)
+          try {
             await updateVideoGenerationByJobId(
               jobId,
               VideoStatus.COMPLETED,
-              null, // Clear direct URL
+              videoUrl, // Use temporary URL
               undefined,
               undefined,
               {
                 temporaryVideoUrl: videoUrl,
                 storageError: true,
-                storageErrorDetails: storageResult.error,
-                processedAt: new Date().toISOString()
+                storageErrorDetails: storageError instanceof Error ? storageError.message : String(storageError),
+                processedAt: new Date().toISOString(),
+                stored: false
               }
             )
-            console.error(`❌ Failed to store video permanently: ${storageResult.error}`)
+          } catch (updateError) {
+            console.error(`❌ Failed to update video status after storage error:`, updateError)
+            // Return 500 so Replicate will retry
+            return NextResponse.json(
+              { 
+                error: 'Failed to update video status',
+                details: updateError instanceof Error ? updateError.message : String(updateError)
+              },
+              { status: 500 }
+            )
           }
-        } catch (storageError) {
-          console.error('❌ Error storing video permanently:', storageError)
-          // Continue processing even if storage fails - temporary URL still works
         }
         
         // Additional tasks:

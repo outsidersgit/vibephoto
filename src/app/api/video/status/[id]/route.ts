@@ -50,12 +50,14 @@ export async function GET(
       const metadata = videoGeneration.metadata as any || {}
       const temporaryVideoUrl = metadata.temporaryVideoUrl || metadata.originalUrl || null
       
+      // CRITICAL: Return videoUrl (permanent) and temporaryVideoUrl (from metadata) for frontend
+      // Frontend will use permanent URL if available, fallback to temporary
       return NextResponse.json({
         id: videoGeneration.id,
         status: videoGeneration.status,
         progress: videoGeneration.progress,
-        videoUrl: videoGeneration.videoUrl, // Permanent URL for gallery
-        temporaryVideoUrl: temporaryVideoUrl, // Temporary URL for modal
+        videoUrl: videoGeneration.videoUrl || temporaryVideoUrl, // Permanent URL (or temporary as fallback)
+        temporaryVideoUrl: temporaryVideoUrl, // Temporary URL from Replicate (for quick preview)
         thumbnailUrl: videoGeneration.thumbnailUrl,
         errorMessage: videoGeneration.errorMessage,
         duration: videoGeneration.duration,
@@ -64,7 +66,7 @@ export async function GET(
         creditsUsed: videoGeneration.creditsUsed,
         processingTime: videoGeneration.processingTime,
         createdAt: videoGeneration.createdAt,
-        completedAt: videoGeneration.completedAt,
+        completedAt: videoGeneration.completedAt || videoGeneration.processingCompletedAt,
         sourceImageUrl: videoGeneration.sourceImageUrl,
         prompt: videoGeneration.prompt
       })

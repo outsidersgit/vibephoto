@@ -244,7 +244,20 @@ export async function POST(request: NextRequest) {
         result = await processEditWebhook(payload, jobType.record)
         break
       case 'video':
-        result = await processVideoWebhook(payload, jobType.record)
+        // CRITICAL: Skip video processing in unified webhook if video already completed
+        // Videos are handled by dedicated /api/webhooks/video endpoint to avoid duplication
+        // Only process if status is not already COMPLETED (idempotency check)
+        if (jobType.record.status === 'COMPLETED' && jobType.record.videoUrl) {
+          console.log(`⏭️ Skipping video ${jobType.record.id} - already completed by dedicated webhook`)
+          result = {
+            success: true,
+            type: 'video',
+            updated: false,
+            message: 'Already processed by dedicated webhook'
+          }
+        } else {
+          result = await processVideoWebhook(payload, jobType.record)
+        }
         break
       default:
         throw new Error(`Unknown job type: ${jobType.type}`)

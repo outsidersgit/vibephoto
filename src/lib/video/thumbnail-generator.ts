@@ -1,5 +1,10 @@
 import sharp from 'sharp'
 import { getStorageProvider } from '../storage/utils'
+import ffmpeg from 'fluent-ffmpeg'
+import { path as ffmpegPath } from '@ffmpeg-installer/ffmpeg'
+import fs from 'fs'
+import path from 'path'
+import os from 'os'
 
 interface ThumbnailGenerationResult {
   success: boolean
@@ -89,7 +94,7 @@ async function tryFindExistingThumbnail(videoUrl: string): Promise<string | null
 }
 
 /**
- * Extract frame from video and upload as thumbnail
+ * Extract frame from video and upload as thumbnail using ffmpeg
  */
 async function extractVideoFrame(
   videoUrl: string,
@@ -97,28 +102,98 @@ async function extractVideoFrame(
   userId: string
 ): Promise<string | null> {
   try {
-    console.log('🎬 Attempting to extract video frame...')
+    console.log('🎬 Attempting to extract video frame using ffmpeg...')
 
-    // This approach requires a video processing service or ffmpeg
-    // For now, we'll create a high-quality placeholder that represents the video
+    // Set ffmpeg path
+    ffmpeg.setFfmpegPath(ffmpegPath)
 
-    // Download video to get some metadata
-    const response = await fetch(videoUrl, {
-      method: 'HEAD',
+    // Download video to temporary file
+    const videoResponse = await fetch(videoUrl, {
       headers: { 'User-Agent': 'VibePhoto/1.0' }
     })
 
-    if (!response.ok) {
-      console.log('⚠️ Could not access video for frame extraction')
-      return null
+    if (!videoResponse.ok) {
+      console.log('⚠️ Could not download video for frame extraction')
+      return await generateSmartThumbnail(videoGenId, userId, videoUrl) // Fallback to placeholder
     }
 
-    // Create a smart thumbnail based on video metadata
-    return await generateSmartThumbnail(videoGenId, userId, videoUrl)
+    // Create temporary files
+    const tempDir = os.tmpdir()
+    const tempVideoPath = path.join(tempDir, `video_${videoGenId}_${Date.now()}.mp4`)
+    const tempThumbnailPath = path.join(tempDir, `thumb_${videoGenId}_${Date.now()}.jpg`)
+
+    try {
+      // Download video to temp file
+      const videoBuffer = Buffer.from(await videoResponse.arrayBuffer())
+      await fs.promises.writeFile(tempVideoPath, videoBuffer)
+
+      // Extract frame at 1 second (or 10% of video duration, whichever is smaller)
+      await new Promise<void>((resolve, reject) => {
+        ffmpeg(tempVideoPath)
+          .screenshots({
+            timestamps: ['00:00:01'], // Extract frame at 1 second
+            filename: path.basename(tempThumbnailPath),
+            folder: path.dirname(tempThumbnailPath),
+            size: '640x360' // 16:9 aspect ratio
+          })
+          .on('end', () => {
+            console.log('✅ Frame extracted successfully')
+            resolve()
+          })
+          .on('error', (err) => {
+            console.error('❌ FFmpeg error:', err)
+            reject(err)
+          })
+      })
+
+      // Read extracted thumbnail
+      const thumbnailBuffer = await fs.promises.readFile(tempThumbnailPath)
+
+      // Upload thumbnail
+      const storage = getStorageProvider()
+      const thumbnailKey = `generated/${userId}/videos/${videoGenId}_thumbnail.jpg`
+
+      let uploadResult
+      if (storage.uploadStandardized) {
+        uploadResult = await storage.uploadStandardized(
+          thumbnailBuffer,
+          userId,
+          'videos',
+          {
+            filename: `${videoGenId}_thumbnail.jpg`,
+            makePublic: true,
+            isVideo: false
+          }
+        )
+      } else {
+        uploadResult = await storage.upload(
+          thumbnailBuffer,
+          thumbnailKey,
+          {
+            filename: `thumb_${videoGenId}.jpg`,
+            makePublic: true
+          }
+        )
+      }
+
+      console.log(`✅ Video frame extracted and uploaded: ${uploadResult.url}`)
+      return uploadResult.url
+
+    } finally {
+      // Clean up temporary files
+      try {
+        await fs.promises.unlink(tempVideoPath).catch(() => {})
+        await fs.promises.unlink(tempThumbnailPath).catch(() => {})
+      } catch (cleanupError) {
+        console.warn('⚠️ Failed to cleanup temp files:', cleanupError)
+      }
+    }
 
   } catch (error) {
     console.error('❌ Error extracting video frame:', error)
-    return null
+    // Fallback to smart thumbnail if extraction fails
+    console.log('🔄 Falling back to smart thumbnail...')
+    return await generateSmartThumbnail(videoGenId, userId, videoUrl)
   }
 }
 
@@ -135,17 +210,32 @@ async function generateSmartThumbnail(
   // Create a thumbnail with video metadata
   const thumbnailBuffer = await createVideoThumbnailImage(videoGenId, videoUrl)
 
-  // Upload thumbnail
-  const thumbnailKey = `generated/${userId}/${videoGenId}/thumbnail.jpg`
+  // Upload thumbnail using standardized structure
+  const thumbnailKey = `generated/${userId}/videos/${videoGenId}_thumbnail.jpg`
 
-  const uploadResult = await storage.upload(
-    thumbnailBuffer,
-    thumbnailKey,
-    {
-      filename: `thumb_${videoGenId}.jpg`,
-      makePublic: false
-    }
-  )
+  // Use standardized upload method if available
+  let uploadResult
+  if (storage.uploadStandardized) {
+    uploadResult = await storage.uploadStandardized(
+      thumbnailBuffer,
+      userId,
+      'videos',
+      {
+        filename: `${videoGenId}_thumbnail.jpg`,
+        makePublic: true, // Thumbnails should be public for gallery display
+        isVideo: false
+      }
+    )
+  } else {
+    uploadResult = await storage.upload(
+      thumbnailBuffer,
+      thumbnailKey,
+      {
+        filename: `thumb_${videoGenId}.jpg`,
+        makePublic: true // Thumbnails should be public
+      }
+    )
+  }
 
   console.log(`✅ Smart thumbnail uploaded: ${uploadResult.url}`)
   return uploadResult.url
@@ -218,17 +308,32 @@ async function generatePlaceholderThumbnail(
   // Create placeholder image
   const thumbnailBuffer = await createVideoThumbnailImage(videoGenId, '')
 
-  // Upload placeholder
-  const thumbnailKey = `generated/${userId}/${videoGenId}/placeholder.jpg`
+  // Upload placeholder using standardized structure
+  const thumbnailKey = `generated/${userId}/videos/${videoGenId}_placeholder.jpg`
 
-  const uploadResult = await storage.upload(
-    thumbnailBuffer,
-    thumbnailKey,
-    {
-      filename: `placeholder_${videoGenId}.jpg`,
-      makePublic: false
-    }
-  )
+  // Use standardized upload method if available
+  let uploadResult
+  if (storage.uploadStandardized) {
+    uploadResult = await storage.uploadStandardized(
+      thumbnailBuffer,
+      userId,
+      'videos',
+      {
+        filename: `${videoGenId}_placeholder.jpg`,
+        makePublic: true, // Thumbnails should be public for gallery display
+        isVideo: false
+      }
+    )
+  } else {
+    uploadResult = await storage.upload(
+      thumbnailBuffer,
+      thumbnailKey,
+      {
+        filename: `placeholder_${videoGenId}.jpg`,
+        makePublic: true // Thumbnails should be public
+      }
+    )
+  }
 
   console.log(`✅ Placeholder thumbnail created: ${uploadResult.url}`)
   return uploadResult.url

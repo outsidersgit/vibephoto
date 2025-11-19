@@ -466,6 +466,22 @@ async function handleJobCompletion(job: PollingJob, status: string, urls: string
       let storageResult: any
 
       if (isVideoJob) {
+        // CRITICAL: Check if video was already processed by webhook to avoid duplication
+        const existingVideo = await prisma.videoGeneration.findUnique({
+          where: { id: generationId },
+          select: { status: true, videoUrl: true }
+        })
+        
+        if (existingVideo?.status === 'COMPLETED' && existingVideo.videoUrl) {
+          console.log(`⏭️ [POLLING_VIDEO] Video ${generationId} already completed by webhook, skipping polling storage`)
+          logger.info('Video already completed by webhook, skipping polling', {
+            service: 'polling-service',
+            action: 'video_already_completed',
+            generationId
+          })
+          return // Skip processing - webhook already handled it
+        }
+        
         // Use video-specific storage function
         console.log(`🎬 [POLLING_VIDEO] Processing video job with URL: ${urls[0]}`)
         storageResult = await downloadAndStoreVideo(urls[0], generationId, userId)

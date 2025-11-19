@@ -434,7 +434,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          imageUrl: previewMedia.url,
+          videoUrl: previewMedia.url, // Use videoUrl instead of imageUrl for videos
           filename: `vibephoto-video-${timestamp}.${extension}`
         })
       })

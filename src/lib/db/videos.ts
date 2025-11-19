@@ -188,8 +188,21 @@ export async function updateVideoGenerationByJobId(
       }
     }
 
-    const updated = await prisma.videoGeneration.update({
+    // First, try to find the video generation by jobId
+    const existingVideo = await prisma.videoGeneration.findFirst({
       where: { jobId },
+      select: { id: true, status: true, jobId: true }
+    })
+
+    if (!existingVideo) {
+      console.error(`❌ Video generation not found for jobId: ${jobId}`)
+      throw new Error(`Video generation not found for jobId: ${jobId}`)
+    }
+
+    console.log(`🔍 Found video generation ${existingVideo.id} for jobId ${jobId}, current status: ${existingVideo.status}`)
+
+    const updated = await prisma.videoGeneration.update({
+      where: { id: existingVideo.id }, // Use id instead of jobId for update
       data: updateData,
       include: {
         user: {
@@ -201,11 +214,11 @@ export async function updateVideoGenerationByJobId(
       }
     })
 
-    console.log(`✅ Video generation updated by jobId ${jobId}: ${status}`)
+    console.log(`✅ Video generation updated by jobId ${jobId} (id: ${existingVideo.id}): ${status}`)
     return updated
 
   } catch (error) {
-    console.error(`❌ Failed to update video generation by jobId:`, error)
+    console.error(`❌ Failed to update video generation by jobId ${jobId}:`, error)
     throw new Error(`Failed to update video generation: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
