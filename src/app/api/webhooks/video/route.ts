@@ -4,6 +4,7 @@ import { VideoStatus } from '@/lib/ai/video/config'
 import { AI_CONFIG } from '@/lib/ai/config'
 import { downloadAndStoreVideo } from '@/lib/storage/utils'
 import { generateVideoThumbnail } from '@/lib/video/thumbnail-generator'
+import { prisma } from '@/lib/db'
 import crypto from 'crypto'
 
 /**
@@ -126,42 +127,119 @@ export async function POST(request: NextRequest) {
         )
       } catch (dbError) {
         console.error(`❌ Database error updating video by jobId ${jobId}:`, dbError)
-        // Return 500 so Replicate will retry
-        return NextResponse.json(
-          { 
-            error: 'Database error updating video generation',
-            details: dbError instanceof Error ? dbError.message : String(dbError)
-          },
-          { status: 500 }
-        )
+        console.error(`❌ Error details:`, {
+          message: dbError instanceof Error ? dbError.message : String(dbError),
+          stack: dbError instanceof Error ? dbError.stack : undefined,
+          jobId
+        })
+        
+        // CRITICAL: Return 200 OK even on database errors to prevent infinite retries
+        // The error is logged and can be handled manually if needed
+        // Returning 500 causes Replicate to retry indefinitely, creating duplicates
+        return NextResponse.json({
+          success: false,
+          error: 'Database error updating video generation',
+          message: 'Error logged but webhook acknowledged to prevent retries',
+          jobId
+        })
       }
 
       if (!updatedVideo) {
         console.warn(`⚠️ Video generation not found for job ID: ${jobId}`)
-        return NextResponse.json(
-          { error: 'Video generation not found' },
-          { status: 404 }
-        )
+        // Return 200 OK even if not found - prevents infinite retries
+        return NextResponse.json({
+          success: false,
+          error: 'Video generation not found',
+          message: 'Video generation not found in database',
+          jobId
+        })
       }
 
       console.log(`✅ Video generation ${updatedVideo.id} updated:`, {
         status: internalStatus,
         hasVideoUrl: !!videoUrl,
         hasError: !!errorMessage,
-        userId: updatedVideo.user.id
+        userId: updatedVideo.user?.id || updatedVideo.userId || 'unknown'
       })
+
+      // CRITICAL: Check idempotency BEFORE processing storage
+      // If video is already COMPLETED with a permanent URL, skip all processing
+      if (updatedVideo.status === VideoStatus.COMPLETED && updatedVideo.videoUrl && updatedVideo.videoUrl.startsWith('http')) {
+        // Check if it's already a permanent URL (not temporary Replicate URL)
+        const isPermanentUrl = updatedVideo.videoUrl.includes('amazonaws.com') || 
+                               updatedVideo.videoUrl.includes('cloudfront.net') ||
+                               updatedVideo.videoUrl.includes('s3') ||
+                               (updatedVideo.metadata as any)?.stored === true
+        
+        if (isPermanentUrl) {
+          console.log(`⏭️ Video ${updatedVideo.id} already processed and stored, skipping duplicate processing`)
+          return NextResponse.json({
+            success: true,
+            videoId: updatedVideo.id,
+            status: VideoStatus.COMPLETED,
+            message: 'Video already processed',
+            skipped: true
+          })
+        }
+      }
 
       // Download and store video permanently if completed successfully
       if (internalStatus === VideoStatus.COMPLETED && videoUrl) {
-        console.log(`🎉 Video generation completed for user ${updatedVideo.user.id}: ${updatedVideo.id}`)
+        const userId = updatedVideo.user?.id || updatedVideo.userId
+        console.log(`🎉 Video generation completed for user ${userId}: ${updatedVideo.id}`)
 
         try {
+          // CRITICAL: Check if video was already stored by checking database first
+          const currentVideo = await prisma.videoGeneration.findUnique({
+            where: { id: updatedVideo.id },
+            select: { videoUrl: true, status: true, metadata: true, userId: true }
+          })
+
+          if (currentVideo?.status === VideoStatus.COMPLETED && currentVideo.videoUrl) {
+            const metadata = currentVideo.metadata as any
+            const isAlreadyStored = currentVideo.videoUrl.includes('amazonaws.com') || 
+                                   currentVideo.videoUrl.includes('cloudfront.net') ||
+                                   currentVideo.videoUrl.includes('s3') ||
+                                   metadata?.stored === true
+
+            if (isAlreadyStored) {
+              console.log(`⏭️ Video ${updatedVideo.id} already stored at ${currentVideo.videoUrl}, skipping storage`)
+              
+              // Still update status and metadata if needed, but skip storage
+              try {
+                await updateVideoGenerationByJobId(
+                  jobId,
+                  VideoStatus.COMPLETED,
+                  currentVideo.videoUrl, // Keep existing permanent URL
+                  undefined,
+                  updatedVideo.thumbnailUrl || undefined,
+                  {
+                    ...(metadata || {}),
+                    lastWebhookAt: new Date().toISOString(),
+                    webhookProcessed: true
+                  }
+                )
+              } catch (updateError) {
+                console.error(`⚠️ Failed to update metadata for already-stored video:`, updateError)
+                // Don't fail - video is already stored
+              }
+
+              return NextResponse.json({
+                success: true,
+                videoId: updatedVideo.id,
+                status: VideoStatus.COMPLETED,
+                message: 'Video already stored, status updated',
+                skipped: true
+              })
+            }
+          }
+
           // Download and store video in our storage FIRST
           console.log('📥 Downloading and storing video permanently...')
           const storageResult = await downloadAndStoreVideo(
             videoUrl,
             updatedVideo.id,
-            updatedVideo.user.id
+            userId
           )
 
           // Generate thumbnail from video AFTER video is stored
@@ -174,7 +252,7 @@ export async function POST(request: NextRequest) {
           const thumbnailResult = await generateVideoThumbnail(
             videoUrlForThumbnail,
             updatedVideo.id,
-            updatedVideo.user.id
+            userId
           )
 
           let finalThumbnailUrl = undefined
@@ -192,30 +270,122 @@ export async function POST(request: NextRequest) {
             const permanentVideoUrl = storageResult.videoUrl
             
             // Update video with permanent URL, thumbnail, status COMPLETED, and metadata
+            // Use transaction to ensure atomicity
             try {
-              await updateVideoGenerationByJobId(
-                jobId,
-                VideoStatus.COMPLETED,
-                permanentVideoUrl, // Save permanent URL in videoUrl field (CRITICAL for frontend)
-                undefined, // errorMessage
-                finalThumbnailUrl, // Save thumbnail URL
-                {
-                  originalUrl: videoUrl, // Original Replicate URL
-                  temporaryVideoUrl: videoUrl, // Temporary URL for fallback
-                  storageProvider: 'aws',
-                  storageType: 'public',
-                  processedAt: new Date().toISOString(),
-                  mimeType: 'video/mp4',
-                  fileExtension: 'mp4',
-                  stored: true
-                }
-              )
+              await prisma.$transaction(async (tx) => {
+                // Double-check status before updating (prevent race conditions)
+                const current = await tx.videoGeneration.findUnique({
+                  where: { id: updatedVideo.id },
+                  select: { status: true, videoUrl: true }
+                })
 
-              console.log(`✅ Video permanently stored and saved to database: ${permanentVideoUrl}`)
+                // Only update if not already completed with permanent URL
+                if (!(current?.status === VideoStatus.COMPLETED && current.videoUrl && 
+                      (current.videoUrl.includes('amazonaws.com') || current.videoUrl.includes('cloudfront.net')))) {
+                  
+                  // Get video duration and other info from original videoGeneration
+                  const originalVideo = await tx.videoGeneration.findUnique({
+                    where: { id: updatedVideo.id },
+                    select: { 
+                      duration: true, 
+                      metadata: true, 
+                      processingStartedAt: true,
+                      storageBucket: true
+                    }
+                  })
+                  
+                  const metadata = originalVideo?.metadata as any || {}
+                  const durationSec = originalVideo?.duration || metadata?.duration || 5
+                  
+                  // Use storageKey from storageResult if available, otherwise extract from URL
+                  let storageKey = storageResult.storageKey
+                  let storageBucket = originalVideo?.storageBucket
+                  
+                  if (!storageKey) {
+                    try {
+                      const urlObj = new URL(permanentVideoUrl)
+                      const pathParts = urlObj.pathname.split('/').filter(p => p)
+                      if (pathParts.length >= 2) {
+                        storageBucket = storageBucket || pathParts[0]
+                        storageKey = pathParts.slice(1).join('/')
+                      } else if (pathParts.length === 1) {
+                        storageKey = pathParts[0]
+                      }
+                    } catch (urlError) {
+                      console.warn('⚠️ Could not extract storage key from URL:', urlError)
+                    }
+                  }
+
+                  await tx.videoGeneration.update({
+                    where: { id: updatedVideo.id },
+                    data: {
+                      status: VideoStatus.COMPLETED,
+                      videoUrl: permanentVideoUrl,
+                      thumbnailUrl: finalThumbnailUrl || undefined,
+                      // CRITICAL: Fill all required fields for frontend
+                      storageProvider: 'aws',
+                      publicUrl: permanentVideoUrl, // Same as videoUrl for public videos
+                      storageKey: storageKey || undefined,
+                      storageBucket: storageBucket || undefined,
+                      mimeType: storageResult.mimeType || 'video/mp4',
+                      sizeBytes: storageResult.sizeBytes ? BigInt(storageResult.sizeBytes) : undefined,
+                      durationSec: durationSec,
+                      processingCompletedAt: new Date(),
+                      progress: 100,
+                      // Set processingStartedAt if not already set
+                      processingStartedAt: originalVideo?.processingStartedAt || (startedAt ? new Date(startedAt) : undefined),
+                      updatedAt: new Date(),
+                      // CRITICAL: Also set jobId if not already set (should be set, but ensure it)
+                      jobId: jobId || updatedVideo.jobId || undefined,
+                      metadata: {
+                        ...metadata,
+                        originalUrl: videoUrl,
+                        temporaryVideoUrl: videoUrl,
+                        storageProvider: 'aws',
+                        storageType: 'public',
+                        processedAt: new Date().toISOString(),
+                        mimeType: storageResult.mimeType || 'video/mp4',
+                        fileExtension: 'mp4',
+                        stored: true,
+                        lastWebhookAt: new Date().toISOString(),
+                        webhookProcessed: true,
+                        completedAt: new Date().toISOString(), // Also save in metadata for compatibility
+                        duration: durationSec,
+                        sizeBytes: storageResult.sizeBytes
+                      }
+                    }
+                  })
+                  console.log(`✅ Video permanently stored and saved to database: ${permanentVideoUrl}`)
+                } else {
+                  console.log(`⏭️ Video ${updatedVideo.id} already updated by another process, skipping`)
+                }
+              })
             } catch (updateError) {
               console.error(`❌ Failed to update video with permanent URL:`, updateError)
-              // Don't throw - video is stored, just DB update failed
-              // Return success to prevent webhook retries
+              // CRITICAL: Even if update fails, try one more time with simpler update
+              try {
+                await prisma.videoGeneration.update({
+                  where: { id: updatedVideo.id },
+                  data: {
+                    videoUrl: permanentVideoUrl,
+                    status: VideoStatus.COMPLETED,
+                    thumbnailUrl: finalThumbnailUrl || undefined
+                  }
+                })
+                console.log(`✅ Fallback update succeeded for video ${updatedVideo.id}`)
+              } catch (fallbackError) {
+                console.error(`❌ Fallback update also failed:`, fallbackError)
+                // CRITICAL: Don't return 500 - video is stored, just log the error
+                // Return 200 to prevent Replicate from retrying and causing duplicates
+                console.error(`⚠️ Video ${updatedVideo.id} stored but DB update failed - will be retried on next webhook`)
+                return NextResponse.json({
+                  success: true,
+                  videoId: updatedVideo.id,
+                  status: VideoStatus.COMPLETED,
+                  message: 'Video stored but database update failed - will retry',
+                  warning: 'Database update failed but video is stored'
+                })
+              }
             }
           } else {
             // If storage failed, save temporary URL but mark as not stored
@@ -260,14 +430,9 @@ export async function POST(request: NextRequest) {
             )
           } catch (updateError) {
             console.error(`❌ Failed to update video status after storage error:`, updateError)
-            // Return 500 so Replicate will retry
-            return NextResponse.json(
-              { 
-                error: 'Failed to update video status',
-                details: updateError instanceof Error ? updateError.message : String(updateError)
-              },
-              { status: 500 }
-            )
+            // CRITICAL: Don't return 500 - return 200 to prevent infinite retries
+            // The video URL is already saved in the first update, so we can acknowledge
+            console.error(`⚠️ Could not update video status but video URL is already saved`)
           }
         }
         
@@ -276,7 +441,8 @@ export async function POST(request: NextRequest) {
         // 2. Send email notification if enabled  
         // 3. Update user credits/usage statistics
       } else if (internalStatus === VideoStatus.FAILED) {
-        console.log(`💥 Video generation failed for user ${updatedVideo.user.id}: ${updatedVideo.id}`)
+        const userId = updatedVideo.user?.id || updatedVideo.userId
+        console.log(`💥 Video generation failed for user ${userId}: ${updatedVideo.id}`)
         
         // Here you would typically:
         // 1. Send failure notification
@@ -284,7 +450,7 @@ export async function POST(request: NextRequest) {
         // 3. Log for debugging
       }
 
-      // Acknowledge webhook
+      // Acknowledge webhook - ALWAYS return 200 OK to prevent retries
       return NextResponse.json({
         success: true,
         videoId: updatedVideo.id,
@@ -294,22 +460,38 @@ export async function POST(request: NextRequest) {
 
     } catch (dbError) {
       console.error('❌ Database error processing video webhook:', dbError)
+      console.error('❌ Error details:', {
+        message: dbError instanceof Error ? dbError.message : String(dbError),
+        stack: dbError instanceof Error ? dbError.stack : undefined,
+        jobId: webhookData?.id
+      })
       
-      // Return 500 so Replicate will retry
-      return NextResponse.json(
-        { error: 'Database error processing webhook' },
-        { status: 500 }
-      )
+      // CRITICAL: Return 200 OK even on database errors to prevent infinite retries
+      // The error is logged and can be handled manually if needed
+      // Returning 500 causes Replicate to retry indefinitely, creating duplicates
+      return NextResponse.json({
+        success: false,
+        error: 'Database error processing webhook',
+        message: 'Error logged but webhook acknowledged to prevent retries',
+        jobId: webhookData?.id
+      })
     }
 
   } catch (error) {
     console.error('❌ Video webhook processing error:', error)
+    console.error('❌ Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
     
-    // Return 500 so Replicate will retry
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    // CRITICAL: Return 200 OK even on unexpected errors to prevent infinite retries
+    // The error is logged and can be handled manually if needed
+    // Returning 500 causes Replicate to retry indefinitely, creating duplicates
+    return NextResponse.json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Error logged but webhook acknowledged to prevent retries'
+    })
   }
 }
 

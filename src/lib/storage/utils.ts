@@ -314,7 +314,15 @@ export async function downloadAndStoreVideo(
   videoUrl: string,
   videoGenId: string,
   userId: string
-): Promise<{ success: boolean; error?: string; videoUrl?: string; thumbnailUrl?: string }> {
+): Promise<{ 
+  success: boolean
+  error?: string
+  videoUrl?: string
+  thumbnailUrl?: string
+  storageKey?: string
+  sizeBytes?: number
+  mimeType?: string
+}> {
   try {
     const storage = getStorageProvider()
 
@@ -382,7 +390,10 @@ export async function downloadAndStoreVideo(
 
     return {
       success: true,
-      videoUrl: uploadResult.url
+      videoUrl: uploadResult.url,
+      storageKey: uploadResult.key,
+      sizeBytes: videoBuffer.length,
+      mimeType: contentType
     }
 
   } catch (error) {
