@@ -113,7 +113,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao ativar pacote')
+        throw new Error(data.error || 'Erro ao gerar pacote')
       }
 
       if (data.success) {
@@ -129,9 +129,9 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
         throw new Error(data.error || 'Erro desconhecido')
       }
     } catch (error) {
-      console.error('Package activation error:', error)
+      console.error('Package generation error:', error)
       setActivationStatus('error')
-      setErrorMessage(error instanceof Error ? error.message : 'Erro ao ativar pacote')
+      setErrorMessage(error instanceof Error ? error.message : 'Erro ao gerar pacote')
     } finally {
       setIsActivating(false)
     }
