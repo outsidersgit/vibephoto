@@ -237,6 +237,7 @@ export class CreditPackageService {
         creditsUsed: true,
         creditsLimit: true,
         creditsBalance: true,
+        creditsExpiresAt: true, // CRITICAL: Check expiration
         subscriptionEndsAt: true
       }
     })
@@ -245,9 +246,31 @@ export class CreditPackageService {
       throw new Error('Usuário não encontrado')
     }
 
-    const subscriptionCredits = Math.max(0, user.creditsLimit - user.creditsUsed)
+    // CRITICAL: Check if plan credits expired (same logic as CreditManager)
+    const now = new Date()
+    let subscriptionCredits = 0
+    
+    if (user.creditsExpiresAt && user.creditsExpiresAt < now) {
+      // Plan credits expired - can't use them
+      subscriptionCredits = 0
+    } else {
+      // Plan credits still valid
+      subscriptionCredits = Math.max(0, user.creditsLimit - user.creditsUsed)
+    }
+    
     const purchasedCredits = user.creditsBalance || 0
     const totalCredits = subscriptionCredits + purchasedCredits
+    
+    console.log(`💰 [getUserCreditBalance] User ${userId}:`, {
+      creditsLimit: user.creditsLimit,
+      creditsUsed: user.creditsUsed,
+      creditsBalance: user.creditsBalance,
+      creditsExpiresAt: user.creditsExpiresAt,
+      subscriptionCredits,
+      purchasedCredits,
+      totalCredits,
+      isExpired: user.creditsExpiresAt ? user.creditsExpiresAt < now : false
+    })
 
     // Calcular próxima renovação (primeiro do próximo mês ou data de término da assinatura)
     let nextReset: string | null = null

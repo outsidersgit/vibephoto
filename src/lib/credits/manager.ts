@@ -80,10 +80,47 @@ export class CreditManager {
   static async getUserCredits(userId: string): Promise<number> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { creditsUsed: true, creditsLimit: true, creditsBalance: true }
+      select: { 
+        creditsUsed: true, 
+        creditsLimit: true, 
+        creditsBalance: true,
+        creditsExpiresAt: true // CRITICAL: Check expiration
+      }
     })
     
-    return (user?.creditsLimit || 0) - (user?.creditsUsed || 0) + (user?.creditsBalance || 0)
+    if (!user) {
+      return 0
+    }
+    
+    // CRITICAL: Check if plan credits expired (same logic as deductCredits)
+    const now = new Date()
+    let planCreditsAvailable = 0
+    
+    if (user.creditsExpiresAt && user.creditsExpiresAt < now) {
+      // Plan credits expired - can't use them
+      planCreditsAvailable = 0
+    } else {
+      // Plan credits still valid
+      planCreditsAvailable = Math.max(0, user.creditsLimit - user.creditsUsed)
+    }
+    
+    // Purchased credits (creditsBalance) are always available (they don't expire the same way)
+    const purchasedCredits = user.creditsBalance || 0
+    
+    const totalCredits = planCreditsAvailable + purchasedCredits
+    
+    console.log(`💰 [getUserCredits] User ${userId}:`, {
+      creditsLimit: user.creditsLimit,
+      creditsUsed: user.creditsUsed,
+      creditsBalance: user.creditsBalance,
+      creditsExpiresAt: user.creditsExpiresAt,
+      planCreditsAvailable,
+      purchasedCredits,
+      totalCredits,
+      isExpired: user.creditsExpiresAt ? user.creditsExpiresAt < now : false
+    })
+    
+    return totalCredits
   }
 
   static async getUserUsage(userId: string): Promise<CreditUsage> {
