@@ -104,7 +104,12 @@ export interface GenerationResponse {
     prompt: string
     seed: number
     params: GenerationParams
-    tune_id?: string // Astria tune ID (para polling)
+    tune_id?: string // Astria tune ID (para polling) - extraído de tunes[0].id
+    prompt_id?: string // Astria prompt ID
+    modelUrl?: string // Model URL usado
+    endpoint_used?: string // Endpoint usado
+    astriaUrl?: string // URL completa do Astria
+    [key: string]: any // Permitir campos adicionais
   }
 }
 

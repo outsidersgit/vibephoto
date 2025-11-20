@@ -610,9 +610,20 @@ export class AstriaProvider extends AIProvider {
       console.log(`📋 [ASTRIA_RESPONSE] Complete Astria API response:`, JSON.stringify(prediction, null, 2))
       
       // 🔍 CORRETO: Extrair tune_id e prompt_id corretamente
-      // IMPORTANTE: A URL do Astria mostra o base_tune_id (1504944), NÃO o tune_id do modelo do usuário
-      // O tune_id correto está em prediction.tunes[0].id (3528382) OU em request.modelUrl
-      // Formato da URL: https://api.astria.ai/tunes/{BASE_TUNE_ID}/prompts/{PROMPT_ID}.json
+      // IMPORTANTE: O Astria retorna uma URL que mostra o base_tune_id (1504944) na rota,
+      // mas isso é um BUG/comportamento inconsistente do Astria. A URL deveria mostrar
+      // o tune_id do modelo do usuário (3276053), mas mostra o base_tune_id.
+      // 
+      // O tune_id CORRETO para usar é:
+      // 1. request.modelUrl (tune_id que enviamos na requisição) - SEMPRE CORRETO
+      // 2. prediction.tunes[0].id (tune_id do modelo do usuário no array tunes) - CORRETO
+      // 
+      // NÃO usar:
+      // - prediction.url (mostra base_tune_id incorretamente)
+      // - prediction.tune.id (base_tune_id, não o tune_id do modelo)
+      // 
+      // Formato da URL retornada (BUG do Astria): https://api.astria.ai/tunes/{BASE_TUNE_ID}/prompts/{PROMPT_ID}.json
+      // Formato CORRETO esperado: https://api.astria.ai/tunes/{TUNE_ID}/prompts/{PROMPT_ID}.json
       let extractedTuneId: string | undefined
       let extractedPromptId: string | undefined
       
@@ -621,10 +632,12 @@ export class AstriaProvider extends AIProvider {
         hasTunes: !!prediction.tunes,
         isArray: Array.isArray(prediction.tunes),
         tunesLength: Array.isArray(prediction.tunes) ? prediction.tunes.length : 0,
-        requestModelUrl: request.modelUrl // Este já é o tune_id correto
+        requestModelUrl: request.modelUrl, // Este é o tune_id correto que enviamos
+        urlFromResponse: prediction.url, // Esta URL mostra base_tune_id (BUG do Astria)
+        urlTuneId: prediction.url ? prediction.url.match(/\/tunes\/(\d+)\//)?.[1] : null
       })
       
-      // 🔍 CORRETO: Extrair prompt_id da URL (este está correto)
+      // 🔍 CORRETO: Extrair prompt_id da URL (este está correto, é o ID do prompt)
       if (prediction.url) {
         const urlMatch = prediction.url.match(/\/prompts\/(\d+)/)
         if (urlMatch) {
@@ -633,7 +646,7 @@ export class AstriaProvider extends AIProvider {
       }
       
       // 🔍 CORRETO: Extrair tune_id do array tunes[0].id (tune_id do modelo do usuário)
-      // NÃO usar a URL que mostra o base_tune_id
+      // OU usar request.modelUrl que é o tune_id que enviamos na requisição
       if (prediction.tunes && Array.isArray(prediction.tunes) && prediction.tunes.length > 0) {
         extractedTuneId = String(prediction.tunes[0].id)
         console.log(`✅ [ASTRIA_RESPONSE] Extracted tune_id from tunes array:`, {
@@ -649,7 +662,7 @@ export class AstriaProvider extends AIProvider {
           hasTuneId: !!tuneId,
           tuneId: tuneId
         })
-        // extractedTuneId será undefined, então usaremos tuneId (que vem de request.modelUrl)
+        // extractedTuneId será undefined, então usaremos request.modelUrl
       }
       
       if (extractedPromptId) {
@@ -660,25 +673,45 @@ export class AstriaProvider extends AIProvider {
         })
       }
       
-      // ⚠️ WARNING: Se a URL mostrar tune_id diferente do tunes[0].id, é o base_tune_id (esperado)
+      // ⚠️ WARNING: A URL do Astria mostra base_tune_id incorretamente (BUG do Astria)
       if (prediction.url && extractedTuneId) {
         const urlTuneId = prediction.url.match(/\/tunes\/(\d+)\//)?.[1]
         if (urlTuneId && urlTuneId !== extractedTuneId) {
-          console.log(`ℹ️ [ASTRIA_RESPONSE] URL shows base_tune_id (${urlTuneId}), using user tune_id (${extractedTuneId}) from tunes array`)
+          console.warn(`⚠️ [ASTRIA_RESPONSE] BUG DO ASTRIA: URL mostra base_tune_id (${urlTuneId}) em vez do tune_id correto (${extractedTuneId})`)
+          console.warn(`⚠️ [ASTRIA_RESPONSE] URL retornada: ${prediction.url}`)
+          console.warn(`⚠️ [ASTRIA_RESPONSE] URL CORRETA deveria ser: https://api.astria.ai/tunes/${extractedTuneId}/prompts/${extractedPromptId || prediction.id}.json`)
+          console.warn(`⚠️ [ASTRIA_RESPONSE] Usando tune_id correto (${extractedTuneId}) do array tunes, ignorando URL incorreta`)
         }
       }
       
       // 🔍 FINAL: Garantir que sempre temos um tune_id correto
-      // Prioridade: extractedTuneId (de tunes[0].id) > tuneId (de request.modelUrl, que já é o tune_id correto)
-      // NOTA: tuneId já foi definido acima como request.modelUrl || prediction.tune_id
-      // Mas request.modelUrl já é o tune_id correto (3528382), então sempre usamos ele se extractedTuneId não estiver disponível
-      const finalTuneId = extractedTuneId || request.modelUrl || tuneId
+      // Prioridade: request.modelUrl (tune_id que enviamos) > extractedTuneId (de tunes[0].id) > tuneId (fallback)
+      // request.modelUrl é SEMPRE o tune_id correto porque é o que enviamos na requisição
+      const finalTuneId = request.modelUrl || extractedTuneId || tuneId
       console.log(`🔍 [ASTRIA_RESPONSE] Final tune_id resolution:`, {
         extractedTuneId,
         requestModelUrl: request.modelUrl, // Este já é o tune_id correto (3528382)
         tuneIdFromVariable: tuneId,
         finalTuneId,
         source: extractedTuneId ? 'tunes[0].id' : (request.modelUrl ? 'request.modelUrl (CORRETO)' : 'tuneId variable (fallback)')
+      })
+
+      const responseMetadata = {
+        prompt: request.prompt,
+        seed: request.params.seed || 0,
+        params: request.params,
+        tune_id: finalTuneId, // 🔍 CORRETO: Usar tune_id extraído de tunes[0].id ou request.modelUrl
+        prompt_id: extractedPromptId || String(prediction.id), // 🔍 CORRETO: prompt_id é o ID do prompt
+        modelUrl: request.modelUrl,
+        endpoint_used: endpoint,
+        astriaUrl: prediction.url // Armazenar URL completa para referência
+      }
+      
+      console.log(`✅ [ASTRIA_RESPONSE] Returning GenerationResponse with metadata:`, {
+        tune_id: responseMetadata.tune_id,
+        prompt_id: responseMetadata.prompt_id,
+        modelUrl: responseMetadata.modelUrl,
+        hasTuneId: !!responseMetadata.tune_id
       })
 
       return {
@@ -690,16 +723,7 @@ export class AstriaProvider extends AIProvider {
           request.params.height || 1024,
           request.params.steps || 30
         ),
-        metadata: {
-          prompt: request.prompt,
-          seed: request.params.seed || 0,
-          params: request.params,
-          tune_id: finalTuneId, // 🔍 CORRETO: Usar tune_id extraído de tunes[0].id ou request.modelUrl
-          prompt_id: extractedPromptId || String(prediction.id), // 🔍 CORRETO: prompt_id é o ID do prompt
-          modelUrl: request.modelUrl,
-          endpoint_used: endpoint,
-          astriaUrl: prediction.url // Armazenar URL completa para referência
-        }
+        metadata: responseMetadata
       }
     } catch (error) {
       console.error('❌ Astria generation failed:', error)

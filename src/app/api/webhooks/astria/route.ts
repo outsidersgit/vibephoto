@@ -643,16 +643,39 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload, promptIdFromUr
     }
     
     // 🔒 CRITICAL: Update the generation with the new status and final image URLs
+    // ⚠️ CRITICAL: Only update status to COMPLETED if we have URLs (permanent or temporary)
+    if (internalStatus === 'COMPLETED' && finalImageUrls.length === 0) {
+      console.error(`❌ [WEBHOOK_ASTRIA] CRITICAL: Cannot update status to COMPLETED - no URLs available for generation ${generation.id}`)
+      console.error(`❌ [WEBHOOK_ASTRIA] Details:`, {
+        status: internalStatus,
+        imageUrlsCount: imageUrls.length,
+        finalImageUrlsCount: finalImageUrls.length,
+        hasStorageResult: !!storageResult,
+        storageSuccess: storageResult?.success,
+        storageError: storageResult?.error
+      })
+      // Don't update status to COMPLETED if there are no URLs
+      internalStatus = 'FAILED'
+    }
+    
     console.log(`💾 [WEBHOOK_ASTRIA] Updating generation ${generation.id} in database:`, {
       status: internalStatus,
       finalImageUrlsCount: finalImageUrls.length,
       hasStorageResult: !!storageResult,
       storageSuccess: storageResult?.success,
-      permanentUrlsCount: storageResult?.permanentUrls?.length || 0
+      permanentUrlsCount: storageResult?.permanentUrls?.length || 0,
+      willUpdateStatus: internalStatus,
+      hasUrls: finalImageUrls.length > 0
     })
     
     let updatedGeneration
     try {
+      // 🔍 VERIFICATION: Before updating, verify we have URLs if status is COMPLETED
+      if (internalStatus === 'COMPLETED' && finalImageUrls.length === 0) {
+        console.error(`❌ [WEBHOOK_ASTRIA] CRITICAL: Attempting to update with COMPLETED status but no URLs! This should not happen.`)
+        throw new Error(`Cannot update generation to COMPLETED status without image URLs`)
+      }
+      
       updatedGeneration = await prisma.generation.update({
         where: { id: generation.id },
         data: {

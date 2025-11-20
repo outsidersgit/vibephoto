@@ -598,6 +598,13 @@ async function handleJobCompletion(job: PollingJob, status: string, urls: string
 
     // Continue with normal polling processing only if webhook hasn't processed
     if (status === 'succeeded' && urls.length > 0) {
+      console.log(`🔄 [POLLING] Processing ${isVideoJob ? 'video' : 'image'} job completion:`, {
+        predictionId,
+        generationId,
+        urlsCount: urls.length,
+        firstUrl: urls[0]?.substring(0, 100) + '...'
+      })
+      
       let storageResult: any
 
       if (isVideoJob) {
@@ -612,12 +619,41 @@ async function handleJobCompletion(job: PollingJob, status: string, urls: string
         }
       } else {
         // Use image storage function
-        storageResult = await downloadAndStoreImages(
-          urls,
+        console.log(`📥 [POLLING] Calling downloadAndStoreImages for ${urls.length} images:`, {
           generationId,
           userId,
-          'generated'
-        )
+          urlsCount: urls.length,
+          firstUrl: urls[0]?.substring(0, 100) + '...'
+        })
+        
+        try {
+          storageResult = await downloadAndStoreImages(
+            urls,
+            generationId,
+            userId,
+            'generated'
+          )
+          
+          console.log(`📊 [POLLING] Storage result:`, {
+            success: storageResult.success,
+            permanentUrlsCount: storageResult.permanentUrls?.length || 0,
+            thumbnailUrlsCount: storageResult.thumbnailUrls?.length || 0,
+            error: storageResult.error,
+            hasPermanentUrls: !!(storageResult.permanentUrls && storageResult.permanentUrls.length > 0)
+          })
+        } catch (storageError) {
+          console.error(`❌ [POLLING] CRITICAL: downloadAndStoreImages threw exception:`, storageError)
+          console.error('❌ Error name:', storageError instanceof Error ? storageError.name : 'Unknown')
+          console.error('❌ Error message:', storageError instanceof Error ? storageError.message : 'Unknown')
+          console.error('❌ Error stack:', storageError instanceof Error ? storageError.stack : 'No stack')
+          
+          storageResult = {
+            success: false,
+            error: storageError instanceof Error ? storageError.message : 'Unknown error',
+            permanentUrls: [],
+            thumbnailUrls: []
+          }
+        }
       }
 
       let updateData: any
@@ -687,6 +723,7 @@ async function handleJobCompletion(job: PollingJob, status: string, urls: string
           updateData.thumbnailUrls = storageResult.thumbnailUrls || storageResult.permanentUrls
           updateData.storageProvider = 'aws'
 
+          console.log(`✅ [POLLING] Successfully stored ${storageResult.permanentUrls.length} images permanently`)
           logger.info('Job completed successfully with storage', {
             service: 'polling-service',
             action: 'job_success',
@@ -696,21 +733,56 @@ async function handleJobCompletion(job: PollingJob, status: string, urls: string
           })
         } else {
           // Storage failed, use temporary URLs
-          updateData.imageUrls = urls
-          updateData.thumbnailUrls = urls
-          updateData.storageProvider = 'temporary'
-          updateData.errorMessage = 'Warning: Storage failed, images may expire'
-
-          logger.warn('Job completed but storage failed', {
-            service: 'polling-service',
-            action: 'job_storage_failed',
-            predictionId,
-            error: storageResult.error
+          console.error(`❌ [POLLING] CRITICAL: Storage failed for generation ${generationId}:`, {
+            success: storageResult.success,
+            error: storageResult.error,
+            hasPermanentUrls: !!(storageResult.permanentUrls && storageResult.permanentUrls.length > 0),
+            permanentUrlsCount: storageResult.permanentUrls?.length || 0,
+            originalUrlsCount: urls.length,
+            storageResultKeys: Object.keys(storageResult || {})
           })
+          
+          // ⚠️ CRITICAL: Only update with temporary URLs if we have URLs to use
+          if (urls.length > 0) {
+            updateData.imageUrls = urls
+            updateData.thumbnailUrls = urls
+            updateData.storageProvider = 'temporary'
+            updateData.errorMessage = `Warning: Storage failed, images may expire. Error: ${storageResult.error || 'Unknown'}`
+            
+            logger.warn('Job completed but storage failed - using temporary URLs', {
+              service: 'polling-service',
+              action: 'job_storage_failed',
+              predictionId,
+              error: storageResult.error,
+              temporaryUrlsCount: urls.length
+            })
+          } else {
+            // ⚠️ CRITICAL: No URLs available - don't update status to COMPLETED
+            console.error(`❌ [POLLING] CRITICAL: Cannot update status to COMPLETED - no URLs available (storage failed and no temporary URLs)`)
+            updateData.status = 'FAILED'
+            updateData.errorMessage = `Storage failed and no URLs available. Error: ${storageResult.error || 'Unknown'}`
+            
+            logger.error('Job failed - no URLs available', {
+              service: 'polling-service',
+              action: 'job_no_urls',
+              predictionId,
+              error: storageResult.error
+            })
+          }
         }
       }
 
       // Update database with the correct table
+      console.log(`💾 [POLLING] Updating ${isVideoJob ? 'video' : 'generation'} in database:`, {
+        generationId,
+        status: updateData.status,
+        hasImageUrls: !!(updateData.imageUrls && updateData.imageUrls.length > 0),
+        hasVideoUrl: !!updateData.videoUrl,
+        imageUrlsCount: updateData.imageUrls?.length || 0,
+        storageProvider: updateData.storageProvider,
+        errorMessage: updateData.errorMessage
+      })
+      
       if (isVideoJob) {
         await prisma.videoGeneration.update({
           where: { id: generationId },
@@ -776,10 +848,42 @@ async function handleJobCompletion(job: PollingJob, status: string, urls: string
           data: updateData
         })
       } else {
-        await prisma.generation.update({
+        const updated = await prisma.generation.update({
           where: { id: generationId },
           data: updateData
         })
+        
+        console.log(`✅ [POLLING] Generation updated in database:`, {
+          generationId,
+          status: updated.status,
+          imageUrlsCount: Array.isArray(updated.imageUrls) ? updated.imageUrls.length : 0,
+          hasImageUrls: Array.isArray(updated.imageUrls) && updated.imageUrls.length > 0,
+          storageProvider: (updated.metadata as any)?.storageProvider
+        })
+        
+        // 🔍 VERIFICATION: Verify the update was successful
+        const verification = await prisma.generation.findUnique({
+          where: { id: generationId },
+          select: { 
+            status: true, 
+            imageUrls: true, 
+            metadata: true 
+          }
+        })
+        
+        if (verification) {
+          const hasUrls = Array.isArray(verification.imageUrls) && verification.imageUrls.length > 0
+          if (verification.status === 'COMPLETED' && !hasUrls) {
+            console.error(`❌ [POLLING] CRITICAL VERIFICATION FAILED: Status is COMPLETED but no imageUrls!`, {
+              generationId,
+              status: verification.status,
+              imageUrls: verification.imageUrls,
+              metadata: verification.metadata
+            })
+          } else {
+            console.log(`✅ [POLLING] Verification passed: Status=${verification.status}, hasUrls=${hasUrls}`)
+          }
+        }
       }
 
       // Broadcast failure

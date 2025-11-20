@@ -274,22 +274,38 @@ export async function POST(request: NextRequest) {
       const generationResponse = await aiProvider.generateImage(generationRequest)
       
       console.log(`✅ Generation started with job ID: ${generationResponse.id}`)
+      
+      // 🔍 DEBUG: Verificar metadata completo da resposta
+      console.log(`🔍 [GENERATIONS_DEBUG] GenerationResponse metadata:`, {
+        hasMetadata: !!generationResponse.metadata,
+        metadataKeys: generationResponse.metadata ? Object.keys(generationResponse.metadata) : [],
+        tune_id: (generationResponse.metadata as any)?.tune_id,
+        prompt_id: (generationResponse.metadata as any)?.prompt_id,
+        fullMetadata: JSON.stringify(generationResponse.metadata, null, 2)
+      })
 
       // 🔍 CORRETO: Extrair tune_id da resposta do Astria (prioridade) ou usar do modelo
       // A resposta do Astria contém o tune_id correto em metadata.tune_id (extraído de tunes[0].id)
       // Se não estiver disponível, usar trainingJobId do modelo como fallback
+      // IMPORTANTE: generationResponse.metadata.tune_id já contém o tune_id extraído de tunes[0].id
+      const metadataTuneId = (generationResponse.metadata as any)?.tune_id
       const tuneId = (currentProvider === 'astria' || currentProvider === 'hybrid')
-        ? (generationResponse.metadata?.tune_id || model.trainingJobId || effectiveModelUrl)
+        ? (metadataTuneId || model.trainingJobId || effectiveModelUrl)
         : effectiveModelUrl
 
       console.log(`🔍 [GENERATIONS_DEBUG] Tune ID resolution:`, {
         modelUrl: model.modelUrl,
         trainingJobId: model.trainingJobId,
         effectiveModelUrl,
-        metadataTuneId: generationResponse.metadata?.tune_id, // tune_id extraído da resposta do Astria
+        metadataTuneId: metadataTuneId, // tune_id extraído da resposta do Astria (de tunes[0].id)
         finalTuneId: tuneId,
         generationResponseId: generationResponse.id,
-        tuneIdSource: generationResponse.metadata?.tune_id ? 'Astria response (tunes[0].id)' : 'Model trainingJobId (fallback)'
+        tuneIdSource: metadataTuneId 
+          ? `Astria response metadata.tune_id (${metadataTuneId})` 
+          : `Model trainingJobId (${model.trainingJobId}) - fallback`,
+        note: metadataTuneId 
+          ? '✅ Using tune_id from Astria response (tunes[0].id)' 
+          : '⚠️ Using model trainingJobId as fallback (tune_id not in response metadata)'
       })
 
       // Update astriaEnhancements with tune_id for proper polling
