@@ -216,7 +216,13 @@ export async function executeGenerationFlow(params: ExecuteGenerationFlowParams)
     
     const generationResponse = await aiProvider.generateImage(generationRequest)
     
-    console.log(`✅ Generation started with job ID: ${generationResponse.id}`)
+    console.log(`✅ Generation started with job ID: ${generationResponse.id}`, {
+      generationId: generation.id,
+      jobId: generationResponse.id,
+      jobIdType: typeof generationResponse.id,
+      jobIdAsString: String(generationResponse.id),
+      webhookUrl: generationRequest.webhookUrl?.substring(0, 100) + '...'
+    })
 
     // Extract tune_id - for Astria use trainingJobId (contains tune_id), for Replicate use modelUrl
     const tuneId = (currentProvider === 'astria' || currentProvider === 'hybrid')

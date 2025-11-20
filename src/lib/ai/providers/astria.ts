@@ -505,9 +505,22 @@ export class AstriaProvider extends AIProvider {
       )
       if (hasValidWebhook && request.webhookUrl) {
         formData.append('prompt[callback]', request.webhookUrl)
-        console.log('📡 Callback configured for generation:', request.webhookUrl)
+        console.log('📡 [ASTRIA_CALLBACK] Callback configured for generation:', {
+          callbackUrl: request.webhookUrl,
+          isHttps: request.webhookUrl.startsWith('https://'),
+          isHttp: request.webhookUrl.startsWith('http://'),
+          environment: process.env.NODE_ENV,
+          hasValidWebhook
+        })
       } else if (request.webhookUrl) {
-        console.warn('⚠️ Invalid callback URL (must be HTTPS in production):', request.webhookUrl)
+        console.warn('⚠️ [ASTRIA_CALLBACK] Invalid callback URL (must be HTTPS in production):', {
+          callbackUrl: request.webhookUrl,
+          isHttps: request.webhookUrl.startsWith('https://'),
+          isHttp: request.webhookUrl.startsWith('http://'),
+          environment: process.env.NODE_ENV
+        })
+      } else {
+        console.warn('⚠️ [ASTRIA_CALLBACK] No webhook URL provided in request')
       }
 
       console.log('🎨 Astria generation input parameters:', {

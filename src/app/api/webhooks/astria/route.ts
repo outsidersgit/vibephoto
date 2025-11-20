@@ -362,15 +362,53 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
   try {
     // Find the corresponding generation in our database
     // Astria sends ID as number, but we store it as string in jobId
+    const jobIdStr = String(payload.id)
+    
+    console.log(`🔍 [WEBHOOK_ASTRIA] Looking for generation with jobId:`, {
+      payloadId: payload.id,
+      payloadIdType: typeof payload.id,
+      jobIdStr,
+      status: payload.status,
+      object: payload.object
+    })
+    
     const generation = await prisma.generation.findFirst({
       where: {
-        jobId: String(payload.id)
+        jobId: jobIdStr
       }
     })
 
     if (!generation) {
-      console.error('❌ [WEBHOOK_ASTRIA] CRITICAL: No generation found for Astria prompt:', payload.id)
-      throw new Error(`Generation not found for jobId: ${payload.id}`)
+      // Try alternative formats (number as string, etc.)
+      console.error('❌ [WEBHOOK_ASTRIA] CRITICAL: No generation found for Astria prompt:', {
+        payloadId: payload.id,
+        jobIdStr,
+        payloadIdType: typeof payload.id,
+        // Try to find any generation with similar jobId
+        recentGenerations: await prisma.generation.findMany({
+          where: {
+            status: 'PROCESSING',
+            createdAt: {
+              gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
+            }
+          },
+          select: {
+            id: true,
+            jobId: true,
+            status: true,
+            createdAt: true,
+            metadata: true
+          },
+          take: 5,
+          orderBy: { createdAt: 'desc' }
+        }).then(gens => gens.map(g => ({
+          id: g.id,
+          jobId: g.jobId,
+          status: g.status,
+          metadata: (g.metadata as any)?.source
+        })))
+      })
+      throw new Error(`Generation not found for jobId: ${payload.id} (as string: ${jobIdStr})`)
     }
 
     console.log(`🎯 Processing Astria prompt webhook for generation: ${generation.id}`)
