@@ -41,10 +41,13 @@ export class HybridAIProvider extends AIProvider {
     if (request.modelUrl) {
       console.log('🎯 Routing custom model generation to Astria provider')
       const result = await this.astriaProvider.generateImage(request)
-      // Add metadata to indicate actual provider used
+      // 🔍 CRITICAL: Merge metadata instead of replacing it
+      // The Astria provider returns important metadata like tune_id and prompt_id
+      // We must preserve it while adding hybrid routing info
       return {
         ...result,
         metadata: {
+          ...(result.metadata || {}), // Preserve original metadata (tune_id, prompt_id, etc.)
           actualProvider: 'astria',
           hybridRouting: 'custom-model'
         }
@@ -55,10 +58,13 @@ export class HybridAIProvider extends AIProvider {
     // Defaulting to Astria for consistency, but can be configured
     console.log('🎯 Routing base model generation to Astria provider')
     const result = await this.astriaProvider.generateImage(request)
-    // Add metadata to indicate actual provider used
+    // 🔍 CRITICAL: Merge metadata instead of replacing it
+    // The Astria provider returns important metadata like tune_id and prompt_id
+    // We must preserve it while adding hybrid routing info
     return {
       ...result,
       metadata: {
+        ...(result.metadata || {}), // Preserve original metadata (tune_id, prompt_id, etc.)
         actualProvider: 'astria',
         hybridRouting: 'base-model'
       }
