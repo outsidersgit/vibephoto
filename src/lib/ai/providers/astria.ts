@@ -142,7 +142,15 @@ export class AstriaProvider extends AIProvider {
       }
 
       if (token) payload.tune.token = token
-      if (options.callback) payload.tune.callback = options.callback
+      if (options.callback) {
+        payload.tune.callback = options.callback
+        console.log(`🔗 [ASTRIA_TUNE] Callback configured for tune creation:`, {
+          callbackUrl: options.callback,
+          isHttps: options.callback.startsWith('https://'),
+          hasPlaceholders: options.callback.includes('{TUNE_ID}') || options.callback.includes('{USER_ID}'),
+          note: 'Astria will replace placeholders or send values in payload'
+        })
+      }
       if (options.testMode) payload.tune.branch = 'fast'
 
       // Retry resiliente para 429/5xx (ex.: 503 Service Unavailable)

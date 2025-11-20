@@ -223,11 +223,42 @@ export async function POST(request: NextRequest) {
       const webhookType = payload.object || (tuneId ? 'tune' : (promptId ? 'prompt' : null))
       
       if (webhookType === 'tune' || tuneId) {
-        // TUNE webhook: usar tune_id da URL ou do payload
-        const actualTuneId = tuneId || String(payload.id)
-        await handleTuneWebhook(payload, actualTuneId, userId)
-        processingResult.success = true
-        console.log('✅ [WEBHOOK_ASTRIA] Tune webhook processed successfully')
+        // TUNE webhook: usar tune_id da URL, do payload.id, ou extrair da URL do payload
+        let actualTuneId = tuneId || String(payload.id)
+        
+        // 🔍 CRITICAL: Se tuneId da URL é literalmente o placeholder, usar payload.id
+        if (actualTuneId === '{TUNE_ID}' || actualTuneId === '%7BTUNE_ID%7D') {
+          console.log(`⚠️ [WEBHOOK_ASTRIA] URL contains literal placeholder, using payload.id instead`)
+          actualTuneId = String(payload.id)
+        }
+        
+        // 🔍 CRITICAL: Se não temos tune_id, tentar extrair da URL do payload
+        if (!actualTuneId || actualTuneId === '{TUNE_ID}' || actualTuneId === '%7BTUNE_ID%7D') {
+          if (payload.url) {
+            const extractedIds = extractIdsFromAstriaUrl(payload.url)
+            if (extractedIds.tuneId) {
+              actualTuneId = extractedIds.tuneId
+              console.log(`🔍 [WEBHOOK_ASTRIA] Extracted tune_id from payload.url: ${actualTuneId}`)
+            }
+          }
+        }
+        
+        // 🔍 CRITICAL: Se ainda não temos tune_id, usar payload.id como fallback
+        if (!actualTuneId || actualTuneId === '{TUNE_ID}' || actualTuneId === '%7BTUNE_ID%7D') {
+          if (payload.id) {
+            actualTuneId = String(payload.id)
+            console.log(`🔍 [WEBHOOK_ASTRIA] Using payload.id as tune_id: ${actualTuneId}`)
+          }
+        }
+        
+        if (actualTuneId && actualTuneId !== '{TUNE_ID}' && actualTuneId !== '%7BTUNE_ID%7D') {
+          await handleTuneWebhook(payload, actualTuneId, userId)
+          processingResult.success = true
+          console.log('✅ [WEBHOOK_ASTRIA] Tune webhook processed successfully')
+        } else {
+          console.error('❌ [WEBHOOK_ASTRIA] Cannot process tune webhook - no valid tune_id available')
+          processingResult.error = 'No valid tune_id available in URL or payload'
+        }
       } else if (webhookType === 'prompt' || promptId || (!tuneId && payload.id)) {
         // PROMPT webhook: usar prompt_id da URL, do payload.id, ou extrair da URL do payload
         let actualPromptId = promptId || String(payload.id)
@@ -340,15 +371,39 @@ function extractIdsFromAstriaUrl(url: string | null | undefined): { tuneId?: str
 
 async function handleTuneWebhook(payload: AstriaWebhookPayload, tuneIdFromUrl?: string, userIdFromUrl?: string | null) {
   try {
-    // 🔍 CORRETO: Usar tune_id da URL (prioridade) ou do payload
-    const tuneId = tuneIdFromUrl || String(payload.id)
+    // 🔍 CORRETO: Extrair tune_id da URL do payload (conforme documentação Astria)
+    // O output do Astria mostra: url: "https://www.astria.ai/tunes/788416.json"
+    // O tune_id real está na URL, não no base_tune_id (que vem como null no output)
+    let tuneId = tuneIdFromUrl || String(payload.id)
+    
+    // 🔍 CRITICAL: Se não temos tune_id válido, tentar extrair da URL do payload
+    if (!tuneId || tuneId === '{TUNE_ID}' || tuneId === '%7BTUNE_ID%7D') {
+      if (payload.url) {
+        const extractedIds = extractIdsFromAstriaUrl(payload.url)
+        if (extractedIds.tuneId) {
+          tuneId = extractedIds.tuneId
+          console.log(`🔍 [WEBHOOK_ASTRIA_TUNE] Extracted tune_id from payload.url: ${tuneId}`)
+        }
+      }
+    }
+    
+    // 🔍 CRITICAL: Se ainda não temos tune_id, usar payload.id como fallback
+    if (!tuneId || tuneId === '{TUNE_ID}' || tuneId === '%7BTUNE_ID%7D') {
+      if (payload.id) {
+        tuneId = String(payload.id)
+        console.log(`🔍 [WEBHOOK_ASTRIA_TUNE] Using payload.id as tune_id: ${tuneId}`)
+      }
+    }
+    
     const tuneIdNum = typeof payload.id === 'number' ? payload.id : parseInt(tuneId)
     
     console.log(`🔍 [WEBHOOK_ASTRIA_TUNE] Processing tune webhook:`, {
       tuneIdFromUrl,
       tuneIdFromPayload: payload.id,
+      tuneIdFromPayloadUrl: payload.url ? extractIdsFromAstriaUrl(payload.url).tuneId : undefined,
       finalTuneId: tuneId,
-      userIdFromUrl
+      userIdFromUrl,
+      payloadUrl: payload.url
     })
     
     const model = await prisma.aIModel.findFirst({

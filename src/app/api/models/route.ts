@@ -257,10 +257,11 @@ export async function POST(request: NextRequest) {
       await updateModelStatus(model.id, 'PROCESSING', 10)
 
       // Create training request
-      // 🔍 CORRETO: Callback de treinamento (TUNE) usa apenas user_id
+      // 🔍 CORRETO: Callback de treinamento (TUNE) conforme documentação oficial do Astria
       // Formato: https://seu-dominio/api/webhooks/astria?user_id={USER_ID}&tune_id={TUNE_ID}
-      // NOTA: tune_id será enviado pelo Astria no payload do webhook, não precisa estar na URL
-      const callbackUrl = `${process.env.NEXTAUTH_URL}/api/webhooks/astria?user_id=${session.user.id}`
+      // NOTA: O Astria substitui {TUNE_ID} pelo valor real quando chama o callback (ou envia no payload)
+      // Usando o mesmo padrão das gerações comuns: placeholder na URL, valor real no payload
+      const callbackUrl = `${process.env.NEXTAUTH_URL}/api/webhooks/astria?user_id=${session.user.id}&tune_id={TUNE_ID}`
       
       const trainingRequest = {
         modelId: model.id,
