@@ -132,23 +132,42 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     })
 
-    // Handle different object types
-    if (payload.object === 'tune') {
-      await handleTuneWebhook(payload)
-    } else if (payload.object === 'prompt') {
-      await handlePromptWebhook(payload)
-    } else {
-      console.warn('⚠️ Unknown Astria webhook object type:', payload.object)
-      // Still try to process if we have an ID (might be a generation webhook without object field)
-      if (payload.id && payload.status) {
-        console.log('🔄 Attempting to process as prompt webhook (object field missing)')
-        await handlePromptWebhook(payload as AstriaWebhookPayload)
+    // 🔒 CRITICAL: Handle different object types and ensure processing completes
+    let processingResult: { success: boolean; error?: string } = { success: false }
+    
+    try {
+      if (payload.object === 'tune') {
+        await handleTuneWebhook(payload)
+        processingResult.success = true
+        console.log('✅ [WEBHOOK_ASTRIA] Tune webhook processed successfully')
+      } else if (payload.object === 'prompt') {
+        await handlePromptWebhook(payload)
+        processingResult.success = true
+        console.log('✅ [WEBHOOK_ASTRIA] Prompt webhook processed successfully')
+      } else {
+        console.warn('⚠️ Unknown Astria webhook object type:', payload.object)
+        // Still try to process if we have an ID (might be a generation webhook without object field)
+        if (payload.id && payload.status) {
+          console.log('🔄 Attempting to process as prompt webhook (object field missing)')
+          await handlePromptWebhook(payload as AstriaWebhookPayload)
+          processingResult.success = true
+          console.log('✅ [WEBHOOK_ASTRIA] Prompt webhook (fallback) processed successfully')
+        } else {
+          processingResult.error = 'Unknown object type and no ID/status to process'
+        }
       }
+    } catch (processingError) {
+      console.error('❌ [WEBHOOK_ASTRIA] Error during webhook processing:', processingError)
+      processingResult.error = processingError instanceof Error ? processingError.message : String(processingError)
+      // Don't throw - we'll return 200 but log the error
     }
 
+    // 🔒 CRITICAL: Always return 200 to prevent retries, but log if processing failed
     return NextResponse.json({ 
-      success: true,
-      message: 'Webhook processed successfully',
+      success: processingResult.success,
+      message: processingResult.success 
+        ? 'Webhook processed successfully' 
+        : `Webhook acknowledged but processing failed: ${processingResult.error}`,
       timestamp: new Date().toISOString()
     })
   } catch (error) {
@@ -350,8 +369,8 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
     })
 
     if (!generation) {
-      console.warn('⚠️ No generation found for Astria prompt:', payload.id)
-      return
+      console.error('❌ [WEBHOOK_ASTRIA] CRITICAL: No generation found for Astria prompt:', payload.id)
+      throw new Error(`Generation not found for jobId: ${payload.id}`)
     }
 
     console.log(`🎯 Processing Astria prompt webhook for generation: ${generation.id}`)
@@ -729,14 +748,53 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
           }
         }
       } catch (reconcileError) {
-        console.error('❌ Failed to reconcile UserPackage status:', reconcileError)
-        // Don't fail the webhook for reconciliation errors
+        console.error('❌ [WEBHOOK_ASTRIA] Failed to reconcile UserPackage status:', reconcileError)
+        console.error('❌ [WEBHOOK_ASTRIA] Reconciliation error details:', {
+          message: reconcileError instanceof Error ? reconcileError.message : String(reconcileError),
+          stack: reconcileError instanceof Error ? reconcileError.stack : undefined
+        })
+        // Don't fail the webhook for reconciliation errors, but log them
       }
     }
 
+    // 🔒 CRITICAL: Final verification before returning
+    const finalCheck = await prisma.generation.findUnique({
+      where: { id: generation.id },
+      select: { status: true, imageUrls: true, metadata: true }
+    })
+    
+    if (!finalCheck) {
+      throw new Error(`Generation ${generation.id} not found after processing`)
+    }
+    
+    const finalMetadata = finalCheck.metadata as any
+    console.log(`✅ [WEBHOOK_ASTRIA] Final verification for generation ${generation.id}:`, {
+      status: finalCheck.status,
+      hasImageUrls: Array.isArray(finalCheck.imageUrls) && (finalCheck.imageUrls as string[]).length > 0,
+      imageUrlsCount: Array.isArray(finalCheck.imageUrls) ? (finalCheck.imageUrls as string[]).length : 0,
+      webhookProcessed: finalMetadata?.webhookProcessed === true,
+      stored: finalMetadata?.stored === true
+    })
+    
+    // 🔒 CRITICAL: Verify that update actually happened
+    if (internalStatus === 'COMPLETED' && finalCheck.status !== 'COMPLETED') {
+      throw new Error(`Generation status mismatch: expected COMPLETED, got ${finalCheck.status}`)
+    }
+    
+    if (internalStatus === 'COMPLETED' && (!Array.isArray(finalCheck.imageUrls) || (finalCheck.imageUrls as string[]).length === 0)) {
+      console.error(`❌ [WEBHOOK_ASTRIA] CRITICAL: Generation ${generation.id} marked as COMPLETED but has no imageUrls!`)
+      throw new Error(`Generation ${generation.id} completed but imageUrls not saved`)
+    }
+    
     return updatedGeneration
   } catch (error) {
-    console.error('❌ Error handling Astria prompt webhook:', error)
+    console.error('❌ [WEBHOOK_ASTRIA] CRITICAL: Error handling Astria prompt webhook:', error)
+    console.error('❌ [WEBHOOK_ASTRIA] Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      jobId: payload.id
+    })
+    // Re-throw so outer handler can log and return 200
     throw error
   }
 }
