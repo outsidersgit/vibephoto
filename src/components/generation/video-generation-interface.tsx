@@ -10,7 +10,7 @@ import { VIDEO_CONFIG, VideoGenerationRequest, VideoTemplate } from '@/lib/ai/vi
 import { calculateVideoCredits, validatePrompt, getEstimatedProcessingTime, formatProcessingTime } from '@/lib/ai/video/utils'
 import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { useInvalidateCredits } from '@/hooks/useCredits'
+import { useInvalidateCredits, useCreditBalance } from '@/hooks/useCredits'
 
 interface VideoGenerationInterfaceProps {
   user: {
@@ -49,6 +49,10 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
   const [monitoringVideoId, setMonitoringVideoId] = useState<string | null>(null)
   const { invalidateBalance } = useInvalidateCredits()
+  
+  // CRITICAL: Use hook to fetch credit balance (handles expired credits correctly)
+  const { data: creditBalance } = useCreditBalance()
+  
   const previewContainerRef = useRef<HTMLDivElement | null>(null)
   
   // Auto-scroll to preview when it appears (same as image generation)
@@ -324,8 +328,10 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
 
       // Check credits
       const requiredCredits = calculateVideoCredits(formData.duration, 'pro')
-      // Formula: credits_available = (credits_limit - credits_used) + credits_balance
-      const remainingCredits = (user.creditsLimit || 0) - (user.creditsUsed || 0) + ((user as any).creditsBalance || 0)
+      // CRITICAL: Use creditBalance from API (handles expired credits correctly)
+      // Fallback to manual calculation if API data not available yet
+      const remainingCredits = creditBalance?.totalCredits ?? 
+        ((user.creditsLimit || 0) - (user.creditsUsed || 0) + ((user as any).creditsBalance || 0))
 
       if (requiredCredits > remainingCredits) {
         addToast({
@@ -463,7 +469,10 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   }, [previewMedia, addToast])
 
   const requiredCredits = calculateVideoCredits(formData.duration, 'pro')
-  const remainingCredits = (user.creditsLimit || 0) - (user.creditsUsed || 0) + ((user as any).creditsBalance || 0)
+  // CRITICAL: Use creditBalance from API (handles expired credits correctly)
+  // Fallback to manual calculation if API data not available yet
+  const remainingCredits = creditBalance?.totalCredits ?? 
+    ((user.creditsLimit || 0) - (user.creditsUsed || 0) + ((user as any).creditsBalance || 0))
   const hasEnoughCredits = requiredCredits <= remainingCredits
   const canProcess = formData.prompt.trim() && !loading && canUseCredits && hasEnoughCredits
 

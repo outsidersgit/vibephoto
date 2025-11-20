@@ -21,7 +21,7 @@ import { GenerationSettings } from './generation-settings'
 import { PromptExamples } from './prompt-examples'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { useInvalidateCredits } from '@/hooks/useCredits'
+import { useInvalidateCredits, useCreditBalance } from '@/hooks/useCredits'
 import { CREDIT_COSTS, getImageGenerationCost } from '@/lib/credits/pricing'
 
 interface GenerationInterfaceProps {
@@ -87,6 +87,9 @@ export function GenerationInterface({
   const generateImage = useImageGeneration()
   const manualSync = useManualSync()
   const { invalidateBalance } = useInvalidateCredits()
+  
+  // CRITICAL: Use hook to fetch credit balance (handles expired credits correctly)
+  const { data: creditBalance } = useCreditBalance()
   
   // Detect mobile for responsive labels
   useEffect(() => {
@@ -787,8 +790,10 @@ export function GenerationInterface({
     }
   }, [previewMedia, clearGenerationLock])
 
-  // Formula: credits_available = (credits_limit - credits_used) + credits_balance
-  const creditsRemaining = (user.creditsLimit || 0) - (user.creditsUsed || 0) + ((user as any).creditsBalance || 0)
+  // CRITICAL: Use creditBalance from API (handles expired credits correctly)
+  // Fallback to manual calculation if API data not available yet
+  const creditsRemaining = creditBalance?.totalCredits ?? 
+    ((user.creditsLimit || 0) - (user.creditsUsed || 0) + ((user as any).creditsBalance || 0))
   const creditsNeeded = getImageGenerationCost(settings.variations)
   const variationLabel = settings.variations === 1 ? 'foto' : 'fotos'
   const desktopButtonLabel = `Gerar ${settings.variations} ${variationLabel} (${creditsNeeded} créditos)`
