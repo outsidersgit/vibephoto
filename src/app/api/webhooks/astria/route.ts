@@ -112,20 +112,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Invalid payload format' })
     }
     
-    // 🔍 CRITICAL: Normalize payload - Astria pode enviar payload nested { prompt: { id, ... } } ou flat { id, ... }
+    // 🔍 CRITICAL: Normalize payload - Astria pode enviar payload nested { prompt: { id, ... } } ou { tune: { id, ... } } ou flat { id, ... }
     let payload: AstriaWebhookPayload
     if (rawPayload.prompt && typeof rawPayload.prompt === 'object') {
       // Payload nested: { prompt: { id, status, images, ... } }
-      console.log(`🔍 [WEBHOOK_ASTRIA] Normalizing nested payload structure`)
+      console.log(`🔍 [WEBHOOK_ASTRIA] Normalizing nested prompt payload structure`)
       payload = {
         ...rawPayload.prompt,
         object: rawPayload.prompt.object || 'prompt'
       } as AstriaWebhookPayload
-      console.log(`✅ [WEBHOOK_ASTRIA] Normalized payload:`, {
+      console.log(`✅ [WEBHOOK_ASTRIA] Normalized prompt payload:`, {
         id: payload.id,
         status: payload.status,
         object: payload.object,
         hasImages: !!(payload.images && payload.images.length > 0)
+      })
+    } else if (rawPayload.tune && typeof rawPayload.tune === 'object') {
+      // Payload nested: { tune: { id, status, trained_at, ... } }
+      console.log(`🔍 [WEBHOOK_ASTRIA] Normalizing nested tune payload structure`)
+      payload = {
+        ...rawPayload.tune,
+        object: rawPayload.tune.object || 'tune'
+      } as AstriaWebhookPayload
+      console.log(`✅ [WEBHOOK_ASTRIA] Normalized tune payload:`, {
+        id: payload.id,
+        status: payload.status,
+        object: payload.object,
+        trainedAt: (payload as any).trained_at,
+        hasTrainedAt: !!(payload as any).trained_at
       })
     } else {
       // Payload flat: { id, status, images, ... }
@@ -142,9 +156,31 @@ export async function POST(request: NextRequest) {
         payloadStructure: JSON.stringify(payload).substring(0, 500)
       })
       
-      // Many Astria webhooks send transient events like { prompt: { id, text } }
+      // Many Astria webhooks send transient events like { prompt: { id, text } } or { tune: { id, ... } }
       // These are informational and shouldn't be treated as warnings
-      if (keys.includes('prompt')) {
+      if (keys.includes('tune')) {
+        // Handle nested tune payload that wasn't normalized above
+        try {
+          const tune: any = (payload as any).tune
+          if (tune?.id) {
+            console.log(`🔔 [WEBHOOK_ASTRIA] Tune payload detected, normalizing:`, {
+              tuneId: tune.id,
+              status: tune.status,
+              trainedAt: tune.trained_at,
+              hasTrainedAt: !!tune.trained_at
+            })
+            // Normalizar payload para estrutura plana
+            payload = {
+              ...tune,
+              object: tune.object || 'tune'
+            } as AstriaWebhookPayload
+            console.log(`✅ [WEBHOOK_ASTRIA] Tune payload normalized, continuing processing`)
+            // Não retornar early - continuar para processar
+          }
+        } catch (tuneError) {
+          console.error('❌ [WEBHOOK_ASTRIA] Error normalizing tune payload:', tuneError)
+        }
+      } else if (keys.includes('prompt')) {
         // Optional: best-effort lookup by prompt.id just to silence retries
         try {
           const prompt: any = (payload as any).prompt
@@ -437,19 +473,26 @@ async function handleTuneWebhook(payload: AstriaWebhookPayload, tuneIdFromUrl?: 
 
     // Map Astria status to our internal status
     console.log(`📊 Astria webhook payload status: "${payload.status}" (type: ${typeof payload.status})`)
+    console.log(`📊 Astria webhook payload trained_at: "${(payload as any).trained_at}"`)
     
     let internalStatus: 'TRAINING' | 'READY' | 'FAILED'
-    const statusLower = String(payload.status).toLowerCase()
+    const statusLower = payload.status ? String(payload.status).toLowerCase() : ''
+    const hasTrainedAt = !!(payload as any).trained_at
     
-    if (statusLower === 'trained') {
+    // 🔍 CRITICAL: Se não há status mas há trained_at, inferir que está "trained" (READY)
+    if (statusLower === 'trained' || (!statusLower && hasTrainedAt)) {
       internalStatus = 'READY'
-      console.log(`✅ Mapping Astria "trained" → READY`)
+      if (!statusLower && hasTrainedAt) {
+        console.log(`✅ Inferring status from trained_at → READY (trained_at: ${(payload as any).trained_at})`)
+      } else {
+        console.log(`✅ Mapping Astria "trained" → READY`)
+      }
     } else if (statusLower === 'failed' || statusLower === 'cancelled') {
       internalStatus = 'FAILED'
       console.log(`❌ Mapping Astria "${payload.status}" → FAILED`)
     } else {
       internalStatus = 'TRAINING'
-      console.log(`⏳ Mapping Astria "${payload.status}" → TRAINING`)
+      console.log(`⏳ Mapping Astria "${payload.status || 'unknown'}" → TRAINING`)
     }
 
     // CRITICAL: Check idempotency - if model is already READY and we're receiving "trained" again, skip update
@@ -467,9 +510,10 @@ async function handleTuneWebhook(payload: AstriaWebhookPayload, tuneIdFromUrl?: 
       updatedAt: new Date() // Explicitly set updatedAt
     }
 
-    if (statusLower === 'trained') {
+    if (internalStatus === 'READY') {
+      // When training is complete (READY), set modelUrl and trainedAt
       updateData.modelUrl = String(payload.id) // Use tune ID as model URL
-      updateData.trainedAt = payload.trained_at ? new Date(payload.trained_at) : new Date()
+      updateData.trainedAt = (payload as any).trained_at ? new Date((payload as any).trained_at) : new Date()
       console.log(`📝 Setting modelUrl to: ${updateData.modelUrl}`)
       console.log(`📝 Setting trainedAt to: ${updateData.trainedAt}`)
     }
