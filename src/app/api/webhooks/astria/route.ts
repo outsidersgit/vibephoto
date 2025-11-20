@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     // Parse the webhook payload - handle both JSON and form-data
     // According to Astria docs: "Callbacks for prompts and tunes are POST requests containing the entity object in the request body"
-    let payload: AstriaWebhookPayload
+    let rawPayload: any
     const contentType = request.headers.get('content-type') || ''
     
     // 🔍 CRITICAL: Read body once and store it
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     
     try {
       if (contentType.includes('application/json')) {
-        payload = await request.json()
+        rawPayload = await request.json()
       } else {
         // Try to parse as JSON anyway (some webhooks don't set content-type correctly)
         bodyText = await request.text()
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
           // So we return 200 OK to acknowledge receipt
           return NextResponse.json({ success: true, message: 'Empty payload ignored' })
         }
-        payload = JSON.parse(bodyText)
+        rawPayload = JSON.parse(bodyText)
       }
     } catch (parseError) {
       console.error('❌ [WEBHOOK_ASTRIA] Failed to parse payload:', parseError)
@@ -111,10 +111,37 @@ export async function POST(request: NextRequest) {
       // So we return 200 OK to acknowledge receipt even if parsing fails
       return NextResponse.json({ success: true, message: 'Invalid payload format' })
     }
+    
+    // 🔍 CRITICAL: Normalize payload - Astria pode enviar payload nested { prompt: { id, ... } } ou flat { id, ... }
+    let payload: AstriaWebhookPayload
+    if (rawPayload.prompt && typeof rawPayload.prompt === 'object') {
+      // Payload nested: { prompt: { id, status, images, ... } }
+      console.log(`🔍 [WEBHOOK_ASTRIA] Normalizing nested payload structure`)
+      payload = {
+        ...rawPayload.prompt,
+        object: rawPayload.prompt.object || 'prompt'
+      } as AstriaWebhookPayload
+      console.log(`✅ [WEBHOOK_ASTRIA] Normalized payload:`, {
+        id: payload.id,
+        status: payload.status,
+        object: payload.object,
+        hasImages: !!(payload.images && payload.images.length > 0)
+      })
+    } else {
+      // Payload flat: { id, status, images, ... }
+      payload = rawPayload as AstriaWebhookPayload
+    }
 
     // Validate payload has required fields
+    // 🔍 CRITICAL: Após normalização, o payload deve ter id, object ou status
+    // Se não tiver nenhum, pode ser um formato diferente que precisa ser tratado
     if (!payload.id && !payload.object && !payload.status) {
       const keys = Object.keys(payload || {})
+      console.warn('⚠️ [WEBHOOK_ASTRIA] Payload sem id/object/status após normalização:', {
+        keys,
+        payloadStructure: JSON.stringify(payload).substring(0, 500)
+      })
+      
       // Many Astria webhooks send transient events like { prompt: { id, text } }
       // These are informational and shouldn't be treated as warnings
       if (keys.includes('prompt')) {
@@ -123,17 +150,43 @@ export async function POST(request: NextRequest) {
           const prompt: any = (payload as any).prompt
           if (prompt?.id) {
             const generation = await prisma.generation.findFirst({ where: { jobId: String(prompt.id) } })
-            // We intentionally do nothing – this is a heartbeat/echo event
-            if (generation) {
-              console.log(`ℹ️ Astria prompt heartbeat received for generation ${generation.id}`)
+            // 🔍 CRITICAL: Verificar se é heartbeat ou callback final
+            // Se tem imagens, é callback final e deve ser processado
+            const hasImages = prompt.images && Array.isArray(prompt.images) && prompt.images.length > 0
+            const isFinal = prompt.status === 'generated' || prompt.status === 'failed'
+            
+            if (hasImages || isFinal) {
+              console.log(`🔔 [WEBHOOK_ASTRIA] Callback final detected (not heartbeat) - normalizing and processing:`, {
+                promptId: prompt.id,
+                status: prompt.status,
+                hasImages,
+                imageCount: prompt.images?.length || 0
+              })
+              // Normalizar payload para estrutura plana
+              payload = {
+                ...prompt,
+                object: prompt.object || 'prompt'
+              } as AstriaWebhookPayload
+              console.log(`✅ [WEBHOOK_ASTRIA] Payload normalized, continuing processing`)
+              // Não retornar early - continuar para processar
             } else {
-              console.log(`ℹ️ Astria prompt heartbeat received (jobId: ${prompt.id})`)
+              // We intentionally do nothing – this is a heartbeat/echo event
+              if (generation) {
+                console.log(`ℹ️ Astria prompt heartbeat received for generation ${generation.id}`)
+              } else {
+                console.log(`ℹ️ Astria prompt heartbeat received (jobId: ${prompt.id})`)
+              }
+              return NextResponse.json({ success: true, message: 'Prompt-only event ignored' })
             }
           }
         } catch {
           // Ignore lookup errors silently
         }
-        return NextResponse.json({ success: true, message: 'Prompt-only event ignored' })
+        
+        // Se chegou aqui e não retornou, é porque tem imagens ou é final - continuar processamento
+        if (!keys.includes('prompt') || !(payload as any).prompt?.id) {
+          return NextResponse.json({ success: true, message: 'Prompt-only event ignored' })
+        }
       }
 
       // Otherwise, log once and ignore
@@ -153,9 +206,13 @@ export async function POST(request: NextRequest) {
       status: payload.status,
       object: payload.object,
       hasImages: !!payload.images?.length,
+      imageCount: payload.images?.length || 0,
       errorMessage: payload.error_message,
       environment: process.env.NODE_ENV,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      isHeartbeat: payload.status === 'generating' || payload.status === 'queued',
+      isFinal: payload.status === 'generated' || payload.status === 'failed',
+      willProcess: (payload.status === 'generated' && payload.images && payload.images.length > 0) || payload.status === 'failed'
     })
 
     // 🔒 CRITICAL: Handle different object types and ensure processing completes
@@ -171,12 +228,33 @@ export async function POST(request: NextRequest) {
         await handleTuneWebhook(payload, actualTuneId, userId)
         processingResult.success = true
         console.log('✅ [WEBHOOK_ASTRIA] Tune webhook processed successfully')
-      } else if (webhookType === 'prompt' || promptId) {
-        // PROMPT webhook: usar prompt_id da URL ou do payload
-        const actualPromptId = promptId || String(payload.id)
-        await handlePromptWebhook(payload, actualPromptId)
-        processingResult.success = true
-        console.log('✅ [WEBHOOK_ASTRIA] Prompt webhook processed successfully')
+      } else if (webhookType === 'prompt' || promptId || (!tuneId && payload.id)) {
+        // PROMPT webhook: usar prompt_id da URL, do payload.id, ou extrair da URL do payload
+        let actualPromptId = promptId || String(payload.id)
+        
+        // 🔍 CRITICAL: Se não temos prompt_id, tentar extrair da URL do payload
+        if (!actualPromptId && payload.url) {
+          const extractedIds = extractIdsFromAstriaUrl(payload.url)
+          if (extractedIds.promptId) {
+            actualPromptId = extractedIds.promptId
+            console.log(`🔍 [WEBHOOK_ASTRIA] Extracted prompt_id from payload.url: ${actualPromptId}`)
+          }
+        }
+        
+        // 🔍 CRITICAL: Se ainda não temos prompt_id, usar payload.id como fallback
+        if (!actualPromptId && payload.id) {
+          actualPromptId = String(payload.id)
+          console.log(`🔍 [WEBHOOK_ASTRIA] Using payload.id as prompt_id: ${actualPromptId}`)
+        }
+        
+        if (actualPromptId) {
+          await handlePromptWebhook(payload, actualPromptId)
+          processingResult.success = true
+          console.log('✅ [WEBHOOK_ASTRIA] Prompt webhook processed successfully')
+        } else {
+          console.error('❌ [WEBHOOK_ASTRIA] Cannot process prompt webhook - no prompt_id available')
+          processingResult.error = 'No prompt_id available in URL or payload'
+        }
       } else {
         console.warn('⚠️ Unknown Astria webhook type:', { object: payload.object, tuneId, promptId })
         // Still try to process if we have an ID (might be a generation webhook without object field)
@@ -494,8 +572,27 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload, promptIdFromUr
       case 'cancelled':
         internalStatus = 'FAILED'
         break
+      case 'generating':
+      case 'queued':
       default:
         internalStatus = 'PROCESSING'
+    }
+    
+    // 🔍 CRITICAL: Log webhook status for debugging
+    console.log(`📊 [WEBHOOK_ASTRIA_PROMPT] Webhook status:`, {
+      astriaStatus: payload.status,
+      internalStatus,
+      hasImages: !!(payload.images && payload.images.length > 0),
+      imageCount: payload.images?.length || 0,
+      isHeartbeat: payload.status === 'generating' || payload.status === 'queued',
+      isFinal: payload.status === 'generated' || payload.status === 'failed'
+    })
+    
+    // ⚠️ CRITICAL: Se é apenas heartbeat (generating/queued) sem imagens, retornar early mas não processar storage
+    if ((payload.status === 'generating' || payload.status === 'queued') && (!payload.images || payload.images.length === 0)) {
+      console.log(`ℹ️ [WEBHOOK_ASTRIA_PROMPT] Heartbeat received (status: ${payload.status}), skipping storage processing`)
+      // Ainda atualizar status para PROCESSING se necessário, mas não processar storage
+      // Não retornar early - continuar para atualizar status se necessário
     }
 
     // Extract image URLs if generation completed

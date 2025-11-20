@@ -105,10 +105,11 @@ export async function generateImage(params: SimpleGenerationParams, generationId
       output_format: 'png',
       output_quality: 95
     },
-    // 🔍 CORRETO: Callback de geração (PROMPT) usa apenas prompt_id
+    // 🔍 CORRETO: Callback conforme documentação oficial do Astria
+    // Documentação mostra: https://optional-callback-url.com/to-your-service-when-ready?prompt_id=1
+    // O Astria substitui {PROMPT_ID} pelo valor real quando chama o callback
     // Formato: https://seu-dominio/api/webhooks/astria?prompt_id={PROMPT_ID}
-    // NOTA: prompt_id será preenchido pelo Astria após criar o prompt (será passado no callback)
-    webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/astria`
+    webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/astria?prompt_id={PROMPT_ID}`
   }
 
   console.log(`🚀 Starting package generation for model ${model.name}...`)

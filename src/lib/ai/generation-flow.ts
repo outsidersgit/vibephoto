@@ -209,13 +209,16 @@ export async function executeGenerationFlow(params: ExecuteGenerationFlowParams)
         // Formato: https://seu-dominio/api/webhooks/astria?prompt_id={PROMPT_ID}
         // NOTA: prompt_id será preenchido pelo Astria após criar o prompt (será passado no callback)
         // Por enquanto, usamos generation.id como placeholder, mas o Astria enviará o prompt_id real no payload
-        const callbackUrl = `${baseUrl}/api/webhooks/astria`
+        // 🔍 CORRETO: Callback conforme documentação oficial do Astria
+        // Documentação mostra: https://optional-callback-url.com/to-your-service-when-ready?prompt_id=1
+        // O Astria substitui {PROMPT_ID} pelo valor real quando chama o callback
+        const callbackUrl = `${baseUrl}/api/webhooks/astria?prompt_id={PROMPT_ID}`
         
-        console.log(`🔗 [GENERATION_FLOW] Callback URL configured (prompt_id virá no payload do Astria):`, {
+        console.log(`🔗 [GENERATION_FLOW] Callback URL configured (conforme documentação oficial):`, {
           baseUrl,
           callbackUrl,
           isHttps: callbackUrl.startsWith('https://'),
-          note: 'Astria will send prompt_id in webhook payload, not in URL'
+          note: 'Astria substitui {PROMPT_ID} pelo ID real quando chama o callback (conforme documentação)'
         })
         
         return callbackUrl

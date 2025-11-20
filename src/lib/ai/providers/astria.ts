@@ -458,14 +458,15 @@ export class AstriaProvider extends AIProvider {
 
       // Enhancements fixos conforme solicitado
       // super_resolution sempre true
-      // NOTA: Astria pode esperar boolean true/false ou string "true"/"false"
-      // Testando com string primeiro (conforme documentação de exemplos)
-      formData.append('prompt[super_resolution]', 'true')
+      // 🔍 CORREÇÃO: Documentação oficial mostra boolean true
+      // FormData aceita boolean e converte para string automaticamente
+      // Testando com boolean (conforme documentação oficial)
+      formData.append('prompt[super_resolution]', true) // Boolean conforme documentação
 
       // inpaint_faces sempre true
       // NOTA: Pode não ser compatível com todos os tipos de modelo LoRA
       // Se der erro 422, tentar removendo este parâmetro
-      formData.append('prompt[inpaint_faces]', 'true')
+      formData.append('prompt[inpaint_faces]', true) // Boolean conforme documentação
 
       // NOTA: style não é enviado (conforme solicitado)
       // NOTA: color_grading não é enviado (conforme solicitado)

@@ -254,10 +254,12 @@ export async function POST(request: NextRequest) {
           output_format: output_format || 'webp'
           // NOTA: output_quality removido - não é suportado pela API Astria
         },
-        // 🔍 CORRETO: Callback de geração (PROMPT) usa apenas endpoint base
-        // Formato: https://seu-dominio/api/webhooks/astria
-        // NOTA: prompt_id será enviado pelo Astria no payload do webhook, não precisa estar na URL
-        webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/astria`,
+        // 🔍 CORRETO: Callback de geração (PROMPT) conforme documentação oficial
+        // Documentação mostra: https://optional-callback-url.com/to-your-service-when-ready?prompt_id=1
+        // O Astria substitui o prompt_id pelo valor real quando chama o callback
+        // Formato: https://seu-dominio/api/webhooks/astria?prompt_id={PROMPT_ID}
+        // NOTA: O {PROMPT_ID} é um placeholder que o Astria substitui pelo ID real
+        webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/astria?prompt_id={PROMPT_ID}`,
         userPlan // Pass user plan for model selection
       }
 
