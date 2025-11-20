@@ -349,7 +349,8 @@ export async function POST(request: NextRequest) {
         console.log(`✅ [PROVIDER_UPDATE] aiProvider updated to '${actualProvider}' for generation ${generation.id}`)
       }
 
-      // For Astria/Hybrid, we need polling (not webhooks)
+      // 🔥 FALLBACK: Polling para Astria/Hybrid apenas como fallback
+      // CALLBACK é o método principal - polling só inicia após delay para dar tempo ao callback processar
       const shouldPoll = actualProvider === 'astria' || currentProvider === 'hybrid'
 
       console.log(`🔍 [GENERATIONS_DECISION] Generation flow decision:`, {
@@ -358,22 +359,47 @@ export async function POST(request: NextRequest) {
         shouldPoll,
         environment: process.env.NODE_ENV,
         predictionId: generationResponse.id,
-        generationId: generation.id
+        generationId: generation.id,
+        primaryMethod: 'CALLBACK',
+        fallbackMethod: 'POLLING'
       })
 
-      // Start polling for Astria/Hybrid providers
+      // Start polling for Astria/Hybrid providers ONLY as fallback
       if (shouldPoll && generationResponse.id) {
-        console.log(`🔄 [GENERATIONS_POLLING] Starting polling for prediction ${generationResponse.id}`)
+        console.log(`🔄 [GENERATIONS_POLLING] Scheduling polling as FALLBACK for prediction ${generationResponse.id}`)
+        console.log(`📡 [GENERATIONS_POLLING] Callback is PRIMARY method - polling will only run if callback fails`)
         console.log(`📊 [GENERATIONS_POLLING] Config: provider=${actualProvider}, generationId=${generation.id}`)
 
         // Start polling in background with improved error handling
         try {
           const { startPolling } = await import('@/lib/services/polling-service')
 
-          // Use setTimeout instead of setImmediate for better reliability
+          // 🔍 FALLBACK: Delay maior (30 segundos) para dar tempo ao callback processar primeiro
           setTimeout(async () => {
             try {
-              console.log(`🚀 [GENERATIONS_POLLING] Executing startPolling for ${generationResponse.id}`)
+              // Verificar se o webhook já processou antes de iniciar polling
+              const currentGeneration = await prisma.generation.findUnique({
+                where: { id: generation.id },
+                select: { 
+                  status: true, 
+                  metadata: true 
+                }
+              })
+              
+              const metadata = currentGeneration?.metadata as any || {}
+              const wasProcessedByWebhook = metadata.webhookProcessed === true || metadata.processedVia === 'webhook'
+              
+              if (wasProcessedByWebhook) {
+                console.log(`⏭️ [GENERATIONS_POLLING] Polling skipped - webhook already processed generation ${generation.id} (callback was primary)`)
+                return
+              }
+              
+              if (currentGeneration?.status === 'COMPLETED' || currentGeneration?.status === 'FAILED') {
+                console.log(`⏭️ [GENERATIONS_POLLING] Polling skipped - generation ${generation.id} already ${currentGeneration.status}`)
+                return
+              }
+              
+              console.log(`🔄 [GENERATIONS_POLLING] Starting polling FALLBACK for ${generationResponse.id} (callback may not have been called)`)
               console.log(`🎯 [GENERATIONS_POLLING] Provider details:`, {
                 currentProvider,
                 actualProvider,
@@ -382,24 +408,13 @@ export async function POST(request: NextRequest) {
                 isNumericJobId: /^\d+$/.test(String(generationResponse.id))
               })
               await startPolling(generationResponse.id, generation.id, session.user.id, actualProvider)
-              console.log(`✅ [GENERATIONS_POLLING] Polling service started successfully for ${generationResponse.id} with provider ${actualProvider}`)
+              console.log(`✅ [GENERATIONS_POLLING] Polling fallback started successfully for ${generationResponse.id} with provider ${actualProvider}`)
             } catch (error) {
-              console.error(`❌ [GENERATIONS_POLLING] Failed to start polling for ${generationResponse.id}:`, error)
-
-              // Retry once after a longer delay
-              setTimeout(async () => {
-                try {
-                  console.log(`🔄 [GENERATIONS_POLLING] Retrying polling for ${generationResponse.id} with provider ${actualProvider}`)
-                  await startPolling(generationResponse.id, generation.id, session.user.id, actualProvider)
-                  console.log(`✅ [GENERATIONS_POLLING] Retry polling successful for ${generationResponse.id}`)
-                } catch (retryError) {
-                  console.error(`❌ [GENERATIONS_POLLING] Retry failed for ${generationResponse.id}:`, retryError)
-                }
-              }, 5000) // 5 second delay for retry
+              console.error(`❌ [GENERATIONS_POLLING] Failed to start polling fallback for ${generationResponse.id}:`, error)
             }
-          }, 500) // Increased delay to ensure transaction completion
+          }, 30000) // 30 segundos de delay para dar tempo ao callback processar
 
-          console.log(`📝 [GENERATIONS_POLLING] Polling startup scheduled for ${generationResponse.id}`)
+          console.log(`📝 [GENERATIONS_POLLING] Polling fallback scheduled for ${generationResponse.id} (30s delay)`)
         } catch (importError) {
           console.error(`❌ [GENERATIONS_POLLING] Failed to import polling service for ${generationResponse.id}:`, importError)
         }

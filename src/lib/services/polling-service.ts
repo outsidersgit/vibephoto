@@ -175,10 +175,50 @@ async function pollPrediction(job: PollingJob) {
   const { predictionId, generationId, userId } = job
 
   try {
-    job.attempts++
-
-    // Determine if this is a video job early for timeout handling
+    // 🔍 FALLBACK CHECK: Verificar se webhook já processou antes de fazer polling
+    // Polling é apenas fallback - se webhook processou, parar imediatamente
     const isVideoJob = job.jobType === 'video'
+    
+    let existingRecord: any
+    if (isVideoJob) {
+      existingRecord = await prisma.videoGeneration.findUnique({
+        where: { id: generationId },
+        select: { 
+          status: true, 
+          videoUrl: true, 
+          metadata: true
+        }
+      })
+    } else {
+      existingRecord = await prisma.generation.findUnique({
+        where: { id: generationId },
+        select: { 
+          status: true, 
+          imageUrls: true, 
+          metadata: true
+        }
+      })
+    }
+
+    if (existingRecord) {
+      const metadata = existingRecord.metadata as any
+      const wasProcessedByWebhook = metadata?.webhookProcessed === true || metadata?.processedVia === 'webhook'
+      const isCompleted = existingRecord.status === 'COMPLETED' || existingRecord.status === 'succeeded'
+      
+      // Se webhook processou ou está completo, parar polling (callback foi o método principal)
+      if (wasProcessedByWebhook || (isCompleted && Array.isArray(existingRecord.imageUrls) && existingRecord.imageUrls.length > 0)) {
+        console.log(`⏭️ [POLLING] Stopping polling - webhook already processed (callback was primary method)`, {
+          generationId,
+          predictionId,
+          status: existingRecord.status,
+          webhookProcessed: wasProcessedByWebhook
+        })
+        stopPolling(predictionId)
+        return
+      }
+    }
+    
+    job.attempts++
 
     logger.debug('Polling attempt', {
       service: 'polling-service',
