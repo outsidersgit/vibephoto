@@ -477,12 +477,12 @@ export class AstriaProvider extends AIProvider {
 
       // Debug completo dos FormData parameters sendo enviados
       console.log(`📋 [ASTRIA_DEBUG] FormData parameters being sent to Astria API:`)
-      const formDataEntries: { [key: string]: string } = {}
+      const formDataParams: { [key: string]: string } = {}
       for (const [key, value] of formData.entries()) {
-        formDataEntries[key] = value as string
+        formDataParams[key] = value as string
         console.log(`  ${key}: ${value}`)
       }
-      console.log(`📊 [ASTRIA_DEBUG] Total parameters: ${Object.keys(formDataEntries).length}`)
+      console.log(`📊 [ASTRIA_DEBUG] Total parameters: ${Object.keys(formDataParams).length}`)
 
       // Verificar especificamente os parâmetros de enhancement
       const criticalParams = [
@@ -492,7 +492,7 @@ export class AstriaProvider extends AIProvider {
       ]
       console.log(`🔍 [ASTRIA_CRITICAL] Fixed parameters verification:`)
       criticalParams.forEach(param => {
-        console.log(`  ${param}: ${formDataEntries[param] || 'NOT SET'}`)
+        console.log(`  ${param}: ${formDataParams[param] || 'NOT SET'}`)
       })
       console.log(`  ✅ Fixed values: super_resolution=true, inpaint_faces=true, cfg_scale=3`)
       console.log(`  ✅ Omitted params: style, color_grading, film_grain (false), use_lpw (false)`)
