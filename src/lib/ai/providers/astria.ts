@@ -567,12 +567,12 @@ export class AstriaProvider extends AIProvider {
       
       // 🔍 CRITICAL: Extract tune_id correctly
       // IMPORTANTE: O tune_id correto para polling/webhook é SEMPRE o request.modelUrl (tune_id do modelo do usuário)
-      // - request.modelUrl = 3528382 (tune_id do modelo do usuário) ✅ CORRETO - usar para polling/webhook
-      // - prediction.tune.id = 1504944 (base_tune_id) → Apenas informativo, não usar para polling/webhook
+      // - request.modelUrl = tune_id do modelo do usuário (dinâmico, varia por modelo) ✅ CORRETO - usar para polling/webhook
+      // - prediction.tune.id = base_tune_id (ex: 1504944 para Flux.1 dev) → Apenas informativo, não usar para polling/webhook
       // - prediction.tune_id = prompt_id (ID do prompt, não do tune) ❌ INCORRETO
       // 
       // NOTA: base_tune_id aparece na resposta do Astria como informação, mas não devemos usá-lo
-      // para polling/webhook. Sempre usamos o tune_id do modelo do usuário (request.modelUrl)
+      // para polling/webhook. Sempre usamos o tune_id do modelo do usuário (request.modelUrl) que é dinâmico
       const tuneId = request.modelUrl || prediction.tune_id
 
       console.log('✅ Astria prediction created:', prediction.id, prediction.status)
@@ -610,12 +610,12 @@ export class AstriaProvider extends AIProvider {
       console.log(`📋 [ASTRIA_RESPONSE] Complete Astria API response:`, JSON.stringify(prediction, null, 2))
       
       // 🔍 CORRETO: Extrair tune_id e prompt_id corretamente
-      // IMPORTANTE: O Astria retorna uma URL que mostra o base_tune_id (1504944) na rota,
+      // IMPORTANTE: O Astria retorna uma URL que mostra o base_tune_id (ex: 1504944 para Flux.1 dev) na rota,
       // mas isso é um BUG/comportamento inconsistente do Astria. A URL deveria mostrar
-      // o tune_id do modelo do usuário (3276053), mas mostra o base_tune_id.
+      // o tune_id do modelo do usuário (request.modelUrl), mas mostra o base_tune_id.
       // 
       // O tune_id CORRETO para usar é:
-      // 1. request.modelUrl (tune_id que enviamos na requisição) - SEMPRE CORRETO
+      // 1. request.modelUrl (tune_id que enviamos na requisição) - SEMPRE CORRETO (dinâmico, varia por modelo)
       // 2. prediction.tunes[0].id (tune_id do modelo do usuário no array tunes) - CORRETO
       // 
       // NÃO usar:
@@ -690,10 +690,10 @@ export class AstriaProvider extends AIProvider {
       const finalTuneId = request.modelUrl || extractedTuneId || tuneId
       console.log(`🔍 [ASTRIA_RESPONSE] Final tune_id resolution:`, {
         extractedTuneId,
-        requestModelUrl: request.modelUrl, // Este já é o tune_id correto (3528382)
+        requestModelUrl: request.modelUrl, // Este é o tune_id correto (dinâmico, varia por modelo)
         tuneIdFromVariable: tuneId,
         finalTuneId,
-        source: extractedTuneId ? 'tunes[0].id' : (request.modelUrl ? 'request.modelUrl (CORRETO)' : 'tuneId variable (fallback)')
+        source: request.modelUrl ? 'request.modelUrl (CORRETO - dinâmico)' : (extractedTuneId ? 'tunes[0].id' : 'tuneId variable (fallback)')
       })
 
       const responseMetadata = {
