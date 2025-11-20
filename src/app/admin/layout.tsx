@@ -2,6 +2,7 @@ import { requireAdmin } from '@/lib/auth'
 import { unstable_noStore as noStore } from 'next/cache'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 import AdminLayoutClient from './admin-layout-client'
+import { AdminRealtimeWrapper } from '@/components/admin/admin-realtime-wrapper'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -19,7 +20,11 @@ export default async function AdminLayout({
   return (
     <>
       <ProtectedPageScript />
-      <AdminLayoutClient>{children}</AdminLayoutClient>
+      <AdminLayoutClient>
+        <AdminRealtimeWrapper>
+          {children}
+        </AdminRealtimeWrapper>
+      </AdminLayoutClient>
     </>
   )
 }

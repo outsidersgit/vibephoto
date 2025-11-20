@@ -136,7 +136,10 @@ export class AWSS3Provider extends StorageProvider {
       }
 
       // Generate modern formats (WebP/AVIF) for images (Fase 3 - Performance)
-      if (!options.isVideo && buffer && options.generateModernFormats !== false) {
+      // 🔒 CRITICAL: Disabled by default to save storage space (3x storage usage)
+      // Only generate when explicitly requested via options.generateModernFormats === true
+      // Modern formats should be generated on-demand for specific use cases (e.g., CDN optimization)
+      if (!options.isVideo && buffer && options.generateModernFormats === true) {
         const modernFormats = await this.generateModernFormats(buffer, key, options)
         if (modernFormats.webpUrl) result.webpUrl = modernFormats.webpUrl
         if (modernFormats.avifUrl) result.avifUrl = modernFormats.avifUrl

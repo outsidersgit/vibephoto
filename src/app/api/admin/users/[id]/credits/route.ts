@@ -66,6 +66,19 @@ export async function POST(
       // Não falhar a requisição se broadcast falhar
       console.error('❌ [Admin Credits] Erro ao broadcast créditos:', error)
     })
+
+    // Broadcast to admins
+    try {
+      const { broadcastAdminUserUpdated } = await import('@/lib/services/realtime-service')
+      await broadcastAdminUserUpdated(id, {
+        creditsBalance: updatedUser.creditsBalance,
+        creditsUsed: updatedUser.creditsUsed,
+        creditsLimit: updatedUser.creditsLimit,
+        action: delta >= 0 ? 'ADMIN_BONUS' : 'ADMIN_ADJUSTMENT'
+      })
+    } catch (broadcastError) {
+      console.error('❌ Failed to broadcast admin user updated event:', broadcastError)
+    }
   }
 
   // Invalida cache do saldo de créditos exibido no app

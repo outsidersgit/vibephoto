@@ -10,6 +10,7 @@ export const revalidate = 0
 const connections = new Map<string, { 
   controller: ReadableStreamDefaultController,
   userId: string,
+  userRole: string, // Store user role to filter admin events
   connectedAt: Date,
   lastActivity: Date,
   heartbeat?: NodeJS.Timeout
@@ -22,13 +23,14 @@ export async function GET(request: NextRequest) {
     // Authenticate user
     const session = await requireAuthAPI()
     const userId = session.user.id
+    const userRole = session.user.role || 'USER'
 
-    console.log('✅ Authentication successful for user:', userId)
+    console.log('✅ Authentication successful for user:', userId, 'role:', userRole)
     
     // Create unique connection ID
     const connectionId = `${userId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     
-    console.log(`📡 SSE connection opened for user ${userId} (${connectionId})`)
+    console.log(`📡 SSE connection opened for user ${userId} (${connectionId}) role: ${userRole}`)
 
     // Create a ReadableStream for Server-Sent Events
     const stream = new ReadableStream({
@@ -39,6 +41,7 @@ export async function GET(request: NextRequest) {
         const connection = {
           controller, 
           userId,
+          userRole,
           connectedAt: now,
           lastActivity: now
         }
@@ -151,10 +154,13 @@ export function broadcastEvent(event: {
   let targetedCount = 0
   const deadConnections: string[] = []
 
-  // Get connections for specific user or all connections
+  // Get connections for specific user, all admins (for admin events), or all connections
+  const isAdminEvent = event.type?.startsWith('admin_')
   const targetConnections = event.userId 
     ? Array.from(connections.entries()).filter(([_, conn]) => conn.userId === event.userId)
-    : Array.from(connections.entries())
+    : isAdminEvent
+      ? Array.from(connections.entries()).filter(([_, conn]) => conn.userRole === 'ADMIN')
+      : Array.from(connections.entries())
 
   targetedCount = targetConnections.length
 

@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db'
 import { Prisma, GenerationStatus } from '@prisma/client'
 import { CreditManager } from '@/lib/credits/manager'
 import { getImageGenerationCost } from '@/lib/credits/pricing'
+import { broadcastAdminGenerationCreated } from '@/lib/services/realtime-service'
 
 export interface GenerationBatchParams {
   userId: string
@@ -162,6 +163,20 @@ export async function createGeneration(data: {
       astriaEnhancements: data.astriaEnhancements
     }
   })
+
+  // Broadcast to admins
+  try {
+    await broadcastAdminGenerationCreated({
+      id: generation.id,
+      userId: data.userId,
+      status: generation.status,
+      prompt: data.prompt,
+      createdAt: generation.createdAt
+    })
+  } catch (error) {
+    console.error('❌ Failed to broadcast generation created event:', error)
+    // Don't fail generation creation if broadcast fails
+  }
 
   // Deduct credits only if not skipped (packages already deducted credits in /activate)
   if (!data.skipCreditDeduction) {

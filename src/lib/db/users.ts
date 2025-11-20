@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db'
 import { Plan } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { getCreditsLimitForPlan, getModelsLimitForPlan } from '@/lib/constants/plans'
+import { broadcastAdminUserCreated } from '@/lib/services/realtime-service'
 
 export async function createUser(data: {
   email: string
@@ -16,13 +17,30 @@ export async function createUser(data: {
   // Novos usuários sem plano recebem 0 créditos
   const creditsLimit = data.plan ? await getCreditsLimitForPlan(data.plan) : 0
   
-  return prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       ...data,
       password: hashedPassword,
       creditsLimit // 0 se sem plano, ou valor do plano se houver
     }
   })
+
+  // Broadcast to admins
+  try {
+    await broadcastAdminUserCreated({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      plan: user.plan,
+      role: user.role,
+      createdAt: user.createdAt
+    })
+  } catch (error) {
+    console.error('❌ Failed to broadcast user created event:', error)
+    // Don't fail user creation if broadcast fails
+  }
+
+  return user
 }
 
 export async function getUserByEmail(email: string) {

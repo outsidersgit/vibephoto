@@ -13,7 +13,15 @@ export const EVENT_TYPES = {
   GENERATION_PROGRESS: 'generation_progress',
   CREDITS_UPDATED: 'credits_updated',
   USER_UPDATED: 'user_updated', // Admin updates: plan, subscription, etc.
-  NOTIFICATION: 'notification'
+  NOTIFICATION: 'notification',
+  // Admin events (broadcasted to all admins, no userId required)
+  ADMIN_USER_CREATED: 'admin_user_created',
+  ADMIN_USER_UPDATED: 'admin_user_updated',
+  ADMIN_GENERATION_CREATED: 'admin_generation_created',
+  ADMIN_GENERATION_UPDATED: 'admin_generation_updated',
+  ADMIN_MODEL_CREATED: 'admin_model_created',
+  ADMIN_MODEL_UPDATED: 'admin_model_updated',
+  ADMIN_STATS_UPDATED: 'admin_stats_updated'
 } as const
 
 export type EventType = typeof EVENT_TYPES[keyof typeof EVENT_TYPES]
@@ -251,6 +259,127 @@ export async function broadcastNotification(
       notificationType: type,
       timestamp: new Date().toISOString()
     }
+  })
+}
+
+/**
+ * Broadcast admin event - sent to all admin users (no userId filter)
+ */
+export async function broadcastAdminEvent(
+  eventType: string,
+  data: any
+) {
+  const broadcast = await getBroadcastFunction()
+  if (!broadcast) {
+    console.log('📡 No broadcast function available, skipping admin event')
+    return
+  }
+
+  return broadcast({
+    type: eventType,
+    // No userId - broadcast to all admins
+    data: {
+      ...data,
+      timestamp: new Date().toISOString()
+    }
+  })
+}
+
+/**
+ * Broadcast user created event to admins
+ */
+export async function broadcastAdminUserCreated(userData: {
+  id: string
+  email: string
+  name?: string | null
+  plan?: string | null
+  role: string
+  createdAt: Date
+}) {
+  return broadcastAdminEvent(EVENT_TYPES.ADMIN_USER_CREATED, {
+    userId: userData.id,
+    email: userData.email,
+    name: userData.name,
+    plan: userData.plan,
+    role: userData.role,
+    createdAt: userData.createdAt.toISOString()
+  })
+}
+
+/**
+ * Broadcast user updated event to admins
+ */
+export async function broadcastAdminUserUpdated(userId: string, updatedFields: any) {
+  return broadcastAdminEvent(EVENT_TYPES.ADMIN_USER_UPDATED, {
+    userId,
+    ...updatedFields
+  })
+}
+
+/**
+ * Broadcast generation created event to admins
+ */
+export async function broadcastAdminGenerationCreated(generationData: {
+  id: string
+  userId: string
+  status: string
+  prompt?: string | null
+  createdAt: Date
+}) {
+  return broadcastAdminEvent(EVENT_TYPES.ADMIN_GENERATION_CREATED, {
+    generationId: generationData.id,
+    userId: generationData.userId,
+    status: generationData.status,
+    prompt: generationData.prompt,
+    createdAt: generationData.createdAt.toISOString()
+  })
+}
+
+/**
+ * Broadcast generation updated event to admins
+ */
+export async function broadcastAdminGenerationUpdated(generationId: string, updatedFields: any) {
+  return broadcastAdminEvent(EVENT_TYPES.ADMIN_GENERATION_UPDATED, {
+    generationId,
+    ...updatedFields
+  })
+}
+
+/**
+ * Broadcast model created event to admins
+ */
+export async function broadcastAdminModelCreated(modelData: {
+  id: string
+  userId: string
+  name: string
+  status: string
+  createdAt: Date
+}) {
+  return broadcastAdminEvent(EVENT_TYPES.ADMIN_MODEL_CREATED, {
+    modelId: modelData.id,
+    userId: modelData.userId,
+    name: modelData.name,
+    status: modelData.status,
+    createdAt: modelData.createdAt.toISOString()
+  })
+}
+
+/**
+ * Broadcast model updated event to admins
+ */
+export async function broadcastAdminModelUpdated(modelId: string, updatedFields: any) {
+  return broadcastAdminEvent(EVENT_TYPES.ADMIN_MODEL_UPDATED, {
+    modelId,
+    ...updatedFields
+  })
+}
+
+/**
+ * Broadcast stats updated event to admins (for KPIs refresh)
+ */
+export async function broadcastAdminStatsUpdated() {
+  return broadcastAdminEvent(EVENT_TYPES.ADMIN_STATS_UPDATED, {
+    // Stats will be fetched by admin clients
   })
 }
 

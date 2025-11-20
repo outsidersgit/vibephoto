@@ -32,10 +32,32 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
   const { data: session, status, update: updateSession } = useSession()
   const { logout } = useLogout()
   
+  // 🔒 CRITICAL: Maintain previous session state during updates to prevent flash
+  // When updateSession() is called, status temporarily becomes 'loading', causing UI flash
+  const [stableSession, setStableSession] = useState(session)
+  const [stableStatus, setStableStatus] = useState(status)
+  
+  // Update stable session only when we have a valid authenticated session
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      setStableSession(session)
+      setStableStatus('authenticated')
+    } else if (status === 'unauthenticated') {
+      // Only clear if truly unauthenticated (not just loading)
+      setStableSession(null)
+      setStableStatus('unauthenticated')
+    }
+    // Don't update during 'loading' state to prevent flash
+  }, [session, status])
+  
+  // Use stable session/status for UI rendering to prevent flash
+  const displaySession = stableSession
+  const displayStatus = stableStatus
+  
   // Performance: Usar React Query para cache de créditos (Sprint 2 - Navegação Rápida)
   // CRITICAL: Só buscar créditos se há sessão válida
   const { data: balance } = useCreditBalance()
-  const creditsBalance = (status === 'authenticated' && session?.user) ? (balance?.totalCredits || null) : null
+  const creditsBalance = (displayStatus === 'authenticated' && displaySession?.user) ? (balance?.totalCredits || null) : null
 
   // CRITICAL: Listener SSE para invalidar queries quando créditos são atualizados
   // CRITICAL: Handler deve forçar refetch imediato para atualizar badge
@@ -59,9 +81,9 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
 
   // Helper: Check if user has active subscription access
   const hasActiveAccess = () => {
-    if (!session?.user) return false
+    if (!displaySession?.user) return false
 
-    const user = session.user as any
+    const user = displaySession.user as any
 
     // Debug log apenas em desenvolvimento (Sprint 2 - Limpar Console)
     if (process.env.NODE_ENV === 'development') {
@@ -154,7 +176,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center space-x-4">
-            {session && status === 'authenticated' ? (
+            {displaySession && displayStatus === 'authenticated' ? (
               <div className="flex items-center space-x-3">
                 {hasActiveAccess() && (
                   <motion.div
@@ -162,7 +184,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                     className="flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-slate-700 to-slate-800 border border-slate-600 shadow-md hover:shadow-lg transition-all duration-200"
                   >
                     <span className="text-xs font-medium text-slate-200 uppercase" style={{fontFamily: '"-apple-system", "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif'}}>
-                      {session.user?.plan || 'STARTER'}
+                      {displaySession.user?.plan || 'STARTER'}
                     </span>
                   </motion.div>
                 )}
@@ -207,15 +229,15 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                     whileTap={{ scale: 0.95 }}
                     className="flex items-center space-x-2 p-2 rounded-full hover:bg-slate-100 transition-colors"
                   >
-                    {session.user?.image ? (
+                    {displaySession.user?.image ? (
                       <img 
-                        src={session.user.image} 
+                        src={displaySession.user.image} 
                         alt="Avatar" 
                         className="w-8 h-8 rounded-full"
                       />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#667EEA] to-[#764BA2] flex items-center justify-center text-white font-semibold text-sm shadow-lg">
-                        {session.user?.name?.[0] || session.user?.email?.[0] || 'U'}
+                        {displaySession.user?.name?.[0] || displaySession.user?.email?.[0] || 'U'}
                       </div>
                     )}
                   </motion.button>
@@ -223,8 +245,8 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                   {/* Dropdown Menu */}
                   <div className="absolute right-0 top-full mt-2 w-64 bg-gradient-to-br from-slate-700 to-slate-800 rounded-2xl shadow-2xl border border-slate-600 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                     <div className="p-4 border-b border-gray-700">
-                      <p className="text-base font-semibold text-white leading-tight" style={{fontFamily: '"-apple-system", "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif'}}>{session.user?.name}</p>
-                      <p className="text-sm text-gray-300 leading-tight" style={{fontFamily: '"-apple-system", "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif'}}>{session.user?.email}</p>
+                      <p className="text-base font-semibold text-white leading-tight" style={{fontFamily: '"-apple-system", "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif'}}>{displaySession.user?.name}</p>
+                      <p className="text-sm text-gray-300 leading-tight" style={{fontFamily: '"-apple-system", "SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif'}}>{displaySession.user?.email}</p>
                     </div>
                     <nav className="p-2">
                       {hasActiveAccess() ? (
@@ -345,13 +367,13 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
 
                 {/* Mobile Actions */}
                 <div className="pt-4 border-t border-slate-200 space-y-3">
-                  {session && status === 'authenticated' ? (
+                  {displaySession && displayStatus === 'authenticated' ? (
                   <>
                     <div className="px-4 py-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-                      <p className="font-semibold text-slate-900">{session.user?.name}</p>
+                      <p className="font-semibold text-slate-900">{displaySession.user?.name}</p>
                       {hasActiveAccess() && (
                         <div className="flex items-center justify-between mt-1">
-                          <p className="text-sm text-purple-600">{session.user?.plan || 'STARTER'} Plan</p>
+                          <p className="text-sm text-purple-600">{displaySession.user?.plan || 'STARTER'} Plan</p>
                           {creditsBalance !== null && (
                             <div className="flex items-center space-x-1 px-2 py-0.5 rounded bg-gray-50 border border-transparent"
                                  style={{

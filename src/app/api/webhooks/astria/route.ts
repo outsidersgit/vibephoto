@@ -538,6 +538,20 @@ async function handleTuneWebhook(payload: AstriaWebhookPayload, tuneIdFromUrl?: 
         data: updateData
       })
       console.log(`✅ Model ${model.id} successfully updated to status: ${updatedModel.status}, progress: ${updatedModel.progress}%`)
+
+      // Broadcast to admins when model status changes
+      try {
+        const { broadcastAdminModelUpdated } = await import('@/lib/services/realtime-service')
+        await broadcastAdminModelUpdated(model.id, {
+          status: updatedModel.status,
+          progress: updatedModel.progress,
+          modelUrl: updatedModel.modelUrl,
+          trainedAt: updatedModel.trainedAt?.toISOString()
+        })
+      } catch (broadcastError) {
+        console.error('❌ Failed to broadcast model updated event:', broadcastError)
+        // Don't fail webhook if broadcast fails
+      }
     } catch (updateError) {
       console.error(`❌ CRITICAL: Failed to update model ${model.id}:`, updateError)
       console.error(`❌ Update error details:`, {
@@ -910,6 +924,19 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload, promptIdFromUr
         hasCompletedAt: !!updatedGeneration.completedAt,
         hasMetadata: !!updatedGeneration.metadata
       })
+
+      // Broadcast to admins when generation is updated
+      try {
+        const { broadcastAdminGenerationUpdated } = await import('@/lib/services/realtime-service')
+        await broadcastAdminGenerationUpdated(generation.id, {
+          status: updatedGeneration.status,
+          imageUrlsCount: Array.isArray(updatedGeneration.imageUrls) ? (updatedGeneration.imageUrls as string[]).length : 0,
+          completedAt: updatedGeneration.completedAt?.toISOString()
+        })
+      } catch (broadcastError) {
+        console.error('❌ Failed to broadcast generation updated event:', broadcastError)
+        // Don't fail webhook if broadcast fails
+      }
       
       // 🔒 CRITICAL: Verify the update actually happened
       const verification = await prisma.generation.findUnique({

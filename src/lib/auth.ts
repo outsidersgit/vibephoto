@@ -30,6 +30,22 @@ const customAdapter: Adapter = {
       data: userData
     })
     
+    // Broadcast to admins (OAuth user creation)
+    try {
+      const { broadcastAdminUserCreated } = await import('@/lib/services/realtime-service')
+      await broadcastAdminUserCreated({
+        id: createdUser.id,
+        email: createdUser.email,
+        name: createdUser.name,
+        plan: createdUser.plan,
+        role: createdUser.role,
+        createdAt: createdUser.createdAt
+      })
+    } catch (error) {
+      console.error('❌ Failed to broadcast OAuth user created event:', error)
+      // Don't fail user creation if broadcast fails
+    }
+    
     return {
       id: createdUser.id,
       email: createdUser.email,

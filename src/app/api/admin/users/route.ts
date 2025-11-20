@@ -79,6 +79,22 @@ export async function POST(request: NextRequest) {
   let created
   try {
     created = await prisma.user.create({ data })
+    
+    // Broadcast to admins
+    try {
+      const { broadcastAdminUserCreated } = await import('@/lib/services/realtime-service')
+      await broadcastAdminUserCreated({
+        id: created.id,
+        email: created.email,
+        name: created.name,
+        plan: created.plan,
+        role: created.role,
+        createdAt: created.createdAt
+      })
+    } catch (broadcastError) {
+      console.error('❌ Failed to broadcast admin user created event:', broadcastError)
+      // Don't fail user creation if broadcast fails
+    }
   } catch (error) {
     console.error('❌ [Admin Users] Erro ao criar usuário base:', error)
     return NextResponse.json({ error: 'Falha ao criar usuário.' }, { status: 500 })

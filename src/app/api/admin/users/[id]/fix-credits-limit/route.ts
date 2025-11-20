@@ -109,6 +109,19 @@ export async function POST(
     ).catch((error) => {
       console.error('❌ [Fix CreditsLimit] Erro ao broadcast:', error)
     })
+
+    // Broadcast to admins
+    try {
+      const { broadcastAdminUserUpdated } = await import('@/lib/services/realtime-service')
+      await broadcastAdminUserUpdated(id, {
+        creditsLimit: updated.creditsLimit,
+        creditsUsed: updated.creditsUsed,
+        creditsBalance: updatedUser.creditsBalance,
+        action: 'ADMIN_FIX_CREDITSLIMIT'
+      })
+    } catch (broadcastError) {
+      console.error('❌ Failed to broadcast admin user updated event:', broadcastError)
+    }
   }
 
   // Criar log

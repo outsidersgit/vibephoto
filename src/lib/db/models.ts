@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { ModelClass, ModelStatus } from '@prisma/client'
+import { broadcastAdminModelCreated } from '@/lib/services/realtime-service'
 
 export async function createAIModel(data: {
   name: string
@@ -19,7 +20,7 @@ export async function createAIModel(data: {
   }
   const classWord = classWordMap[data.class]
   
-  return prisma.aIModel.create({
+  const model = await prisma.aIModel.create({
     data: {
       name: data.name,
       class: data.class,
@@ -32,6 +33,22 @@ export async function createAIModel(data: {
       status: ModelStatus.UPLOADING
     }
   })
+
+  // Broadcast to admins
+  try {
+    await broadcastAdminModelCreated({
+      id: model.id,
+      userId: data.userId,
+      name: model.name,
+      status: model.status,
+      createdAt: model.createdAt
+    })
+  } catch (error) {
+    console.error('❌ Failed to broadcast model created event:', error)
+    // Don't fail model creation if broadcast fails
+  }
+
+  return model
 }
 
 export async function getModelsByUserId(userId: string) {
