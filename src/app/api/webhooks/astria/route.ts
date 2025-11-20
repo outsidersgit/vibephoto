@@ -232,28 +232,38 @@ export async function POST(request: NextRequest) {
         // PROMPT webhook: usar prompt_id da URL, do payload.id, ou extrair da URL do payload
         let actualPromptId = promptId || String(payload.id)
         
+        // 🔍 CRITICAL: Se promptId da URL é literalmente o placeholder, usar payload.id
+        if (actualPromptId === '{PROMPT_ID}' || actualPromptId === '%7BPROMPT_ID%7D') {
+          console.log(`⚠️ [WEBHOOK_ASTRIA] URL contains literal placeholder, using payload.id instead`)
+          actualPromptId = String(payload.id)
+        }
+        
         // 🔍 CRITICAL: Se não temos prompt_id, tentar extrair da URL do payload
-        if (!actualPromptId && payload.url) {
-          const extractedIds = extractIdsFromAstriaUrl(payload.url)
-          if (extractedIds.promptId) {
-            actualPromptId = extractedIds.promptId
-            console.log(`🔍 [WEBHOOK_ASTRIA] Extracted prompt_id from payload.url: ${actualPromptId}`)
+        if (!actualPromptId || actualPromptId === '{PROMPT_ID}' || actualPromptId === '%7BPROMPT_ID%7D') {
+          if (payload.url) {
+            const extractedIds = extractIdsFromAstriaUrl(payload.url)
+            if (extractedIds.promptId) {
+              actualPromptId = extractedIds.promptId
+              console.log(`🔍 [WEBHOOK_ASTRIA] Extracted prompt_id from payload.url: ${actualPromptId}`)
+            }
           }
         }
         
         // 🔍 CRITICAL: Se ainda não temos prompt_id, usar payload.id como fallback
-        if (!actualPromptId && payload.id) {
-          actualPromptId = String(payload.id)
-          console.log(`🔍 [WEBHOOK_ASTRIA] Using payload.id as prompt_id: ${actualPromptId}`)
+        if (!actualPromptId || actualPromptId === '{PROMPT_ID}' || actualPromptId === '%7BPROMPT_ID%7D') {
+          if (payload.id) {
+            actualPromptId = String(payload.id)
+            console.log(`🔍 [WEBHOOK_ASTRIA] Using payload.id as prompt_id: ${actualPromptId}`)
+          }
         }
         
-        if (actualPromptId) {
+        if (actualPromptId && actualPromptId !== '{PROMPT_ID}' && actualPromptId !== '%7BPROMPT_ID%7D') {
           await handlePromptWebhook(payload, actualPromptId)
           processingResult.success = true
           console.log('✅ [WEBHOOK_ASTRIA] Prompt webhook processed successfully')
         } else {
-          console.error('❌ [WEBHOOK_ASTRIA] Cannot process prompt webhook - no prompt_id available')
-          processingResult.error = 'No prompt_id available in URL or payload'
+          console.error('❌ [WEBHOOK_ASTRIA] Cannot process prompt webhook - no valid prompt_id available')
+          processingResult.error = 'No valid prompt_id available in URL or payload'
         }
       } else {
         console.warn('⚠️ Unknown Astria webhook type:', { object: payload.object, tuneId, promptId })
@@ -531,7 +541,7 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload, promptIdFromUr
       // Try alternative formats (number as string, etc.)
       console.error('❌ [WEBHOOK_ASTRIA] CRITICAL: No generation found for Astria prompt:', {
         payloadId: payload.id,
-        jobIdStr,
+        promptId,
         payloadIdType: typeof payload.id,
         // Try to find any generation with similar jobId
         recentGenerations: await prisma.generation.findMany({
@@ -557,25 +567,32 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload, promptIdFromUr
           metadata: (g.metadata as any)?.source
         })))
       })
-      throw new Error(`Generation not found for jobId: ${payload.id} (as string: ${jobIdStr})`)
+      throw new Error(`Generation not found for jobId: ${payload.id} (as string: ${promptId})`)
     }
 
     console.log(`🎯 Processing Astria prompt webhook for generation: ${generation.id}`)
 
     // Map Astria status to our internal status
     let internalStatus: 'PROCESSING' | 'COMPLETED' | 'FAILED'
-    switch (payload.status) {
-      case 'generated':
-        internalStatus = 'COMPLETED'
-        break
-      case 'failed':
-      case 'cancelled':
-        internalStatus = 'FAILED'
-        break
-      case 'generating':
-      case 'queued':
-      default:
-        internalStatus = 'PROCESSING'
+    
+    // 🔍 CRITICAL: Se status é undefined mas há imagens, tratar como COMPLETED
+    if (!payload.status && payload.images && payload.images.length > 0) {
+      console.log(`🔍 [WEBHOOK_ASTRIA_PROMPT] Status is undefined but images present - treating as COMPLETED`)
+      internalStatus = 'COMPLETED'
+    } else {
+      switch (payload.status) {
+        case 'generated':
+          internalStatus = 'COMPLETED'
+          break
+        case 'failed':
+        case 'cancelled':
+          internalStatus = 'FAILED'
+          break
+        case 'generating':
+        case 'queued':
+        default:
+          internalStatus = 'PROCESSING'
+      }
     }
     
     // 🔍 CRITICAL: Log webhook status for debugging
@@ -585,7 +602,7 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload, promptIdFromUr
       hasImages: !!(payload.images && payload.images.length > 0),
       imageCount: payload.images?.length || 0,
       isHeartbeat: payload.status === 'generating' || payload.status === 'queued',
-      isFinal: payload.status === 'generated' || payload.status === 'failed'
+      isFinal: payload.status === 'generated' || payload.status === 'failed' || (!payload.status && payload.images && payload.images.length > 0)
     })
     
     // ⚠️ CRITICAL: Se é apenas heartbeat (generating/queued) sem imagens, retornar early mas não processar storage
