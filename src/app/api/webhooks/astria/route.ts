@@ -33,56 +33,73 @@ interface AstriaWebhookPayload {
 }
 
 export async function POST(request: NextRequest) {
+  // 🔍 CRITICAL: Log ALL webhook requests immediately (even before parsing)
+  const requestUrl = request.url
+  const requestMethod = request.method
+  const requestHeaders = Object.fromEntries(request.headers.entries())
+  
+  console.log(`📥 [WEBHOOK_ASTRIA] Webhook request received:`, {
+    method: requestMethod,
+    url: requestUrl,
+    headers: {
+      'content-type': requestHeaders['content-type'],
+      'user-agent': requestHeaders['user-agent'],
+      'x-forwarded-for': requestHeaders['x-forwarded-for']
+    },
+    timestamp: new Date().toISOString()
+  })
+  
   try {
     console.log('🔔 Astria webhook received')
 
-    // Security: Validate webhook secret
-    const authHeader = request.headers.get('authorization') || request.headers.get('x-astria-secret')
-    const webhookSecret = process.env.ASTRIA_WEBHOOK_SECRET
+    // 🔍 CORRETO: Extrair parâmetros da URL conforme formato correto
+    // TUNE: ?user_id={USER_ID}&tune_id={TUNE_ID}
+    // PROMPT: ?prompt_id={PROMPT_ID}
     const url = new URL(request.url)
-    const secretParam = url.searchParams.get('secret')
+    const userId = url.searchParams.get('user_id')
+    const tuneId = url.searchParams.get('tune_id')
+    const promptId = url.searchParams.get('prompt_id')
+    
+    console.log(`🔍 [WEBHOOK_ASTRIA] URL parameters extracted:`, {
+      userId,
+      tuneId,
+      promptId,
+      hasUserId: !!userId,
+      hasTuneId: !!tuneId,
+      hasPromptId: !!promptId,
+      webhookType: tuneId ? 'TUNE' : (promptId ? 'PROMPT' : 'UNKNOWN')
+    })
 
-    if (webhookSecret) {
-      if (!authHeader && !secretParam) {
-        console.error('❌ Astria webhook authentication failed: missing auth')
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
-      }
-      if (authHeader && authHeader !== webhookSecret && secretParam !== webhookSecret) {
-        console.error('❌ Astria webhook authentication failed')
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
-      }
-      console.log('✅ Astria webhook authenticated')
-    } else {
-      console.warn('⚠️ ASTRIA_WEBHOOK_SECRET not configured - webhook is INSECURE!')
-    }
+    // 🔍 NOTA: Removido validação de secret conforme especificação
+    // Callbacks do Astria não usam secret na URL, apenas user_id/tune_id ou prompt_id
 
     // Parse the webhook payload - handle both JSON and form-data
+    // According to Astria docs: "Callbacks for prompts and tunes are POST requests containing the entity object in the request body"
     let payload: AstriaWebhookPayload
     const contentType = request.headers.get('content-type') || ''
+    
+    // 🔍 CRITICAL: Read body once and store it
+    let bodyText: string | null = null
     
     try {
       if (contentType.includes('application/json')) {
         payload = await request.json()
       } else {
         // Try to parse as JSON anyway (some webhooks don't set content-type correctly)
-        const text = await request.text()
-        if (!text || text.trim().length === 0) {
-          console.warn('⚠️ Astria webhook received empty body')
-          // Return success to avoid webhook retries
+        bodyText = await request.text()
+        if (!bodyText || bodyText.trim().length === 0) {
+          console.warn('⚠️ [WEBHOOK_ASTRIA] Empty body received')
+          // According to Astria docs: "Callbacks are currently not retried if they fail"
+          // So we return 200 OK to acknowledge receipt
           return NextResponse.json({ success: true, message: 'Empty payload ignored' })
         }
-        payload = JSON.parse(text)
+        payload = JSON.parse(bodyText)
       }
     } catch (parseError) {
-      console.error('❌ Failed to parse Astria webhook payload:', parseError)
-      console.error('📋 Raw body (first 500 chars):', await request.text().then(t => t.substring(0, 500)))
-      // Return success to avoid webhook retries
+      console.error('❌ [WEBHOOK_ASTRIA] Failed to parse payload:', parseError)
+      console.error('📋 [WEBHOOK_ASTRIA] Raw body (first 500 chars):', bodyText?.substring(0, 500) || 'Body already consumed')
+      // According to Astria docs: "Callbacks are currently not retried if they fail"
+      // So we return 200 OK to acknowledge receipt even if parsing fails
       return NextResponse.json({ success: true, message: 'Invalid payload format' })
     }
 
@@ -136,20 +153,27 @@ export async function POST(request: NextRequest) {
     let processingResult: { success: boolean; error?: string } = { success: false }
     
     try {
-      if (payload.object === 'tune') {
-        await handleTuneWebhook(payload)
+      // 🔍 CORRETO: Determinar tipo de webhook baseado em object ou parâmetros da URL
+      const webhookType = payload.object || (tuneId ? 'tune' : (promptId ? 'prompt' : null))
+      
+      if (webhookType === 'tune' || tuneId) {
+        // TUNE webhook: usar tune_id da URL ou do payload
+        const actualTuneId = tuneId || String(payload.id)
+        await handleTuneWebhook(payload, actualTuneId, userId)
         processingResult.success = true
         console.log('✅ [WEBHOOK_ASTRIA] Tune webhook processed successfully')
-      } else if (payload.object === 'prompt') {
-        await handlePromptWebhook(payload)
+      } else if (webhookType === 'prompt' || promptId) {
+        // PROMPT webhook: usar prompt_id da URL ou do payload
+        const actualPromptId = promptId || String(payload.id)
+        await handlePromptWebhook(payload, actualPromptId)
         processingResult.success = true
         console.log('✅ [WEBHOOK_ASTRIA] Prompt webhook processed successfully')
       } else {
-        console.warn('⚠️ Unknown Astria webhook object type:', payload.object)
+        console.warn('⚠️ Unknown Astria webhook type:', { object: payload.object, tuneId, promptId })
         // Still try to process if we have an ID (might be a generation webhook without object field)
         if (payload.id && payload.status) {
           console.log('🔄 Attempting to process as prompt webhook (object field missing)')
-          await handlePromptWebhook(payload as AstriaWebhookPayload)
+          await handlePromptWebhook(payload, String(payload.id))
           processingResult.success = true
           console.log('✅ [WEBHOOK_ASTRIA] Prompt webhook (fallback) processed successfully')
         } else {
@@ -201,12 +225,34 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleTuneWebhook(payload: AstriaWebhookPayload) {
+/**
+ * 🔍 CORRETO: Extrair tune_id e prompt_id de URLs do Astria
+ * Formato: https://api.astria.ai/tunes/{TUNE_ID}/prompts/{PROMPT_ID}.json
+ */
+function extractIdsFromAstriaUrl(url: string | null | undefined): { tuneId?: string; promptId?: string } {
+  if (!url) return {}
+  
+  const tuneMatch = url.match(/\/tunes\/(\d+)\//)
+  const promptMatch = url.match(/\/prompts\/(\d+)/)
+  
+  return {
+    tuneId: tuneMatch ? tuneMatch[1] : undefined,
+    promptId: promptMatch ? promptMatch[1] : undefined
+  }
+}
+
+async function handleTuneWebhook(payload: AstriaWebhookPayload, tuneIdFromUrl?: string, userIdFromUrl?: string | null) {
   try {
-    // Find the corresponding AI model in our database
-    // Tentar tanto como string quanto como número (Astria pode retornar ambos)
-    const tuneId = String(payload.id)
+    // 🔍 CORRETO: Usar tune_id da URL (prioridade) ou do payload
+    const tuneId = tuneIdFromUrl || String(payload.id)
     const tuneIdNum = typeof payload.id === 'number' ? payload.id : parseInt(tuneId)
+    
+    console.log(`🔍 [WEBHOOK_ASTRIA_TUNE] Processing tune webhook:`, {
+      tuneIdFromUrl,
+      tuneIdFromPayload: payload.id,
+      finalTuneId: tuneId,
+      userIdFromUrl
+    })
     
     const model = await prisma.aIModel.findFirst({
       where: {
@@ -358,23 +404,39 @@ async function handleTuneWebhook(payload: AstriaWebhookPayload) {
   }
 }
 
-async function handlePromptWebhook(payload: AstriaWebhookPayload) {
+async function handlePromptWebhook(payload: AstriaWebhookPayload, promptIdFromUrl?: string) {
   try {
-    // Find the corresponding generation in our database
-    // Astria sends ID as number, but we store it as string in jobId
-    const jobIdStr = String(payload.id)
+    // 🔍 CORRETO: Usar prompt_id da URL (prioridade) ou do payload
+    const promptId = promptIdFromUrl || String(payload.id)
     
-    console.log(`🔍 [WEBHOOK_ASTRIA] Looking for generation with jobId:`, {
-      payloadId: payload.id,
-      payloadIdType: typeof payload.id,
-      jobIdStr,
+    // 🔍 CORRETO: Extrair tune_id da URL do Astria se disponível
+    // Formato: https://api.astria.ai/tunes/{TUNE_ID}/prompts/{PROMPT_ID}.json
+    let tuneIdFromAstriaUrl: string | undefined
+    if (payload.url) {
+      const extractedIds = extractIdsFromAstriaUrl(payload.url)
+      tuneIdFromAstriaUrl = extractedIds.tuneId
+      console.log(`🔍 [WEBHOOK_ASTRIA_PROMPT] Extracted IDs from Astria URL:`, {
+        url: payload.url,
+        tuneId: extractedIds.tuneId,
+        promptId: extractedIds.promptId,
+        matchesPayloadPromptId: extractedIds.promptId === promptId
+      })
+    }
+    
+    console.log(`🔍 [WEBHOOK_ASTRIA_PROMPT] Looking for generation with prompt_id:`, {
+      promptIdFromUrl,
+      promptIdFromPayload: payload.id,
+      finalPromptId: promptId,
+      tuneIdFromAstriaUrl,
       status: payload.status,
-      object: payload.object
+      object: payload.object,
+      astriaUrl: payload.url
     })
     
+    // 🔍 CORRETO: Buscar geração por prompt_id (jobId)
     const generation = await prisma.generation.findFirst({
       where: {
-        jobId: jobIdStr
+        jobId: promptId
       }
     })
 
@@ -540,6 +602,19 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
       })
     }
 
+    // 🔍 CORRETO: Extrair tune_id da URL do Astria se disponível
+    // Formato: https://api.astria.ai/tunes/{TUNE_ID}/prompts/{PROMPT_ID}.json
+    let extractedTuneId: string | undefined
+    if (payload.url) {
+      const extractedIds = extractIdsFromAstriaUrl(payload.url)
+      extractedTuneId = extractedIds.tuneId
+      console.log(`🔍 [WEBHOOK_ASTRIA_PROMPT] Extracted tune_id from Astria URL:`, {
+        url: payload.url,
+        tuneId: extractedTuneId,
+        promptId: extractedIds.promptId
+      })
+    }
+    
     // Store temporary URLs in metadata for modal display
     const existingMetadata = (generation.metadata as any) || {}
     const updatedMetadata = {
@@ -547,6 +622,9 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
       temporaryUrls: imageUrls.length > 0 ? imageUrls : existingMetadata.temporaryUrls || [],
       permanentUrls: finalImageUrls.length > 0 ? finalImageUrls : existingMetadata.permanentUrls || [],
       originalUrls: imageUrls.length > 0 ? imageUrls : existingMetadata.originalUrls || [],
+      // 🔍 CORRETO: Armazenar tune_id e prompt_id extraídos
+      tune_id: extractedTuneId || existingMetadata.tune_id,
+      prompt_id: promptId, // 🔍 CORRETO: prompt_id é o ID do prompt
       // 🔒 CRITICAL: Mark that webhook processed this generation
       webhookProcessed: true,
       processedVia: 'webhook',

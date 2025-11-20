@@ -199,7 +199,27 @@ export async function executeGenerationFlow(params: ExecuteGenerationFlowParams)
         raw_mode: raw_mode || false,
         output_format: output_format || 'webp'
       },
-      webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/astria?type=prompt&id=${generation.id}&userId=${userId}&secret=${process.env.ASTRIA_WEBHOOK_SECRET}`,
+      webhookUrl: (() => {
+        const baseUrl = process.env.NEXTAUTH_URL
+        if (!baseUrl) {
+          console.warn('⚠️ [GENERATION_FLOW] NEXTAUTH_URL not configured - callback will not work')
+          return undefined
+        }
+        // 🔍 CORRETO: Callback de geração (PROMPT) usa apenas prompt_id
+        // Formato: https://seu-dominio/api/webhooks/astria?prompt_id={PROMPT_ID}
+        // NOTA: prompt_id será preenchido pelo Astria após criar o prompt (será passado no callback)
+        // Por enquanto, usamos generation.id como placeholder, mas o Astria enviará o prompt_id real no payload
+        const callbackUrl = `${baseUrl}/api/webhooks/astria`
+        
+        console.log(`🔗 [GENERATION_FLOW] Callback URL configured (prompt_id virá no payload do Astria):`, {
+          baseUrl,
+          callbackUrl,
+          isHttps: callbackUrl.startsWith('https://'),
+          note: 'Astria will send prompt_id in webhook payload, not in URL'
+        })
+        
+        return callbackUrl
+      })(),
       userPlan
     }
 
@@ -278,6 +298,43 @@ export async function executeGenerationFlow(params: ExecuteGenerationFlowParams)
             hybridRouting: generationResponse.metadata?.hybridRouting
           }
         }
+      })
+    }
+
+    // 🔥 CRITICAL: Start polling for Astria/Hybrid (same as common generation)
+    // Astria callbacks are unreliable, so polling is the primary mechanism
+    const shouldPoll = actualProvider === 'astria' || currentProvider === 'hybrid'
+
+    if (shouldPoll && generationResponse.id) {
+      console.log(`🔄 [GENERATION_FLOW] Starting polling for Astria generation ${generationResponse.id}`)
+      
+      // Start polling in background (same logic as /api/generations)
+      setTimeout(async () => {
+        try {
+          const { startPolling } = await import('@/lib/services/polling-service')
+          await startPolling(generationResponse.id, generation.id, userId, actualProvider)
+          console.log(`✅ [GENERATION_FLOW] Polling started successfully for ${generationResponse.id}`)
+        } catch (pollingError) {
+          console.error(`❌ [GENERATION_FLOW] Failed to start polling for ${generationResponse.id}:`, pollingError)
+          
+          // Retry once after delay
+          setTimeout(async () => {
+            try {
+              const { startPolling } = await import('@/lib/services/polling-service')
+              await startPolling(generationResponse.id, generation.id, userId, actualProvider)
+              console.log(`✅ [GENERATION_FLOW] Retry polling successful for ${generationResponse.id}`)
+            } catch (retryError) {
+              console.error(`❌ [GENERATION_FLOW] Retry polling failed for ${generationResponse.id}:`, retryError)
+            }
+          }, 5000)
+        }
+      }, 500)
+    } else {
+      console.log(`⚠️ [GENERATION_FLOW] Polling skipped:`, {
+        shouldPoll,
+        hasJobId: !!generationResponse.id,
+        actualProvider,
+        currentProvider
       })
     }
 

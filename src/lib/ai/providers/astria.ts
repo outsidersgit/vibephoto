@@ -551,23 +551,84 @@ export class AstriaProvider extends AIProvider {
       const endpoint = `/tunes/${request.modelUrl}/prompts`
       
       console.log(`🚀 [ASTRIA_POST] Sending POST to: ${this.baseUrl}${endpoint}`)
-      console.log(`📦 [ASTRIA_POST] FormData entries count: ${Array.from(formData.entries()).length}`)
+      
+      // 🔍 DEBUG: Verify callback is in FormData before sending
+      const formDataEntries = Array.from(formData.entries())
+      const callbackEntry = formDataEntries.find(([key]) => key.includes('callback'))
+      console.log(`📦 [ASTRIA_POST] FormData verification:`, {
+        totalEntries: formDataEntries.length,
+        hasCallback: !!callbackEntry,
+        callbackKey: callbackEntry?.[0],
+        callbackValue: callbackEntry?.[1] ? (callbackEntry[1] as string).substring(0, 100) + '...' : 'NOT FOUND',
+        allKeys: formDataEntries.map(([key]) => key)
+      })
       
       const prediction = await this.makeRequest('POST', endpoint, formData)
-      // CRÍTICO: usar sempre o modelUrl como tune_id correto, pois prediction.tune_id retorna o prompt_id
+      
+      // 🔍 CRITICAL: Extract tune_id correctly
+      // IMPORTANTE: O tune_id correto para polling/webhook é SEMPRE o request.modelUrl (tune_id do modelo do usuário)
+      // - request.modelUrl = 3528382 (tune_id do modelo do usuário) ✅ CORRETO - usar para polling/webhook
+      // - prediction.tune.id = 1504944 (base_tune_id) → Apenas informativo, não usar para polling/webhook
+      // - prediction.tune_id = prompt_id (ID do prompt, não do tune) ❌ INCORRETO
+      // 
+      // NOTA: base_tune_id aparece na resposta do Astria como informação, mas não devemos usá-lo
+      // para polling/webhook. Sempre usamos o tune_id do modelo do usuário (request.modelUrl)
       const tuneId = request.modelUrl || prediction.tune_id
 
       console.log('✅ Astria prediction created:', prediction.id, prediction.status)
       console.log(`📊 [ASTRIA_GENERATE] Generation created:`, {
         predictionId: prediction.id,
         tuneId,
+        tuneIdSource: request.modelUrl ? 'request.modelUrl (tune_id do modelo do usuário - usar para polling/webhook)' : 'prediction.tune_id (fallback)',
+        requestModelUrl: request.modelUrl,
+        baseTuneId: prediction.tune?.id, // Apenas informativo (base_tune_id usado internamente pelo Astria)
         status: prediction.status,
         endpoint: endpoint
       })
+      
+      // 🔍 CRITICAL: Verify callback in Astria response
+      console.log(`🔍 [ASTRIA_CALLBACK_VERIFICATION] Checking callback in Astria response:`, {
+        hasCallback: !!prediction.callback,
+        callbackValue: prediction.callback || 'NOT FOUND',
+        callbackMatchesRequest: prediction.callback === request.webhookUrl,
+        requestWebhookUrl: request.webhookUrl?.substring(0, 100) + '...',
+        predictionId: prediction.id
+      })
+      
+      if (!prediction.callback) {
+        console.warn('⚠️ [ASTRIA_CALLBACK] WARNING: Astria response does NOT contain callback field!')
+        console.warn('⚠️ [ASTRIA_CALLBACK] This may indicate that callbacks are not supported for prompts or there was an issue')
+      } else if (prediction.callback !== request.webhookUrl) {
+        console.warn('⚠️ [ASTRIA_CALLBACK] WARNING: Callback in response does NOT match request!', {
+          requestCallback: request.webhookUrl?.substring(0, 100),
+          responseCallback: prediction.callback.substring(0, 100)
+        })
+      } else {
+        console.log('✅ [ASTRIA_CALLBACK] Callback confirmed in Astria response - matches request')
+      }
+      
       console.log(`📋 [ASTRIA_RESPONSE] Complete Astria API response:`, JSON.stringify(prediction, null, 2))
+      
+      // 🔍 CORRETO: Extrair tune_id e prompt_id da URL do Astria se disponível
+      // Formato: https://api.astria.ai/tunes/{TUNE_ID}/prompts/{PROMPT_ID}.json
+      let extractedTuneId: string | undefined
+      let extractedPromptId: string | undefined
+      if (prediction.url) {
+        const urlMatch = prediction.url.match(/\/tunes\/(\d+)\/prompts\/(\d+)/)
+        if (urlMatch) {
+          extractedTuneId = urlMatch[1]
+          extractedPromptId = urlMatch[2]
+          console.log(`🔍 [ASTRIA_RESPONSE] Extracted IDs from Astria URL:`, {
+            url: prediction.url,
+            tuneId: extractedTuneId,
+            promptId: extractedPromptId,
+            matchesPredictionId: extractedPromptId === String(prediction.id)
+          })
+        }
+      }
 
       return {
-        id: prediction.id,
+        id: prediction.id, // Este é o prompt_id
         status: this.mapAstriaStatus(prediction.status),
         createdAt: prediction.created_at,
         estimatedTime: this.estimateGenerationTime(
@@ -579,9 +640,11 @@ export class AstriaProvider extends AIProvider {
           prompt: request.prompt,
           seed: request.params.seed || 0,
           params: request.params,
-          tune_id: tuneId, // CRÍTICO: armazenar tune_id para polling correto
+          tune_id: extractedTuneId || tuneId, // 🔍 CORRETO: Usar tune_id extraído da URL ou do request
+          prompt_id: extractedPromptId || String(prediction.id), // 🔍 CORRETO: prompt_id é o ID do prompt
           modelUrl: request.modelUrl,
-          endpoint_used: endpoint
+          endpoint_used: endpoint,
+          astriaUrl: prediction.url // Armazenar URL completa para referência
         }
       }
     } catch (error) {

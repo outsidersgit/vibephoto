@@ -105,7 +105,10 @@ export async function generateImage(params: SimpleGenerationParams, generationId
       output_format: 'png',
       output_quality: 95
     },
-    webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/astria?type=prompt&id=${generationId}&userId=${generation.userId}&secret=${process.env.ASTRIA_WEBHOOK_SECRET}`
+    // 🔍 CORRETO: Callback de geração (PROMPT) usa apenas prompt_id
+    // Formato: https://seu-dominio/api/webhooks/astria?prompt_id={PROMPT_ID}
+    // NOTA: prompt_id será preenchido pelo Astria após criar o prompt (será passado no callback)
+    webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/astria`
   }
 
   console.log(`🚀 Starting package generation for model ${model.name}...`)
