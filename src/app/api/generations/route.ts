@@ -254,7 +254,10 @@ export async function POST(request: NextRequest) {
           output_format: output_format || 'webp'
           // NOTA: output_quality removido - não é suportado pela API Astria
         },
-        webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/astria?type=prompt&id=${generation.id}&userId=${session.user.id}&secret=${process.env.ASTRIA_WEBHOOK_SECRET}`,
+        // 🔍 CORRETO: Callback de geração (PROMPT) usa apenas endpoint base
+        // Formato: https://seu-dominio/api/webhooks/astria
+        // NOTA: prompt_id será enviado pelo Astria no payload do webhook, não precisa estar na URL
+        webhookUrl: `${process.env.NEXTAUTH_URL}/api/webhooks/astria`,
         userPlan // Pass user plan for model selection
       }
 
@@ -272,27 +275,30 @@ export async function POST(request: NextRequest) {
       
       console.log(`✅ Generation started with job ID: ${generationResponse.id}`)
 
-      // Extract tune_id - for Astria use trainingJobId (contains tune_id), for Replicate use modelUrl
+      // 🔍 CORRETO: Extrair tune_id da resposta do Astria (prioridade) ou usar do modelo
+      // A resposta do Astria contém o tune_id correto em metadata.tune_id (extraído de tunes[0].id)
+      // Se não estiver disponível, usar trainingJobId do modelo como fallback
       const tuneId = (currentProvider === 'astria' || currentProvider === 'hybrid')
-        ? model.trainingJobId || effectiveModelUrl
+        ? (generationResponse.metadata?.tune_id || model.trainingJobId || effectiveModelUrl)
         : effectiveModelUrl
 
       console.log(`🔍 [GENERATIONS_DEBUG] Tune ID resolution:`, {
         modelUrl: model.modelUrl,
         trainingJobId: model.trainingJobId,
         effectiveModelUrl,
-        metadataTuneId: generationResponse.metadata?.tune_id,
+        metadataTuneId: generationResponse.metadata?.tune_id, // tune_id extraído da resposta do Astria
         finalTuneId: tuneId,
-        generationResponseId: generationResponse.id
+        generationResponseId: generationResponse.id,
+        tuneIdSource: generationResponse.metadata?.tune_id ? 'Astria response (tunes[0].id)' : 'Model trainingJobId (fallback)'
       })
 
       // Update astriaEnhancements with tune_id for proper polling
       const updatedAstriaEnhancements = (currentProvider === 'astria' || currentProvider === 'hybrid') ? {
         ...astriaEnhancements,
-        tune_id: tuneId // CRÍTICO: armazenar tune_id para polling
+        tune_id: tuneId // 🔍 CORRETO: armazenar tune_id extraído da resposta do Astria para polling
       } : astriaEnhancements
 
-      console.log(`📝 [GENERATIONS_DB] Storing tune_id for polling: ${tuneId}`)
+      console.log(`📝 [GENERATIONS_DB] Storing tune_id for polling: ${tuneId} (from ${generationResponse.metadata?.tune_id ? 'Astria response' : 'model'})`)
 
       // Update generation with job ID, status and tune_id
       await prisma.generation.update({

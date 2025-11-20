@@ -609,21 +609,45 @@ export class AstriaProvider extends AIProvider {
       
       console.log(`📋 [ASTRIA_RESPONSE] Complete Astria API response:`, JSON.stringify(prediction, null, 2))
       
-      // 🔍 CORRETO: Extrair tune_id e prompt_id da URL do Astria se disponível
-      // Formato: https://api.astria.ai/tunes/{TUNE_ID}/prompts/{PROMPT_ID}.json
+      // 🔍 CORRETO: Extrair tune_id e prompt_id corretamente
+      // IMPORTANTE: A URL do Astria mostra o base_tune_id (1504944), NÃO o tune_id do modelo do usuário
+      // O tune_id correto está em prediction.tunes[0].id (3528382)
+      // Formato da URL: https://api.astria.ai/tunes/{BASE_TUNE_ID}/prompts/{PROMPT_ID}.json
       let extractedTuneId: string | undefined
       let extractedPromptId: string | undefined
+      
+      // 🔍 CORRETO: Extrair prompt_id da URL (este está correto)
       if (prediction.url) {
-        const urlMatch = prediction.url.match(/\/tunes\/(\d+)\/prompts\/(\d+)/)
+        const urlMatch = prediction.url.match(/\/prompts\/(\d+)/)
         if (urlMatch) {
-          extractedTuneId = urlMatch[1]
-          extractedPromptId = urlMatch[2]
-          console.log(`🔍 [ASTRIA_RESPONSE] Extracted IDs from Astria URL:`, {
-            url: prediction.url,
-            tuneId: extractedTuneId,
-            promptId: extractedPromptId,
-            matchesPredictionId: extractedPromptId === String(prediction.id)
-          })
+          extractedPromptId = urlMatch[1]
+        }
+      }
+      
+      // 🔍 CORRETO: Extrair tune_id do array tunes[0].id (tune_id do modelo do usuário)
+      // NÃO usar a URL que mostra o base_tune_id
+      if (prediction.tunes && Array.isArray(prediction.tunes) && prediction.tunes.length > 0) {
+        extractedTuneId = String(prediction.tunes[0].id)
+        console.log(`🔍 [ASTRIA_RESPONSE] Extracted tune_id from tunes array:`, {
+          tuneId: extractedTuneId,
+          tuneTitle: prediction.tunes[0].title,
+          tuneName: prediction.tunes[0].name
+        })
+      }
+      
+      if (extractedPromptId) {
+        console.log(`🔍 [ASTRIA_RESPONSE] Extracted prompt_id from URL:`, {
+          url: prediction.url,
+          promptId: extractedPromptId,
+          matchesPredictionId: extractedPromptId === String(prediction.id)
+        })
+      }
+      
+      // ⚠️ WARNING: Se a URL mostrar tune_id diferente do tunes[0].id, é o base_tune_id (esperado)
+      if (prediction.url && extractedTuneId) {
+        const urlTuneId = prediction.url.match(/\/tunes\/(\d+)\//)?.[1]
+        if (urlTuneId && urlTuneId !== extractedTuneId) {
+          console.log(`ℹ️ [ASTRIA_RESPONSE] URL shows base_tune_id (${urlTuneId}), using user tune_id (${extractedTuneId}) from tunes array`)
         }
       }
 

@@ -236,17 +236,30 @@ async function pollPrediction(job: PollingJob) {
       // Get generation to extract tune_id from metadata
       const generationWithMetadata = await prisma.generation.findUnique({
         where: { id: generationId },
-        select: { astriaEnhancements: true }
+        select: { 
+          astriaEnhancements: true,
+          metadata: true // Também buscar de metadata como fallback
+        }
       })
 
-      const tuneId = generationWithMetadata?.astriaEnhancements?.tune_id
+      // 🔍 CORRETO: Buscar tune_id de astriaEnhancements (prioridade) ou metadata (fallback)
+      const tuneId = generationWithMetadata?.astriaEnhancements?.tune_id || 
+                     (generationWithMetadata?.metadata as any)?.tune_id
+      
       logger.debug('Extracted tune_id for Astria polling', {
         service: 'polling-service',
         action: 'astria_tune_id',
-        tuneId: tuneId || 'none'
+        tuneId: tuneId || 'none',
+        source: generationWithMetadata?.astriaEnhancements?.tune_id 
+          ? 'astriaEnhancements' 
+          : ((generationWithMetadata?.metadata as any)?.tune_id ? 'metadata' : 'not found')
       })
+      
+      if (!tuneId) {
+        console.warn(`⚠️ [POLLING] No tune_id found for generation ${generationId}, using direct endpoint (may be slower)`)
+      }
 
-      prediction = await aiProvider.getGenerationStatus(predictionId, tuneId)
+      prediction = await aiProvider.getGenerationStatus(predictionId, tuneId || undefined)
     } else {
       prediction = await aiProvider.getPredictionStatus(predictionId)
     }
