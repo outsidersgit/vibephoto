@@ -434,22 +434,27 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
           success: storageResult.success,
           permanentUrlsCount: storageResult.permanentUrls?.length || 0,
           error: storageResult.error,
-          hasPermanentUrls: !!(storageResult.permanentUrls && storageResult.permanentUrls.length > 0)
+          hasPermanentUrls: !!(storageResult.permanentUrls && storageResult.permanentUrls.length > 0),
+          thumbnailUrlsCount: storageResult.thumbnailUrls?.length || 0
         })
 
         if (storageResult.success && storageResult.permanentUrls && storageResult.permanentUrls.length > 0) {
           console.log(`✅ [WEBHOOK_ASTRIA] Successfully stored ${storageResult.permanentUrls.length} images permanently for generation ${generation.id}`)
+          console.log(`📸 [WEBHOOK_ASTRIA] Permanent URLs saved:`, storageResult.permanentUrls.map((url: string) => url.substring(0, 100) + '...'))
           // Use permanent URLs for database update
           finalImageUrls = storageResult.permanentUrls
         } else {
-          console.error(`❌ [WEBHOOK_ASTRIA] Storage failed for generation ${generation.id}:`, {
+          console.error(`❌ [WEBHOOK_ASTRIA] CRITICAL: Storage failed for generation ${generation.id}:`, {
             success: storageResult.success,
             error: storageResult.error,
             hasPermanentUrls: !!(storageResult.permanentUrls && storageResult.permanentUrls.length > 0),
-            permanentUrlsCount: storageResult.permanentUrls?.length || 0
+            permanentUrlsCount: storageResult.permanentUrls?.length || 0,
+            originalUrlsCount: imageUrls.length,
+            storageResultKeys: Object.keys(storageResult || {})
           })
           // Keep original URLs if storage fails
           finalImageUrls = imageUrls
+          console.warn(`⚠️ [WEBHOOK_ASTRIA] Using temporary URLs from Astria (storage failed)`)
         }
       } catch (storageError) {
         console.error(`❌ [WEBHOOK_ASTRIA] Storage failed with exception for generation ${generation.id}:`, storageError)
@@ -493,22 +498,75 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
       storedAt: storageResult?.success ? new Date().toISOString() : undefined
     }
     
-    // Update the generation with the new status and final image URLs
-    const updatedGeneration = await prisma.generation.update({
-      where: { id: generation.id },
-      data: {
-        status: internalStatus as any,
-        imageUrls: finalImageUrls.length > 0 ? finalImageUrls as any : generation.imageUrls,
-        completedAt: payload.completed_at ? new Date(payload.completed_at) : undefined,
-        processingTime: processingTime,
-        errorMessage: payload.error_message || undefined,
-        metadata: updatedMetadata as any, // Includes webhookProcessed: true
-        // Update seed if provided
-        seed: payload.seed || generation.seed
-      }
+    // 🔒 CRITICAL: Update the generation with the new status and final image URLs
+    console.log(`💾 [WEBHOOK_ASTRIA] Updating generation ${generation.id} in database:`, {
+      status: internalStatus,
+      finalImageUrlsCount: finalImageUrls.length,
+      hasStorageResult: !!storageResult,
+      storageSuccess: storageResult?.success,
+      permanentUrlsCount: storageResult?.permanentUrls?.length || 0
     })
     
-    // CRITICAL: Log for debugging modal opening
+    let updatedGeneration
+    try {
+      updatedGeneration = await prisma.generation.update({
+        where: { id: generation.id },
+        data: {
+          status: internalStatus as any,
+          imageUrls: finalImageUrls.length > 0 ? finalImageUrls as any : generation.imageUrls,
+          completedAt: payload.completed_at ? new Date(payload.completed_at) : undefined,
+          processingTime: processingTime,
+          errorMessage: payload.error_message || undefined,
+          metadata: updatedMetadata as any, // Includes webhookProcessed: true
+          // Update seed if provided
+          seed: payload.seed || generation.seed
+        }
+      })
+      
+      console.log(`✅ [WEBHOOK_ASTRIA] Generation ${generation.id} successfully updated in database:`, {
+        generationId: updatedGeneration.id,
+        status: updatedGeneration.status,
+        imageUrlsCount: Array.isArray(updatedGeneration.imageUrls) ? (updatedGeneration.imageUrls as string[]).length : 0,
+        hasCompletedAt: !!updatedGeneration.completedAt,
+        hasMetadata: !!updatedGeneration.metadata
+      })
+      
+      // 🔒 CRITICAL: Verify the update actually happened
+      const verification = await prisma.generation.findUnique({
+        where: { id: generation.id },
+        select: { status: true, imageUrls: true, completedAt: true }
+      })
+      
+      if (!verification) {
+        throw new Error(`Generation ${generation.id} not found after update`)
+      }
+      
+      if (verification.status !== internalStatus) {
+        throw new Error(`Generation status mismatch: expected ${internalStatus}, got ${verification.status}`)
+      }
+      
+      const verificationUrls = Array.isArray(verification.imageUrls) ? (verification.imageUrls as string[]) : []
+      if (internalStatus === 'COMPLETED' && verificationUrls.length === 0 && finalImageUrls.length > 0) {
+        throw new Error(`Generation imageUrls not saved: expected ${finalImageUrls.length} URLs, got ${verificationUrls.length}`)
+      }
+      
+      console.log(`✅ [WEBHOOK_ASTRIA] Database update verified successfully for generation ${generation.id}`)
+      
+    } catch (updateError) {
+      console.error(`❌ [WEBHOOK_ASTRIA] CRITICAL: Failed to update generation ${generation.id} in database:`, updateError)
+      console.error(`❌ [WEBHOOK_ASTRIA] Update error details:`, {
+        message: updateError instanceof Error ? updateError.message : String(updateError),
+        stack: updateError instanceof Error ? updateError.stack : undefined,
+        generationId: generation.id,
+        internalStatus,
+        finalImageUrlsCount: finalImageUrls.length
+      })
+      
+      // Re-throw to be caught by outer handler
+      throw updateError
+    }
+    
+    // CRITICAL: Log for debugging
     console.log(`📊 [ASTRIA_WEBHOOK] Generation updated:`, {
       generationId: updatedGeneration.id,
       status: internalStatus,
@@ -581,10 +639,39 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload) {
 
     if (userPackageId) {
       try {
-        console.log(`🔄 Reconciling UserPackage status for generation ${generation.id} (userPackageId: ${userPackageId})`)
+        console.log(`🔄 [WEBHOOK_ASTRIA] Reconciling UserPackage status for generation ${generation.id} (userPackageId: ${userPackageId})`)
         const reconciliation = await reconcileUserPackageStatus(userPackageId)
+        
+        console.log(`📊 [WEBHOOK_ASTRIA] Reconciliation result:`, {
+          userPackageId,
+          success: reconciliation.success,
+          updated: reconciliation.updated,
+          previousStatus: reconciliation.previousStatus,
+          newStatus: reconciliation.newStatus,
+          stats: reconciliation.stats
+        })
+        
         if (reconciliation.updated) {
-          console.log(`✅ UserPackage ${userPackageId} status updated: ${reconciliation.previousStatus} → ${reconciliation.newStatus}`)
+          console.log(`✅ [WEBHOOK_ASTRIA] UserPackage ${userPackageId} status updated: ${reconciliation.previousStatus} → ${reconciliation.newStatus}`)
+          
+          // 🔒 CRITICAL: Verify the update actually happened
+          const verification = await prisma.userPackage.findUnique({
+            where: { id: userPackageId },
+            select: { status: true, generatedImages: true, failedImages: true }
+          })
+          
+          if (verification) {
+            console.log(`✅ [WEBHOOK_ASTRIA] UserPackage update verified:`, {
+              userPackageId,
+              status: verification.status,
+              generatedImages: verification.generatedImages,
+              failedImages: verification.failedImages
+            })
+          } else {
+            console.error(`❌ [WEBHOOK_ASTRIA] UserPackage ${userPackageId} not found after reconciliation`)
+          }
+        } else {
+          console.log(`ℹ️ [WEBHOOK_ASTRIA] UserPackage ${userPackageId} reconciliation: no update needed (status: ${reconciliation.newStatus})`)
         }
 
         // CRITICAL: If generation failed, check if all package generations failed and refund credits

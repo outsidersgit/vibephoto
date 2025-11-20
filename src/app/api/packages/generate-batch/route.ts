@@ -107,25 +107,12 @@ export async function POST(request: NextRequest) {
     }
     const resolution = resolutionMap[aspectRatio] || '1024x1024'
 
-    // Build prompt prefix with token and className
-    // ARQUITETURA CORRETA:
-    // - token: sempre "ohwx" (fixo no backend)
-    // - className: vem do AIModel.classWord (obrigatório)
-    // Format: {token} {className}, {base_prompt}
-    const token = 'ohwx' // ✅ Token fixo
-    const className = aiModel.classWord // ✅ Obrigatório do modelo
-
-    // Validação: className é obrigatório
-    if (!className) {
-      throw new Error(`ClassName is required for model ${aiModel.name}. Model data is incomplete.`)
-    }
-
-    const promptPrefix = `${token} ${className},`
-
-    console.log('🎯 Prompt injection:', {
-      token, // Sempre 'ohwx'
-      className, // Do modelo
-      promptPrefix,
+    // 🔒 CRITICAL: Use prompts EXACTLY as they are in the package
+    // Do NOT add "ohwx" or className automatically - the prompts in packages are already complete
+    // The AI provider (AstriaProvider) will handle token/triggerWord injection if needed
+    
+    console.log('🎯 Using package prompts as-is (no automatic token injection):', {
+      totalPrompts: packagePrompts.length,
       aspectRatio,
       resolution
     })
@@ -141,27 +128,8 @@ export async function POST(request: NextRequest) {
     for (let promptIndex = 0; promptIndex < packagePrompts.length; promptIndex++) {
       const promptData = packagePrompts[promptIndex]
 
-      // Remove "ohwx" and className from prompt if already present (to avoid duplication)
-      // The backend should add it automatically, so we clean the prompt first
-      let cleanPrompt = promptData.text.trim()
-      
-      // Remove "ohwx" if present (case insensitive)
-      cleanPrompt = cleanPrompt.replace(/^ohwx\s+/i, '')
-      
-      // Remove className if present at the start (common patterns: "woman,", "man,", etc.)
-      if (className) {
-        const classNamePattern = new RegExp(`^${className}\\s*,?\\s*`, 'i')
-        cleanPrompt = cleanPrompt.replace(classNamePattern, '')
-      }
-      
-      // Remove "ohwx {className}," pattern if present
-      if (className) {
-        const fullPattern = new RegExp(`^ohwx\\s+${className}\\s*,?\\s*`, 'i')
-        cleanPrompt = cleanPrompt.replace(fullPattern, '')
-      }
-
-      // Inject token and className into prompt (backend adds it)
-      const fullPrompt = `${promptPrefix} ${cleanPrompt}`
+      // Use prompt EXACTLY as it is in the package - no modifications
+      const fullPrompt = promptData.text.trim()
 
       console.log(`📝 Prompt ${promptIndex + 1}/${packagePrompts.length}:`, {
         original: promptData.text,
