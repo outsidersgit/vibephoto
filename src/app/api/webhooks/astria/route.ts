@@ -49,6 +49,15 @@ export async function POST(request: NextRequest) {
     timestamp: new Date().toISOString()
   })
   
+  // 🔍 DEBUG: Log URL parameters for debugging
+  const url = new URL(requestUrl)
+  const urlParams = {
+    userId: url.searchParams.get('user_id'),
+    tuneId: url.searchParams.get('tune_id'),
+    promptId: url.searchParams.get('prompt_id')
+  }
+  console.log(`🔍 [WEBHOOK_ASTRIA_DEBUG] URL parameters:`, urlParams)
+  
   try {
     console.log('🔔 Astria webhook received')
 
