@@ -127,19 +127,31 @@ export async function POST(
       console.log('✅ UserPackage created successfully:', { id: userPackage.id, status: userPackage.status })
     } catch (createError: any) {
       // Handle unique constraint error (P2002)
-      if (createError.code === 'P2002' && createError.meta?.target?.includes('userId') && createError.meta?.target?.includes('packageId')) {
-        console.error('❌ CRITICAL: Unique constraint still exists on user_packages table')
-        console.error('❌ This constraint prevents multiple package generations per user')
-        console.error('❌ SOLUTION: Execute this SQL in your database:')
-        console.error('   ALTER TABLE "user_packages" DROP CONSTRAINT IF EXISTS "user_packages_userId_packageId_key";')
-        console.error('❌ Or run the migration: npx prisma migrate deploy')
+      if (createError.code === 'P2002') {
+        console.error('❌ CRITICAL: Database constraint error:', {
+          code: createError.code,
+          meta: createError.meta,
+          target: createError.meta?.target,
+          constraintName: createError.meta?.target?.[0] || 'unknown',
+          fullError: JSON.stringify(createError, null, 2)
+        })
         
-        return NextResponse.json({
-          error: 'Database constraint error: The unique constraint on user_packages must be removed to allow multiple package generations.',
-          details: 'Please execute this SQL in your database: ALTER TABLE "user_packages" DROP CONSTRAINT IF EXISTS "user_packages_userId_packageId_key";',
-          code: 'CONSTRAINT_ERROR',
-          migrationFile: 'prisma/migrations/20251119_remove_user_package_unique_constraint/migration.sql'
-        }, { status: 500 })
+        // Check if it's the userId/packageId constraint
+        if (createError.meta?.target?.includes('userId') && createError.meta?.target?.includes('packageId')) {
+          console.error('❌ This constraint prevents multiple package generations per user')
+          console.error('❌ SOLUTION: Execute this SQL in your database:')
+          console.error('   ALTER TABLE "user_packages" DROP CONSTRAINT IF EXISTS "user_packages_userId_packageId_key";')
+          console.error('❌ Or check for unique indexes:')
+          console.error('   SELECT indexname, indexdef FROM pg_indexes WHERE tablename = \'user_packages\' AND indexdef LIKE \'%UNIQUE%\';')
+          
+          return NextResponse.json({
+            error: 'Database constraint error: The unique constraint on user_packages must be removed to allow multiple package generations.',
+            details: 'Please execute this SQL in your database: ALTER TABLE "user_packages" DROP CONSTRAINT IF EXISTS "user_packages_userId_packageId_key";',
+            constraintName: createError.meta?.target?.[0] || 'unknown',
+            code: 'CONSTRAINT_ERROR',
+            migrationFile: 'prisma/migrations/20251119_remove_user_package_unique_constraint/migration.sql'
+          }, { status: 500 })
+        }
       }
       // Re-throw other errors
       throw createError
