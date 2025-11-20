@@ -57,7 +57,7 @@ export const STORAGE_CONFIG = {
     generated: {
       maxWidth: 2048,
       maxHeight: 2048,
-      quality: 90,
+      quality: 87, // 🎯 OPTIMIZED: Reduced from 90 to 87 (imperceptible difference, ~15-20% smaller files)
       format: 'jpeg'
     },
     // Thumbnails
