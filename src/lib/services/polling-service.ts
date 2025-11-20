@@ -286,6 +286,17 @@ async function pollPrediction(job: PollingJob) {
       const tuneId = generationWithMetadata?.astriaEnhancements?.tune_id || 
                      (generationWithMetadata?.metadata as any)?.tune_id
       
+      console.log(`🔍 [POLLING] Extracting tune_id for Astria polling:`, {
+        generationId,
+        predictionId,
+        astriaEnhancements: generationWithMetadata?.astriaEnhancements,
+        metadataTuneId: (generationWithMetadata?.metadata as any)?.tune_id,
+        extractedTuneId: tuneId || 'NOT FOUND',
+        source: generationWithMetadata?.astriaEnhancements?.tune_id 
+          ? 'astriaEnhancements.tune_id' 
+          : ((generationWithMetadata?.metadata as any)?.tune_id ? 'metadata.tune_id' : 'NOT FOUND')
+      })
+      
       logger.debug('Extracted tune_id for Astria polling', {
         service: 'polling-service',
         action: 'astria_tune_id',
@@ -297,6 +308,7 @@ async function pollPrediction(job: PollingJob) {
       
       if (!tuneId) {
         console.warn(`⚠️ [POLLING] No tune_id found for generation ${generationId}, using direct endpoint (may be slower)`)
+        console.warn(`⚠️ [POLLING] This means tune_id was not saved correctly in astriaEnhancements or metadata`)
       }
 
       prediction = await aiProvider.getGenerationStatus(predictionId, tuneId || undefined)

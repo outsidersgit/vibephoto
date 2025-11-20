@@ -298,7 +298,13 @@ export async function POST(request: NextRequest) {
         tune_id: tuneId // 🔍 CORRETO: armazenar tune_id extraído da resposta do Astria para polling
       } : astriaEnhancements
 
-      console.log(`📝 [GENERATIONS_DB] Storing tune_id for polling: ${tuneId} (from ${generationResponse.metadata?.tune_id ? 'Astria response' : 'model'})`)
+      console.log(`📝 [GENERATIONS_DB] Storing tune_id for polling:`, {
+        tuneId,
+        source: generationResponse.metadata?.tune_id ? 'Astria response (tunes[0].id)' : 'Model trainingJobId (fallback)',
+        metadataTuneId: generationResponse.metadata?.tune_id,
+        modelTrainingJobId: model.trainingJobId,
+        willBeStoredIn: 'astriaEnhancements.tune_id'
+      })
 
       // Update generation with job ID, status and tune_id
       await prisma.generation.update({
