@@ -166,23 +166,64 @@ export async function downloadAndStoreImages(
         permanentUrls.push(uploadResult.url)
         console.log(`✅ [STORAGE_SIMPLE] Image ${i + 1} uploaded successfully: ${uploadResult.url.substring(0, 100)}...`)
 
-        // Generate thumbnail using same approach
-        const thumbnailBuffer = await generateThumbnailBuffer(imageBuffer)
-        const thumbnailBlob = new Blob([thumbnailBuffer], { type: 'image/png' })
-        const thumbnailFile = new File([thumbnailBlob], `thumb_${filename}`, { type: 'image/png' })
-        const thumbnailPath = `generated/${userId}/${generationId}/thumb_${filename}`
+        // 🔒 CRITICAL: Generate thumbnail with retry logic to ensure it's always saved
+        // Thumbnails are essential for gallery performance - MUST be generated for every image
+        let thumbnailUrl: string | null = null
+        let thumbnailAttempt = 0
+        const maxThumbnailAttempts = 5 // Increased from 3 to 5 for better reliability
+        
+        while (thumbnailAttempt < maxThumbnailAttempts && !thumbnailUrl) {
+          try {
+            thumbnailAttempt++
+            console.log(`🖼️ [STORAGE_SIMPLE] Generating thumbnail ${i + 1} (attempt ${thumbnailAttempt}/${maxThumbnailAttempts})`)
+            
+            // Generate thumbnail buffer from the downloaded image
+            const thumbnailBuffer = await generateThumbnailBuffer(imageBuffer, 300, 300, 80)
+            
+            if (!thumbnailBuffer || thumbnailBuffer.length === 0) {
+              throw new Error('Thumbnail buffer generation returned empty buffer')
+            }
+            
+            const thumbnailBlob = new Blob([thumbnailBuffer], { type: 'image/jpeg' })
+            const thumbnailFile = new File([thumbnailBlob], `thumb_${filename}`, { type: 'image/jpeg' })
+            const thumbnailPath = `generated/${userId}/${generationId}/thumb_${filename}`
 
-        const thumbnailUpload = await storage.upload(thumbnailFile, thumbnailPath, {
-          folder: `generated/${userId}`,
-          makePublic: true,
-          quality: 80 // 🎯 OPTIMIZED: Thumbnails use lower quality (80) since they're small previews
-        })
+            console.log(`☁️ [STORAGE_SIMPLE] Uploading thumbnail ${i + 1} to: ${thumbnailPath}`)
+            
+            const thumbnailUpload = await storage.upload(thumbnailFile, thumbnailPath, {
+              folder: `generated/${userId}`,
+              makePublic: true,
+              quality: 80 // 🎯 OPTIMIZED: Thumbnails use lower quality (80) since they're small previews
+            })
 
-        if (!thumbnailUpload || !thumbnailUpload.url) {
-          console.warn(`⚠️ [STORAGE_SIMPLE] Thumbnail upload failed for image ${i + 1}, continuing without thumbnail`)
-        } else {
-          thumbnailUrls.push(thumbnailUpload.url)
-          console.log(`✅ [STORAGE_SIMPLE] Thumbnail ${i + 1} uploaded: ${thumbnailUpload.url.substring(0, 100)}...`)
+            if (thumbnailUpload && thumbnailUpload.url) {
+              thumbnailUrl = thumbnailUpload.url
+              thumbnailUrls.push(thumbnailUrl)
+              console.log(`✅ [STORAGE_SIMPLE] Thumbnail ${i + 1} uploaded successfully: ${thumbnailUrl.substring(0, 100)}...`)
+              console.log(`📊 [STORAGE_SIMPLE] Thumbnail size: ${(thumbnailBuffer.length / 1024).toFixed(2)}KB`)
+            } else {
+              throw new Error(`Thumbnail upload returned no URL. Upload result: ${JSON.stringify(thumbnailUpload)}`)
+            }
+          } catch (thumbnailError) {
+            console.error(`❌ [STORAGE_SIMPLE] Thumbnail upload attempt ${thumbnailAttempt} failed for image ${i + 1}:`, thumbnailError)
+            if (thumbnailAttempt < maxThumbnailAttempts) {
+              // Wait before retry with exponential backoff
+              const delayMs = 2000 * Math.pow(2, thumbnailAttempt - 1) // 2s, 4s, 8s, 16s, 32s
+              console.log(`⏱️ [STORAGE_SIMPLE] Waiting ${delayMs/1000}s before retry...`)
+              await new Promise(resolve => setTimeout(resolve, delayMs))
+            } else {
+              console.error(`❌ [STORAGE_SIMPLE] CRITICAL: Failed to upload thumbnail after ${maxThumbnailAttempts} attempts for image ${i + 1}`)
+              console.error(`❌ [STORAGE_SIMPLE] This will cause performance issues in gallery - thumbnails are essential!`)
+              // Don't fail the entire process, but log as critical error
+            }
+          }
+        }
+        
+        // 🔒 CRITICAL: If thumbnail upload failed after all retries, this is a critical issue
+        if (!thumbnailUrl) {
+          console.error(`❌ [STORAGE_SIMPLE] CRITICAL: Thumbnail upload failed for image ${i + 1} after ${maxThumbnailAttempts} attempts.`)
+          console.error(`❌ [STORAGE_SIMPLE] Gallery will use full image (performance impact). Check storage provider configuration.`)
+          // Continue processing other images, but log as error
         }
 
         // Add progressive delay between uploads to avoid S3 rate limits
@@ -218,11 +259,23 @@ export async function downloadAndStoreImages(
 
     console.log(`🎉 [STORAGE_SIMPLE] SUCCESS! Stored ${permanentUrls.length}/${temporaryUrls.length} images using training pattern`)
     console.log(`📊 [STORAGE_SIMPLE] Permanent URLs:`, permanentUrls.map(url => url.substring(0, 100) + '...'))
+    console.log(`🖼️ [STORAGE_SIMPLE] Thumbnail URLs: ${thumbnailUrls.length}/${permanentUrls.length} thumbnails generated`)
 
+    // 🔒 CRITICAL: Verify thumbnail count matches image count
+    if (thumbnailUrls.length !== permanentUrls.length) {
+      console.error(`❌ [STORAGE_SIMPLE] CRITICAL: Thumbnail count mismatch!`)
+      console.error(`❌ [STORAGE_SIMPLE] Expected ${permanentUrls.length} thumbnails, got ${thumbnailUrls.length}`)
+      console.error(`❌ [STORAGE_SIMPLE] Missing thumbnails will cause performance issues in gallery`)
+    } else {
+      console.log(`✅ [STORAGE_SIMPLE] All ${thumbnailUrls.length} thumbnails generated successfully`)
+    }
+
+    // 🔒 CRITICAL: Ensure thumbnailUrls array is always returned (even if empty)
+    // This allows the webhook to detect when thumbnails are missing and generate them
     return {
       success: true,
       permanentUrls,
-      thumbnailUrls
+      thumbnailUrls: thumbnailUrls.length > 0 ? thumbnailUrls : [] // Always return array (empty if no thumbnails)
     }
     
   } catch (error) {
@@ -236,25 +289,43 @@ export async function downloadAndStoreImages(
 
 /**
  * Generate thumbnail buffer from image buffer
+ * 🎯 OPTIMIZED: Uses JPEG instead of PNG for better compression and smaller file size
  */
 export async function generateThumbnailBuffer(
   imageBuffer: Buffer,
   maxWidth: number = 300,
   maxHeight: number = 300,
-  quality: number = 90
+  quality: number = 80 // Default 80 for thumbnails (smaller file size)
 ): Promise<Buffer> {
   try {
     return await sharp(imageBuffer)
       .resize(maxWidth, maxHeight, {
-        fit: 'inside',
+        fit: 'cover', // Use 'cover' instead of 'inside' for consistent thumbnail sizes
+        position: 'center', // Center crop for better thumbnails
         withoutEnlargement: true
       })
-      .png({ quality })
+      .jpeg({ 
+        quality,
+        progressive: true,
+        mozjpeg: true // Better compression
+      })
       .toBuffer()
   } catch (error) {
-    console.error('Error generating thumbnail:', error)
-    // Fallback: return original image buffer
-    return imageBuffer
+    console.error('❌ Error generating thumbnail:', error)
+    // Fallback: try to resize original buffer as JPEG
+    try {
+      return await sharp(imageBuffer)
+        .resize(maxWidth, maxHeight, {
+          fit: 'cover',
+          position: 'center'
+        })
+        .jpeg({ quality: 70 }) // Lower quality as last resort
+        .toBuffer()
+    } catch (fallbackError) {
+      console.error('❌ Fallback thumbnail generation also failed:', fallbackError)
+      // Last resort: return original buffer (not ideal, but better than failing)
+      return imageBuffer
+    }
   }
 }
 

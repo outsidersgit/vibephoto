@@ -104,10 +104,14 @@ export async function POST(request: NextRequest) {
 
       console.log('🎬 [VIDEO-API] Sending to Kling v2.1 via Replicate:', input)
 
-      // Call Kling v2.1 model via Replicate
+      // 🔒 CRITICAL: Use dedicated video webhook endpoint, NOT the unified replicate webhook
+      // The unified webhook SKIPS video processing to avoid duplication
+      // Videos MUST use /api/webhooks/video endpoint which has proper idempotency and storage handling
       const webhookUrl = process.env.NEXTAUTH_URL?.startsWith('https://')
-        ? `${process.env.NEXTAUTH_URL}/api/webhooks/replicate?type=video&id=${videoGeneration.id}&userId=${user.id}`
+        ? `${process.env.NEXTAUTH_URL}/api/webhooks/video?videoId=${videoGeneration.id}`
         : undefined
+      console.log('📞 [VIDEO-API] Webhook URL configured:', webhookUrl)
+      console.log('🔍 [VIDEO-API] Using dedicated video webhook endpoint (not unified replicate webhook)')
 
       const prediction = await replicate.predictions.create({
         model: "kwaivgi/kling-v2.1-master",
@@ -116,6 +120,18 @@ export async function POST(request: NextRequest) {
       })
 
       console.log('✅ [VIDEO-API] Kling v2.1 prediction created:', prediction.id)
+
+      // 🔒 CRITICAL: Save jobId (prediction.id) to database BEFORE webhook arrives
+      // This allows the webhook to find the video generation record by jobId
+      await prisma.videoGeneration.update({
+        where: { id: videoGeneration.id },
+        data: {
+          jobId: prediction.id, // 🔒 CRITICAL: Save jobId so webhook can find this record
+          status: 'PROCESSING',
+          processingStartedAt: new Date()
+        }
+      })
+      console.log('✅ [VIDEO-API] jobId saved to database:', prediction.id)
 
       chargeResult = await CreditManager.deductCredits(
         user.id,

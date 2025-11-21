@@ -53,8 +53,14 @@ export function OptimizedImage({
   const optimizedSrc = toCloudFrontUrl(src) || src // Fallback para URL original se conversão falhar
   const optimizedThumbnail = thumbnailUrl ? toCloudFrontUrl(thumbnailUrl) : undefined
 
+  // 🎯 CRITICAL: Prioritize thumbnail for gallery performance
+  // Use thumbnail as main src if available, full image as fallback
+  // This significantly improves gallery load times and reduces bandwidth
+  const displaySrc = optimizedThumbnail || optimizedSrc
+  const fullImageSrc = optimizedSrc // Keep full image for high-res viewing
+
   // Se não houver src válido, mostrar erro
-  if (!optimizedSrc) {
+  if (!displaySrc) {
     return (
       <div
         className={cn(

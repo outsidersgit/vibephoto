@@ -200,6 +200,17 @@ export async function POST(request: NextRequest) {
     const startedAt = webhookData.started_at
     const completedAt = webhookData.completed_at
     
+    // 🔒 CRITICAL: Extract videoId from query params as fallback identifier
+    // This allows webhook to find record even if jobId lookup fails
+    const url = new URL(request.url)
+    const videoIdFromUrl = url.searchParams.get('videoId')
+    console.log(`🔍 [WEBHOOK_VIDEO] Identifiers:`, {
+      jobId,
+      videoIdFromUrl,
+      willUseJobId: !!jobId,
+      willUseVideoId: !!videoIdFromUrl
+    })
+    
     // Extract additional metadata from Replicate response
     const replicateMetadata = {
       // Model information
@@ -302,13 +313,46 @@ export async function POST(request: NextRequest) {
       // Also include Replicate metadata in the update
       let updatedVideo
       try {
-        // Get current metadata to merge with Replicate data
-        const currentVideo = await prisma.videoGeneration.findFirst({
+        // 🔒 CRITICAL: Try to find video by jobId first, then fallback to videoId from URL
+        // This handles race conditions where webhook arrives before jobId is saved
+        let currentVideo = await prisma.videoGeneration.findFirst({
           where: { jobId },
-          select: { id: true, metadata: true }
+          select: { id: true, metadata: true, userId: true }
         })
         
-        const currentMetadata = (currentVideo?.metadata as any) || {}
+        // Fallback: If not found by jobId, try videoId from URL (race condition handling)
+        if (!currentVideo && videoIdFromUrl) {
+          console.log(`⚠️ [WEBHOOK_VIDEO] Video not found by jobId ${jobId}, trying videoId from URL: ${videoIdFromUrl}`)
+          currentVideo = await prisma.videoGeneration.findUnique({
+            where: { id: videoIdFromUrl },
+            select: { id: true, metadata: true, userId: true, jobId: true }
+          })
+          
+          if (currentVideo) {
+            console.log(`✅ [WEBHOOK_VIDEO] Found video by videoId fallback: ${currentVideo.id}`)
+            // Update jobId if it wasn't set yet (race condition recovery)
+            if (!currentVideo.jobId && jobId) {
+              await prisma.videoGeneration.update({
+                where: { id: currentVideo.id },
+                data: { jobId }
+              })
+              console.log(`✅ [WEBHOOK_VIDEO] Updated jobId for video ${currentVideo.id}: ${jobId}`)
+            }
+          }
+        }
+        
+        if (!currentVideo) {
+          console.error(`❌ [WEBHOOK_VIDEO] Video generation not found for jobId ${jobId} or videoId ${videoIdFromUrl}`)
+          return NextResponse.json({
+            success: false,
+            error: 'Video generation not found',
+            message: `Video not found by jobId (${jobId}) or videoId (${videoIdFromUrl})`,
+            jobId,
+            videoIdFromUrl
+          })
+        }
+        
+        const currentMetadata = (currentVideo.metadata as any) || {}
         const mergedMetadata = {
           ...currentMetadata,
           replicate: replicateMetadata,
@@ -316,20 +360,45 @@ export async function POST(request: NextRequest) {
           webhookStatus: replicateStatus
         }
         
-        updatedVideo = await updateVideoGenerationByJobId(
-          jobId,
-          internalStatus,
-          videoUrl,
-          errorMessage,
-          undefined, // thumbnailUrl
-          mergedMetadata // Include Replicate metadata
-        )
+        // Use updateVideoGenerationByJobId if we have jobId, otherwise update by id
+        if (jobId) {
+          updatedVideo = await updateVideoGenerationByJobId(
+            jobId,
+            internalStatus,
+            videoUrl,
+            errorMessage,
+            undefined, // thumbnailUrl
+            mergedMetadata // Include Replicate metadata
+          )
+        } else {
+          // Fallback: Update by id directly if jobId lookup failed
+          updatedVideo = await prisma.videoGeneration.update({
+            where: { id: currentVideo.id },
+            data: {
+              status: internalStatus,
+              videoUrl: videoUrl || undefined,
+              errorMessage: errorMessage || undefined,
+              metadata: mergedMetadata,
+              updatedAt: new Date()
+            },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          })
+          console.log(`✅ [WEBHOOK_VIDEO] Updated video ${currentVideo.id} by id (jobId fallback)`)
+        }
       } catch (dbError) {
-        console.error(`❌ Database error updating video by jobId ${jobId}:`, dbError)
-        console.error(`❌ Error details:`, {
+        console.error(`❌ [WEBHOOK_VIDEO] Database error updating video:`, dbError)
+        console.error(`❌ [WEBHOOK_VIDEO] Error details:`, {
           message: dbError instanceof Error ? dbError.message : String(dbError),
           stack: dbError instanceof Error ? dbError.stack : undefined,
-          jobId
+          jobId,
+          videoIdFromUrl
         })
         
         // CRITICAL: Return 200 OK even on database errors to prevent infinite retries
@@ -339,18 +408,20 @@ export async function POST(request: NextRequest) {
           success: false,
           error: 'Database error updating video generation',
           message: 'Error logged but webhook acknowledged to prevent retries',
-          jobId
+          jobId,
+          videoIdFromUrl
         })
       }
 
       if (!updatedVideo) {
-        console.warn(`⚠️ Video generation not found for job ID: ${jobId}`)
+        console.warn(`⚠️ [WEBHOOK_VIDEO] Video generation update returned null for jobId: ${jobId}`)
         // Return 200 OK even if not found - prevents infinite retries
         return NextResponse.json({
           success: false,
-          error: 'Video generation not found',
-          message: 'Video generation not found in database',
-          jobId
+          error: 'Video generation update returned null',
+          message: 'Video generation update failed',
+          jobId,
+          videoIdFromUrl
         })
       }
 

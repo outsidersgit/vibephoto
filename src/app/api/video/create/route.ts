@@ -164,9 +164,11 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      // Build webhook URL
-      const webhookUrl = `${AI_CONFIG.webhooks.baseUrl}/api/webhooks/video`
+      // 🔒 CRITICAL: Build webhook URL with videoId as fallback identifier
+      // This ensures webhook can find the record even if jobId isn't saved yet
+      const webhookUrl = `${AI_CONFIG.webhooks.baseUrl}/api/webhooks/video?videoId=${videoGeneration.id}`
       console.log('📞 Webhook URL configured:', webhookUrl)
+      console.log('🔍 Webhook includes videoId as fallback:', videoGeneration.id)
       
       // Submit to Kling AI via Replicate
       console.log('🚀 Submitting to Kling AI provider...')
@@ -179,12 +181,19 @@ export async function POST(request: NextRequest) {
       const providerResponse = await provider.generateVideo(requestToSend, webhookUrl)
       console.log('✅ Provider response received:', JSON.stringify(providerResponse, null, 2))
 
-      // Update video generation with job ID
-      await updateVideoGenerationJobId(
-        videoGeneration.id,
-        providerResponse.jobId!,
-        providerResponse.estimatedTimeRemaining
-      )
+      // 🔒 CRITICAL: Update video generation with job ID IMMEDIATELY after getting response
+      // This must happen BEFORE webhook can arrive (race condition prevention)
+      if (providerResponse.jobId) {
+        await updateVideoGenerationJobId(
+          videoGeneration.id,
+          providerResponse.jobId,
+          providerResponse.estimatedTimeRemaining
+        )
+        console.log(`✅ Video generation ${videoGeneration.id} updated with jobId ${providerResponse.jobId} BEFORE webhook can arrive`)
+      } else {
+        console.error(`❌ CRITICAL: No jobId in provider response!`, providerResponse)
+        throw new Error('Provider did not return jobId')
+      }
 
       console.log(`✅ Video generation ${videoGeneration.id} submitted with job ${providerResponse.jobId}`)
 

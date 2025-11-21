@@ -750,6 +750,7 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload, promptIdFromUr
 
     // If generation completed successfully, store images permanently BEFORE updating database
     let finalImageUrls = imageUrls
+    let finalThumbnailUrls: string[] = [] // Initialize thumbnail URLs
     let storageResult: any = null // Initialize storageResult
     
     // CRITICAL: Check if this is a package generation for logging
@@ -790,14 +791,39 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload, promptIdFromUr
           permanentUrlsCount: storageResult.permanentUrls?.length || 0,
           error: storageResult.error,
           hasPermanentUrls: !!(storageResult.permanentUrls && storageResult.permanentUrls.length > 0),
-          thumbnailUrlsCount: storageResult.thumbnailUrls?.length || 0
+          thumbnailUrlsCount: storageResult.thumbnailUrls?.length || 0,
+          thumbnailUrls: storageResult.thumbnailUrls?.map((url: string) => url.substring(0, 100) + '...') || [],
+          // 🔒 CRITICAL: Verify thumbnail count matches image count
+          thumbnailMatch: storageResult.thumbnailUrls?.length === storageResult.permanentUrls?.length
         })
+        
+        // 🔒 CRITICAL: Log warning if thumbnail count doesn't match image count
+        if (storageResult.thumbnailUrls && storageResult.permanentUrls) {
+          if (storageResult.thumbnailUrls.length !== storageResult.permanentUrls.length) {
+            console.warn(`⚠️ [WEBHOOK_ASTRIA] Thumbnail count mismatch: ${storageResult.thumbnailUrls.length} thumbnails for ${storageResult.permanentUrls.length} images`)
+          }
+        }
 
         if (storageResult.success && storageResult.permanentUrls && storageResult.permanentUrls.length > 0) {
           console.log(`✅ [WEBHOOK_ASTRIA] Successfully stored ${storageResult.permanentUrls.length} images permanently for generation ${generation.id}`)
           console.log(`📸 [WEBHOOK_ASTRIA] Permanent URLs saved:`, storageResult.permanentUrls.map((url: string) => url.substring(0, 100) + '...'))
           // Use permanent URLs for database update
           finalImageUrls = storageResult.permanentUrls
+          
+          // 🔒 CRITICAL: Save thumbnail URLs if available
+          if (storageResult.thumbnailUrls && storageResult.thumbnailUrls.length > 0) {
+            finalThumbnailUrls = storageResult.thumbnailUrls
+            console.log(`✅ [WEBHOOK_ASTRIA] Thumbnail URLs saved: ${finalThumbnailUrls.length} thumbnails`)
+            console.log(`🖼️ [WEBHOOK_ASTRIA] Thumbnail URLs:`, finalThumbnailUrls.map((url: string) => url.substring(0, 100) + '...'))
+            
+            // 🔒 CRITICAL: Verify thumbnail count matches image count
+            if (finalThumbnailUrls.length !== finalImageUrls.length) {
+              console.warn(`⚠️ [WEBHOOK_ASTRIA] Thumbnail count mismatch: ${finalThumbnailUrls.length} thumbnails for ${finalImageUrls.length} images`)
+            }
+          } else {
+            console.warn(`⚠️ [WEBHOOK_ASTRIA] No thumbnail URLs in storage result for generation ${generation.id}`)
+            console.warn(`⚠️ [WEBHOOK_ASTRIA] Thumbnails will be generated from permanent URLs as fallback`)
+          }
         } else {
           console.error(`❌ [WEBHOOK_ASTRIA] CRITICAL: Storage failed for generation ${generation.id}:`, {
             success: storageResult.success,
@@ -903,24 +929,68 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload, promptIdFromUr
         throw new Error(`Cannot update generation to COMPLETED status without image URLs`)
       }
       
+      // 🔒 CRITICAL: Prepare update data with thumbnail URLs
+      const updateData: any = {
+        status: internalStatus as any,
+        imageUrls: finalImageUrls.length > 0 ? finalImageUrls as any : generation.imageUrls,
+        completedAt: payload.completed_at ? new Date(payload.completed_at) : undefined,
+        processingTime: processingTime,
+        errorMessage: payload.error_message || undefined,
+        metadata: updatedMetadata as any, // Includes webhookProcessed: true
+        // Update seed if provided
+        seed: payload.seed || generation.seed
+      }
+      
+      // 🔒 CRITICAL: Update thumbnailUrls if available (for gallery performance)
+      // Thumbnails are essential for gallery performance - always try to save them
+      // Priority: finalThumbnailUrls > storageResult.thumbnailUrls > generate from permanent URLs
+      if (finalThumbnailUrls.length > 0) {
+        updateData.thumbnailUrls = finalThumbnailUrls as any
+        console.log(`✅ [WEBHOOK_ASTRIA] Updating thumbnailUrls in database: ${finalThumbnailUrls.length} thumbnails`)
+      } else if (storageResult?.thumbnailUrls && storageResult.thumbnailUrls.length > 0) {
+        // Fallback: use thumbnailUrls from storageResult if finalThumbnailUrls is empty
+        updateData.thumbnailUrls = storageResult.thumbnailUrls as any
+        console.log(`✅ [WEBHOOK_ASTRIA] Using thumbnailUrls from storageResult: ${storageResult.thumbnailUrls.length} thumbnails`)
+      } else if (finalImageUrls.length > 0) {
+        // 🔒 CRITICAL: If thumbnails are missing, generate them from permanent URLs BEFORE updating database
+        // This ensures thumbnails are ALWAYS available for gallery performance
+        console.warn(`⚠️ [WEBHOOK_ASTRIA] CRITICAL: No thumbnailUrls in storage result for generation ${generation.id}`)
+        console.log(`🔄 [WEBHOOK_ASTRIA] Generating thumbnails from permanent URLs as fallback...`)
+        
+        try {
+          // Generate thumbnails from permanent URLs
+          const { downloadAndStoreImages } = await import('@/lib/storage/utils')
+          const thumbnailGenerationResult = await downloadAndStoreImages(
+            finalImageUrls, // Use permanent URLs to generate thumbnails
+            generation.id,
+            generation.userId
+          )
+          
+          if (thumbnailGenerationResult.thumbnailUrls && thumbnailGenerationResult.thumbnailUrls.length > 0) {
+            updateData.thumbnailUrls = thumbnailGenerationResult.thumbnailUrls as any
+            console.log(`✅ [WEBHOOK_ASTRIA] Successfully generated ${thumbnailGenerationResult.thumbnailUrls.length} thumbnails from permanent URLs`)
+          } else {
+            console.error(`❌ [WEBHOOK_ASTRIA] Failed to generate thumbnails from permanent URLs. Gallery will use full images (performance impact).`)
+            // Don't set thumbnailUrls - let it remain null/empty so gallery knows to use imageUrls
+          }
+        } catch (thumbnailGenError) {
+          console.error(`❌ [WEBHOOK_ASTRIA] Error generating thumbnails from permanent URLs:`, thumbnailGenError)
+          // Don't fail the entire update, but log error
+        }
+      } else {
+        console.warn(`⚠️ [WEBHOOK_ASTRIA] No thumbnailUrls and no imageUrls to save for generation ${generation.id}`)
+      }
+      
       updatedGeneration = await prisma.generation.update({
         where: { id: generation.id },
-        data: {
-          status: internalStatus as any,
-          imageUrls: finalImageUrls.length > 0 ? finalImageUrls as any : generation.imageUrls,
-          completedAt: payload.completed_at ? new Date(payload.completed_at) : undefined,
-          processingTime: processingTime,
-          errorMessage: payload.error_message || undefined,
-          metadata: updatedMetadata as any, // Includes webhookProcessed: true
-          // Update seed if provided
-          seed: payload.seed || generation.seed
-        }
+        data: updateData
       })
       
       console.log(`✅ [WEBHOOK_ASTRIA] Generation ${generation.id} successfully updated in database:`, {
         generationId: updatedGeneration.id,
         status: updatedGeneration.status,
         imageUrlsCount: Array.isArray(updatedGeneration.imageUrls) ? (updatedGeneration.imageUrls as string[]).length : 0,
+        thumbnailUrlsCount: Array.isArray(updatedGeneration.thumbnailUrls) ? (updatedGeneration.thumbnailUrls as string[]).length : 0,
         hasCompletedAt: !!updatedGeneration.completedAt,
         hasMetadata: !!updatedGeneration.metadata
       })
@@ -941,7 +1011,7 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload, promptIdFromUr
       // 🔒 CRITICAL: Verify the update actually happened
       const verification = await prisma.generation.findUnique({
         where: { id: generation.id },
-        select: { status: true, imageUrls: true, completedAt: true }
+        select: { status: true, imageUrls: true, thumbnailUrls: true, completedAt: true }
       })
       
       if (!verification) {
@@ -957,7 +1027,49 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload, promptIdFromUr
         throw new Error(`Generation imageUrls not saved: expected ${finalImageUrls.length} URLs, got ${verificationUrls.length}`)
       }
       
-      console.log(`✅ [WEBHOOK_ASTRIA] Database update verified successfully for generation ${generation.id}`)
+      // 🔒 CRITICAL: Verify thumbnailUrls were saved
+      const verificationThumbnails = Array.isArray(verification.thumbnailUrls) ? (verification.thumbnailUrls as string[]) : []
+      if (internalStatus === 'COMPLETED' && finalImageUrls.length > 0) {
+        // 🔒 CRITICAL: Thumbnails MUST be saved for gallery performance
+        // If thumbnails are missing, try to generate them from permanent URLs
+        if (verificationThumbnails.length === 0) {
+          console.error(`❌ [WEBHOOK_ASTRIA] CRITICAL: thumbnailUrls not saved in database for generation ${generation.id}`)
+          console.error(`❌ [WEBHOOK_ASTRIA] Expected ${finalThumbnailUrls.length || storageResult?.thumbnailUrls?.length || 0} thumbnails, got ${verificationThumbnails.length}`)
+          console.error(`❌ [WEBHOOK_ASTRIA] Attempting to generate thumbnails from permanent URLs as fallback...`)
+          
+          // 🔒 FALLBACK: Generate thumbnails from permanent URLs if they weren't saved
+          try {
+            const { downloadAndStoreImages } = await import('@/lib/storage/utils')
+            const fallbackStorageResult = await downloadAndStoreImages(
+              finalImageUrls, // Use all permanent URLs to generate thumbnails
+              generation.id,
+              generation.userId
+            )
+            
+            if (fallbackStorageResult.thumbnailUrls && fallbackStorageResult.thumbnailUrls.length > 0) {
+              // Update database with generated thumbnails
+              await prisma.generation.update({
+                where: { id: generation.id },
+                data: {
+                  thumbnailUrls: fallbackStorageResult.thumbnailUrls as any
+                }
+              })
+              console.log(`✅ [WEBHOOK_ASTRIA] Successfully generated and saved ${fallbackStorageResult.thumbnailUrls.length} thumbnails as fallback`)
+            } else {
+              console.error(`❌ [WEBHOOK_ASTRIA] Fallback thumbnail generation also failed. Gallery will use full images (performance impact).`)
+            }
+          } catch (fallbackError) {
+            console.error(`❌ [WEBHOOK_ASTRIA] Fallback thumbnail generation failed:`, fallbackError)
+          }
+        } else {
+          console.log(`✅ [WEBHOOK_ASTRIA] Verified: ${verificationThumbnails.length} thumbnails saved to database`)
+        }
+      }
+      
+      console.log(`✅ [WEBHOOK_ASTRIA] Database update verified successfully for generation ${generation.id}`, {
+        imageUrlsCount: verificationUrls.length,
+        thumbnailUrlsCount: verificationThumbnails.length
+      })
       
     } catch (updateError) {
       console.error(`❌ [WEBHOOK_ASTRIA] CRITICAL: Failed to update generation ${generation.id} in database:`, updateError)
@@ -996,9 +1108,14 @@ async function handlePromptWebhook(payload: AstriaWebhookPayload, promptIdFromUr
       
       // Ensure we always send imageUrls, even if empty (frontend needs to know status)
       // CRITICAL: Include both temporary (for modal) and permanent (for gallery) URLs
+      // 🔒 CRITICAL: Use actual thumbnailUrls from database (not imageUrls) for gallery performance
       const broadcastData = {
         imageUrls: finalImageUrls.length > 0 ? finalImageUrls : (updatedGeneration.imageUrls as any || []),
-        thumbnailUrls: finalImageUrls.length > 0 ? finalImageUrls : (updatedGeneration.imageUrls as any || []),
+        thumbnailUrls: finalThumbnailUrls.length > 0 
+          ? finalThumbnailUrls 
+          : (Array.isArray(updatedGeneration.thumbnailUrls) && updatedGeneration.thumbnailUrls.length > 0
+              ? updatedGeneration.thumbnailUrls as any
+              : finalImageUrls.length > 0 ? finalImageUrls : (updatedGeneration.imageUrls as any || [])), // Fallback to imageUrls if no thumbnails
         // Include temporary URLs for immediate modal display (before S3 upload completes)
         temporaryUrls: imageUrls.length > 0 ? imageUrls : (updatedGeneration.metadata as any)?.temporaryUrls || [],
         permanentUrls: finalImageUrls.length > 0 ? finalImageUrls : [],
