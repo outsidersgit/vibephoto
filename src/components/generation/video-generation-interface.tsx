@@ -790,7 +790,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
             <CardContent className="p-4">
               <div className="text-sm text-white leading-relaxed font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
                 <h3 className="text-base font-bold text-white mb-3">
-                  🎬 Como Gerar Vídeos com IA
+                  Como Gerar Vídeos com IA
                 </h3>
                 <ul className="space-y-2 text-sm text-gray-200">
                   <li className="flex items-start">

@@ -77,7 +77,7 @@ const faqData: FAQItem[] = [
   {
     category: 'funcionamento',
     question: 'Como funciona a geração de vídeos?',
-    answer: 'Nossa ferramenta de geração de vídeos permite criar clipes curtos e realistas a partir de imagens ou descrições em texto. Os vídeos são gerados em alta qualidade (1080p), com animações, transições e movimentos naturais. O custo é de 100 créditos para vídeos de 5 segundos e 200 créditos para vídeos de 10 segundos.'
+    answer: 'Nossa ferramenta de geração de vídeos permite criar clipes curtos e realistas a partir de imagens ou descrições em texto. Os vídeos são gerados em alta qualidade (1080p), com animações, transições e movimentos naturais. O custo é de 80 créditos para vídeos de 4 segundos, 120 créditos para vídeos de 6 segundos e 160 créditos para vídeos de 8 segundos.'
   },
   {
     category: 'funcionamento',
