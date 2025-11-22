@@ -358,7 +358,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
       }
 
       // Check credits
-      const requiredCredits = calculateVideoCredits(formData.duration, 'pro')
+      const requiredCredits = calculateVideoCredits(formData.duration, formData.resolution || '1080p')
       // CRITICAL: Use creditBalance from API (handles expired credits correctly)
       // Fallback to manual calculation if API data not available yet
       const remainingCredits = creditBalance?.totalCredits ?? 
@@ -413,7 +413,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
       addToast({
         type: 'success',
         title: "Vídeo em processamento",
-        description: `Tempo estimado: ${formatProcessingTime(getEstimatedProcessingTime(formData.duration, 'pro'))}. O modal abrirá automaticamente quando estiver pronto.`,
+        description: `Tempo estimado: ${formatProcessingTime(getEstimatedProcessingTime(formData.duration, formData.resolution || '1080p'))}. O modal abrirá automaticamente quando estiver pronto.`,
       })
 
       // Clear form immediately after starting generation
@@ -505,7 +505,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
     }
   }, [previewMedia, addToast])
 
-  const requiredCredits = calculateVideoCredits(formData.duration, 'pro')
+  const requiredCredits = calculateVideoCredits(formData.duration, formData.resolution || '1080p')
   // CRITICAL: Use creditBalance from API (handles expired credits correctly)
   // Fallback to manual calculation if API data not available yet
   const remainingCredits = creditBalance?.totalCredits ?? 
@@ -609,7 +609,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                 {/* Quality Info */}
                 <div className="pt-3 border-t border-gray-200">
                   <div className="text-xs text-gray-600 text-center">
-                    Qualidade 1080p • Tempo estimado: {formatProcessingTime(getEstimatedProcessingTime(formData.duration, 'pro'))}
+                    Qualidade 1080p • Tempo estimado: {formatProcessingTime(getEstimatedProcessingTime(formData.duration, formData.resolution || '1080p'))}
                   </div>
                 </div>
               </CardContent>
@@ -878,7 +878,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
             {/* Quality Info */}
             <div className="pt-4 border-t border-gray-200">
               <div className="text-xs text-gray-600 text-center">
-                Qualidade 1080p • Tempo estimado: {formatProcessingTime(getEstimatedProcessingTime(formData.duration, 'pro'))}
+                Qualidade 1080p • Tempo estimado: {formatProcessingTime(getEstimatedProcessingTime(formData.duration, formData.resolution || '1080p'))}
               </div>
             </div>
           </div>

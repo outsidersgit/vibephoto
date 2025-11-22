@@ -1,4 +1,4 @@
-import { VIDEO_CONFIG, VideoDuration, VideoQuality, VideoAspectRatio, UserPlan, VideoGenerationRequest } from './config'
+import { VIDEO_CONFIG, VideoDuration, VideoResolution, VideoAspectRatio, UserPlan, VideoGenerationRequest } from './config'
 import { getVideoGenerationCost } from '@/lib/credits/pricing'
 
 /**
@@ -6,7 +6,7 @@ import { getVideoGenerationCost } from '@/lib/credits/pricing'
  */
 export function calculateVideoCredits(
   duration: VideoDuration,
-  _quality: VideoQuality
+  _resolution: VideoResolution
 ): number {
   return getVideoGenerationCost(duration)
 }
@@ -16,9 +16,9 @@ export function calculateVideoCredits(
  */
 export function getEstimatedProcessingTime(
   duration: VideoDuration,
-  quality: VideoQuality
+  resolution: VideoResolution
 ): number {
-  return VIDEO_CONFIG.estimatedTimes[quality][duration]
+  return VIDEO_CONFIG.estimatedTimes[resolution][duration]
 }
 
 /**
@@ -28,7 +28,7 @@ export function validateUserVideoLimits(
   userPlan: UserPlan,
   videosCreatedToday: number,
   duration: VideoDuration,
-  quality: VideoQuality,
+  resolution: VideoResolution,
   concurrentJobs: number
 ): {
   canCreate: boolean
@@ -55,11 +55,11 @@ export function validateUserVideoLimits(
     }
   }
 
-  // Check pro quality access
-  if (quality === 'pro' && !limits.allowPro) {
+  // Check high resolution access
+  if (resolution === '1080p' && !limits.allowHighRes) {
     return {
       canCreate: false,
-      reason: `Qualidade Pro não disponível no plano ${userPlan}.`,
+      reason: `Resolução 1080p não disponível no plano ${userPlan}.`,
       upgradeRequired: true
     }
   }
@@ -280,7 +280,7 @@ export function formatFileSize(bytes: number): string {
 export function generateVideoFilename(
   prompt: string,
   duration: VideoDuration,
-  quality: VideoQuality
+  resolution: VideoResolution
 ): string {
   // Clean prompt for filename
   const cleanPrompt = prompt
@@ -290,7 +290,7 @@ export function generateVideoFilename(
     .slice(0, 50)
   
   const timestamp = Date.now()
-  return `video-${cleanPrompt}-${duration}s-${quality}-${timestamp}.mp4`
+  return `video-${cleanPrompt}-${duration}s-${resolution}-${timestamp}.mp4`
 }
 
 /**
