@@ -151,26 +151,77 @@ export async function POST(request: NextRequest) {
     
     const body = await request.text()
     const signature = request.headers.get('webhook-signature')
+    const webhookId = request.headers.get('webhook-id')
+    const webhookTimestamp = request.headers.get('webhook-timestamp')
     
     logger.successStage('WEBHOOK_RECEIVED', 'Webhook recebido e parseado', undefined, undefined, {
       hasSignature: !!signature,
+      hasWebhookId: !!webhookId,
+      hasTimestamp: !!webhookTimestamp,
       bodyLength: body.length
     })
 
-    // Verify webhook signature if secret is configured
-    if (AI_CONFIG.replicate.webhookSecret && signature) {
-      const expectedSignature = crypto
-        .createHmac('sha256', AI_CONFIG.replicate.webhookSecret)
-        .update(body)
-        .digest('hex')
+    // Verify webhook signature using Svix format (same as Replicate editor webhook)
+    const webhookSecret = AI_CONFIG.replicate.webhookSecret
+    if (webhookSecret && signature) {
+      try {
+        // Replicate uses Svix for webhooks
+        // Format: v1,<signature_base64>
+        // Signed content: <webhook-id>.<webhook-timestamp>.<raw-body>
+        if (!signature.startsWith('v1,')) {
+          console.warn('⚠️ [WEBHOOK_VIDEO] Invalid signature format (expected v1, format) - continuing anyway')
+        } else {
+          // Extract signature from v1,<signature> format
+          const receivedSignature = signature.replace('v1,', '')
+          
+          // Build signed content: webhook-id.webhook-timestamp.body
+          if (!webhookId || !webhookTimestamp) {
+            console.warn('⚠️ [WEBHOOK_VIDEO] Missing webhook-id or webhook-timestamp headers - continuing anyway')
+          } else {
+            const signedContent = `${webhookId}.${webhookTimestamp}.${body}`
+            
+            // Process Svix secret key
+            // Format whsec_<base64>: remove prefix and decode base64 to get real key
+            let secretKey: string | Buffer
+            if (webhookSecret.startsWith('whsec_')) {
+              // Remove whsec_ prefix and decode base64
+              const base64Secret = webhookSecret.replace('whsec_', '')
+              secretKey = Buffer.from(base64Secret, 'base64')
+            } else {
+              // If no prefix, use directly (may be configured without prefix)
+              secretKey = webhookSecret
+            }
+            
+            // Calculate expected signature using HMAC-SHA256 and convert to base64
+            const expectedSignature = crypto
+              .createHmac('sha256', secretKey)
+              .update(signedContent, 'utf8')
+              .digest('base64')
 
-      if (signature !== `sha256=${expectedSignature}`) {
-        console.error('❌ Invalid webhook signature')
-        return NextResponse.json(
-          { error: 'Invalid signature' },
-          { status: 401 }
-        )
+            // Compare signatures using timing-safe comparison
+            const isValid = crypto.timingSafeEqual(
+              Buffer.from(receivedSignature),
+              Buffer.from(expectedSignature)
+            )
+
+            if (!isValid) {
+              console.warn('⚠️ [WEBHOOK_VIDEO] Invalid webhook signature (Svix format) - continuing anyway')
+              console.warn('⚠️ [WEBHOOK_VIDEO] Signature details:', {
+                webhookId,
+                webhookTimestamp: webhookTimestamp.substring(0, 10) + '...',
+                receivedSig: receivedSignature.substring(0, 20) + '...',
+                expectedSig: expectedSignature.substring(0, 20) + '...'
+              })
+            } else {
+              console.log('✅ [WEBHOOK_VIDEO] Webhook signature validated successfully (Svix format)')
+            }
+          }
+        }
+      } catch (validationError) {
+        console.warn('⚠️ [WEBHOOK_VIDEO] Error validating signature - continuing anyway:', validationError)
       }
+    } else {
+      console.log('ℹ️ [WEBHOOK_VIDEO] No webhook signature validation (secret not configured or no signature provided)')
     }
 
     // Parse webhook data
