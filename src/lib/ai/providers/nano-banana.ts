@@ -7,6 +7,8 @@ export interface NanoBananaEditRequest {
   imageInput?: string | string[] // Base64 or URLs
   outputFormat?: 'jpg' | 'png'
   aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9'
+  resolution?: string // Output resolution (default: "2K") - Nano Banana Pro
+  safetyFilterLevel?: string // Safety filter level (default: "block_only_high") - Nano Banana Pro
   webhookUrl?: string // Optional webhook URL for async processing
 }
 
@@ -25,7 +27,10 @@ export interface NanoBananaEditResponse {
 
 export class NanoBananaProvider {
   private replicate: Replicate
-  private modelVersion = 'adfd722f0c8b5abd782eac022a625a14fb812951de19618dfc4979f6651a00b4'
+  // 🔥 UPDATED: google/nano-banana-pro with enhanced capabilities
+  // To find latest version: https://replicate.com/google/nano-banana-pro
+  private modelVersion = process.env.NANO_BANANA_MODEL_VERSION || 'google/nano-banana-pro'
+  private modelName = 'google/nano-banana-pro'
 
   constructor() {
     if (!AI_CONFIG.replicate.apiToken) {
@@ -36,7 +41,7 @@ export class NanoBananaProvider {
       auth: AI_CONFIG.replicate.apiToken,
     })
 
-    console.log('🍌 Nano Banana via Replicate initialized successfully')
+    console.log(`🍌 Nano Banana Pro via Replicate initialized successfully (model: ${this.modelName})`)
   }
 
   /**
@@ -52,7 +57,7 @@ export class NanoBananaProvider {
         hasImage: !!request.imageInput
       })
 
-      // Prepare input according to Nano Banana schema
+      // Prepare input according to Nano Banana Pro schema
       const input: any = {
         prompt: request.prompt,
         output_format: request.outputFormat || 'jpg'
@@ -62,6 +67,13 @@ export class NanoBananaProvider {
       if (request.aspectRatio) {
         input.aspect_ratio = request.aspectRatio
       }
+
+      // 🔥 NEW: Nano Banana Pro parameters
+      // Add resolution (default: "2K")
+      input.output_resolution = request.resolution || '2K'
+      
+      // Add safety filter level (default: "block_only_high")
+      input.safety_filter_level = request.safetyFilterLevel || 'block_only_high'
 
       // Add image input if provided - Nano Banana supports array of image URIs
       if (request.imageInput) {
@@ -74,15 +86,19 @@ export class NanoBananaProvider {
         input.image_input = []
       }
 
-      console.log('🍌 Nano Banana input:', {
+      console.log('🍌 Nano Banana Pro input:', {
         prompt: input.prompt.substring(0, 50) + '...',
         imageCount: input.image_input.length,
-        outputFormat: input.output_format
+        outputFormat: input.output_format,
+        resolution: input.output_resolution,
+        safetyLevel: input.safety_filter_level
       })
 
       // Prepare prediction options
+      // Note: For Nano Banana Pro, we use the model name directly
+      // Replicate will use the latest version automatically
       const predictionOptions: any = {
-        version: this.modelVersion,
+        model: this.modelName,
         input
       }
 
@@ -97,9 +113,10 @@ export class NanoBananaProvider {
       // Create prediction using the correct version ID
       const prediction = await this.replicate.predictions.create(predictionOptions)
 
-      console.log('🍌 Nano Banana prediction created:', { 
+      console.log('🍌 Nano Banana Pro prediction created:', { 
         id: prediction.id,
         status: prediction.status,
+        model: this.modelName,
         hasWebhook: hasValidWebhook
       })
 
@@ -114,7 +131,9 @@ export class NanoBananaProvider {
             operation: 'edit',
             prompt: request.prompt,
             processedAt: new Date().toISOString(),
-            model: 'nano-banana',
+            model: 'nano-banana-pro',
+            resolution: request.resolution || '2K',
+            safetyFilterLevel: request.safetyFilterLevel || 'block_only_high',
             async: true
           }
         }
@@ -123,9 +142,10 @@ export class NanoBananaProvider {
       // Synchronous fallback: wait for completion
       const result = await this.replicate.wait(prediction)
 
-      console.log('🍌 Nano Banana prediction completed:', { 
+      console.log('🍌 Nano Banana Pro prediction completed:', { 
         id: result.id, 
         status: result.status,
+        model: this.modelName,
         hasOutput: !!result.output 
       })
 
@@ -158,7 +178,9 @@ export class NanoBananaProvider {
           operation: 'edit',
           prompt: request.prompt,
           processedAt: new Date().toISOString(),
-          model: 'nano-banana'
+          model: 'nano-banana-pro',
+          resolution: request.resolution || '2K',
+          safetyFilterLevel: request.safetyFilterLevel || 'block_only_high'
         }
       }
 
@@ -179,13 +201,23 @@ export class NanoBananaProvider {
   /**
    * Edit image with text prompt
    */
-  async editWithPrompt(imageUrl: string, prompt: string, outputFormat: 'jpg' | 'png' = 'jpg', aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string): Promise<NanoBananaEditResponse> {
+  async editWithPrompt(
+    imageUrl: string, 
+    prompt: string, 
+    outputFormat: 'jpg' | 'png' = 'jpg', 
+    aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', 
+    webhookUrl?: string,
+    resolution?: string,
+    safetyFilterLevel?: string
+  ): Promise<NanoBananaEditResponse> {
     // Use prompt directly without adding prefix - user's prompt should be used as-is
     return this.editImage({
       prompt: prompt,
       imageInput: [imageUrl],
       outputFormat,
       aspectRatio,
+      resolution,
+      safetyFilterLevel,
       webhookUrl
     })
   }
@@ -249,7 +281,14 @@ export class NanoBananaProvider {
   /**
    * Generate image from text prompt only
    */
-  async generateImage(prompt: string, outputFormat: 'jpg' | 'png' = 'jpg', aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string): Promise<NanoBananaEditResponse> {
+  async generateImage(
+    prompt: string, 
+    outputFormat: 'jpg' | 'png' = 'jpg', 
+    aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', 
+    webhookUrl?: string,
+    resolution?: string,
+    safetyFilterLevel?: string
+  ): Promise<NanoBananaEditResponse> {
     const enhancedPrompt = `Generate a high-quality image: ${prompt}. Create detailed, professional-looking result with excellent composition and lighting.`
     
     return this.editImage({
@@ -257,6 +296,8 @@ export class NanoBananaProvider {
       imageInput: [],
       outputFormat,
       aspectRatio,
+      resolution,
+      safetyFilterLevel,
       webhookUrl
     })
   }
