@@ -12,6 +12,7 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { PackageConfigModal } from './package-config-modal'
+import { PackageProgressModal } from './package-progress-modal'
 import { useCreditBalance, useCreditPackages, useInvalidateCredits } from '@/hooks/useCredits'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 
@@ -44,6 +45,8 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
   const [showCreditsPurchase, setShowCreditsPurchase] = useState(false)
   const [showConfigModal, setShowConfigModal] = useState(false)
   const [showAllPreviews, setShowAllPreviews] = useState(false)
+  const [showProgressModal, setShowProgressModal] = useState(false)
+  const [activeUserPackageId, setActiveUserPackageId] = useState<string | null>(null)
 
   // Debug: verificar preview images
   React.useEffect(() => {
@@ -121,10 +124,18 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
         // Invalidar cache de créditos (React Query atualiza automaticamente)
         invalidateBalance()
 
-        // Show success message and redirect to gallery after 3 seconds
-        setTimeout(() => {
-          window.location.href = '/gallery?tab=packages'
-        }, 3000)
+        // 🔥 NOVO FLUXO: Abrir modal de progresso em vez de redirecionar
+        setActiveUserPackageId(data.userPackage.id)
+        
+        // Marcar no localStorage que o modal está aberto
+        localStorage.setItem(`package_modal_open_${data.userPackage.id}`, 'true')
+        
+        // Fechar o modal de seleção
+        onClose()
+        
+        // Abrir modal de progresso
+        setShowProgressModal(true)
+        setIsActivating(false)
       } else {
         throw new Error(data.error || 'Erro desconhecido')
       }
@@ -132,9 +143,25 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
       console.error('Package generation error:', error)
       setActivationStatus('error')
       setErrorMessage(error instanceof Error ? error.message : 'Erro ao gerar pacote')
-    } finally {
       setIsActivating(false)
     }
+  }
+
+  const handleProgressModalClose = () => {
+    setShowProgressModal(false)
+    // Remover flag de modal aberto
+    if (activeUserPackageId) {
+      localStorage.removeItem(`package_modal_open_${activeUserPackageId}`)
+    }
+  }
+
+  const handleProgressComplete = () => {
+    // Quando a geração completar, fechar modal e redirecionar
+    setShowProgressModal(false)
+    if (activeUserPackageId) {
+      localStorage.removeItem(`package_modal_open_${activeUserPackageId}`)
+    }
+    window.location.href = '/gallery?tab=packages'
   }
 
   const handlePurchaseCredits = (credits: number) => {
@@ -426,6 +453,18 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
           totalImages={pkg.promptCount || pkg.prompts?.length || 0}
           onClose={() => setShowConfigModal(false)}
           onConfirm={handleActivatePackage}
+        />
+      )}
+
+      {/* Modal de Progresso - Mantém usuário informado durante a geração */}
+      {showProgressModal && activeUserPackageId && (
+        <PackageProgressModal
+          isOpen={showProgressModal}
+          onClose={handleProgressModalClose}
+          userPackageId={activeUserPackageId}
+          packageName={pkg.name}
+          totalImages={pkg.promptCount || pkg.prompts?.length || 20}
+          onComplete={handleProgressComplete}
         />
       )}
     </div>

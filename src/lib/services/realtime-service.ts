@@ -11,6 +11,7 @@ export const EVENT_TYPES = {
   GENERATION_STATUS_CHANGED: 'generation_status_changed',
   TRAINING_PROGRESS: 'training_progress',
   GENERATION_PROGRESS: 'generation_progress',
+  PACKAGE_GENERATION_UPDATED: 'package_generation_updated', // Real-time package progress
   CREDITS_UPDATED: 'credits_updated',
   USER_UPDATED: 'user_updated', // Admin updates: plan, subscription, etc.
   NOTIFICATION: 'notification',
@@ -168,6 +169,49 @@ export async function broadcastGenerationProgress(
       progress,
       message,
       timestamp: new Date().toISOString()
+    }
+  })
+}
+
+/**
+ * Broadcast package generation update in real-time
+ * Used to update progress in both modal and gallery
+ */
+export async function broadcastPackageGenerationUpdate(
+  userPackageId: string,
+  userId: string,
+  status: string,
+  generatedImages: number,
+  totalImages: number,
+  packageName?: string,
+  additionalData?: any
+) {
+  const broadcast = await getBroadcastFunction()
+  if (!broadcast) {
+    console.log('📡 No broadcast function available, skipping package event')
+    return
+  }
+
+  console.log('📦 [realtime-service] Broadcasting package generation update:', {
+    userPackageId,
+    userId,
+    status,
+    progress: `${generatedImages}/${totalImages}`,
+    packageName
+  })
+
+  return broadcast({
+    type: EVENT_TYPES.PACKAGE_GENERATION_UPDATED,
+    userId,
+    data: {
+      userPackageId,
+      status,
+      generatedImages,
+      totalImages,
+      packageName,
+      progress: Math.min(100, Math.round((generatedImages / totalImages) * 100)),
+      timestamp: new Date().toISOString(),
+      ...additionalData
     }
   })
 }

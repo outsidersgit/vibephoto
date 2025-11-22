@@ -151,6 +151,22 @@ export async function reconcileUserPackageStatus(userPackageId: string): Promise
         failedImages: stats.failed
       })
 
+      // 🔥 CRITICAL: Broadcast package update via SSE for real-time UI updates
+      const { broadcastPackageGenerationUpdate } = await import('./realtime-service')
+      await broadcastPackageGenerationUpdate(
+        userPackageId,
+        userPackage.userId,
+        newStatus,
+        stats.completed,
+        stats.total,
+        userPackage.package?.name,
+        {
+          failedImages: stats.failed,
+          statusChanged: shouldUpdate,
+          previewUrls: [] // Could fetch preview URLs if needed
+        }
+      )
+
       return {
         success: true,
         previousStatus,

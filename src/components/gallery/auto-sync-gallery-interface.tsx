@@ -39,6 +39,7 @@ import { GalleryList } from './gallery-list'
 import { GalleryStats } from './gallery-stats'
 import { UpscaleProgress } from '@/components/upscale/upscale-progress'
 import { VideoGalleryWrapper } from './video-gallery-wrapper'
+import { PackageProgressBarMinimal } from '@/components/packages/package-progress-bar-minimal'
 
 // Lazy load modals pesados (Fase 2 - Otimização de Performance)
 const ImageModal = dynamic(() => import('./image-modal').then(mod => ({ default: mod.ImageModal })), {
@@ -2190,6 +2191,9 @@ export function AutoSyncGalleryInterface({
         isLoading={upscaleConfigModal.isLoading}
         resultImageUrl={upscaleConfigModal.resultImageUrl}
       />
+
+      {/* Barra de progresso minimalista para pacotes - apenas fallback quando modal está fechado */}
+      <PackageProgressBarMinimal />
 
     </div>
   )

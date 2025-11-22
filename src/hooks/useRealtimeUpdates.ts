@@ -16,6 +16,7 @@ export interface UseRealtimeUpdatesOptions {
   onGenerationStatusChange?: (generationId: string, status: string, data: any) => void
   onTrainingProgress?: (modelId: string, progress: number, message?: string) => void
   onGenerationProgress?: (generationId: string, progress: number, message?: string) => void
+  onPackageGenerationUpdate?: (userPackageId: string, data: any) => void // Real-time package progress
   onCreditsUpdate?: (creditsUsed: number, creditsLimit: number, action?: string, creditsBalance?: number) => void // CRITICAL: Incluir creditsBalance
   onUserUpdate?: (updatedFields: { plan?: string; subscriptionStatus?: string; creditsLimit?: number; creditsUsed?: number; creditsBalance?: number; [key: string]: any }) => void
   onNotification?: (title: string, message: string, type: string) => void
@@ -224,6 +225,14 @@ export function useRealtimeUpdates(options: UseRealtimeUpdatesOptions = {}) {
               eventData.data.generationId,
               eventData.data.progress,
               eventData.data.message
+            )
+            break
+
+          case 'package_generation_updated':
+            console.log('📦 [useRealtimeUpdates] Package generation update received:', eventData.data)
+            optionsRef.current.onPackageGenerationUpdate?.(
+              eventData.data.userPackageId,
+              eventData.data
             )
             break
 
