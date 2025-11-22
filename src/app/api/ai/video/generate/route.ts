@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const duration = body.duration || 5
+    const duration = body.duration || 8
     const creditsNeeded = getVideoGenerationCost(duration)
     const userPlan = (user.plan || 'STARTER') as Plan
     const affordability = await CreditManager.canUserAfford(user.id, creditsNeeded, userPlan)
@@ -67,11 +67,17 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         prompt: body.prompt,
         negativePrompt: body.negativePrompt || '',
-        duration: body.duration || 5,
+        duration: body.duration || 8,
         aspectRatio: body.aspectRatio || '16:9',
         quality: body.quality === 'pro' ? 'pro' : 'standard',
-        sourceImageUrl: body.sourceImageUrl,
-        status: 'STARTING'
+        sourceImageUrl: body.sourceImageUrl || body.image,
+        status: 'STARTING',
+        metadata: {
+          resolution: body.resolution || '1080p',
+          generateAudio: body.generateAudio !== false,
+          lastFrame: body.lastFrame || null,
+          seed: body.seed || null
+        }
       }
     })
 
@@ -85,11 +91,13 @@ export async function POST(request: NextRequest) {
     let chargeResult: Awaited<ReturnType<typeof CreditManager.deductCredits>> | null = null
 
     try {
-      // Prepare input for Kling v2.1 (based on official schema)
+      // Prepare input for Veo 3.1 Fast (based on official schema)
       const input: any = {
         prompt: body.prompt, // required
-        duration: body.duration || 5, // optional, default 5
-        aspect_ratio: body.aspectRatio || '16:9' // optional, default "16:9"
+        duration: body.duration || 8, // optional, default 8 (4, 6, or 8)
+        aspect_ratio: body.aspectRatio || '16:9', // optional, default "16:9"
+        resolution: body.resolution || '1080p', // optional, default "1080p"
+        generate_audio: body.generateAudio !== false // optional, default true
       }
 
       // Add negative prompt if provided
@@ -97,12 +105,23 @@ export async function POST(request: NextRequest) {
         input.negative_prompt = body.negativePrompt
       }
 
-      // Add source image for image-to-video if provided
-      if (body.sourceImageUrl) {
-        input.start_image = body.sourceImageUrl
+      // Add seed if provided
+      if (body.seed !== undefined) {
+        input.seed = body.seed
       }
 
-      console.log('🎬 [VIDEO-API] Sending to Kling v2.1 via Replicate:', input)
+      // Add source image for image-to-video if provided
+      const sourceImage = body.image || body.sourceImageUrl
+      if (sourceImage) {
+        input.image = sourceImage
+      }
+
+      // Add last frame for interpolation if provided
+      if (body.lastFrame) {
+        input.last_frame = body.lastFrame
+      }
+
+      console.log('🎬 [VIDEO-API] Sending to Veo 3.1 Fast via Replicate:', input)
 
       // 🔒 CRITICAL: Use dedicated video webhook endpoint, NOT the unified replicate webhook
       // The unified webhook SKIPS video processing to avoid duplication
@@ -114,12 +133,12 @@ export async function POST(request: NextRequest) {
       console.log('🔍 [VIDEO-API] Using dedicated video webhook endpoint (not unified replicate webhook)')
 
       const prediction = await replicate.predictions.create({
-        model: "kwaivgi/kling-v2.1-master",
+        model: "google/veo-3.1-fast",
         input,
         ...(webhookUrl && { webhook: webhookUrl })
       })
 
-      console.log('✅ [VIDEO-API] Kling v2.1 prediction created:', prediction.id)
+      console.log('✅ [VIDEO-API] Veo 3.1 Fast prediction created:', prediction.id)
 
       // 🔒 CRITICAL: Save jobId (prediction.id) to database BEFORE webhook arrives
       // This allows the webhook to find the video generation record by jobId
@@ -188,7 +207,7 @@ export async function POST(request: NextRequest) {
       }
 
     } catch (replicateError) {
-      console.error('❌ [VIDEO-API] Kling v2.1 error:', replicateError)
+      console.error('❌ [VIDEO-API] Veo 3.1 Fast error:', replicateError)
 
       // Update video generation status to failed
       await prisma.videoGeneration.update({
@@ -212,7 +231,7 @@ export async function POST(request: NextRequest) {
       remainingCredits: chargeResult?.user
         ? (chargeResult.user.creditsLimit - chargeResult.user.creditsUsed + chargeResult.user.creditsBalance)
         : undefined,
-      estimatedTime: body.duration === 5 ? '5 minutos' : '8 minutos'
+      estimatedTime: body.duration === 4 ? '2 minutos' : body.duration === 6 ? '3 minutos' : '4 minutos'
     })
 
   } catch (error) {

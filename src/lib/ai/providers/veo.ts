@@ -8,21 +8,13 @@ import {
 } from '../../utils/status-mapping'
 
 /**
- * Google Veo 3.1 Fast Provider for Video Generation
- * Uses Replicate API with webhook-based processing
- * 
- * Features:
- * - Text-to-video generation
- * - Image-to-video with optional interpolation (first + last frame)
- * - Audio generation support
- * - Flexible durations: 4s, 6s, or 8s
- * - Multiple aspect ratios: 16:9, 9:16
- * - High resolution: 720p or 1080p
+ * Kling AI 2.1 Master Provider for Video Generation
+ * Uses direct Replicate API calls with Prefer: wait for synchronous responses
  */
 export class KlingVideoProvider {
   private apiToken: string
   private baseUrl: string = 'https://api.replicate.com/v1'
-  private modelEndpoint: string = 'models/google/veo-3.1-fast/predictions'
+  private modelEndpoint: string = 'models/kwaivgi/kling-v2.1-master/predictions'
 
   constructor() {
     if (!AI_CONFIG.replicate.apiToken) {
@@ -37,47 +29,27 @@ export class KlingVideoProvider {
    */
   async generateVideo(request: VideoGenerationRequest, webhookUrl?: string): Promise<VideoGenerationResponse> {
     try {
-      console.log(`🎬 Starting video generation with Google Veo 3.1 Fast:`, {
+      console.log(`🎬 Starting video generation with Kling AI:`, {
         model: VIDEO_CONFIG.provider.model,
         duration: request.duration,
         aspectRatio: request.aspectRatio,
-        resolution: request.resolution || '1080p',
-        generateAudio: request.generateAudio !== false,
+        quality: request.quality,
         promptLength: request.prompt.length,
-        hasImage: !!(request.sourceImageUrl || request.image),
-        hasLastFrame: !!request.lastFrame
+        hasImage: !!request.sourceImageUrl
       })
 
-      // Build input parameters for Google Veo 3.1 Fast according to schema
+      // Build input parameters for Kling AI according to official docs
       const input: any = {
         prompt: request.prompt, // Required
-        duration: request.duration || 8, // Optional, default 8 (4, 6, or 8)
+        duration: request.duration || 5, // Optional, default 5
         aspect_ratio: request.aspectRatio || '16:9', // Optional, default '16:9'
-        resolution: request.resolution || '1080p', // Optional, default '1080p'
-        generate_audio: request.generateAudio !== false // Optional, default true
+        negative_prompt: request.negativePrompt || '' // Optional, default ''
       }
 
-      // Add negative_prompt if provided
-      if (request.negativePrompt) {
-        input.negative_prompt = request.negativePrompt
-      }
-
-      // Add seed if provided (for reproducibility)
-      if (request.seed !== undefined) {
-        input.seed = request.seed
-      }
-
-      // Add image for image-to-video generation (optional)
-      const sourceImage = request.image || request.sourceImageUrl
-      if (sourceImage) {
-        input.image = sourceImage
-        console.log('📸 Using source image for video generation')
-      }
-
-      // Add last_frame for interpolation (optional)
-      if (request.lastFrame) {
-        input.last_frame = request.lastFrame
-        console.log('🖼️ Using last frame for interpolation')
+      // Add start_image for image-to-video generation (optional)
+      if (request.sourceImageUrl) {
+        input.start_image = request.sourceImageUrl
+        // Note: aspect_ratio is ignored when start_image is provided
       }
 
       // Build request body
@@ -95,14 +67,15 @@ export class KlingVideoProvider {
         console.log('🔄 Development mode: no webhook configured for video')
       }
 
-      console.log('🚀 Creating Veo 3.1 Fast video prediction with input:', JSON.stringify(requestBody, null, 2))
+      console.log('🚀 Creating Kling video prediction with input:', JSON.stringify(requestBody, null, 2))
 
-      // Make direct API call to Replicate (webhook-based, no 'Prefer: wait')
+      // Make direct API call to Replicate with Prefer: wait for synchronous response
       const response = await fetch(`${this.baseUrl}/${this.modelEndpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiToken}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Prefer': 'wait' // Critical: Wait for video to complete
         },
         body: JSON.stringify(requestBody)
       })
@@ -151,7 +124,7 @@ export class KlingVideoProvider {
 
         // Model errors
         if (errorMessage.includes('model not found') || errorMessage.includes('404')) {
-          throw new AIError('Google Veo 3.1 Fast model not found or unavailable', 'MODEL_NOT_FOUND')
+          throw new AIError('Kling AI model not found or unavailable', 'MODEL_NOT_FOUND')
         }
 
         // Input validation errors
@@ -407,8 +380,8 @@ export class KlingVideoProvider {
     return [
       {
         id: VIDEO_CONFIG.provider.model,
-        name: 'Google Veo 3.1 Fast',
-        description: 'Fast and high-quality video generation with audio support',
+        name: 'Kling AI v2.1 Master',
+        description: 'Advanced image-to-video generation with cinematic quality',
         type: 'video' as const,
         capabilities: {
           maxDuration: 10,

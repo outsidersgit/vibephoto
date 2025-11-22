@@ -3,12 +3,13 @@ export const CREDIT_COSTS = {
   IMAGE_EDIT_PER_IMAGE: 15,
   UPSCALE_PER_IMAGE: 10,
   VIDEO_DURATION: {
-    5: 100,
-    10: 200
+    4: 80,
+    6: 120,
+    8: 160
   } as Record<number, number>
 }
 
-export type VideoDurationSeconds = 5 | 10
+export type VideoDurationSeconds = 4 | 6 | 8
 
 export function getImageGenerationCost(variations: number = 1): number {
   const count = Math.max(1, variations)
@@ -26,8 +27,10 @@ export function getUpscaleCost(imageCount: number = 1): number {
 }
 
 export function getVideoGenerationCost(duration: number): number {
-  const normalized = duration === 10 ? 10 : 5
-  return CREDIT_COSTS.VIDEO_DURATION[normalized]
+  // Normalize to valid durations: 4, 6, or 8 seconds
+  if (duration <= 4) return CREDIT_COSTS.VIDEO_DURATION[4]
+  if (duration <= 6) return CREDIT_COSTS.VIDEO_DURATION[6]
+  return CREDIT_COSTS.VIDEO_DURATION[8]
 }
 
 export function formatCredits(amount: number): string {

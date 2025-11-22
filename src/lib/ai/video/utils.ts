@@ -237,12 +237,10 @@ export function getOptimalAspectRatio(
 ): VideoAspectRatio {
   const ratio = imageWidth / imageHeight
 
-  if (ratio > 1.5) {
+  if (ratio > 1.2) {
     return '16:9'  // Landscape
-  } else if (ratio < 0.75) {
-    return '9:16'  // Portrait
   } else {
-    return '1:1'   // Square
+    return '9:16'  // Portrait
   }
 }
 
@@ -325,7 +323,7 @@ export function generateThumbnailUrl(videoUrl: string): string {
 }
 
 /**
- * Normalize video generation request with official Kling v2.1 defaults
+ * Normalize video generation request with Veo 3.1 Fast defaults
  */
 export function normalizeVideoGenerationRequest(request: any): VideoGenerationRequest {
   try {
@@ -338,17 +336,23 @@ export function normalizeVideoGenerationRequest(request: any): VideoGenerationRe
     
     // Debug: Log the mapping process
     console.log('🔍 Mapping video request fields:', {
-      'request.start_image': request.start_image,
+      'request.image': request.image,
       'request.sourceImageUrl': request.sourceImageUrl,
-      'final_sourceImageUrl': request.start_image || request.sourceImageUrl || undefined
+      'request.lastFrame': request.lastFrame,
+      'request.generateAudio': request.generateAudio
     })
 
     const normalized = {
-      sourceImageUrl: request.start_image || request.sourceImageUrl || undefined, // start_image for image-to-video, undefined for text-to-video
+      image: request.image || request.sourceImageUrl || undefined,
+      sourceImageUrl: request.sourceImageUrl || request.image || undefined, // Legacy compatibility
+      lastFrame: request.lastFrame || undefined,
       prompt: request.prompt || '', // Required, but provide default to avoid errors
       negativePrompt: request.negativePrompt || '', // Optional, default ''
-      duration: (request.duration && typeof request.duration === 'number') ? request.duration : 5, // Optional, default 5
+      duration: (request.duration && typeof request.duration === 'number') ? request.duration : 8, // Optional, default 8
       aspectRatio: (request.aspectRatio && typeof request.aspectRatio === 'string') ? request.aspectRatio : '16:9', // Optional, default '16:9'
+      resolution: (request.resolution && typeof request.resolution === 'string') ? request.resolution : '1080p', // Optional, default '1080p'
+      generateAudio: request.generateAudio !== false, // Optional, default true
+      seed: request.seed || undefined, // Optional
       quality: (request.quality && typeof request.quality === 'string') ? request.quality : 'standard', // Internal parameter
       template: request.template || undefined // Optional template
     }
@@ -360,11 +364,15 @@ export function normalizeVideoGenerationRequest(request: any): VideoGenerationRe
     console.error('❌ Error in normalizeVideoGenerationRequest:', error)
     // Return a safe default to avoid API crashes
     return {
-      sourceImageUrl: request?.start_image || request?.sourceImageUrl || undefined,
+      image: request?.image || request?.sourceImageUrl || undefined,
+      sourceImageUrl: request?.sourceImageUrl || request?.image || undefined,
+      lastFrame: request?.lastFrame || undefined,
       prompt: request?.prompt || '',
       negativePrompt: '',
-      duration: 5,
+      duration: 8,
       aspectRatio: '16:9',
+      resolution: '1080p',
+      generateAudio: true,
       quality: 'standard',
       template: undefined
     }
@@ -372,7 +380,7 @@ export function normalizeVideoGenerationRequest(request: any): VideoGenerationRe
 }
 
 /**
- * Validate video generation request according to Kling v2.1 official docs
+ * Validate video generation request according to Veo 3.1 Fast specs
  */
 export function validateVideoGenerationRequest(request: any): {
   isValid: boolean
@@ -387,10 +395,19 @@ export function validateVideoGenerationRequest(request: any): {
   }
 
   // Validate source image (optional - for image-to-video)
-  if (request.sourceImageUrl) {
-    const imageValidation = validateSourceImage(request.sourceImageUrl)
+  if (request.sourceImageUrl || request.image) {
+    const imageUrl = request.image || request.sourceImageUrl
+    const imageValidation = validateSourceImage(imageUrl)
     if (!imageValidation.isValid) {
       errors.push(imageValidation.reason!)
+    }
+  }
+
+  // Validate last frame (optional - for interpolation)
+  if (request.lastFrame) {
+    const lastFrameValidation = validateSourceImage(request.lastFrame)
+    if (!lastFrameValidation.isValid) {
+      errors.push(`Última imagem: ${lastFrameValidation.reason}`)
     }
   }
 
@@ -402,18 +419,17 @@ export function validateVideoGenerationRequest(request: any): {
     }
   }
 
-  // Validate duration (optional, defaults to 5)
+  // Validate duration (optional, defaults to 8)
   if (request.duration !== undefined) {
     if (!VIDEO_CONFIG.options.durations.includes(request.duration)) {
-      errors.push(`Duração inválida. Deve ser ${VIDEO_CONFIG.options.durations.join(' ou ')} segundos`)
+      errors.push(`Duração inválida. Deve ser ${VIDEO_CONFIG.options.durations.join(', ')} segundos`)
     }
     if (typeof request.duration !== 'number') {
-      errors.push('Duração deve ser um número (5 ou 10)')
+      errors.push('Duração deve ser um número (4, 6 ou 8)')
     }
   }
 
   // Validate aspect ratio (optional, defaults to "16:9")
-  // Note: aspect_ratio is ignored when start_image is provided
   if (request.aspectRatio !== undefined) {
     if (!VIDEO_CONFIG.options.aspectRatios.includes(request.aspectRatio)) {
       errors.push(`Aspect ratio inválido. Deve ser ${VIDEO_CONFIG.options.aspectRatios.join(', ')}`)
@@ -423,16 +439,11 @@ export function validateVideoGenerationRequest(request: any): {
     }
   }
 
-  // Validate quality (internal parameter, not sent to Kling API)
-  if (request.quality !== undefined) {
-    if (!VIDEO_CONFIG.options.qualities.includes(request.quality)) {
-      errors.push(`Qualidade inválida. Deve ser ${VIDEO_CONFIG.options.qualities.join(' ou ')}`)
+  // Validate resolution (optional, defaults to "1080p")
+  if (request.resolution !== undefined) {
+    if (!VIDEO_CONFIG.options.resolutions.includes(request.resolution)) {
+      errors.push(`Resolução inválida. Deve ser ${VIDEO_CONFIG.options.resolutions.join(' ou ')}`)
     }
-  }
-
-  // Special validation: aspect_ratio is ignored when start_image is provided
-  if (request.sourceImageUrl && request.aspectRatio) {
-    console.log('⚠️ Note: aspect_ratio will be ignored because start_image is provided')
   }
 
   return {
@@ -442,9 +453,9 @@ export function validateVideoGenerationRequest(request: any): {
 }
 
 /**
- * Validate that input conforms to Kling v2.1 API schema exactly
+ * Validate that input conforms to Veo 3.1 Fast API schema
  */
-export function validateKlingApiInput(input: any): {
+export function validateVeoApiInput(input: any): {
   isValid: boolean
   errors: string[]
 } {
@@ -455,22 +466,35 @@ export function validateKlingApiInput(input: any): {
     errors.push('prompt is required and must be a string')
   }
 
-  // Optional: duration (integer, 5 or 10)
+  // Optional: duration (integer, 4, 6 or 8)
   if (input.duration !== undefined) {
-    if (!Number.isInteger(input.duration) || ![5, 10].includes(input.duration)) {
-      errors.push('duration must be an integer (5 or 10)')
+    if (!Number.isInteger(input.duration) || ![4, 6, 8].includes(input.duration)) {
+      errors.push('duration must be an integer (4, 6 or 8)')
     }
   }
 
-  // Optional: start_image (string URI)
-  if (input.start_image !== undefined) {
-    if (typeof input.start_image !== 'string') {
-      errors.push('start_image must be a string (URI)')
+  // Optional: image (string URI)
+  if (input.image !== undefined) {
+    if (typeof input.image !== 'string') {
+      errors.push('image must be a string (URI)')
     } else {
       try {
-        new URL(input.start_image)
+        new URL(input.image)
       } catch {
-        errors.push('start_image must be a valid URI')
+        errors.push('image must be a valid URI')
+      }
+    }
+  }
+
+  // Optional: last_frame (string URI)
+  if (input.last_frame !== undefined) {
+    if (typeof input.last_frame !== 'string') {
+      errors.push('last_frame must be a string (URI)')
+    } else {
+      try {
+        new URL(input.last_frame)
+      } catch {
+        errors.push('last_frame must be a valid URI')
       }
     }
   }
@@ -479,9 +503,23 @@ export function validateKlingApiInput(input: any): {
   if (input.aspect_ratio !== undefined) {
     if (typeof input.aspect_ratio !== 'string') {
       errors.push('aspect_ratio must be a string')
-    } else if (!['16:9', '9:16', '1:1'].includes(input.aspect_ratio)) {
-      errors.push('aspect_ratio must be one of: 16:9, 9:16, 1:1')
+    } else if (!['16:9', '9:16'].includes(input.aspect_ratio)) {
+      errors.push('aspect_ratio must be one of: 16:9, 9:16')
     }
+  }
+
+  // Optional: resolution (string)
+  if (input.resolution !== undefined) {
+    if (typeof input.resolution !== 'string') {
+      errors.push('resolution must be a string')
+    } else if (!['720p', '1080p'].includes(input.resolution)) {
+      errors.push('resolution must be one of: 720p, 1080p')
+    }
+  }
+
+  // Optional: generate_audio (boolean)
+  if (input.generate_audio !== undefined && typeof input.generate_audio !== 'boolean') {
+    errors.push('generate_audio must be a boolean')
   }
 
   // Optional: negative_prompt (string)
@@ -489,8 +527,19 @@ export function validateKlingApiInput(input: any): {
     errors.push('negative_prompt must be a string')
   }
 
+  // Optional: seed (integer)
+  if (input.seed !== undefined && !Number.isInteger(input.seed)) {
+    errors.push('seed must be an integer')
+  }
+
   return {
     isValid: errors.length === 0,
     errors
   }
 }
+
+/**
+ * Legacy compatibility: alias for validateVeoApiInput
+ * @deprecated Use validateVeoApiInput instead
+ */
+export const validateKlingApiInput = validateVeoApiInput

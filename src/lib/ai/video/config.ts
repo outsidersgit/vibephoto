@@ -1,25 +1,26 @@
-// Configuração modular para sistema de vídeos com Kling AI 2.1
+// Configuração modular para sistema de vídeos com Google Veo 3.1 Fast
 export const VIDEO_CONFIG = {
   // Provider configuration
   provider: {
-    name: 'kling-v2.1-master',
-    model: 'kwaivgi/kling-v2.1-master',
+    name: 'veo-3.1-fast',
+    model: 'google/veo-3.1-fast',
     baseUrl: 'https://api.replicate.com/v1'
   },
 
   // Default parameters for video generation
   defaults: {
-    duration: 5,                    // seconds (5 or 10)
-    aspectRatio: '16:9',           // "16:9", "9:16", "1:1"  
-    quality: 'standard',           // "standard" (720p) or "pro" (1080p)
+    duration: 8,                    // seconds (4, 6, or 8)
+    aspectRatio: '16:9',           // "16:9" or "9:16"
+    resolution: '1080p',           // "720p" or "1080p" (always 1080p, hidden in UI)
+    generateAudio: true,           // Generate audio with video
     negativePrompt: 'blurry, low quality, distorted, watermark, text'
   },
 
   // Supported options
   options: {
-    durations: [5, 10] as const,
-    aspectRatios: ['16:9', '9:16', '1:1'] as const,
-    qualities: ['standard', 'pro'] as const,
+    durations: [4, 6, 8] as const,
+    aspectRatios: ['16:9', '9:16'] as const,
+    resolutions: ['720p', '1080p'] as const,
     maxPromptLength: 2500,
     maxNegativePromptLength: 200
   },
@@ -27,12 +28,13 @@ export const VIDEO_CONFIG = {
   // Cost configuration (in credits)
   costs: {
     base: {
-      5: 100,   // 100 credits for 5s video
-      10: 200   // 200 credits for 10s video
+      4: 80,    // 80 credits for 4s video
+      6: 120,   // 120 credits for 6s video
+      8: 160    // 160 credits for 8s video
     },
-    qualityMultiplier: {
-      standard: 1.0,   // 720p (no extra cost)
-      pro: 1.0         // 1080p (same cost)
+    resolutionMultiplier: {
+      '720p': 1.0,   // 720p (no extra cost)
+      '1080p': 1.0   // 1080p (same cost)
     }
   },
 
@@ -40,33 +42,35 @@ export const VIDEO_CONFIG = {
   planLimits: {
     STARTER: {
       maxVideosPerDay: 5,
-      maxDuration: 10,
-      allowPro: true,
+      maxDuration: 8,
+      allowHighRes: true,
       maxConcurrentJobs: 2
     },
     PREMIUM: {
       maxVideosPerDay: 20,
-      maxDuration: 10,
-      allowPro: true,
+      maxDuration: 8,
+      allowHighRes: true,
       maxConcurrentJobs: 3
     },
     GOLD: {
       maxVideosPerDay: 50,
-      maxDuration: 10,
-      allowPro: true,
+      maxDuration: 8,
+      allowHighRes: true,
       maxConcurrentJobs: 5
     }
   },
 
   // Processing time estimates (in seconds)
   estimatedTimes: {
-    standard: {
-      5: 90,   // ~1.5 minutes for 5s video
-      10: 150  // ~2.5 minutes for 10s video
+    '720p': {
+      4: 60,   // ~1 minute for 4s video
+      6: 90,   // ~1.5 minutes for 6s video
+      8: 120   // ~2 minutes for 8s video
     },
-    pro: {
-      5: 240,  // ~4 minutes for 5s pro video
-      10: 480  // ~8 minutes for 10s pro video
+    '1080p': {
+      4: 120,  // ~2 minutes for 4s video
+      6: 180,  // ~3 minutes for 6s video
+      8: 240   // ~4 minutes for 8s video
     }
   },
 
@@ -76,49 +80,49 @@ export const VIDEO_CONFIG = {
       name: 'Retrato Natural',
       prompt: 'gentle breathing motion, subtle eye movement, natural portrait expression',
       description: 'Movimento sutil para retratos, com respiração natural',
-      recommendedDuration: 5,
+      recommendedDuration: 6,
       recommendedAspectRatio: '9:16'
     },
     landscape: {
       name: 'Paisagem Cinematográfica', 
       prompt: 'slow cinematic camera movement, gentle parallax effect',
       description: 'Movimento de câmera cinematográfico para paisagens',
-      recommendedDuration: 10,
+      recommendedDuration: 8,
       recommendedAspectRatio: '16:9'
     },
     product: {
       name: 'Produto 360°',
       prompt: 'smooth 360-degree rotation, professional lighting, studio background',
       description: 'Rotação suave para mostrar produto em todos os ângulos',
-      recommendedDuration: 5,
-      recommendedAspectRatio: '1:1'
+      recommendedDuration: 6,
+      recommendedAspectRatio: '16:9'
     },
     artistic: {
       name: 'Arte Abstrata',
       prompt: 'flowing motion, artistic transformation, creative movement',
       description: 'Movimento criativo e artístico',
-      recommendedDuration: 10,
+      recommendedDuration: 8,
       recommendedAspectRatio: '16:9'
     },
     nature: {
       name: 'Natureza Viva',
       prompt: 'gentle wind effect, leaves swaying, natural movement',
       description: 'Movimento natural de elementos como folhas e água',
-      recommendedDuration: 10,
+      recommendedDuration: 8,
       recommendedAspectRatio: '16:9'
     }
   },
 
-  // Quality presets
-  qualityPresets: {
-    standard: {
-      name: 'Padrão',
+  // Resolution presets
+  resolutionPresets: {
+    '720p': {
+      name: 'HD',
       description: '720p • 24fps • Boa qualidade',
       resolution: '720p',
       recommended: 'Ideal para uso geral e redes sociais'
     },
-    pro: {
-      name: 'Profissional',
+    '1080p': {
+      name: 'Full HD',
       description: '1080p • 24fps • Alta qualidade',
       resolution: '1080p', 
       recommended: 'Melhor qualidade para uso profissional'
@@ -146,18 +150,23 @@ export const VIDEO_CONFIG = {
 // Type definitions based on config
 export type VideoDuration = typeof VIDEO_CONFIG.options.durations[number]
 export type VideoAspectRatio = typeof VIDEO_CONFIG.options.aspectRatios[number]  
-export type VideoQuality = typeof VIDEO_CONFIG.options.qualities[number]
+export type VideoResolution = typeof VIDEO_CONFIG.options.resolutions[number]
 export type VideoTemplate = keyof typeof VIDEO_CONFIG.promptTemplates
 export type UserPlan = keyof typeof VIDEO_CONFIG.planLimits
 
 // Helper type for video generation request
 export interface VideoGenerationRequest {
-  sourceImageUrl?: string  // Optional for text-to-video generation
+  image?: string           // Input image (renamed from sourceImageUrl for Veo compatibility)
+  sourceImageUrl?: string  // Legacy compatibility
+  lastFrame?: string       // Ending image for interpolation (NEW)
   prompt: string
   negativePrompt?: string
   duration: VideoDuration
   aspectRatio: VideoAspectRatio
-  quality: VideoQuality
+  resolution?: VideoResolution  // Resolution (720p or 1080p, defaults to 1080p)
+  generateAudio?: boolean  // Generate audio with video (NEW)
+  seed?: number           // Random seed for reproducibility (NEW)
+  quality?: 'standard' | 'pro'  // Legacy compatibility
   template?: VideoTemplate
 }
 

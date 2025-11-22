@@ -29,6 +29,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   // Violar esta regra causa erro React #310 (can't set state on unmounted component)
   const { addToast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const lastFrameInputRef = useRef<HTMLInputElement>(null)
   const loadingRef = useRef(false)
   
   const [isMobile, setIsMobile] = useState(false)
@@ -36,14 +37,17 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   const [formData, setFormData] = useState<VideoGenerationRequest>({
     prompt: '',
     negativePrompt: VIDEO_CONFIG.defaults.negativePrompt,
-    duration: VIDEO_CONFIG.defaults.duration as 5 | 10,
-    aspectRatio: VIDEO_CONFIG.defaults.aspectRatio as '16:9' | '9:16' | '1:1',
+    duration: VIDEO_CONFIG.defaults.duration as 4 | 6 | 8,
+    aspectRatio: VIDEO_CONFIG.defaults.aspectRatio as '16:9' | '9:16',
+    resolution: VIDEO_CONFIG.defaults.resolution as '720p' | '1080p',
+    generateAudio: VIDEO_CONFIG.defaults.generateAudio,
     quality: 'pro' as 'standard' | 'pro'
   })
 
   const [selectedTemplate, setSelectedTemplate] = useState<VideoTemplate | null>(null)
   const [loading, setLoading] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
+  const [uploadedLastFrame, setUploadedLastFrame] = useState<string | null>(null)
   const [errors, setErrors] = useState<string[]>([])
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'video' } | null>(null)
   const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
@@ -66,15 +70,21 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
     setFormData({
       prompt: '',
       negativePrompt: VIDEO_CONFIG.defaults.negativePrompt,
-      duration: VIDEO_CONFIG.defaults.duration as 5 | 10,
-      aspectRatio: VIDEO_CONFIG.defaults.aspectRatio as '16:9' | '9:16' | '1:1',
+      duration: VIDEO_CONFIG.defaults.duration as 4 | 6 | 8,
+      aspectRatio: VIDEO_CONFIG.defaults.aspectRatio as '16:9' | '9:16',
+      resolution: VIDEO_CONFIG.defaults.resolution as '720p' | '1080p',
+      generateAudio: VIDEO_CONFIG.defaults.generateAudio,
       quality: 'pro'
     })
     setSelectedTemplate(null)
     setUploadedImage(null)
+    setUploadedLastFrame(null)
     setErrors([])
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
+    }
+    if (lastFrameInputRef.current) {
+      lastFrameInputRef.current.value = ''
     }
   }
   
@@ -301,9 +311,30 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
 
   const removeImage = () => {
     setUploadedImage(null)
-    setFormData(prev => ({ ...prev, sourceImageUrl: undefined }))
+    setFormData(prev => ({ ...prev, sourceImageUrl: undefined, image: undefined }))
     // Automatically switch back to text-to-video mode when image is removed
     setActiveMode('text-to-video')
+  }
+
+  const handleLastFrameUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result as string
+        setUploadedLastFrame(result)
+        setFormData(prev => ({ ...prev, lastFrame: result }))
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const removeLastFrame = () => {
+    setUploadedLastFrame(null)
+    setFormData(prev => ({ ...prev, lastFrame: undefined }))
+    if (lastFrameInputRef.current) {
+      lastFrameInputRef.current.value = ''
+    }
   }
 
   const handleSubmit = async () => {
@@ -348,7 +379,10 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
       // Prepare request data
       const requestData = {
         ...formData,
-        sourceImageUrl: activeMode === 'image-to-video' ? uploadedImage : undefined
+        image: activeMode === 'image-to-video' ? uploadedImage : undefined,
+        sourceImageUrl: activeMode === 'image-to-video' ? uploadedImage : undefined,
+        lastFrame: uploadedLastFrame || undefined,
+        generateAudio: formData.generateAudio !== false
       }
 
       console.log('🎬 [VIDEO-GENERATION] Creating video with data:', requestData)
@@ -386,11 +420,14 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
       setFormData({
         prompt: '',
         negativePrompt: VIDEO_CONFIG.defaults.negativePrompt,
-        duration: VIDEO_CONFIG.defaults.duration as 5 | 10,
-        aspectRatio: VIDEO_CONFIG.defaults.aspectRatio as '16:9' | '9:16' | '1:1',
+        duration: VIDEO_CONFIG.defaults.duration as 4 | 6 | 8,
+        aspectRatio: VIDEO_CONFIG.defaults.aspectRatio as '16:9' | '9:16',
+        resolution: VIDEO_CONFIG.defaults.resolution as '720p' | '1080p',
+        generateAudio: VIDEO_CONFIG.defaults.generateAudio,
         quality: 'pro' as 'standard' | 'pro'
       })
       setUploadedImage(null)
+      setUploadedLastFrame(null)
       setSelectedTemplate(null)
       setActiveMode('text-to-video')
 
@@ -517,44 +554,57 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
           <div className="mb-4">
             <Card className="border-gray-200 bg-white rounded-lg shadow-lg">
               <CardContent className="p-4 space-y-3">
-                {/* Duration */}
+              {/* Duration */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                     Duração
                   </label>
-                  <Select
-                    value={formData.duration.toString()}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, duration: parseInt(value) as 5 | 10 }))}
-                  >
+                    <Select
+                      value={formData.duration.toString()}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, duration: parseInt(value) as 4 | 6 | 8 }))}
+                    >
                     <SelectTrigger className="w-full bg-gray-200 border-gray-900 text-gray-900">
-                      <SelectValue />
-                    </SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="5">5 segundos</SelectItem>
-                      <SelectItem value="10">10 segundos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                      <SelectItem value="4">4 segundos</SelectItem>
+                      <SelectItem value="6">6 segundos</SelectItem>
+                      <SelectItem value="8">8 segundos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                {/* Aspect Ratio */}
+              {/* Aspect Ratio */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                     Proporção
                   </label>
-                  <Select
-                    value={formData.aspectRatio}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, aspectRatio: value as '16:9' | '9:16' | '1:1' }))}
-                  >
+                    <Select
+                      value={formData.aspectRatio}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, aspectRatio: value as '16:9' | '9:16' }))}
+                    >
                     <SelectTrigger className="w-full bg-gray-200 border-gray-900 text-gray-900">
-                      <SelectValue />
-                    </SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="16:9">16:9 (Paisagem)</SelectItem>
                       <SelectItem value="9:16">9:16 (Retrato)</SelectItem>
-                      <SelectItem value="1:1">1:1 (Quadrado)</SelectItem>
                     </SelectContent>
                   </Select>
                     </div>
+
+                {/* Generate Audio */}
+                <div>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.generateAudio !== false}
+                      onChange={(e) => setFormData(prev => ({ ...prev, generateAudio: e.target.checked }))}
+                      className="w-4 h-4 text-[#667EEA] bg-gray-200 border-gray-900 rounded focus:ring-[#667EEA] focus:ring-2"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Gerar com áudio</span>
+                  </label>
+                </div>
 
                 {/* Quality Info */}
                 <div className="pt-3 border-t border-gray-200">
@@ -630,12 +680,24 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                 className="flex-1 border border-gray-900 bg-white hover:border-[#667EEA] hover:bg-[#667EEA]/5 text-gray-900 rounded-lg px-4 py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               >
                 <ImageIcon className="w-3 h-3 mr-1.5" />
-                {uploadedImage ? 'Imagem adicionada' : 'Adicionar'}
+                {uploadedImage ? 'Imagem adicionada' : 'Adicionar imagem inicial'}
               </Button>
+              <Button
+                type="button"
+                              variant="outline"
+                onClick={() => lastFrameInputRef.current?.click()}
+                disabled={loading}
+                className="flex-1 border border-gray-900 bg-white hover:border-[#667EEA] hover:bg-[#667EEA]/5 text-gray-900 rounded-lg px-4 py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              >
+                <ImageIcon className="w-3 h-3 mr-1.5" />
+                {uploadedLastFrame ? 'Última imagem adicionada' : 'Adicionar última imagem'}
+              </Button>
+                          </div>
+            <div className="flex flex-row items-center gap-2">
               <Button
                 onClick={handleSubmit}
                 disabled={!canProcess}
-                className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               >
                 {loading ? (
                   <>
@@ -656,13 +718,21 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                               onChange={handleImageUpload}
                               className="hidden"
             />
+            <input
+              ref={lastFrameInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleLastFrameUpload}
+              className="hidden"
+            />
 
-            {/* Uploaded Image Preview */}
+            {/* Uploaded Images Preview */}
+            <div className="flex gap-3">
             {uploadedImage && (
               <div className="relative inline-block">
                 <img
                   src={uploadedImage}
-                  alt="Uploaded"
+                  alt="Imagem inicial"
                   className="w-20 h-20 object-cover rounded-lg border-2 border-gray-200"
                 />
                 <button
@@ -671,8 +741,26 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                 >
                   <X className="w-3 h-3" />
                 </button>
+                <p className="text-xs text-gray-600 text-center mt-1">Inicial</p>
               </div>
             )}
+            {uploadedLastFrame && (
+              <div className="relative inline-block">
+                <img
+                  src={uploadedLastFrame}
+                  alt="Última imagem"
+                  className="w-20 h-20 object-cover rounded-lg border-2 border-gray-200"
+                />
+                <button
+                  onClick={removeLastFrame}
+                  className="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-sm"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+                <p className="text-xs text-gray-600 text-center mt-1">Final</p>
+              </div>
+            )}
+            </div>
 
             {/* Error Display */}
             {errors.length > 0 && (
@@ -702,16 +790,28 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
             <CardContent className="p-4">
               <div className="text-sm text-white leading-relaxed font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
                 <h3 className="text-base font-bold text-white mb-3">
-                  Como Gerar Vídeos com IA
+                  🎬 Como Gerar Vídeos com IA
                 </h3>
                 <ul className="space-y-2 text-sm text-gray-200">
                   <li className="flex items-start">
                     <span className="text-white mr-2">•</span>
-                    <span>Você pode gerar vídeos a partir de texto ou usando uma imagem de referência</span>
+                    <span><strong>Texto para vídeo:</strong> Descreva o movimento e a ação desejada no prompt para criar vídeos únicos a partir do zero</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-white mr-2">•</span>
-                    <span>Descreva o movimento e a ação desejada no prompt para criar vídeos únicos</span>
+                    <span><strong>Imagem inicial (opcional):</strong> Adicione uma imagem de referência para iniciar o vídeo a partir dessa imagem, criando animação e movimento</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-white mr-2">•</span>
+                    <span><strong>Imagem final (opcional):</strong> Quando usado junto com a imagem inicial, cria uma transição suave entre as duas imagens (interpolação), perfeito para transformações e morphing</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-white mr-2">•</span>
+                    <span><strong>Áudio:</strong> Gere vídeos com ou sem áudio sincronizado automaticamente com o movimento visual</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-white mr-2">•</span>
+                    <span><strong>Durações:</strong> Escolha entre 4s, 6s ou 8s de vídeo em alta qualidade (1080p)</span>
                   </li>
                 </ul>
                   </div>
@@ -730,14 +830,15 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                 </label>
                 <Select
                   value={formData.duration.toString()}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, duration: parseInt(value) as 5 | 10 }))}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, duration: parseInt(value) as 4 | 6 | 8 }))}
                 >
                 <SelectTrigger className="w-full bg-gray-200 border-gray-900 text-gray-900">
                     <SelectValue />
                   </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="5">5 segundos</SelectItem>
-                  <SelectItem value="10">10 segundos</SelectItem>
+                  <SelectItem value="4">4 segundos</SelectItem>
+                  <SelectItem value="6">6 segundos</SelectItem>
+                  <SelectItem value="8">8 segundos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -749,7 +850,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                 </label>
                 <Select
                   value={formData.aspectRatio}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, aspectRatio: value as '16:9' | '9:16' | '1:1' }))}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, aspectRatio: value as '16:9' | '9:16' }))}
                 >
                 <SelectTrigger className="w-full bg-gray-200 border-gray-900 text-gray-900">
                     <SelectValue />
@@ -757,10 +858,22 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                 <SelectContent>
                   <SelectItem value="16:9">16:9 (Paisagem)</SelectItem>
                   <SelectItem value="9:16">9:16 (Retrato)</SelectItem>
-                  <SelectItem value="1:1">1:1 (Quadrado)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+            {/* Generate Audio */}
+            <div>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.generateAudio !== false}
+                  onChange={(e) => setFormData(prev => ({ ...prev, generateAudio: e.target.checked }))}
+                  className="w-4 h-4 text-[#667EEA] bg-gray-200 border-gray-900 rounded focus:ring-[#667EEA] focus:ring-2"
+                />
+                <span className="text-sm font-medium text-gray-700">Gerar com áudio</span>
+              </label>
+            </div>
 
             {/* Quality Info */}
             <div className="pt-4 border-t border-gray-200">
@@ -834,12 +947,24 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                 className="flex-1 border border-gray-900 bg-white hover:border-[#667EEA] hover:bg-[#667EEA]/5 text-gray-900 rounded-lg px-4 py-3 text-sm font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               >
                 <ImageIcon className="w-3 h-3 mr-1.5" />
-                {uploadedImage ? 'Imagem adicionada' : 'Adicionar imagem'}
+                {uploadedImage ? 'Imagem inicial adicionada' : 'Adicionar imagem inicial'}
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => lastFrameInputRef.current?.click()}
+                disabled={loading}
+                className="flex-1 border border-gray-900 bg-white hover:border-[#667EEA] hover:bg-[#667EEA]/5 text-gray-900 rounded-lg px-4 py-3 text-sm font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+              >
+                <ImageIcon className="w-3 h-3 mr-1.5" />
+                {uploadedLastFrame ? 'Última imagem adicionada' : 'Adicionar última imagem'}
+              </Button>
+            </div>
+            <div className="flex flex-row items-center gap-2">
             <Button
               onClick={handleSubmit}
                 disabled={!canProcess}
-                className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white px-6 py-3 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white px-6 py-3 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
             >
               {loading ? (
                 <>
@@ -860,13 +985,21 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
               onChange={handleImageUpload}
               className="hidden"
             />
+            <input
+              ref={lastFrameInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleLastFrameUpload}
+              className="hidden"
+            />
 
-            {/* Uploaded Image Preview */}
+            {/* Uploaded Images Preview */}
+            <div className="flex gap-3">
             {uploadedImage && (
               <div className="relative inline-block">
                 <img
                   src={uploadedImage}
-                  alt="Uploaded"
+                  alt="Imagem inicial"
                   className="w-24 h-24 object-cover rounded-lg border-2 border-gray-300"
                 />
                 <button
@@ -875,8 +1008,26 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                 >
                   <X className="w-3 h-3" />
                 </button>
+                <p className="text-xs text-gray-600 text-center mt-1">Inicial</p>
           </div>
             )}
+            {uploadedLastFrame && (
+              <div className="relative inline-block">
+                <img
+                  src={uploadedLastFrame}
+                  alt="Última imagem"
+                  className="w-24 h-24 object-cover rounded-lg border-2 border-gray-300"
+                />
+                <button
+                  onClick={removeLastFrame}
+                  className="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-sm"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+                <p className="text-xs text-gray-600 text-center mt-1">Final</p>
+              </div>
+            )}
+            </div>
 
             {/* Error Display */}
           {errors.length > 0 && (
