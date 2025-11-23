@@ -421,30 +421,37 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
                       errorMessage
                     })
                     
-                    // Set user-friendly error message
-                    let userError = 'Erro ao carregar vídeo.'
-                    if (errorCode === 4) {
-                      userError = 'Vídeo não encontrado ou URL expirada.'
-                    } else if (errorCode === 3) {
-                      userError = 'Formato de vídeo não suportado.'
-                    } else if (errorCode === 2) {
-                      userError = 'Erro de rede ao carregar vídeo.'
+                    // Só mostra erro se for um erro real (não erro temporário de carregamento)
+                    // Error code 4 = MEDIA_ELEMENT_ERROR: Media loading aborted
+                    if (errorCode && errorCode !== 1) {
+                      let userError = 'Erro ao carregar vídeo.'
+                      if (errorCode === 4) {
+                        userError = 'Vídeo não encontrado ou URL expirada.'
+                      } else if (errorCode === 3) {
+                        userError = 'Formato de vídeo não suportado.'
+                      } else if (errorCode === 2) {
+                        userError = 'Erro de rede ao carregar vídeo.'
+                      }
+                      setVideoError(userError)
                     }
-                    setVideoError(userError)
                   }}
-                  onLoadStart={() => console.log('🎬 [VIDEO_MODAL] Starting to load video:', video.videoUrl?.substring(0, 100))}
-                  onCanPlay={() => console.log('✅ [VIDEO_MODAL] Video can play')}
+                  onLoadStart={() => {
+                    console.log('🎬 [VIDEO_MODAL] Starting to load video:', video.videoUrl?.substring(0, 100))
+                    // Limpa erro anterior ao tentar carregar novamente
+                    setVideoError(null)
+                  }}
+                  onCanPlay={() => {
+                    console.log('✅ [VIDEO_MODAL] Video can play')
+                    // Limpa erro quando conseguir reproduzir
+                    setVideoError(null)
+                  }}
                   onLoadedMetadata={() => console.log('✅ [VIDEO_MODAL] Video metadata loaded')}
                   preload="metadata"
                   controls={false}
                   muted={isMuted}
-                  playsInline
                   disablePictureInPicture
                   disableRemotePlayback
-                >
-                  <source src={video.videoUrl} type="video/mp4" />
-                  Seu navegador não suporta reprodução de vídeo.
-                </video>
+                />
                 
                 {/* Overlay de loading */}
                 {(!duration || duration === 0) && !videoError && (

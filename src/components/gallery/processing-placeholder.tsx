@@ -48,27 +48,6 @@ export function ProcessingPlaceholder({
               </p>
             </div>
 
-            {/* Progress bar */}
-            {progress > 0 && (
-              <div className="w-full max-w-[120px]">
-                <div className="w-full bg-gray-200 rounded-full h-1.5">
-                  <div
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 h-1.5 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(progress, 100)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 text-center mt-1">
-                  {Math.min(progress, 100)}%
-                </p>
-              </div>
-            )}
-
-            {/* Prompt preview */}
-            {prompt && (
-              <p className="text-xs text-gray-500 line-clamp-2 text-center max-w-full">
-                {prompt}
-              </p>
-            )}
           </div>
         </div>
       </CardContent>

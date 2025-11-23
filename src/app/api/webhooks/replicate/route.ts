@@ -554,6 +554,14 @@ async function processGenerationWebhook(payload: WebhookPayload, generation: any
           updateData.thumbnailUrls = storageResult.thumbnailUrls
           updateData.errorMessage = null
           
+          // Limpar gerações duplicadas em PROCESSING (bug fix)
+          try {
+            const { cleanupDuplicateProcessing } = await import('@/lib/db/cleanup-duplicates')
+            await cleanupDuplicateProcessing(generation.userId, generation.id)
+          } catch (cleanupError) {
+            console.error('⚠️ Failed to cleanup duplicates (non-critical):', cleanupError)
+          }
+          
           // Salvar contexto de operação no banco
           if (storageResult.context) {
             updateData.operationType = storageResult.context.operationType
