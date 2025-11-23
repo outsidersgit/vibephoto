@@ -1136,6 +1136,8 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
               }
             })
 
+            let finalGenerationId: string
+            
             if (existingPlaceholder) {
               console.log(`🔄 Updating existing placeholder generation: ${existingPlaceholder.id}`)
               await prisma.generation.update({
@@ -1157,9 +1159,10 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
                   completedAt: new Date()
                 }
               })
+              finalGenerationId = existingPlaceholder.id
             } else {
               console.log(`⚠️ No placeholder found, creating new generation record`)
-              await prisma.generation.create({
+              const newGeneration = await prisma.generation.create({
                 data: {
                   userId: editHistory.userId,
                   modelId: editHistory.metadata?.defaultModelId || null,
@@ -1182,6 +1185,16 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
                   completedAt: new Date()
                 }
               })
+              finalGenerationId = newGeneration.id
+            }
+            
+            // 🧹 CRITICAL: Cleanup any duplicate PROCESSING generations
+            // This can happen if there are race conditions or multiple requests
+            try {
+              const { cleanupDuplicateProcessing } = await import('@/lib/db/cleanup-duplicates')
+              await cleanupDuplicateProcessing(editHistory.userId, finalGenerationId)
+            } catch (cleanupError) {
+              console.error('⚠️ Failed to cleanup duplicates (non-critical):', cleanupError)
             }
             
             // Broadcast completion - use editHistoryId as generationId for SSE compatibility
