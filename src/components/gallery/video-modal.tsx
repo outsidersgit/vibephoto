@@ -73,9 +73,12 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [videoError, setVideoError] = useState<string | null>(null)
-  const [videoSrc, setVideoSrc] = useState<string>(video.videoUrl || '')
-  const [isUsingProxy, setIsUsingProxy] = useState(false)
-  const [triedProxy, setTriedProxy] = useState(false)
+  // SEMPRE usar proxy para evitar erro CORS até CloudFront estar configurado
+  const [videoSrc, setVideoSrc] = useState<string>(
+    video.id ? `/api/videos/${video.id}/stream` : (video.videoUrl || '')
+  )
+  const [isUsingProxy, setIsUsingProxy] = useState(true)
+  const [triedProxy, setTriedProxy] = useState(true)
 
   useEffect(() => {
     const videoElement = videoRef.current
