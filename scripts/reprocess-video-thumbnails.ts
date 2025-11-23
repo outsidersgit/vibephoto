@@ -18,6 +18,13 @@
  * - --force: Reprocessa todas as thumbnails, independente do tamanho
  */
 
+// Load environment variables from .env file
+import { config } from 'dotenv'
+import { resolve } from 'path'
+
+// Load .env from project root
+config({ path: resolve(__dirname, '../.env') })
+
 import { prisma } from '../src/lib/db'
 import { extractFirstFrame } from '../src/lib/video/extract-frame'
 import { VideoStatus } from '@prisma/client'
