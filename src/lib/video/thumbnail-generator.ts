@@ -1,5 +1,6 @@
 import sharp from 'sharp'
 import { getStorageProvider } from '../storage/utils'
+import { prisma } from '@/lib/db'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
@@ -41,12 +42,22 @@ export async function generateVideoThumbnail(
       }
     }
 
-    // Strategy 3: No thumbnail for now (better than fake SVG placeholder)
-    // Frontend will show video player or generic video icon
-    console.log('⚠️ No thumbnail available - frontend will handle video display')
+    // Strategy 3: Use sourceImageUrl as fallback if available
+    // Check if this video has a sourceImageUrl in the database
+    const fallbackThumbnail = await tryUseSourceImageAsThumbnail(videoGenId)
+    if (fallbackThumbnail) {
+      console.log(`✅ Using source image as thumbnail fallback: ${fallbackThumbnail}`)
+      return {
+        success: true,
+        thumbnailUrl: fallbackThumbnail
+      }
+    }
+
+    // Strategy 4: No thumbnail available (frontend will show video icon)
+    console.warn('⚠️ [THUMBNAIL] No thumbnail available - FFmpeg not available, no existing thumbnail found, and no source image')
     return {
-      success: true,
-      thumbnailUrl: undefined // No thumbnail - let frontend handle it
+      success: false,
+      error: 'No thumbnail available: FFmpeg not available in serverless environment and no fallback image found'
     }
 
   } catch (error) {
@@ -175,6 +186,30 @@ async function tryReplicateThumbnail(videoUrl: string): Promise<string | null> {
   }
 }
 
+
+/**
+ * Try using the source image URL as a thumbnail fallback
+ * This is particularly useful when FFmpeg is not available (e.g., Vercel serverless)
+ */
+async function tryUseSourceImageAsThumbnail(videoGenId: string): Promise<string | null> {
+  try {
+    const video = await prisma.videoGeneration.findUnique({
+      where: { id: videoGenId },
+      select: { sourceImageUrl: true }
+    })
+
+    if (video?.sourceImageUrl) {
+      console.log(`✅ [THUMBNAIL_FALLBACK] Found source image for video ${videoGenId}: ${video.sourceImageUrl}`)
+      return video.sourceImageUrl
+    }
+
+    console.log(`⚠️ [THUMBNAIL_FALLBACK] No source image available for video ${videoGenId}`)
+    return null
+  } catch (error) {
+    console.error('❌ [THUMBNAIL_FALLBACK] Error fetching source image:', error)
+    return null
+  }
+}
 
 /**
  * Try using Cloudinary or similar service to extract frame

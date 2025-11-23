@@ -383,12 +383,20 @@ export class KlingVideoProvider {
 
   /**
    * Get estimated processing time
+   * @param duration - Video duration in seconds (4, 6, or 8)
+   * @param quality - Quality setting (maps to resolution: 'standard' = 720p, 'pro' = 1080p)
    */
   private getEstimatedTime(duration: number, quality: string): number {
-    const qualityKey = quality === 'pro' ? 'pro' : 'standard'
-    const durationKey = duration === 10 ? 10 : 5
+    // 🔒 CRITICAL FIX: Map quality to resolution (VIDEO_CONFIG uses resolution keys, not quality)
+    // quality='standard' → '720p', quality='pro' → '1080p'
+    const resolutionKey = quality === 'pro' ? '1080p' : '720p'
     
-    return VIDEO_CONFIG.estimatedTimes[qualityKey][durationKey as keyof typeof VIDEO_CONFIG.estimatedTimes[typeof qualityKey]]
+    // Ensure duration is valid (4, 6, or 8), fallback to 8
+    const validDuration = [4, 6, 8].includes(duration) ? duration : 8
+    
+    // Safely access estimatedTimes with proper type casting
+    const times = VIDEO_CONFIG.estimatedTimes[resolutionKey as '720p' | '1080p']
+    return times[validDuration as 4 | 6 | 8]
   }
 
   /**

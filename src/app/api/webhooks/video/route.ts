@@ -585,9 +585,33 @@ export async function POST(request: NextRequest) {
             console.error(`❌ [WEBHOOK_VIDEO] Video URL was: ${videoUrl}`)
             console.error(`❌ [WEBHOOK_VIDEO] User ID: ${userId}, Video ID: ${updatedVideo.id}`)
             
-            // CRITICAL: Even if storage fails, we should still try to update the database with the temporary URL
-            // This allows the frontend to at least show the video from Replicate while we investigate storage issues
-            console.log(`⚠️ [WEBHOOK_VIDEO] Storage failed, but will still update database with temporary URL for frontend preview`)
+            // 🔒 CRITICAL: If storage failed, mark video as FAILED in database
+            // DO NOT save temporary Replicate URLs - they expire and create confusion
+            console.error(`⚠️ [WEBHOOK_VIDEO] Storage failed - marking video as FAILED in database`)
+            
+            await prisma.videoGeneration.update({
+              where: { id: updatedVideo.id },
+              data: {
+                status: 'FAILED',
+                errorMessage: `Storage failed: ${errorMsg}`,
+                metadata: {
+                  ...((updatedVideo.metadata as any) || {}),
+                  storageError: errorMsg,
+                  storageFailed: true,
+                  temporaryVideoUrl: videoUrl,
+                  failedAt: new Date().toISOString()
+                }
+              }
+            })
+            
+            // Return error response - video generation failed
+            return NextResponse.json({
+              success: false,
+              videoId: updatedVideo.id,
+              status: 'FAILED',
+              error: `Storage failed: ${errorMsg}`,
+              message: 'Video generation completed but storage failed'
+            })
           }
 
           // Generate thumbnail from video AFTER video is stored
@@ -612,10 +636,13 @@ export async function POST(request: NextRequest) {
             logger.successStage('GENERATE_THUMBNAIL', 'Thumbnail gerado com sucesso', updatedVideo.id, jobId, {
               thumbnailUrl: finalThumbnailUrl.substring(0, 100) + '...'
             })
+            console.log(`✅ [WEBHOOK_VIDEO] Thumbnail generated: ${finalThumbnailUrl}`)
           } else {
             logger.warningStage('GENERATE_THUMBNAIL', 'Falha ao gerar thumbnail (opcional)', updatedVideo.id, jobId, {
               error: thumbnailResult.error
             })
+            console.warn(`⚠️ [WEBHOOK_VIDEO] Thumbnail generation failed: ${thumbnailResult.error || 'Unknown error'}`)
+            console.warn(`⚠️ [WEBHOOK_VIDEO] Frontend will use sourceImageUrl or video icon as fallback`)
             // Thumbnail is optional, continue without it
           }
 

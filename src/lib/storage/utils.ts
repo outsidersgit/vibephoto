@@ -416,31 +416,53 @@ export async function downloadAndStoreVideo(
   try {
     const storage = getStorageProvider()
 
-    console.log(`📥 Starting download of video for generation ${videoGenId}`)
+    console.log(`📥 [DOWNLOAD_VIDEO] Starting download for generation ${videoGenId}`)
+    console.log(`📥 [DOWNLOAD_VIDEO] Video URL: ${videoUrl.substring(0, 100)}...`)
 
     // Download the video with timeout
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 120000) // 2 minute timeout for videos
 
-    const response = await fetch(videoUrl, {
-      headers: {
-        'User-Agent': 'VibePhoto/1.0',
-      },
-      signal: controller.signal
-    })
+    let response
+    try {
+      response = await fetch(videoUrl, {
+        headers: {
+          'User-Agent': 'VibePhoto/1.0',
+        },
+        signal: controller.signal
+      })
 
-    clearTimeout(timeoutId)
-
-    if (!response.ok) {
-      throw new Error(`Failed to download video: ${response.status} ${response.statusText}`)
+      clearTimeout(timeoutId)
+    } catch (fetchError) {
+      clearTimeout(timeoutId)
+      const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError)
+      console.error(`❌ [DOWNLOAD_VIDEO] Fetch failed: ${errorMsg}`)
+      throw new Error(`Failed to fetch video: ${errorMsg}`)
     }
 
-    const videoBuffer = Buffer.from(await response.arrayBuffer())
+    if (!response.ok) {
+      const errorMsg = `HTTP ${response.status}: ${response.statusText}`
+      console.error(`❌ [DOWNLOAD_VIDEO] Download failed: ${errorMsg}`)
+      throw new Error(`Failed to download video: ${errorMsg}`)
+    }
+
+    console.log(`✅ [DOWNLOAD_VIDEO] Download successful (${response.status}), content-type: ${response.headers.get('content-type')}`)
+
+    let videoBuffer
+    try {
+      videoBuffer = Buffer.from(await response.arrayBuffer())
+      console.log(`✅ [DOWNLOAD_VIDEO] Buffer created, size: ${(videoBuffer.length / 1024 / 1024).toFixed(2)} MB`)
+    } catch (bufferError) {
+      const errorMsg = bufferError instanceof Error ? bufferError.message : String(bufferError)
+      console.error(`❌ [DOWNLOAD_VIDEO] Failed to create buffer: ${errorMsg}`)
+      throw new Error(`Failed to process video data: ${errorMsg}`)
+    }
+
     const contentType = response.headers.get('content-type') || 'video/mp4'
 
     // Ensure we're working with a video content type
     if (!contentType.startsWith('video/')) {
-      console.warn(`Unexpected content type for video: ${contentType}, forcing to video/mp4`)
+      console.warn(`⚠️ [DOWNLOAD_VIDEO] Unexpected content type: ${contentType}, forcing to video/mp4`)
     }
 
     // Use new standardized structure: generated/{userId}/videos/uniqueFilename.mp4
@@ -448,7 +470,7 @@ export async function downloadAndStoreVideo(
     const videoKey = buildS3Key(userId, 'videos', videoFilename)
 
     // Upload video using standardized method
-    console.log(`☁️ Uploading video to ${videoKey}`)
+    console.log(`☁️ [UPLOAD_VIDEO] Uploading to ${videoKey}`)
     let uploadResult: UploadResult
 
     if (storage instanceof AWSS3Provider) {
@@ -476,7 +498,11 @@ export async function downloadAndStoreVideo(
       )
     }
 
-    console.log(`✅ Video uploaded successfully: ${uploadResult.url}`)
+    if (!uploadResult || !uploadResult.url) {
+      throw new Error('Upload failed: No URL returned from storage provider')
+    }
+
+    console.log(`✅ [UPLOAD_VIDEO] Video uploaded successfully: ${uploadResult.url.substring(0, 100)}...`)
 
     return {
       success: true,
@@ -487,10 +513,19 @@ export async function downloadAndStoreVideo(
     }
 
   } catch (error) {
-    console.error('❌ Error in downloadAndStoreVideo:', error)
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred'
+    console.error('❌ [DOWNLOAD_AND_STORE_VIDEO] Critical error:', errorMsg)
+    console.error('❌ [DOWNLOAD_AND_STORE_VIDEO] Error details:', {
+      videoUrl: videoUrl?.substring(0, 100) + '...',
+      videoGenId,
+      userId,
+      error: errorMsg,
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
+      error: errorMsg
     }
   }
 }
