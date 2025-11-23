@@ -237,6 +237,10 @@ export function VideoGallery({
                           alt="Video thumbnail"
                           className="w-full h-full object-cover"
                           loading="lazy"
+                          decoding="async"
+                          width={480}
+                          height={270}
+                          sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                         />
                       ) : video.sourceImageUrl ? (
                         // Usar sourceImageUrl como poster - vídeo completo só carrega no modal
@@ -245,6 +249,10 @@ export function VideoGallery({
                           alt="Video poster"
                           className="w-full h-full object-cover"
                           loading="lazy"
+                          decoding="async"
+                          width={480}
+                          height={270}
+                          sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                         />
                       ) : (
                         // Placeholder genérico quando não há thumbnail nem imagem de origem
@@ -260,6 +268,10 @@ export function VideoGallery({
                         alt="Source image"
                         className="w-full h-full object-cover opacity-50"
                         loading="lazy"
+                        decoding="async"
+                        width={480}
+                        height={270}
+                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                       />
                     ) : (
                       // Show placeholder for text-to-video with no source image

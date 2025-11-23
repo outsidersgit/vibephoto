@@ -142,7 +142,7 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
       setIsPlaying(false)
       console.log('⏸️ [VIDEO_MODAL] Video paused')
     } else {
-      // Tentar reproduzir - agora de forma simplificada
+      // Reproduzir - STREAMING SEM PRÉ-CARREGAMENTO COMPLETO
       try {
         console.log('▶️ [VIDEO_MODAL] Attempting to play video...')
         console.log('📊 [VIDEO_MODAL] Video state:', {
@@ -153,39 +153,15 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
           src: videoElement.src?.substring(0, 100)
         })
         
-        // CRÍTICO: Forçar preload para garantir que há dados suficientes
-        if (videoElement.readyState < 2) {
-          console.log('⏳ [VIDEO_MODAL] Video not ready, setting preload=auto and loading...')
-          videoElement.preload = 'auto'
-          videoElement.load()
-          
-          // Aguardar dados suficientes
-          await new Promise<void>((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Load timeout')), 10000)
-            const onCanPlay = () => {
-              clearTimeout(timeout)
-              videoElement.removeEventListener('canplay', onCanPlay)
-              videoElement.removeEventListener('error', onError)
-              resolve()
-            }
-            const onError = (e: Event) => {
-              clearTimeout(timeout)
-              videoElement.removeEventListener('canplay', onCanPlay)
-              videoElement.removeEventListener('error', onError)
-              reject(new Error('Video load error'))
-            }
-            videoElement.addEventListener('canplay', onCanPlay)
-            videoElement.addEventListener('error', onError)
-          })
-        }
-        
-        // Agora tentar reproduzir
+        // ✅ CORREÇÃO: NÃO forçar preload=auto nem load() completo
+        // Deixar o browser fazer streaming progressivo
+        // Apenas tentar reproduzir diretamente - browser busca dados conforme necessário
         const playPromise = videoElement.play()
         
         if (playPromise !== undefined) {
           await playPromise
           setIsPlaying(true)
-          console.log('✅ [VIDEO_MODAL] Video playing successfully')
+          console.log('✅ [VIDEO_MODAL] Video playing successfully (streaming mode)')
         }
       } catch (err: any) {
         console.error('❌ [VIDEO_MODAL] Error playing video:', err)
@@ -527,7 +503,7 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
                     setVideoError(null)
                   }}
                   onLoadedMetadata={() => console.log('✅ [VIDEO_MODAL] Video metadata loaded', `(using proxy: ${isUsingProxy})`)}
-                  preload="metadata"
+                  preload="none"
                   controls={false}
                   muted={isMuted}
                   disablePictureInPicture
