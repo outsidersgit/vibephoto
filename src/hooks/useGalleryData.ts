@@ -74,8 +74,10 @@ export function useGalleryData(filters: GalleryFilters, placeholderData?: Galler
     refetchOnWindowFocus: true,
     // CRITICAL: Refetch quando reconectar à internet
     refetchOnReconnect: true,
-    // Não refetch automaticamente ao montar se já temos dados frescos
-    refetchOnMount: 'always', // Mas refetch sempre ao montar para garantir sincronização
+    // 🚀 OTIMIZAÇÃO: Não refetch se dados são frescos (< staleTime)
+    // SSE e polling já garantem sincronização em tempo real
+    // Isso evita refetch desnecessário ao trocar entre tabs
+    refetchOnMount: false,
   })
 }
 

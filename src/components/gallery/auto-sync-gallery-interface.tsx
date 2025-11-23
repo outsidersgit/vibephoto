@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, useTransition } from 'react'
+import { useState, useEffect, useCallback, useRef, useTransition, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import dynamic from 'next/dynamic'
@@ -1362,16 +1362,15 @@ export function AutoSyncGalleryInterface({
     startDirectUpscale(imageUrl, scaleFactor, objectDetection, generation)
   }
 
-  // Filter generations based on active tab and status
-  const filteredGenerations = (() => {
-    let tabData = []
-
+  // 🚀 OTIMIZAÇÃO: Memoize filteredGenerations para evitar re-processamento
+  // Só recalcula quando activeTab, generations, videos ou favoriteImages mudarem
+  const filteredGenerations = useMemo(() => {
+    // Se estamos na tab de vídeos, não processar generations
     if (activeTab === 'videos') {
-      tabData = videos
-    } else {
-      // For 'generated' tab, show all photos (normal, editor, packages)
-      tabData = generations
+      return []
     }
+
+    let tabData = generations
 
     // Apply favorites filter
     if (showFavoritesOnly) {
@@ -1388,7 +1387,7 @@ export function AutoSyncGalleryInterface({
     }
 
     return tabData
-  })()
+  }, [activeTab, generations, showFavoritesOnly, favoriteImages])
 
   const isFavoritesFilterActive = showFavoritesOnly
   const hasAnyFavoriteImages = favoriteImages.length > 0
