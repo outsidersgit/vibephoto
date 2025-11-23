@@ -136,63 +136,60 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
 
   const togglePlay = async () => {
     const videoElement = videoRef.current
-    if (!videoElement) return
+    if (!videoElement) {
+      console.error('❌ [VIDEO_MODAL] togglePlay: videoElement is null')
+      return
+    }
+
+    console.log('🎬 [VIDEO_MODAL] togglePlay called, isPlaying:', isPlaying, 'readyState:', videoElement.readyState)
 
     if (isPlaying) {
+      console.log('⏸️ [VIDEO_MODAL] Pausing video')
       videoElement.pause()
       setIsPlaying(false)
     } else {
-      // IMPORTANTE: Configurar para streaming progressivo ANTES de qualquer carregamento
-      videoElement.preload = 'none'
-      videoElement.setAttribute('preload', 'none')
-      
-      // Garantir que não há src configurado até agora (evita carregamento automático)
-      // O navegador fará HTTP Range Requests automaticamente quando necessário
-      // Isso permite streaming progressivo - carrega apenas chunks necessários
-      
       try {
-        // Tentar reproduzir - o navegador automaticamente fará range requests progressivos
-        // Não carrega tudo de uma vez quando preload="none"
+        console.log('▶️ [VIDEO_MODAL] Attempting to play video...')
+        console.log('📊 [VIDEO_MODAL] Video state:', {
+          readyState: videoElement.readyState,
+          networkState: videoElement.networkState,
+          currentTime: videoElement.currentTime,
+          duration: videoElement.duration,
+          paused: videoElement.paused,
+          ended: videoElement.ended
+        })
         
-        // Se não tem dados suficientes, esperar canplay primeiro
-        if (videoElement.readyState < 2) {
-          // Não tem dados suficientes, carregar primeiro
-          const playOnCanPlay = () => {
-            if (videoElement.readyState >= 2) {
-              videoElement.play()
-                .then(() => setIsPlaying(true))
-                .catch(e => {
-                  console.error('Erro ao reproduzir vídeo após canplay:', e)
-                  // Tentar novamente após loadeddata
-                  videoElement.addEventListener('loadeddata', () => {
-                    videoElement.play()
-                      .then(() => setIsPlaying(true))
-                      .catch(err => console.error('Erro ao reproduzir vídeo após loadeddata:', err))
-                  }, { once: true })
-                })
+        await videoElement.play()
+        console.log('✅ [VIDEO_MODAL] Video playing successfully')
+        setIsPlaying(true)
+      } catch (err: any) {
+        console.error('❌ [VIDEO_MODAL] Error playing video:', err)
+        console.error('❌ [VIDEO_MODAL] Error details:', {
+          name: err.name,
+          message: err.message,
+          readyState: videoElement.readyState,
+          networkState: videoElement.networkState
+        })
+        
+        // Tentar novamente após carregar mais dados
+        if (videoElement.readyState < 3) {
+          console.log('⏳ [VIDEO_MODAL] Video not ready (readyState < 3), waiting for canplaythrough event...')
+          const playOnReady = async () => {
+            try {
+              console.log('🔄 [VIDEO_MODAL] canplaythrough event fired, trying to play again...')
+              await videoElement.play()
+              console.log('✅ [VIDEO_MODAL] Video playing after canplaythrough')
+              setIsPlaying(true)
+            } catch (e) {
+              console.error('❌ [VIDEO_MODAL] Failed to play after canplaythrough:', e)
             }
-            videoElement.removeEventListener('canplay', playOnCanPlay)
           }
           
-          videoElement.addEventListener('canplay', playOnCanPlay, { once: true })
-          videoElement.load() // Inicia carregamento
-        } else {
-          // Já tem dados suficientes, reproduzir direto
-          await videoElement.play()
-          setIsPlaying(true)
+          videoElement.addEventListener('canplaythrough', playOnReady, { once: true })
+          
+          // Também tentar em canplay se canplaythrough demorar
+          videoElement.addEventListener('canplay', playOnReady, { once: true })
         }
-      } catch (err: any) {
-        console.error('Erro ao iniciar reprodução:', err)
-        // Se play() falhou, tentar novamente após carregar
-        const playOnLoadedData = () => {
-      videoElement.play()
-            .then(() => setIsPlaying(true))
-            .catch(e => console.error('Erro ao reproduzir vídeo após loadeddata:', e))
-          videoElement.removeEventListener('loadeddata', playOnLoadedData)
-        }
-        
-        videoElement.addEventListener('loadeddata', playOnLoadedData, { once: true })
-        videoElement.load()
       }
     }
   }
