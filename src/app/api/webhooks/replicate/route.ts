@@ -1123,29 +1123,66 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
               }
             })
             
-            // Also create generation record for gallery (créditos já foram deduzidos na criação do edit_history)
-            await prisma.generation.create({
-              data: {
+            // Update existing placeholder generation (if exists) or create new one
+            // CRITICAL: Avoid duplicates by updating the placeholder created during request
+            const existingPlaceholder = await prisma.generation.findFirst({
+              where: {
                 userId: editHistory.userId,
-                modelId: editHistory.metadata?.defaultModelId || null,
-                prompt: editHistory.prompt,
-                imageUrls: [permanentUrl],
-                thumbnailUrls: [thumbnailUrl],
-                status: 'COMPLETED',
-                jobId: payload.id,
-                operationType: 'edit',
+                status: 'PROCESSING',
                 metadata: {
-                  source: 'editor',
-                  editHistoryId: editHistory.id,
-                  operation: editHistory.operation,
-                  webhook: true,
-                  cost: 15
-                },
-                estimatedCost: 15, // Custo de edições via editor
-                aiProvider: 'hybrid',
-                completedAt: new Date()
+                  path: ['editHistoryId'],
+                  equals: editHistory.id
+                }
               }
             })
+
+            if (existingPlaceholder) {
+              console.log(`🔄 Updating existing placeholder generation: ${existingPlaceholder.id}`)
+              await prisma.generation.update({
+                where: { id: existingPlaceholder.id },
+                data: {
+                  imageUrls: [permanentUrl],
+                  thumbnailUrls: [thumbnailUrl],
+                  status: 'COMPLETED',
+                  jobId: payload.id,
+                  operationType: 'edit',
+                  metadata: {
+                    source: 'editor',
+                    editHistoryId: editHistory.id,
+                    operation: editHistory.operation,
+                    webhook: true,
+                    cost: 15,
+                    processedVia: 'webhook'
+                  },
+                  completedAt: new Date()
+                }
+              })
+            } else {
+              console.log(`⚠️ No placeholder found, creating new generation record`)
+              await prisma.generation.create({
+                data: {
+                  userId: editHistory.userId,
+                  modelId: editHistory.metadata?.defaultModelId || null,
+                  prompt: editHistory.prompt,
+                  imageUrls: [permanentUrl],
+                  thumbnailUrls: [thumbnailUrl],
+                  status: 'COMPLETED',
+                  jobId: payload.id,
+                  operationType: 'edit',
+                  metadata: {
+                    source: 'editor',
+                    editHistoryId: editHistory.id,
+                    operation: editHistory.operation,
+                    webhook: true,
+                    cost: 15,
+                    processedVia: 'webhook'
+                  },
+                  estimatedCost: 15,
+                  aiProvider: 'hybrid',
+                  completedAt: new Date()
+                }
+              })
+            }
             
             // Broadcast completion - use editHistoryId as generationId for SSE compatibility
             const { broadcastGenerationStatusChange } = await import('@/lib/services/realtime-service')

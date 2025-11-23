@@ -1552,35 +1552,6 @@ export function AutoSyncGalleryInterface({
         </Button>
       </div>
 
-      {/* Processing Status Alert */}
-      {generations.some(g => g.status === 'PROCESSING') && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center space-x-3">
-            <div className="flex-shrink-0">
-              <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-medium text-blue-800">
-                Gerações em Processamento
-              </h3>
-              <p className="text-sm text-blue-700">
-                {generations.filter(g => g.status === 'PROCESSING').length} imagem(ns) sendo processada(s). 
-                As imagens aparecerão aqui quando ficarem prontas.
-              </p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline" 
-              onClick={() => refreshGalleryData(true)}
-              disabled={isRefreshing}
-              className="border-blue-300 text-blue-700 hover:bg-blue-100"
-            >
-              <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Verificar
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Clean Tabs with Underline */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
