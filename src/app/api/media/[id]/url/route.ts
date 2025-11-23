@@ -6,6 +6,15 @@ import { getStorageProvider } from '@/lib/storage/utils'
 import { parseStorageKey, isConsistentKey, convertLegacyKey, buildKey } from '@/lib/storage/path-utils'
 import { getSignedUrlS3 } from '@/lib/storage/s3-helpers'
 
+// Helper para adicionar headers CORS
+function addCorsHeaders(response: NextResponse) {
+  response.headers.set('Access-Control-Allow-Origin', '*')
+  response.headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS')
+  response.headers.set('Access-Control-Allow-Headers', '*')
+  response.headers.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range')
+  return response
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -17,7 +26,7 @@ export async function GET(
     const internalAuth = authHeader?.startsWith('Bearer ') && authHeader.split(' ')[1]
 
     if (!session?.user && !internalAuth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return addCorsHeaders(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
     }
 
     const userId = session?.user?.id || internalAuth
@@ -68,20 +77,20 @@ export async function GET(
     }
 
     if (!mediaItem) {
-      return NextResponse.json({ error: 'Media not found' }, { status: 404 })
+      return addCorsHeaders(NextResponse.json({ error: 'Media not found' }, { status: 404 }))
     }
 
     // Check if user owns this media
     if (mediaItem.userId !== userId) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+      return addCorsHeaders(NextResponse.json({ error: 'Access denied' }, { status: 403 }))
     }
 
     // Check if media is ready
     if (mediaItem.status !== 'COMPLETED') {
-      return NextResponse.json({ 
+      return addCorsHeaders(NextResponse.json({ 
         error: 'Media not ready',
         status: mediaItem.status 
-      }, { status: 422 })
+      }, { status: 422 }))
     }
 
     // Generate signed URLs from s3_keys stored in metadata
@@ -139,14 +148,14 @@ export async function GET(
 
       // If we successfully generated signed URLs, return them
       if (signedUrls.length > 0) {
-        return NextResponse.json({
+        return addCorsHeaders(NextResponse.json({
           id: mediaItem.id,
           urls: signedUrls,
           thumbnailUrls: thumbnailUrls.length > 0 ? thumbnailUrls : signedUrls,
           isVideo,
           source: 'signed_urls',
           storageProvider: metadata?.storageProvider || 'aws'
-        })
+        }))
       }
 
     } catch (error) {
@@ -158,52 +167,52 @@ export async function GET(
 
     // Check for temporary URLs first (from storage failures)
     if (metadata?.temporaryUrls && Array.isArray(metadata.temporaryUrls)) {
-      return NextResponse.json({
+      return addCorsHeaders(NextResponse.json({
         id: mediaItem.id,
         urls: metadata.temporaryUrls,
         thumbnailUrls: metadata.temporaryUrls,
         isVideo,
         source: 'temporary_urls',
         warning: 'These URLs may expire soon due to storage error'
-      })
+      }))
     }
 
     if (isVideo && metadata?.temporaryVideoUrl) {
-      return NextResponse.json({
+      return addCorsHeaders(NextResponse.json({
         id: mediaItem.id,
         urls: [metadata.temporaryVideoUrl],
         thumbnailUrls: [],
         isVideo,
         source: 'temporary_url',
         warning: 'This URL may expire soon due to storage error'
-      })
+      }))
     }
 
     // Final fallback: return stored URLs directly (legacy support)
     if (mediaItem.imageUrls && mediaItem.imageUrls.length > 0) {
-      return NextResponse.json({
+      return addCorsHeaders(NextResponse.json({
         id: mediaItem.id,
         urls: mediaItem.imageUrls,
         thumbnailUrls: mediaItem.thumbnailUrls || mediaItem.imageUrls,
         isVideo,
         source: 'legacy_urls',
         storageProvider: 'legacy'
-      })
+      }))
     }
 
     // No URLs available
-    return NextResponse.json({ 
+    return addCorsHeaders(NextResponse.json({ 
       error: 'No media URLs available',
       id: mediaItem.id,
       status: mediaItem.status
-    }, { status: 404 })
+    }, { status: 404 }))
 
   } catch (error) {
     console.error('Media URL API error:', error)
-    return NextResponse.json(
+    return addCorsHeaders(NextResponse.json(
       { error: 'Failed to retrieve media URL' },
       { status: 500 }
-    )
+    ))
   }
 }
 

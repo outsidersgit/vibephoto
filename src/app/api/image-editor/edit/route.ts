@@ -134,6 +134,33 @@ export async function POST(request: NextRequest) {
       
       console.log('✅ Edit history created for async processing:', editHistoryEntry.id)
 
+      // Also create a placeholder generation for gallery preview
+      const placeholderGeneration = await prisma.generation.create({
+        data: {
+          userId: session.user.id,
+          modelId: null,
+          prompt: image ? `[EDITOR] ${prompt}` : `[GERADO] ${prompt}`,
+          status: 'PROCESSING',
+          imageUrls: [],
+          thumbnailUrls: [],
+          aspectRatio: aspectRatioValue || '1:1',
+          resolution: '1024x1024',
+          estimatedCost: creditsNeeded,
+          operationType: 'edit',
+          aiProvider: 'nano-banana',
+          metadata: {
+            source: image ? 'editor' : 'editor_generate',
+            editHistoryId: editHistoryEntry.id,
+            replicateId: result.id,
+            generatedFromScratch: !image,
+            processingStartedAt: new Date().toISOString(),
+            webhookEnabled: true
+          }
+        }
+      })
+
+      console.log('✅ Placeholder generation created for gallery preview:', placeholderGeneration.id)
+
       const charge = await CreditManager.deductCredits(
         session.user.id,
         creditsNeeded,
@@ -296,7 +323,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Save to gallery automatically (create Generation record)
+    // Update placeholder generation with final results
     let generationRecord = null
     try {
       if (result.resultImage) {
@@ -308,14 +335,14 @@ export async function POST(request: NextRequest) {
           temporaryUrl: result.resultImage,
           permanentUrl: permanentImageUrl,
           cost: creditsNeeded,
-          originalImageUrl: originalImageUrl || (image ? 'uploaded-image' : 'generated-from-scratch')
+          originalImageUrl: originalImageUrl || (image ? 'uploaded-image' : 'generated-from-scratch'),
+          processingCompletedAt: new Date().toISOString()
         }
 
-        generationRecord = await prisma.generation.create({
+        // Update the placeholder generation to COMPLETED with final data
+        generationRecord = await prisma.generation.update({
+          where: { id: placeholderGeneration.id },
           data: {
-            userId: session.user.id,
-            modelId: null,
-            prompt: image ? `[EDITOR] ${prompt}` : `[GERADO] ${prompt}`,
             status: 'COMPLETED',
             imageUrls: [permanentImageUrl], // Use permanent S3 URL
             thumbnailUrls: [permanentThumbnailUrl], // Use permanent S3 URL
@@ -326,9 +353,6 @@ export async function POST(request: NextRequest) {
                aspectRatioValue === '3:4' ? '768x1024' :
                aspectRatioValue === '9:16' ? '720x1280' :
                aspectRatioValue === '16:9' ? '1280x720' : '1024x1024') : '1024x1024',
-            estimatedCost: creditsNeeded,
-            operationType: 'edit',
-            aiProvider: 'nano-banana',
             storageProvider: 'aws',
             storageContext: 'edited',
             metadata: generationMetadata
@@ -340,11 +364,11 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        console.log('✅ Generation record saved to gallery with permanent S3 URL:', generationRecord.id)
+        console.log('✅ Generation record updated to COMPLETED with permanent S3 URL:', generationRecord.id)
       }
     } catch (galleryError) {
-      console.error('❌ Failed to save generation to gallery:', galleryError)
-      // Don't fail the whole request if gallery save fails
+      console.error('❌ Failed to update generation in gallery:', galleryError)
+      // Don't fail the whole request if gallery update fails
     }
 
     return NextResponse.json({

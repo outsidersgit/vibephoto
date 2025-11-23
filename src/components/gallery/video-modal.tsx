@@ -20,7 +20,8 @@ import {
   ExternalLink,
   Heart,
   Eye,
-  Trash2
+  Trash2,
+  AlertCircle
 } from 'lucide-react'
 import { calculateOperationCost, getCostDescription } from '@/lib/utils/cost-calculator'
 

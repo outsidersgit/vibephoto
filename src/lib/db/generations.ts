@@ -19,6 +19,11 @@ export interface GenerationBatchParams {
    * - undefined => todas as gerações
    */
   includePackages?: boolean
+  /**
+   * Se true, inclui gerações em processamento (PROCESSING)
+   * Se false ou undefined, mostra apenas COMPLETED
+   */
+  includeProcessing?: boolean
 }
 
 export interface GenerationBatchResult {
@@ -37,14 +42,19 @@ export async function fetchGenerationBatch({
   packageId,
   searchQuery,
   sortBy = 'newest',
-  includePackages
+  includePackages,
+  includeProcessing = true
 }: GenerationBatchParams): Promise<GenerationBatchResult> {
   const page = Math.max(requestedPage ?? 1, 1)
   const skip = (page - 1) * limit
 
   const where: Prisma.GenerationWhereInput = {
     userId,
-    status: GenerationStatus.COMPLETED,
+    // Inclui PROCESSING se solicitado, caso contrário apenas COMPLETED
+    ...(includeProcessing 
+      ? { status: { in: [GenerationStatus.COMPLETED, GenerationStatus.PROCESSING] } }
+      : { status: GenerationStatus.COMPLETED }
+    ),
     ...(modelId && { modelId }),
     ...(packageId && { packageId }),
     ...(searchQuery && {
