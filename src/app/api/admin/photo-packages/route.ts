@@ -33,7 +33,8 @@ export async function POST(request: NextRequest) {
     prompts: z.array(z.object({
       text: z.string().min(1),
       style: z.string().optional(),
-      description: z.string().optional()
+      description: z.string().optional(),
+      seed: z.number().optional()
     })).default([]),
     previewUrls: z.array(z.string()).default([])
   })
@@ -66,7 +67,8 @@ export async function PUT(request: NextRequest) {
     prompts: z.array(z.object({
       text: z.string().min(1),
       style: z.string().optional(),
-      description: z.string().optional()
+      description: z.string().optional(),
+      seed: z.number().optional()
     })).optional(),
     previewUrls: z.array(z.string()).optional()
   })
