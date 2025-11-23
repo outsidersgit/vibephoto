@@ -73,6 +73,27 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [videoError, setVideoError] = useState<string | null>(null)
+  
+  // Detectar mudanças de fullscreen do navegador
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!document.fullscreenElement
+      setIsFullscreen(isCurrentlyFullscreen)
+      console.log(`📺 [VIDEO_MODAL] Fullscreen changed: ${isCurrentlyFullscreen}`)
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange)
+    document.addEventListener('msfullscreenchange', handleFullscreenChange)
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange)
+    }
+  }, [])
   // SEMPRE usar proxy para evitar erro CORS até CloudFront estar configurado
   const [videoSrc, setVideoSrc] = useState<string>(
     video.id ? `/api/videos/${video.id}/stream` : (video.videoUrl || '')
@@ -84,55 +105,27 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
     const videoElement = videoRef.current
     if (!videoElement) return
 
-    // Configurar para streaming progressivo - NUNCA carregar tudo de uma vez
-    // Usar 'metadata' para carregar apenas metadados (duração) mas não o vídeo completo
-    videoElement.preload = 'metadata'
-    videoElement.setAttribute('preload', 'metadata')
-
     const updateTime = () => setCurrentTime(videoElement.currentTime)
-    const updateDuration = () => {
-      setDuration(videoElement.duration)
-    }
-
-    // Carregar apenas metadados (duração) quando necessário
-    const handleLoadedMetadata = () => {
-      setDuration(videoElement.duration)
-    }
-
-    // Monitorar progresso sem carregar tudo
-    const handleProgress = () => {
-      // O navegador fará streaming progressivo automaticamente com preload="none"
-      // Não precisamos fazer nada aqui, apenas monitorar
-    }
-
-    // Prevenir carregamento completo antes de play
-    const handleLoadStart = () => {
-      // Apenas carrega quando usuário clica em play (preload="none")
-    }
+    const updateDuration = () => setDuration(videoElement.duration)
+    const handleEnded = () => setIsPlaying(false)
+    const handlePause = () => setIsPlaying(false)
+    const handlePlay = () => setIsPlaying(true)
 
     videoElement.addEventListener('timeupdate', updateTime)
-    videoElement.addEventListener('loadedmetadata', handleLoadedMetadata)
-    videoElement.addEventListener('progress', handleProgress)
-    videoElement.addEventListener('loadstart', handleLoadStart)
-    videoElement.addEventListener('ended', () => setIsPlaying(false))
+    videoElement.addEventListener('loadedmetadata', updateDuration)
+    videoElement.addEventListener('ended', handleEnded)
+    videoElement.addEventListener('pause', handlePause)
+    videoElement.addEventListener('play', handlePlay)
 
-    // Não usar canplaythrough pois isso pode forçar carregamento completo
-    // Usar canplay que indica que pode começar a tocar com dados mínimos
-
-    // Limpar ao desmontar
+    // Limpar ao desmontar componente
     return () => {
       videoElement.removeEventListener('timeupdate', updateTime)
-      videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata)
-      videoElement.removeEventListener('progress', handleProgress)
-      videoElement.removeEventListener('loadstart', handleLoadStart)
-      // Pausar e resetar o vídeo ao desmontar para economizar banda
-      videoElement.pause()
-      videoElement.currentTime = 0
-      // Não remover src para evitar re-requests desnecessários
-      // Apenas resetar para estado inicial
-      videoElement.load()
+      videoElement.removeEventListener('loadedmetadata', updateDuration)
+      videoElement.removeEventListener('ended', handleEnded)
+      videoElement.removeEventListener('pause', handlePause)
+      videoElement.removeEventListener('play', handlePlay)
     }
-  }, [isPlaying])
+  }, [])
 
   const togglePlay = async () => {
     const videoElement = videoRef.current
@@ -144,52 +137,66 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
     console.log('🎬 [VIDEO_MODAL] togglePlay called, isPlaying:', isPlaying, 'readyState:', videoElement.readyState)
 
     if (isPlaying) {
-      console.log('⏸️ [VIDEO_MODAL] Pausing video')
+      // Pausar é simples e sempre funciona
       videoElement.pause()
       setIsPlaying(false)
+      console.log('⏸️ [VIDEO_MODAL] Video paused')
     } else {
+      // Tentar reproduzir - agora de forma simplificada
       try {
         console.log('▶️ [VIDEO_MODAL] Attempting to play video...')
         console.log('📊 [VIDEO_MODAL] Video state:', {
           readyState: videoElement.readyState,
           networkState: videoElement.networkState,
-          currentTime: videoElement.currentTime,
-          duration: videoElement.duration,
           paused: videoElement.paused,
-          ended: videoElement.ended
+          ended: videoElement.ended,
+          src: videoElement.src?.substring(0, 100)
         })
         
-        await videoElement.play()
-        console.log('✅ [VIDEO_MODAL] Video playing successfully')
-        setIsPlaying(true)
+        // CRÍTICO: Forçar preload para garantir que há dados suficientes
+        if (videoElement.readyState < 2) {
+          console.log('⏳ [VIDEO_MODAL] Video not ready, setting preload=auto and loading...')
+          videoElement.preload = 'auto'
+          videoElement.load()
+          
+          // Aguardar dados suficientes
+          await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Load timeout')), 10000)
+            const onCanPlay = () => {
+              clearTimeout(timeout)
+              videoElement.removeEventListener('canplay', onCanPlay)
+              videoElement.removeEventListener('error', onError)
+              resolve()
+            }
+            const onError = (e: Event) => {
+              clearTimeout(timeout)
+              videoElement.removeEventListener('canplay', onCanPlay)
+              videoElement.removeEventListener('error', onError)
+              reject(new Error('Video load error'))
+            }
+            videoElement.addEventListener('canplay', onCanPlay)
+            videoElement.addEventListener('error', onError)
+          })
+        }
+        
+        // Agora tentar reproduzir
+        const playPromise = videoElement.play()
+        
+        if (playPromise !== undefined) {
+          await playPromise
+          setIsPlaying(true)
+          console.log('✅ [VIDEO_MODAL] Video playing successfully')
+        }
       } catch (err: any) {
         console.error('❌ [VIDEO_MODAL] Error playing video:', err)
         console.error('❌ [VIDEO_MODAL] Error details:', {
           name: err.name,
           message: err.message,
-          readyState: videoElement.readyState,
-          networkState: videoElement.networkState
+          code: err.code
         })
         
-        // Tentar novamente após carregar mais dados
-        if (videoElement.readyState < 3) {
-          console.log('⏳ [VIDEO_MODAL] Video not ready (readyState < 3), waiting for canplaythrough event...')
-          const playOnReady = async () => {
-            try {
-              console.log('🔄 [VIDEO_MODAL] canplaythrough event fired, trying to play again...')
-              await videoElement.play()
-              console.log('✅ [VIDEO_MODAL] Video playing after canplaythrough')
-              setIsPlaying(true)
-            } catch (e) {
-              console.error('❌ [VIDEO_MODAL] Failed to play after canplaythrough:', e)
-            }
-          }
-          
-          videoElement.addEventListener('canplaythrough', playOnReady, { once: true })
-          
-          // Também tentar em canplay se canplaythrough demorar
-          videoElement.addEventListener('canplay', playOnReady, { once: true })
-        }
+        // Se falhar, resetar estado
+        setIsPlaying(false)
       }
     }
   }
@@ -202,16 +209,43 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
     setIsMuted(!isMuted)
   }
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = async () => {
     const videoElement = videoRef.current
     if (!videoElement) return
 
-    if (!isFullscreen) {
-      videoElement.requestFullscreen?.()
-    } else {
-      document.exitFullscreen?.()
+    try {
+      // Verificar o estado real do fullscreen (não o estado React)
+      const isCurrentlyFullscreen = !!document.fullscreenElement
+
+      if (!isCurrentlyFullscreen) {
+        // Entrar em fullscreen
+        console.log('📺 [VIDEO_MODAL] Entering fullscreen')
+        if (videoElement.requestFullscreen) {
+          await videoElement.requestFullscreen()
+        } else if ((videoElement as any).webkitRequestFullscreen) {
+          await (videoElement as any).webkitRequestFullscreen()
+        } else if ((videoElement as any).mozRequestFullScreen) {
+          await (videoElement as any).mozRequestFullScreen()
+        } else if ((videoElement as any).msRequestFullscreen) {
+          await (videoElement as any).msRequestFullscreen()
+        }
+      } else {
+        // Sair do fullscreen
+        console.log('📺 [VIDEO_MODAL] Exiting fullscreen')
+        if (document.exitFullscreen) {
+          await document.exitFullscreen()
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen()
+        } else if ((document as any).mozCancelFullScreen) {
+          await (document as any).mozCancelFullScreen()
+        } else if ((document as any).msExitFullscreen) {
+          await (document as any).msExitFullscreen()
+        }
+      }
+    } catch (error) {
+      console.error('❌ [VIDEO_MODAL] Fullscreen error:', error)
+      // Não fazer nada - o erro é esperado em alguns casos
     }
-    setIsFullscreen(!isFullscreen)
   }
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
