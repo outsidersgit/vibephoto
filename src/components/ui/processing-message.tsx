@@ -56,7 +56,7 @@ export const PROCESSING_MESSAGES = {
   image: "Sua imagem está sendo processada. Você será avisado quando ficar pronta e pode acompanhar também na galeria.",
   video: "Seu vídeo está sendo processado. Você será avisado quando ficar pronto e pode acompanhar também na galeria.",
   model: "Estamos treinando seu modelo. Você será avisado quando estiver pronto. Acompanhe o progresso na página de Modelos.",
-  editor: "Sua edição está sendo processada. Você será avisado quando ficar pronta e pode acompanhar também na galeria.",
+  editor: "Sua imagem está sendo processada. Você será avisado quando ficar pronta e pode acompanhar também na galeria.",
   package: "Seu pacote de fotos está sendo gerado. Você pode acompanhar o progresso em tempo real ou continuar navegando."
 } as const
 

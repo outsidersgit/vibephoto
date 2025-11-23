@@ -32,17 +32,17 @@ export const TOAST_MESSAGES = {
   IMAGE_EDIT: {
     PROCESSING: {
       title: 'Processando edição...',
-      description: 'Sua edição está sendo processada. Você será notificado quando estiver pronta.',
+      description: 'Sua imagem está sendo processada. Você será notificado quando estiver pronta.',
       type: 'default' as const
     },
     SUCCESS: {
       title: 'Edição concluída com sucesso!',
-      description: 'Sua imagem editada está pronta e disponível na galeria.',
+      description: 'Sua imagem está pronta e disponível na galeria.',
       type: 'success' as const
     },
     ERROR: {
       title: 'Erro ao editar imagem',
-      description: 'Não foi possível processar sua edição. Tente novamente.',
+      description: 'Não foi possível processar sua imagem. Tente novamente.',
       type: 'error' as const
     }
   },
