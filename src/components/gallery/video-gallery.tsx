@@ -190,6 +190,14 @@ export function VideoGallery({
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {localVideos.map((video) => (
+              video.status === 'PROCESSING' || video.status === 'STARTING' ? (
+                <ProcessingPlaceholder 
+                  key={video.id}
+                  type="video"
+                  prompt={video.prompt}
+                  progress={video.progress}
+                />
+              ) : (
               <Card key={video.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group relative">
                 {/* Selection Checkbox */}
                 {bulkSelectMode && (
@@ -282,6 +290,7 @@ export function VideoGallery({
                 </div>
 
               </Card>
+              )
             ))}
           </div>
 

@@ -71,6 +71,7 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
   const [isFavorited, setIsFavorited] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [videoError, setVideoError] = useState<string | null>(null)
 
   useEffect(() => {
     const videoElement = videoRef.current
@@ -379,6 +380,27 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
           {/* Video Player */}
           <div className="lg:col-span-2 space-y-4">
             {video.status === 'COMPLETED' && video.videoUrl ? (
+              videoError ? (
+                <div className="aspect-video bg-red-50 rounded-lg flex flex-col items-center justify-center space-y-4 p-6">
+                  <AlertCircle className="w-16 h-16 text-red-600" />
+                  <div className="text-center space-y-2">
+                    <p className="text-red-900 font-semibold text-lg">{videoError}</p>
+                    <p className="text-red-700 text-sm">URL: {video.videoUrl?.substring(0, 80)}...</p>
+                    <Button 
+                      onClick={() => {
+                        setVideoError(null)
+                        if (videoRef.current) {
+                          videoRef.current.load()
+                        }
+                      }}
+                      variant="outline"
+                      className="mt-4"
+                    >
+                      Tentar Novamente
+                    </Button>
+                  </div>
+                </div>
+              ) : (
               <div className="relative bg-black rounded-lg overflow-hidden">
                 <video
                   ref={videoRef}
@@ -386,19 +408,52 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
                   poster={video.thumbnailUrl || video.sourceImageUrl}
                   className="w-full aspect-video object-contain"
                   onClick={togglePlay}
+                  crossOrigin="anonymous"
+                  playsInline
+                  onError={(e) => {
+                    const errorCode = e.currentTarget.error?.code
+                    const errorMessage = e.currentTarget.error?.message || 'Unknown error'
+                    console.error('❌ [VIDEO_MODAL] Error loading video:', {
+                      videoUrl: video.videoUrl,
+                      error: e.currentTarget.error,
+                      errorCode,
+                      errorMessage
+                    })
+                    
+                    // Set user-friendly error message
+                    let userError = 'Erro ao carregar vídeo.'
+                    if (errorCode === 4) {
+                      userError = 'Vídeo não encontrado ou URL expirada.'
+                    } else if (errorCode === 3) {
+                      userError = 'Formato de vídeo não suportado.'
+                    } else if (errorCode === 2) {
+                      userError = 'Erro de rede ao carregar vídeo.'
+                    }
+                    setVideoError(userError)
+                  }}
+                  onLoadStart={() => console.log('🎬 [VIDEO_MODAL] Starting to load video:', video.videoUrl?.substring(0, 100))}
+                  onCanPlay={() => console.log('✅ [VIDEO_MODAL] Video can play')}
+                  onLoadedMetadata={() => console.log('✅ [VIDEO_MODAL] Video metadata loaded')}
                   preload="metadata"
                   controls={false}
                   muted={isMuted}
                   playsInline
                   disablePictureInPicture
                   disableRemotePlayback
-                  onError={(e) => {
-                    console.error('Erro no elemento de vídeo:', e)
-                  }}
                 >
                   <source src={video.videoUrl} type="video/mp4" />
                   Seu navegador não suporta reprodução de vídeo.
                 </video>
+                
+                {/* Overlay de loading */}
+                {(!duration || duration === 0) && !videoError && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <div className="text-center space-y-2">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
+                      <p className="text-white text-sm">Carregando vídeo...</p>
+                    </div>
+                  </div>
+                )}
                 
                 {/* Fallback: se o vídeo não carregar, mostrar mensagem */}
                 {!video.videoUrl && (
@@ -451,6 +506,7 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
                   </div>
                 </div>
               </div>
+              )
             ) : video.status === 'PROCESSING' ? (
               <div className="aspect-video bg-gray-100 rounded-lg flex flex-col items-center justify-center space-y-4">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>

@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useInvalidateCredits, useCreditBalance } from '@/hooks/useCredits'
 import { CREDIT_COSTS, getImageGenerationCost } from '@/lib/credits/pricing'
+import { ProcessingMessage } from '@/components/ui/processing-message'
 
 interface GenerationInterfaceProps {
   models: Array<{
@@ -557,7 +558,7 @@ export function GenerationInterface({
     addToast({
       type: 'info',
       title: 'Processando...',
-      description: 'Sua imagem está sendo processada, você será notificado quando estiver pronta'
+      description: 'Sua imagem está sendo gerada'
     })
 
     // Log do prompt que será enviado
@@ -920,8 +921,15 @@ export function GenerationInterface({
                   )}
                 </Button>
 
+                {/* Processing Message */}
+                <ProcessingMessage 
+                  isProcessing={isGenerating} 
+                  type="image" 
+                  className="mt-4"
+                />
+
                 {!canGenerate && !isGenerating && (
-                  <p className="text-xs text-gray-500 text-center">
+                  <p className="text-xs text-gray-500 text-center mt-2">
                     {!canUseCredits
                       ? 'Limite de créditos atingido'
                       : creditsRemaining < creditsNeeded

@@ -41,12 +41,12 @@ export async function generateVideoThumbnail(
       }
     }
 
-    // Strategy 3: Generate AI-based thumbnail placeholder
-    const placeholderThumbnail = await generatePlaceholderThumbnail(videoGenId, userId)
-
+    // Strategy 3: No thumbnail for now (better than fake SVG placeholder)
+    // Frontend will show video player or generic video icon
+    console.log('⚠️ No thumbnail available - frontend will handle video display')
     return {
       success: true,
-      thumbnailUrl: placeholderThumbnail
+      thumbnailUrl: undefined // No thumbnail - let frontend handle it
     }
 
   } catch (error) {
@@ -92,8 +92,8 @@ async function tryFindExistingThumbnail(videoUrl: string): Promise<string | null
 }
 
 /**
- * Extract frame from video and upload as thumbnail using ffmpeg
- * Uses dynamic import to avoid build-time issues with ffmpeg binaries
+ * Extract frame from video and upload as thumbnail
+ * Tries multiple strategies to get a real frame from the video
  */
 async function extractVideoFrame(
   videoUrl: string,
@@ -101,31 +101,103 @@ async function extractVideoFrame(
   userId: string
 ): Promise<string | null> {
   try {
-    console.log('🎬 Attempting to extract video frame using ffmpeg...')
+    console.log('🎬 Attempting to extract video frame as thumbnail...')
 
-    // Check if we're in a serverless environment (Vercel) - ffmpeg may not be available
-    // In serverless, we'll use the fallback thumbnail generator
-    const isServerless = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME
-    
-    if (isServerless) {
-      console.log('⚠️ Serverless environment detected, using fallback thumbnail (ffmpeg not available)')
-      return await generateSmartThumbnail(videoGenId, userId, videoUrl)
+    // Strategy 1: Try Replicate's automatic thumbnail generation
+    // Replicate often provides thumbnail URLs for video predictions
+    const replicateThumbnail = await tryReplicateThumbnail(videoUrl)
+    if (replicateThumbnail) {
+      console.log('✅ Found Replicate auto-generated thumbnail')
+      return replicateThumbnail
     }
 
-    // Dynamic import of ffmpeg extractor (only at runtime, never during build)
+    // Strategy 2: Extract first frame using FFmpeg (server-side)
+    // This downloads the video and extracts the frame
     try {
-      const { extractFrameFromVideo } = await import('./ffmpeg-extractor')
-      return await extractFrameFromVideo(videoUrl, videoGenId, userId)
+      const { extractFirstFrame } = await import('./extract-frame')
+      const result = await extractFirstFrame(videoUrl, videoGenId, userId)
+      if (result.success && result.thumbnailUrl) {
+        console.log('✅ Extracted frame using FFmpeg')
+        return result.thumbnailUrl
+      } else {
+        console.warn('⚠️ FFmpeg frame extraction failed:', result.error)
+      }
     } catch (importError) {
-      console.warn('⚠️ FFmpeg extractor not available, using fallback thumbnail:', importError)
-      return await generateSmartThumbnail(videoGenId, userId, videoUrl)
+      console.warn('⚠️ Could not import extract-frame module:', importError)
     }
+
+    // Strategy 3: Use Cloudinary or similar service to extract frame
+    const cloudinaryThumbnail = await tryCloudinaryExtraction(videoUrl, videoGenId, userId)
+    if (cloudinaryThumbnail) {
+      return cloudinaryThumbnail
+    }
+
+    // No thumbnail available
+    console.log('⚠️ Could not extract real frame from video')
+    return null
 
   } catch (error) {
     console.error('❌ Error extracting video frame:', error)
-    // Fallback to smart thumbnail if extraction fails
-    console.log('🔄 Falling back to smart thumbnail...')
-    return await generateSmartThumbnail(videoGenId, userId, videoUrl)
+    return null
+  }
+}
+
+/**
+ * Try to get Replicate's auto-generated thumbnail
+ */
+async function tryReplicateThumbnail(videoUrl: string): Promise<string | null> {
+  try {
+    // Replicate sometimes provides thumbnails at specific endpoints
+    // Try common patterns
+    const possibleThumbnails = [
+      videoUrl.replace('.mp4', '_thumbnail.jpg'),
+      videoUrl.replace('.mp4', '-thumbnail.jpg'),
+      videoUrl.replace('.mp4', '_thumb.jpg'),
+      videoUrl + '?thumbnail=true'
+    ]
+
+    for (const thumbUrl of possibleThumbnails) {
+      try {
+        const response = await fetch(thumbUrl, { method: 'HEAD', timeout: 5000 } as any)
+        if (response.ok) {
+          console.log(`✅ Found Replicate thumbnail: ${thumbUrl}`)
+          return thumbUrl
+        }
+      } catch {
+        continue
+      }
+    }
+
+    return null
+  } catch (error) {
+    console.warn('⚠️ Error trying Replicate thumbnail:', error)
+    return null
+  }
+}
+
+
+/**
+ * Try using Cloudinary or similar service to extract frame
+ */
+async function tryCloudinaryExtraction(
+  videoUrl: string,
+  videoGenId: string,
+  userId: string
+): Promise<string | null> {
+  try {
+    // If we have Cloudinary configured, we can use it to extract frames
+    const cloudinaryUrl = process.env.CLOUDINARY_URL
+    if (!cloudinaryUrl) {
+      return null
+    }
+
+    // TODO: Implement Cloudinary frame extraction
+    console.log('⚠️ Cloudinary extraction not configured')
+    return null
+
+  } catch (error) {
+    console.warn('⚠️ Error trying Cloudinary extraction:', error)
+    return null
   }
 }
 

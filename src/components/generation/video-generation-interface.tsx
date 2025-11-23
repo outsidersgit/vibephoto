@@ -11,6 +11,7 @@ import { calculateVideoCredits, validatePrompt, getEstimatedProcessingTime, form
 import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useInvalidateCredits, useCreditBalance } from '@/hooks/useCredits'
+import { ProcessingMessage } from '@/components/ui/processing-message'
 
 interface VideoGenerationInterfaceProps {
   user: {
@@ -711,6 +712,13 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
                 )}
                             </Button>
                           </div>
+
+            {/* Processing Message - Mobile */}
+            <ProcessingMessage 
+              isProcessing={loading} 
+              type="video" 
+            />
+
                             <input
               ref={fileInputRef}
                               type="file"
@@ -978,6 +986,13 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
               )}
             </Button>
             </div>
+
+            {/* Processing Message - Desktop */}
+            <ProcessingMessage 
+              isProcessing={loading} 
+              type="video" 
+            />
+
             <input
               ref={fileInputRef}
               type="file"

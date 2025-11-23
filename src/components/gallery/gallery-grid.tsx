@@ -26,6 +26,7 @@ import { formatDate } from '@/lib/utils'
 import { getGenerationCostDescription, resolveOperationTypeFromGeneration } from '@/lib/utils/gallery-cost'
 import { OptimizedImage } from '@/components/ui/optimized-image'
 import { ImageDetailsDialog } from './image-details-dialog'
+import { ProcessingPlaceholder } from './processing-placeholder'
 
 // Lazy load modals pesados (Fase 2 - Otimização de Performance)
 const ComparisonModal = dynamic(() => import('./comparison-modal').then(mod => ({ default: mod.ComparisonModal })), {
@@ -641,15 +642,11 @@ export function GalleryGrid({
             )
           })()
         ) : generation.status === 'PROCESSING' ? (
-          <Card className="aspect-square">
-            <CardContent className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <Clock className="w-8 h-8 text-gray-400 mx-auto mb-2 animate-pulse" />
-                <p className="text-sm text-gray-600">Gerando...</p>
-                <p className="text-xs text-gray-500">~30 segundos</p>
-              </div>
-            </CardContent>
-          </Card>
+          <ProcessingPlaceholder 
+            type="image"
+            prompt={generation.prompt}
+            progress={generation.progress || 0}
+          />
         ) : generation.status === 'FAILED' ? (
           <Card className="aspect-square border-red-200 bg-red-50">
             <CardContent className="flex items-center justify-center h-full">

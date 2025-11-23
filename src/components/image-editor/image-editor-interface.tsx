@@ -25,6 +25,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 import { useInvalidateCredits } from '@/hooks/useCredits'
 import { CREDIT_COSTS } from '@/lib/credits/pricing'
+import { ProcessingMessage } from '@/components/ui/processing-message'
 
 const IMAGE_EDITOR_CREDIT_COST = CREDIT_COSTS.IMAGE_EDIT_PER_IMAGE
 
@@ -883,6 +884,13 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 )}
               </Button>
             </div>
+            
+            {/* Processing Message - Mobile */}
+            <ProcessingMessage 
+              isProcessing={loading} 
+              type="editor" 
+            />
+            
             <input
               ref={fileInputRef}
               id={fileInputId}
@@ -1102,6 +1110,13 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               )}
             </Button>
           </div>
+          
+          {/* Processing Message - Desktop */}
+          <ProcessingMessage 
+            isProcessing={loading} 
+            type="editor" 
+          />
+          
           <input
             ref={fileInputRef}
             id={fileInputId}

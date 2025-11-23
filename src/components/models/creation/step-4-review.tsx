@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, Clock, Zap, Image, User, AlertTriangle, Sparkles, Brain, Star, Shield, ArrowLeft, Coins } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { ProcessingMessage } from '@/components/ui/processing-message'
 
 type ModelStatus = 'UPLOADING' | 'PROCESSING' | 'TRAINING' | 'READY' | 'ERROR' | null
 
@@ -506,6 +507,12 @@ export function ModelCreationStep4({
                 )}
               </Button>
             </div>
+
+            {/* Processing Message */}
+            <ProcessingMessage 
+              isProcessing={isSubmitting || trainingActive} 
+              type="model" 
+            />
 
             {!consentAccepted && (
               <p className="text-sm text-red-600 mt-2">

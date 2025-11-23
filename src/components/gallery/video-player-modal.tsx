@@ -424,6 +424,19 @@ export function VideoPlayerModal({ mediaItem, onClose }: VideoPlayerModalProps) 
           className="max-w-full max-h-full"
           onClick={togglePlayPause}
           poster={mediaItem.thumbnailUrl}
+          crossOrigin="anonymous"
+          playsInline
+          onError={(e) => {
+            console.error('❌ [VIDEO_PLAYER] Error loading video:', {
+              url: mediaItem.url,
+              error: e.currentTarget.error,
+              errorCode: e.currentTarget.error?.code,
+              errorMessage: e.currentTarget.error?.message
+            })
+          }}
+          onLoadStart={() => console.log('🎬 [VIDEO_PLAYER] Starting to load video:', mediaItem.url?.substring(0, 100))}
+          onCanPlay={() => console.log('✅ [VIDEO_PLAYER] Video can play')}
+          onLoadedMetadata={() => console.log('✅ [VIDEO_PLAYER] Video metadata loaded')}
           preload="metadata"
           controls={false}
           muted
