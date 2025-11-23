@@ -43,15 +43,36 @@ export async function extractFirstFrame(
 
     console.log(`✅ [FRAME_EXTRACT] Frame extracted to ${tempFramePath}`)
 
-    // Step 3: Upload frame to storage
-    console.log(`☁️ [FRAME_EXTRACT] Uploading thumbnail to storage...`)
+    // Step 3: Compress and optimize frame before upload
+    console.log(`🗜️ [FRAME_EXTRACT] Compressing thumbnail...`)
     const frameBuffer = await fs.readFile(tempFramePath)
+    
+    // 🚀 OTIMIZAÇÃO: Comprimir thumbnail para ~50-100 KB
+    const sharp = require('sharp')
+    const optimizedThumbnail = await sharp(frameBuffer)
+      .resize(640, 360, {
+        fit: 'cover',
+        position: 'center',
+        withoutEnlargement: true
+      })
+      .jpeg({
+        quality: 75,
+        progressive: true,
+        mozjpeg: true
+      })
+      .toBuffer()
+
+    const compressionRatio = ((1 - (optimizedThumbnail.length / frameBuffer.length)) * 100).toFixed(1)
+    console.log(`✅ [FRAME_EXTRACT] Thumbnail compressed: ${(frameBuffer.length / 1024).toFixed(0)} KB → ${(optimizedThumbnail.length / 1024).toFixed(0)} KB (${compressionRatio}% reduction)`)
+    
+    // Step 4: Upload optimized frame to storage
+    console.log(`☁️ [FRAME_EXTRACT] Uploading thumbnail to storage...`)
     const storage = getStorageProvider()
 
     let uploadResult
     if (storage.uploadStandardized) {
       uploadResult = await storage.uploadStandardized(
-        frameBuffer,
+        optimizedThumbnail,
         userId,
         'videos',
         {
@@ -63,7 +84,7 @@ export async function extractFirstFrame(
     } else {
       const thumbnailKey = `generated/${userId}/videos/${videoGenId}_thumbnail.jpg`
       uploadResult = await storage.upload(
-        frameBuffer,
+        optimizedThumbnail,
         thumbnailKey,
         {
           filename: `${videoGenId}_thumbnail.jpg`,

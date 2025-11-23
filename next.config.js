@@ -5,6 +5,21 @@ const withBundleAnalyzer = process.env.ANALYZE === 'true'
   : (config) => config
 
 const nextConfig = {
+  // 🚀 OTIMIZAÇÃO: Headers de cache para melhorar performance
+  async headers() {
+    return [
+      {
+        // Thumbnails de vídeo e imagens - cache agressivo (1 ano)
+        source: '/:path*.(jpg|jpeg|png|webp|avif|mp4)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ]
+  },
   turbopack: {
     rules: {
       '*.svg': {
