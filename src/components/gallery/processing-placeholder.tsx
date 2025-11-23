@@ -30,8 +30,8 @@ export function ProcessingPlaceholder({
       className
     )}>
       <CardContent className="p-0">
-        {/* Aspect ratio container */}
-        <div className="relative aspect-square">
+        {/* Aspect ratio container - square for images, video ratio for videos */}
+        <div className={cn("relative", type === 'video' ? "aspect-video" : "aspect-square")}>
           {/* Gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-purple-50/50" />
           
