@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "analyze": "cross-env ANALYZE=true npm run build"
+    "analyze": "cross-env ANALYZE=true npm run build",
+    "optimize:thumbnails": "ts-node scripts/reprocess-video-thumbnails.ts",
+    "optimize:thumbnails:dry": "ts-node scripts/reprocess-video-thumbnails.ts --dry-run",
+    "optimize:thumbnails:force": "ts-node scripts/reprocess-video-thumbnails.ts --force"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.864.0",

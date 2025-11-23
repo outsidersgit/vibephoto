@@ -78,7 +78,14 @@ export async function extractFirstFrame(
         {
           filename: `${videoGenId}_thumbnail.jpg`,
           makePublic: true,
-          isVideo: false
+          isVideo: false,
+          metadata: {
+            'Content-Type': 'image/jpeg',
+            'Cache-Control': 'public, max-age=31536000, immutable', // 1 year cache
+            'X-Optimized': 'true',
+            'X-Original-Size': frameBuffer.length.toString(),
+            'X-Compressed-Size': optimizedThumbnail.length.toString()
+          }
         }
       )
     } else {
@@ -88,7 +95,12 @@ export async function extractFirstFrame(
         thumbnailKey,
         {
           filename: `${videoGenId}_thumbnail.jpg`,
-          makePublic: true
+          makePublic: true,
+          metadata: {
+            'Content-Type': 'image/jpeg',
+            'Cache-Control': 'public, max-age=31536000, immutable',
+            'X-Optimized': 'true'
+          }
         }
       )
     }
@@ -179,8 +191,9 @@ async function extractFrameWithFFmpeg(videoPath: string, videoGenId: string): Pr
     // -ss 0.1: seek to 0.1 seconds
     // -i: input file
     // -vframes 1: extract only 1 frame
-    // -q:v 2: high quality (2 is very high, scale is 2-31)
-    const command = `ffmpeg -ss 0.1 -i "${videoPath}" -vframes 1 -q:v 2 "${framePath}"`
+    // -vf scale=1280:720: resize to 720p (will be further compressed by sharp)
+    // -q:v 5: medium quality (balance between size and quality, scale is 2-31)
+    const command = `ffmpeg -ss 0.1 -i "${videoPath}" -vframes 1 -vf "scale=1280:720:force_original_aspect_ratio=decrease" -q:v 5 "${framePath}"`
     
     console.log(`🎬 [FRAME_EXTRACT] Running FFmpeg command: ${command}`)
     await execAsync(command)
