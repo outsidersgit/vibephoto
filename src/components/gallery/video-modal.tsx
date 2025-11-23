@@ -73,6 +73,8 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [videoError, setVideoError] = useState<string | null>(null)
+  const [videoSrc, setVideoSrc] = useState<string>(video.videoUrl || '')
+  const [isUsingProxy, setIsUsingProxy] = useState(false)
 
   useEffect(() => {
     const videoElement = videoRef.current
@@ -233,8 +235,11 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
           ;(downloadButton as HTMLElement).style.pointerEvents = 'none'
         }
 
+        // Usar proxy se estiver disponível, senão usar URL direta
+        const downloadUrl = isUsingProxy ? `/api/videos/${video.id}/stream` : video.videoUrl
+
         // Baixar o vídeo completo apenas quando usuário solicitar
-        const response = await fetch(video.videoUrl, {
+        const response = await fetch(downloadUrl, {
           method: 'GET',
           headers: {
             'Accept': 'video/mp4',
@@ -268,6 +273,48 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
         // Fallback to opening in new tab
         window.open(video.videoUrl, '_blank')
       }
+    }
+  }
+
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    const errorCode = e.currentTarget.error?.code
+    const errorMessage = e.currentTarget.error?.message || 'Unknown error'
+    console.error('❌ [VIDEO_MODAL] Error loading video:', {
+      videoUrl: videoSrc,
+      error: e.currentTarget.error,
+      errorCode,
+      errorMessage,
+      isUsingProxy
+    })
+    
+    // Se não está usando proxy e teve erro, tentar fallback para proxy
+    if (!isUsingProxy && video.videoUrl) {
+      console.log('🔄 [VIDEO_MODAL] Trying proxy fallback...')
+      setIsUsingProxy(true)
+      setVideoSrc(`/api/videos/${video.id}/stream`)
+      setVideoError(null)
+      
+      // Recarregar vídeo com nova URL
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.load()
+        }
+      }, 100)
+      return
+    }
+    
+    // Só mostra erro se for um erro real (não erro temporário de carregamento)
+    // Error code 1 = MEDIA_ERR_ABORTED: Media loading aborted (não é erro real)
+    if (errorCode && errorCode !== 1) {
+      let userError = 'Erro ao carregar vídeo.'
+      if (errorCode === 4) {
+        userError = 'Vídeo não encontrado ou URL expirada.'
+      } else if (errorCode === 3) {
+        userError = 'Formato de vídeo não suportado.'
+      } else if (errorCode === 2) {
+        userError = 'Erro de rede ao carregar vídeo.'
+      }
+      setVideoError(userError)
     }
   }
 
@@ -405,47 +452,24 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
               <div className="relative bg-black rounded-lg overflow-hidden">
                 <video
                   ref={videoRef}
-                  src={video.videoUrl}
+                  src={videoSrc}
                   poster={video.thumbnailUrl || video.sourceImageUrl}
                   className="w-full aspect-video object-contain"
                   onClick={togglePlay}
                   crossOrigin="anonymous"
                   playsInline
-                  onError={(e) => {
-                    const errorCode = e.currentTarget.error?.code
-                    const errorMessage = e.currentTarget.error?.message || 'Unknown error'
-                    console.error('❌ [VIDEO_MODAL] Error loading video:', {
-                      videoUrl: video.videoUrl,
-                      error: e.currentTarget.error,
-                      errorCode,
-                      errorMessage
-                    })
-                    
-                    // Só mostra erro se for um erro real (não erro temporário de carregamento)
-                    // Error code 4 = MEDIA_ELEMENT_ERROR: Media loading aborted
-                    if (errorCode && errorCode !== 1) {
-                      let userError = 'Erro ao carregar vídeo.'
-                      if (errorCode === 4) {
-                        userError = 'Vídeo não encontrado ou URL expirada.'
-                      } else if (errorCode === 3) {
-                        userError = 'Formato de vídeo não suportado.'
-                      } else if (errorCode === 2) {
-                        userError = 'Erro de rede ao carregar vídeo.'
-                      }
-                      setVideoError(userError)
-                    }
-                  }}
+                  onError={handleVideoError}
                   onLoadStart={() => {
-                    console.log('🎬 [VIDEO_MODAL] Starting to load video:', video.videoUrl?.substring(0, 100))
+                    console.log('🎬 [VIDEO_MODAL] Starting to load video:', videoSrc?.substring(0, 100), `(using proxy: ${isUsingProxy})`)
                     // Limpa erro anterior ao tentar carregar novamente
                     setVideoError(null)
                   }}
                   onCanPlay={() => {
-                    console.log('✅ [VIDEO_MODAL] Video can play')
+                    console.log('✅ [VIDEO_MODAL] Video can play', `(using proxy: ${isUsingProxy})`)
                     // Limpa erro quando conseguir reproduzir
                     setVideoError(null)
                   }}
-                  onLoadedMetadata={() => console.log('✅ [VIDEO_MODAL] Video metadata loaded')}
+                  onLoadedMetadata={() => console.log('✅ [VIDEO_MODAL] Video metadata loaded', `(using proxy: ${isUsingProxy})`)}
                   preload="metadata"
                   controls={false}
                   muted={isMuted}
