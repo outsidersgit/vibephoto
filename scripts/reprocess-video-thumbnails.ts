@@ -85,7 +85,8 @@ async function reprocessVideoThumbnails(options: {
         userId: true,
         thumbnailUrl: true,
         videoUrl: true,
-        createdAt: true
+        createdAt: true,
+        metadata: true
       },
       orderBy: { createdAt: 'desc' },
       take: limit

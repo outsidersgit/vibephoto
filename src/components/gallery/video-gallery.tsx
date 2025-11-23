@@ -18,6 +18,7 @@ import {
   Circle
 } from 'lucide-react'
 import { VideoModal } from './video-modal'
+import { ProcessingPlaceholder } from './processing-placeholder'
 
 interface VideoGeneration {
   id: string
