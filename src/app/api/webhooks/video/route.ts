@@ -6,6 +6,7 @@ import { downloadAndStoreVideo } from '@/lib/storage/utils'
 import { generateVideoThumbnail } from '@/lib/video/thumbnail-generator'
 import { prisma } from '@/lib/db'
 import crypto from 'crypto'
+import { broadcastVideoStatusChange, broadcastNotification } from '@/lib/services/realtime-service'
 
 // Sistema de logging estruturado para debug
 interface FlowLog {
@@ -853,10 +854,55 @@ export async function POST(request: NextRequest) {
         const userId = updatedVideo.user?.id || updatedVideo.userId
         console.log(`💥 Video generation failed for user ${userId}: ${updatedVideo.id}`)
         
-        // Here you would typically:
-        // 1. Send failure notification
-        // 2. Optionally refund credits
-        // 3. Log for debugging
+        // Broadcast failure notification via SSE
+        try {
+          await broadcastVideoStatusChange(
+            updatedVideo.id,
+            userId,
+            'FAILED',
+            {
+              errorMessage: updatedVideo.errorMessage || 'Unknown error'
+            }
+          )
+          
+          await broadcastNotification(
+            userId,
+            'Falha na Geração de Vídeo',
+            'Não foi possível gerar seu vídeo. Você não foi cobrado por esta tentativa.',
+            'error'
+          )
+        } catch (broadcastError) {
+          console.error('⚠️ Failed to broadcast video failure:', broadcastError)
+          // Don't fail the webhook - just log the broadcast error
+        }
+      }
+
+      // 🎬 CRITICAL: Broadcast video completion via SSE for real-time toast
+      if (internalStatus === VideoStatus.COMPLETED) {
+        const userId = updatedVideo.user?.id || updatedVideo.userId
+        try {
+          await broadcastVideoStatusChange(
+            updatedVideo.id,
+            userId,
+            'COMPLETED',
+            {
+              videoUrl: updatedVideo.videoUrl,
+              thumbnailUrl: updatedVideo.thumbnailUrl
+            }
+          )
+          
+          await broadcastNotification(
+            userId,
+            '🎉 Vídeo pronto!',
+            'Seu vídeo foi gerado com sucesso e está disponível na galeria.',
+            'success'
+          )
+          
+          console.log(`✅ Broadcasted video completion notification to user ${userId}`)
+        } catch (broadcastError) {
+          console.error('⚠️ Failed to broadcast video completion:', broadcastError)
+          // Don't fail the webhook - just log the broadcast error
+        }
       }
 
       // Acknowledge webhook - ALWAYS return 200 OK to prevent retries

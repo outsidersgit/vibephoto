@@ -14,6 +14,7 @@ export interface RealtimeEvent {
 export interface UseRealtimeUpdatesOptions {
   onModelStatusChange?: (modelId: string, status: string, data: any) => void
   onGenerationStatusChange?: (generationId: string, status: string, data: any) => void
+  onVideoStatusChange?: (videoId: string, status: string, data: any) => void // 🎬 Video generation real-time updates
   onTrainingProgress?: (modelId: string, progress: number, message?: string) => void
   onGenerationProgress?: (generationId: string, progress: number, message?: string) => void
   onPackageGenerationUpdate?: (userPackageId: string, data: any) => void // Real-time package progress
@@ -210,6 +211,35 @@ export function useRealtimeUpdates(options: UseRealtimeUpdatesOptions = {}) {
               console.warn('⚠️ [useRealtimeUpdates] No handler registered')
             }
             console.log('🎯 [useRealtimeUpdates] ==========================================')
+            break
+
+          case 'video_status_changed':
+            console.log('🎬 [useRealtimeUpdates] ===== VIDEO STATUS CHANGED =====')
+            console.log('🎬 [useRealtimeUpdates] Event data:', {
+              videoId: eventData.data.videoId,
+              status: eventData.data.status,
+              hasHandler: !!optionsRef.current.onVideoStatusChange,
+              hasVideoUrl: !!eventData.data.videoUrl,
+              hasThumbnailUrl: !!eventData.data.thumbnailUrl,
+              dataKeys: Object.keys(eventData.data || {}),
+              fullEventData: eventData.data
+            })
+
+            if (optionsRef.current.onVideoStatusChange) {
+              console.log('✅ [useRealtimeUpdates] Calling video handler with:', {
+                videoId: eventData.data.videoId,
+                status: eventData.data.status
+              })
+              optionsRef.current.onVideoStatusChange(
+                eventData.data.videoId,
+                eventData.data.status,
+                eventData.data
+              )
+              console.log('✅ [useRealtimeUpdates] Video handler called successfully')
+            } else {
+              console.warn('⚠️ [useRealtimeUpdates] No handler registered for video_status_changed')
+            }
+            console.log('🎬 [useRealtimeUpdates] ==========================================')
             break
 
           case 'training_progress':

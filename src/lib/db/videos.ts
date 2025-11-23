@@ -641,13 +641,23 @@ export async function fetchVideoBatch({
   const page = Math.max(requestedPage ?? 1, 1)
   const skip = (page - 1) * limit
 
+  // 🚀 CRITICAL: Include ALL statuses by default (not just COMPLETED)
+  // This allows placeholder to show for PROCESSING videos
   const where: any = {
     userId,
-    status: status
-      ? typeof status === 'string'
-        ? (status.toUpperCase() as VideoStatus)
-        : status
-      : VideoStatus.COMPLETED,
+    ...(status
+      ? {
+          status: typeof status === 'string'
+            ? (status.toUpperCase() as VideoStatus)
+            : status
+        }
+      : {
+          // If no status filter, include COMPLETED, PROCESSING, and STARTING
+          // This allows placeholders to show in gallery during generation
+          status: {
+            in: [VideoStatus.COMPLETED, VideoStatus.PROCESSING, VideoStatus.STARTING]
+          }
+        }),
     ...(quality ? { quality: quality as any } : {}),
     ...(searchQuery && {
       prompt: { contains: searchQuery, mode: 'insensitive' }

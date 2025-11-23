@@ -9,6 +9,7 @@ interface RealtimeEvent {
 export const EVENT_TYPES = {
   MODEL_STATUS_CHANGED: 'model_status_changed',
   GENERATION_STATUS_CHANGED: 'generation_status_changed',
+  VIDEO_STATUS_CHANGED: 'video_status_changed', // 🎬 Real-time video generation updates
   TRAINING_PROGRESS: 'training_progress',
   GENERATION_PROGRESS: 'generation_progress',
   PACKAGE_GENERATION_UPDATED: 'package_generation_updated', // Real-time package progress

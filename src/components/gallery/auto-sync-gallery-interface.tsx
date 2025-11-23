@@ -634,6 +634,20 @@ export function AutoSyncGalleryInterface({
   // Configurar WebSocket para atualizações em tempo real
   const { isConnected, connectionError } = useRealtimeUpdates({
     onGenerationStatusChange: handleUpscaleUpdate, // Usa o handler que suporta upscale
+    onVideoStatusChange: (videoId, status, data) => {
+      console.log('🎬 [Gallery] Video status changed:', { videoId, status, data })
+      
+      // Invalidate gallery cache to fetch updated videos
+      queryClient.invalidateQueries({ queryKey: ['gallery'] })
+      
+      // Show toast for completed videos (the toast is already sent via broadcast notification)
+      // Just log here for debugging
+      if (status === 'COMPLETED') {
+        console.log('✅ Video generation completed:', videoId)
+      } else if (status === 'FAILED') {
+        console.log('❌ Video generation failed:', videoId)
+      }
+    },
     onConnect: () => {
       console.log('✅ Gallery WebSocket connected - isConnected should be true')
     },

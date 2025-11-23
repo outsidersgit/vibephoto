@@ -148,12 +148,12 @@ async function extractVideoFrame(
 async function tryReplicateThumbnail(videoUrl: string): Promise<string | null> {
   try {
     // Replicate sometimes provides thumbnails at specific endpoints
-    // Try common patterns
+    // Try common patterns (REMOVED ?thumbnail=true - it doesn't work)
     const possibleThumbnails = [
       videoUrl.replace('.mp4', '_thumbnail.jpg'),
       videoUrl.replace('.mp4', '-thumbnail.jpg'),
-      videoUrl.replace('.mp4', '_thumb.jpg'),
-      videoUrl + '?thumbnail=true'
+      videoUrl.replace('.mp4', '_thumb.jpg')
+      // REMOVED: videoUrl + '?thumbnail=true' - this doesn't generate a real thumbnail
     ]
 
     for (const thumbUrl of possibleThumbnails) {
