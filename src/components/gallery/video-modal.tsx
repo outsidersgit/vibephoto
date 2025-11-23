@@ -477,7 +477,6 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
                 <video
                   ref={videoRef}
                   src={videoSrc}
-                  poster={video.thumbnailUrl || video.sourceImageUrl}
                   className="w-full aspect-video object-contain"
                   onClick={togglePlay}
                   crossOrigin="anonymous"

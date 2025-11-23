@@ -237,14 +237,20 @@ export function VideoGallery({
                           className="w-full h-full object-cover"
                           loading="lazy"
                         />
-                      ) : (
+                      ) : video.sourceImageUrl ? (
                         // Usar sourceImageUrl como poster - vídeo completo só carrega no modal
                         <img
-                          src={video.sourceImageUrl || '/examples/professional-woman.jpg'}
+                          src={video.sourceImageUrl}
                           alt="Video poster"
                           className="w-full h-full object-cover"
                           loading="lazy"
                         />
+                      ) : (
+                        // Placeholder genérico quando não há thumbnail nem imagem de origem
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+                          <Film className="w-20 h-20 text-white opacity-80 mb-2" />
+                          <span className="text-white text-sm opacity-60">Vídeo Gerado</span>
+                        </div>
                       )
                     ) : video.sourceImageUrl ? (
                       // Show source image for processing videos or as fallback
@@ -256,11 +262,11 @@ export function VideoGallery({
                       />
                     ) : (
                       // Show placeholder for text-to-video with no source image
-                      <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                        <Film className="w-16 h-16 text-gray-400" />
-                        <div className="ml-2 text-gray-500 text-sm">
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-gray-200">
+                        <Film className="w-16 h-16 text-gray-400 mb-2" />
+                        <span className="text-gray-500 text-sm">
                           Vídeo {video.status === 'PROCESSING' ? 'processando' : 'texto para vídeo'}
-                        </div>
+                        </span>
                       </div>
                     )}
                     
