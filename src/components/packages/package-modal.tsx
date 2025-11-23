@@ -47,6 +47,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
   const [showAllPreviews, setShowAllPreviews] = useState(false)
   const [showProgressModal, setShowProgressModal] = useState(false)
   const [activeUserPackageId, setActiveUserPackageId] = useState<string | null>(null)
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
 
   // Debug: verificar preview images
   React.useEffect(() => {
@@ -212,11 +213,15 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {pkg.previewImages.slice(0, 4).map((image, index) => (
-                      <div key={index} className="aspect-square bg-gray-900 rounded-lg overflow-hidden group cursor-pointer border border-gray-700">
+                      <div 
+                        key={index} 
+                        className="aspect-square bg-gray-900 rounded-lg overflow-hidden group cursor-pointer border border-gray-700 hover:border-purple-500 transition-colors"
+                        onClick={() => setSelectedImageIndex(index)}
+                      >
                         <img
                           src={image}
                           alt={`Preview ${index + 1}`}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none'
                             e.currentTarget.nextElementSibling?.classList.remove('hidden')
@@ -364,11 +369,15 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
             <div className="p-6">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {pkg.previewImages.map((image, index) => (
-                  <div key={index} className="aspect-square bg-gray-900 rounded-lg overflow-hidden border border-gray-700">
+                  <div 
+                    key={index} 
+                    className="aspect-square bg-gray-900 rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-purple-500 transition-colors"
+                    onClick={() => setSelectedImageIndex(index)}
+                  >
                     <img
                       src={image}
                       alt={`Preview ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none'
                         e.currentTarget.nextElementSibling?.classList.remove('hidden')
@@ -466,6 +475,65 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
           totalImages={pkg.promptCount || pkg.prompts?.length || 20}
           onComplete={handleProgressComplete}
         />
+      )}
+
+      {/* Modal de Visualização de Imagem em Tamanho Real */}
+      {selectedImageIndex !== null && (
+        <div 
+          className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+          onClick={() => setSelectedImageIndex(null)}
+        >
+          <div className="relative max-w-7xl max-h-[90vh] w-full">
+            {/* Botão Fechar */}
+            <button
+              onClick={() => setSelectedImageIndex(null)}
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+            >
+              <X className="w-8 h-8" />
+            </button>
+
+            {/* Imagem */}
+            <img
+              src={pkg.previewImages[selectedImageIndex]}
+              alt={`Preview ${selectedImageIndex + 1}`}
+              className="w-full h-full object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+
+            {/* Navegação */}
+            {pkg.previewImages.length > 1 && (
+              <>
+                {selectedImageIndex > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedImageIndex(selectedImageIndex - 1)
+                    }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-colors"
+                  >
+                    ←
+                  </button>
+                )}
+                {selectedImageIndex < pkg.previewImages.length - 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedImageIndex(selectedImageIndex + 1)
+                    }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-colors"
+                  >
+                    →
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Contador */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm">
+              {selectedImageIndex + 1} / {pkg.previewImages.length}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

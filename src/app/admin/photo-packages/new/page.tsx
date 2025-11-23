@@ -10,6 +10,7 @@ interface Prompt {
   text: string
   style?: string
   description?: string
+  seed?: number // Seed fixo para reprodutibilidade
 }
 
 export default function NewPhotoPackagePage() {
@@ -165,7 +166,7 @@ export default function NewPhotoPackagePage() {
   const addPrompt = () => {
     setFormData({
       ...formData,
-      prompts: [...formData.prompts, { text: '', style: 'photographic' }]
+      prompts: [...formData.prompts, { text: '', style: 'photographic', seed: Math.floor(Math.random() * 1000000) }]
     })
   }
 
@@ -176,7 +177,7 @@ export default function NewPhotoPackagePage() {
     })
   }
 
-  const updatePrompt = (index: number, field: keyof Prompt, value: string) => {
+  const updatePrompt = (index: number, field: keyof Prompt, value: string | number) => {
     const updated = [...formData.prompts]
     updated[index] = { ...updated[index], [field]: value }
     setFormData({ ...formData, prompts: updated })
@@ -399,6 +400,24 @@ export default function NewPhotoPackagePage() {
                       <option value="portrait">Portrait</option>
                       <option value="landscape">Landscape</option>
                     </select>
+                    
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Seed (Reprodutibilidade)
+                      </label>
+                      <input
+                        type="number"
+                        value={prompt.seed || 0}
+                        onChange={(e) => updatePrompt(index, 'seed', parseInt(e.target.value) || 0)}
+                        placeholder="Ex: 123456"
+                        min={0}
+                        max={4294967295}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Seed fixo para reproduzir a mesma imagem. Deixe 0 ou vazio para gerar aleatório.
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
       text: string
       style?: string
       description?: string
+      seed?: number // Seed fixo para reprodutibilidade
     }>
 
     if (!packagePrompts || packagePrompts.length === 0) {
@@ -147,6 +148,7 @@ export async function POST(request: NextRequest) {
           negativePrompt: 'low quality, blurry, distorted, bad anatomy',
           aspectRatio,
           resolution,
+          seed: promptData.seed || undefined, // Usar seed fixo do banco ou gerar aleatório
           variations: 1, // 1 output per prompt
           strength: 0.8,
           style: promptData.style || 'photographic',
