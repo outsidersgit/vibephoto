@@ -479,59 +479,57 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
 
       {/* Modal de Visualização de Imagem em Tamanho Real */}
       {selectedImageIndex !== null && (
-        <div 
-          className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+        <div
+          className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center"
           onClick={() => setSelectedImageIndex(null)}
         >
-          <div className="relative max-w-7xl max-h-[90vh] w-full">
-            {/* Botão Fechar */}
-            <button
-              onClick={() => setSelectedImageIndex(null)}
-              className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
-            >
-              <X className="w-8 h-8" />
-            </button>
+          {/* Botão Fechar */}
+          <button
+            onClick={() => setSelectedImageIndex(null)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10"
+          >
+            <X className="w-8 h-8" />
+          </button>
 
-            {/* Imagem */}
-            <img
-              src={pkg.previewImages[selectedImageIndex]}
-              alt={`Preview ${selectedImageIndex + 1}`}
-              className="w-full h-full object-contain rounded-lg"
-              onClick={(e) => e.stopPropagation()}
-            />
+          {/* Imagem */}
+          <img
+            src={pkg.previewImages[selectedImageIndex]}
+            alt={`Preview ${selectedImageIndex + 1}`}
+            className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
 
-            {/* Navegação */}
-            {pkg.previewImages.length > 1 && (
-              <>
-                {selectedImageIndex > 0 && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedImageIndex(selectedImageIndex - 1)
-                    }}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-colors"
-                  >
-                    ←
-                  </button>
-                )}
-                {selectedImageIndex < pkg.previewImages.length - 1 && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedImageIndex(selectedImageIndex + 1)
-                    }}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-colors"
-                  >
-                    →
-                  </button>
-                )}
-              </>
-            )}
+          {/* Navegação */}
+          {pkg.previewImages.length > 1 && (
+            <>
+              {selectedImageIndex > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSelectedImageIndex(selectedImageIndex - 1)
+                  }}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-colors"
+                >
+                  ←
+                </button>
+              )}
+              {selectedImageIndex < pkg.previewImages.length - 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSelectedImageIndex(selectedImageIndex + 1)
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-colors"
+                >
+                  →
+                </button>
+              )}
+            </>
+          )}
 
-            {/* Contador */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm">
-              {selectedImageIndex + 1} / {pkg.previewImages.length}
-            </div>
+          {/* Contador */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm">
+            {selectedImageIndex + 1} / {pkg.previewImages.length}
           </div>
         </div>
       )}
