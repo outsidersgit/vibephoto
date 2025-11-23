@@ -75,6 +75,7 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
   const [videoError, setVideoError] = useState<string | null>(null)
   const [videoSrc, setVideoSrc] = useState<string>(video.videoUrl || '')
   const [isUsingProxy, setIsUsingProxy] = useState(false)
+  const [triedProxy, setTriedProxy] = useState(false)
 
   useEffect(() => {
     const videoElement = videoRef.current
@@ -284,23 +285,33 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
       error: e.currentTarget.error,
       errorCode,
       errorMessage,
-      isUsingProxy
+      isUsingProxy,
+      triedProxy
     })
     
-    // Se não está usando proxy e teve erro, tentar fallback para proxy
-    if (!isUsingProxy && video.videoUrl) {
+    // Se não tentou proxy ainda e teve erro, tentar fallback para proxy
+    if (!triedProxy && !isUsingProxy && video.videoUrl && video.id) {
       console.log('🔄 [VIDEO_MODAL] Trying proxy fallback...')
+      setTriedProxy(true)
       setIsUsingProxy(true)
-      setVideoSrc(`/api/videos/${video.id}/stream`)
+      const proxyUrl = `/api/videos/${video.id}/stream`
+      console.log('🔄 [VIDEO_MODAL] Switching to proxy URL:', proxyUrl)
+      setVideoSrc(proxyUrl)
       setVideoError(null)
       
-      // Recarregar vídeo com nova URL
+      // Recarregar vídeo com nova URL após um pequeno delay
       setTimeout(() => {
         if (videoRef.current) {
+          console.log('🔄 [VIDEO_MODAL] Reloading video with proxy URL')
           videoRef.current.load()
         }
       }, 100)
       return
+    }
+    
+    // Se já tentou proxy e ainda deu erro, mostrar mensagem
+    if (triedProxy && errorCode && errorCode !== 1) {
+      console.error('❌ [VIDEO_MODAL] Proxy also failed, showing error to user')
     }
     
     // Só mostra erro se for um erro real (não erro temporário de carregamento)
@@ -314,6 +325,12 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
       } else if (errorCode === 2) {
         userError = 'Erro de rede ao carregar vídeo.'
       }
+      
+      // Se já tentou proxy, adicionar informação extra
+      if (triedProxy) {
+        userError += ' (Tentativa de fallback também falhou)'
+      }
+      
       setVideoError(userError)
     }
   }
@@ -436,10 +453,17 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
                     <p className="text-red-700 text-sm">URL: {video.videoUrl?.substring(0, 80)}...</p>
                     <Button 
                       onClick={() => {
+                        console.log('🔄 [VIDEO_MODAL] User clicked retry')
                         setVideoError(null)
-                        if (videoRef.current) {
-                          videoRef.current.load()
-                        }
+                        setTriedProxy(false)
+                        setIsUsingProxy(false)
+                        setVideoSrc(video.videoUrl || '')
+                        setTimeout(() => {
+                          if (videoRef.current) {
+                            console.log('🔄 [VIDEO_MODAL] Reloading video after retry')
+                            videoRef.current.load()
+                          }
+                        }, 100)
                       }}
                       variant="outline"
                       className="mt-4"
