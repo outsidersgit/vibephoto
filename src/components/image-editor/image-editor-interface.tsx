@@ -826,7 +826,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={4}
-                maxLength={2500}
+                maxLength={4000}
                 className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#667EEA] focus:border-[#667EEA] rounded-lg px-4 py-4 transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
                 style={{
                   fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
@@ -1052,7 +1052,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={5}
-              maxLength={2500}
+              maxLength={4000}
               className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 rounded-lg px-4 py-4 shadow-sm transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'

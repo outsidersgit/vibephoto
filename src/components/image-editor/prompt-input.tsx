@@ -54,7 +54,7 @@ export function PromptInput({
           placeholder={placeholder}
           disabled={disabled}
           rows={3}
-          maxLength={2500}
+          maxLength={4000}
           className={`
             block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg 
             placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 

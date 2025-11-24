@@ -21,7 +21,7 @@ export const VIDEO_CONFIG = {
     durations: [4, 6, 8] as const,
     aspectRatios: ['16:9', '9:16'] as const,
     resolutions: ['720p', '1080p'] as const,
-    maxPromptLength: 2500,
+    maxPromptLength: 4000,
     maxNegativePromptLength: 200
   },
 

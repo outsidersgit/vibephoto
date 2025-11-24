@@ -122,7 +122,7 @@ export function PromptInput({
               </label>
               <div className="flex items-center space-x-2">
                 <div className="text-xs text-gray-600">
-                  {prompt.length}/2500
+                  {prompt.length}/4000
                 </div>
                 {prompt && (
                   <>
@@ -159,7 +159,7 @@ export function PromptInput({
               disabled={isGenerating}
               className="w-full px-3 py-3 bg-gray-200 border border-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-[#667EEA] focus:border-[#667EEA] resize-none text-gray-900 placeholder:text-gray-500"
               rows={3}
-              maxLength={2500}
+              maxLength={4000}
               placeholder="Descreva a foto que deseja criar... ex: 'foto profissional com roupa social, sorrindo, iluminação natural, alta qualidade'"
               style={{
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
