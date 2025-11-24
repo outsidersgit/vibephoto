@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { X, Upload, Image as ImageIcon } from 'lucide-react'
+import { X, Upload, Image as ImageIcon, Trash2 } from 'lucide-react'
 import { NumericInput } from '@/components/ui/numeric-input'
 
 interface Prompt {
@@ -257,9 +257,15 @@ export default function EditPhotoPackagePage() {
     })
   }
 
-  const updatePrompt = (index: number, field: keyof Prompt, value: string | number) => {
+  const updatePrompt = (index: number, field: keyof Prompt, value: string | number | undefined) => {
     const updated = [...formData.prompts]
     updated[index] = { ...updated[index], [field]: value }
+    setFormData({ ...formData, prompts: updated })
+  }
+
+  const clearPrompt = (index: number) => {
+    const updated = [...formData.prompts]
+    updated[index] = { text: '', style: 'photographic', seed: undefined }
     setFormData({ ...formData, prompts: updated })
   }
 
@@ -630,13 +636,24 @@ export default function EditPhotoPackagePage() {
                 <div key={index} className="border border-gray-200 rounded-md p-3 bg-gray-50">
                   <div className="flex items-start justify-between mb-2">
                     <span className="text-sm font-medium text-gray-700">Prompt {index + 1}</span>
-                    <button
-                      type="button"
-                      onClick={() => removePrompt(index)}
-                      className="text-sm text-red-600 hover:text-red-700"
-                    >
-                      Remover
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => clearPrompt(index)}
+                        className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                        title="Limpar campos"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Limpar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removePrompt(index)}
+                        className="text-sm text-red-600 hover:text-red-700"
+                      >
+                        Remover
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
@@ -666,15 +683,24 @@ export default function EditPhotoPackagePage() {
                       </label>
                       <input
                         type="number"
-                        value={prompt.seed || 0}
-                        onChange={(e) => updatePrompt(index, 'seed', parseInt(e.target.value) || 0)}
-                        placeholder="Ex: 123456"
+                        value={prompt.seed ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          updatePrompt(index, 'seed', val === '' ? undefined : parseInt(val) || 0)
+                        }}
+                        onFocus={(e) => {
+                          // Se o valor atual for 0, limpar o campo para melhor UX
+                          if (e.target.value === '0') {
+                            updatePrompt(index, 'seed', undefined)
+                          }
+                        }}
+                        placeholder="0"
                         min={0}
                         max={4294967295}
                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                       />
                       <p className="mt-1 text-xs text-gray-500">
-                        Seed fixo para reproduzir a mesma imagem. Deixe 0 ou vazio para gerar aleatório.
+                        Seed fixo para reproduzir a mesma imagem. Deixe vazio para gerar aleatório.
                       </p>
                     </div>
                   </div>
