@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     const session = await requireAuthAPI()
     const userId = session.user.id
 
-    const { operation, prompt, images, aspectRatio } = await request.json()
+    const { operation, prompt, images, aspectRatio, resolution } = await request.json()
 
     // Validate input - prompt is required, images can be empty for generation from scratch
     if (!operation || !prompt || !prompt.trim()) {
@@ -119,6 +119,9 @@ export async function POST(request: NextRequest) {
     formData.append('prompt', prompt)
     if (aspectRatio) {
       formData.append('aspectRatio', aspectRatio)
+    }
+    if (resolution) {
+      formData.append('resolution', resolution) // 'standard' ou '4k'
     }
 
     // For single image operations (only if image is provided)

@@ -1,6 +1,7 @@
 export const CREDIT_COSTS = {
   IMAGE_GENERATION_PER_OUTPUT: 10,
-  IMAGE_EDIT_PER_IMAGE: 15,
+  IMAGE_EDIT_PER_IMAGE: 20,      // Custo base do editor
+  IMAGE_EDIT_4K_PER_IMAGE: 30,   // Custo do editor em 4K
   UPSCALE_PER_IMAGE: 10,
   VIDEO_DURATION: {
     4: 80,
@@ -10,15 +11,19 @@ export const CREDIT_COSTS = {
 }
 
 export type VideoDurationSeconds = 4 | 6 | 8
+export type EditorResolution = 'standard' | '4k'
 
 export function getImageGenerationCost(variations: number = 1): number {
   const count = Math.max(1, variations)
   return count * CREDIT_COSTS.IMAGE_GENERATION_PER_OUTPUT
 }
 
-export function getImageEditCost(imageCount: number = 1): number {
+export function getImageEditCost(imageCount: number = 1, resolution: EditorResolution = 'standard'): number {
   const count = Math.max(1, imageCount)
-  return count * CREDIT_COSTS.IMAGE_EDIT_PER_IMAGE
+  const costPerImage = resolution === '4k'
+    ? CREDIT_COSTS.IMAGE_EDIT_4K_PER_IMAGE
+    : CREDIT_COSTS.IMAGE_EDIT_PER_IMAGE
+  return count * costPerImage
 }
 
 export function getUpscaleCost(imageCount: number = 1): number {

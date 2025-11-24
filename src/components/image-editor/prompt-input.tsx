@@ -79,7 +79,7 @@ export function PromptInput({
 
       {/* Character Count */}
       <div className="flex justify-between items-center text-sm text-gray-500">
-        <span>{value.length}/2500 characters</span>
+        <span>{value.length}/4000 characters</span>
         {value.length > 2250 && (
           <span className="text-orange-500 font-medium">
             {2500 - value.length} characters remaining

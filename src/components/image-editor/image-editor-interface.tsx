@@ -24,10 +24,11 @@ import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 import { useInvalidateCredits } from '@/hooks/useCredits'
-import { CREDIT_COSTS } from '@/lib/credits/pricing'
+import { CREDIT_COSTS, getImageEditCost, EditorResolution } from '@/lib/credits/pricing'
 import { ProcessingMessage } from '@/components/ui/processing-message'
 
-const IMAGE_EDITOR_CREDIT_COST = CREDIT_COSTS.IMAGE_EDIT_PER_IMAGE
+// Custos dinâmicos baseados na resolução
+const getEditorCost = (resolution: EditorResolution) => getImageEditCost(1, resolution)
 
 interface ImageEditorInterfaceProps {
   preloadedImageUrl?: string
@@ -54,6 +55,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   const [error, setError] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3' | '3:4' | '9:16' | '16:9'>('1:1')
+  const [resolution, setResolution] = useState<EditorResolution>('standard')
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' } | null>(null)
   const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
   const [currentEditId, setCurrentEditId] = useState<string | null>(null)
@@ -626,6 +628,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           prompt,
           images,
           aspectRatio,
+          resolution, // 'standard' ou '4k'
         })
       })
 
@@ -793,7 +796,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 </label>
                 <div className="flex items-center space-x-2">
                   <div className="text-xs text-gray-600">
-                    {prompt.length}/2500
+                    {prompt.length}/4000
                   </div>
                   {prompt && (
                     <>
@@ -852,6 +855,24 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               </select>
             </div>
 
+            {/* 4K Resolution Option */}
+            <div className="flex items-center">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={resolution === '4k'}
+                  onChange={(e) => setResolution(e.target.checked ? '4k' : 'standard')}
+                  className="w-4 h-4 rounded border-gray-300 text-[#667EEA] focus:ring-[#667EEA]"
+                />
+                <span className="text-sm text-gray-700">
+                  Gerar em 4K
+                </span>
+                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                  {CREDIT_COSTS.IMAGE_EDIT_4K_PER_IMAGE} créditos
+                </Badge>
+              </label>
+            </div>
+
             {/* Upload and Process Buttons - Side by side, smaller */}
             <div className="flex flex-row items-center gap-2">
               <Button
@@ -879,7 +900,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                   </>
                 ) : (
                   <>
-                    {isMobile ? `Gerar (${IMAGE_EDITOR_CREDIT_COST} créditos)` : `Gerar Foto (${IMAGE_EDITOR_CREDIT_COST} créditos)`}
+                    {isMobile ? `Gerar (${getEditorCost(resolution)} créditos)` : `Gerar Foto (${getEditorCost(resolution)} créditos)`}
                   </>
                 )}
               </Button>
@@ -1078,6 +1099,24 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             </select>
           </div>
 
+          {/* 4K Resolution Option */}
+          <div className="flex items-center">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={resolution === '4k'}
+                onChange={(e) => setResolution(e.target.checked ? '4k' : 'standard')}
+                className="w-4 h-4 rounded border-gray-300 text-[#667EEA] focus:ring-[#667EEA]"
+              />
+              <span className="text-sm text-gray-700">
+                Gerar em 4K
+              </span>
+              <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                {CREDIT_COSTS.IMAGE_EDIT_4K_PER_IMAGE} créditos
+              </Badge>
+            </label>
+          </div>
+
           {/* Upload and Process Buttons - Side by side, smaller */}
           <div className="flex items-center gap-3">
             <Button
@@ -1105,7 +1144,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 </>
               ) : (
                 <>
-                  {isMobile ? `Gerar (${IMAGE_EDITOR_CREDIT_COST} créditos)` : `Gerar Foto (${IMAGE_EDITOR_CREDIT_COST} créditos)`}
+                  {isMobile ? `Gerar (${getEditorCost(resolution)} créditos)` : `Gerar Foto (${getEditorCost(resolution)} créditos)`}
                 </>
               )}
             </Button>

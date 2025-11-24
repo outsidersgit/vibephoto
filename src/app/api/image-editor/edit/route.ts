@@ -8,7 +8,7 @@ import { prisma } from '@/lib/db'
 import { downloadAndStoreImages } from '@/lib/storage/utils'
 import { processAndStoreReplicateImages } from '@/lib/services/auto-image-storage'
 import { CreditManager } from '@/lib/credits/manager'
-import { getImageEditCost } from '@/lib/credits/pricing'
+import { getImageEditCost, EditorResolution } from '@/lib/credits/pricing'
 import { Plan } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
@@ -22,8 +22,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Parse form data first to get resolution
+    const formData = await request.formData()
+    const image = formData.get('image') as File | null
+    const prompt = formData.get('prompt') as string
+    const aspectRatio = formData.get('aspectRatio') as string | null
+    const resolutionParam = formData.get('resolution') as string | null
+    const resolution: EditorResolution = resolutionParam === '4k' ? '4k' : 'standard'
+
     const userPlan = ((session.user as any)?.plan || 'STARTER') as Plan
-    const creditsNeeded = getImageEditCost(1)
+    const creditsNeeded = getImageEditCost(1, resolution) // Custo baseado na resolução
     const affordability = await CreditManager.canUserAfford(session.user.id, creditsNeeded, userPlan)
     if (!affordability.canAfford) {
       return NextResponse.json(
@@ -31,12 +39,6 @@ export async function POST(request: NextRequest) {
         { status: 402 }
       )
     }
-
-    // Parse form data
-    const formData = await request.formData()
-    const image = formData.get('image') as File | null
-    const prompt = formData.get('prompt') as string
-    const aspectRatio = formData.get('aspectRatio') as string | null
 
     // Validate inputs
     if (!prompt || !prompt.trim()) {
@@ -96,13 +98,16 @@ export async function POST(request: NextRequest) {
       userId: session.user.id
     })
     
+    // Convert resolution to Nano Banana format ('2K' or '4K')
+    const nanoBananaResolution = resolution === '4k' ? '4K' : '2K'
+
     let result
     if (image) {
       // Edit existing image
-      result = await imageEditor.editImageWithPrompt(image, prompt, aspectRatioValue, webhookUrl)
+      result = await imageEditor.editImageWithPrompt(image, prompt, aspectRatioValue, webhookUrl, nanoBananaResolution)
     } else {
       // Generate from scratch
-      result = await imageEditor.generateImageFromPrompt(prompt, aspectRatioValue, webhookUrl)
+      result = await imageEditor.generateImageFromPrompt(prompt, aspectRatioValue, webhookUrl, nanoBananaResolution)
     }
 
     // If webhook is enabled, result might not have resultImage yet (async processing)

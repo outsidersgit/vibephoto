@@ -4,7 +4,8 @@ import {
   getImageGenerationCost,
   getImageEditCost,
   getUpscaleCost,
-  getVideoGenerationCost
+  getVideoGenerationCost,
+  EditorResolution
 } from '@/lib/credits/pricing'
 
 /**
@@ -16,6 +17,7 @@ export function calculateOperationCost(
     duration?: number
     packageType?: string
     estimatedCost?: number
+    resolution?: string // '4k' ou 'standard'
     [key: string]: any
   }
 ): number {
@@ -37,8 +39,9 @@ export function calculateOperationCost(
       return getUpscaleCost(metadata?.imageCount || 1)
 
     case 'edited':
-      // Edit costs: 15 créditos
-      return getImageEditCost(metadata?.imageCount || 1)
+      // Edit costs: 20 créditos (standard) ou 30 créditos (4K)
+      const editorResolution: EditorResolution = metadata?.resolution === '4k' ? '4k' : 'standard'
+      return getImageEditCost(metadata?.imageCount || 1, editorResolution)
 
     case 'video':
       // Video costs based on duration

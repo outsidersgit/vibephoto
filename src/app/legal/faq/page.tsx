@@ -67,7 +67,7 @@ const faqData: FAQItem[] = [
   {
     category: 'funcionamento',
     question: 'Quantos créditos cada foto consome?',
-    answer: 'Cada foto gerada consome, por padrão, 10 créditos, independentemente do plano. Fotos criadas pelo Editor IA custam 15 créditos por imagem. Alguns pacotes de fotos podem ter custo superior por imagem, conforme o nível de detalhamento ou exclusividade do pacote.'
+    answer: 'Cada foto gerada consome, por padrão, 10 créditos, independentemente do plano. Fotos criadas pelo Editor IA custam 20 créditos por imagem (ou 30 créditos em resolução 4K). Alguns pacotes de fotos podem ter custo superior por imagem, conforme o nível de detalhamento ou exclusividade do pacote.'
   },
   {
     category: 'funcionamento',
@@ -82,7 +82,7 @@ const faqData: FAQItem[] = [
   {
     category: 'funcionamento',
     question: 'Como funciona o Editor IA?',
-    answer: 'O Editor IA permite editar ou criar qualquer imagem — seja sua, gerada na plataforma ou totalmente nova. Você pode recriar fotos famosas, montar campanhas publicitárias ou dar vida a qualquer ideia usando comandos de texto simples. Modifique cenários, troque roupas, ajuste luz, remova objetos ou combine imagens com realismo total. Cada geração custa 15 créditos.'
+    answer: 'O Editor IA permite editar ou criar qualquer imagem — seja sua, gerada na plataforma ou totalmente nova. Você pode recriar fotos famosas, montar campanhas publicitárias ou dar vida a qualquer ideia usando comandos de texto simples. Modifique cenários, troque roupas, ajuste luz, remova objetos ou combine imagens com realismo total. Cada geração custa 20 créditos (ou 30 créditos em resolução 4K).'
   },
   {
     category: 'funcionamento',

@@ -43,19 +43,20 @@ export class ImageEditor {
    * @param promptText - Text description of the desired edit
    * @param aspectRatio - Aspect ratio for the output image
    * @param webhookUrl - Optional webhook URL for async processing
+   * @param resolution - Output resolution ('2K' or '4K')
    * @returns Promise<ImageEditResponse>
    */
-  async editImageWithPrompt(imageFile: File, promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string): Promise<ImageEditResponse> {
+  async editImageWithPrompt(imageFile: File, promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string, resolution?: string): Promise<ImageEditResponse> {
     this.checkConfiguration()
-    
+
     try {
-      console.log('🍌 Starting Nano Banana image edit via Replicate:', { fileName: imageFile.name, prompt: promptText })
-      
+      console.log('🍌 Starting Nano Banana image edit via Replicate:', { fileName: imageFile.name, prompt: promptText, resolution })
+
       // Validate input
       if (!imageFile) {
         throw new AIError('Image file is required', 'INVALID_INPUT')
       }
-      
+
       if (!promptText || promptText.trim().length === 0) {
         throw new AIError('Prompt text is required', 'INVALID_INPUT')
       }
@@ -73,9 +74,9 @@ export class ImageEditor {
 
       // Convert file to data URL for Replicate
       const imageUrl = await NanoBananaProvider.fileToUrl(imageFile)
-      
+
       // Call Nano Banana provider via Replicate with webhook support
-      const result = await this.provider!.editWithPrompt(imageUrl, promptText, 'jpg', aspectRatio, webhookUrl)
+      const result = await this.provider!.editWithPrompt(imageUrl, promptText, 'jpg', aspectRatio, webhookUrl, resolution)
 
       console.log('✅ Nano Banana edit completed:', result.id)
       return result
@@ -94,21 +95,22 @@ export class ImageEditor {
    * @param promptText - Text description of the desired image
    * @param aspectRatio - Aspect ratio for the output image
    * @param webhookUrl - Optional webhook URL for async processing
+   * @param resolution - Output resolution ('2K' or '4K')
    * @returns Promise<ImageEditResponse>
    */
-  async generateImageFromPrompt(promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string): Promise<ImageEditResponse> {
+  async generateImageFromPrompt(promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string, resolution?: string): Promise<ImageEditResponse> {
     this.checkConfiguration()
-    
+
     try {
-      console.log('🍌 Starting Nano Banana image generation from scratch via Replicate:', { prompt: promptText })
-      
+      console.log('🍌 Starting Nano Banana image generation from scratch via Replicate:', { prompt: promptText, resolution })
+
       // Validate input
       if (!promptText || promptText.trim().length === 0) {
         throw new AIError('Prompt text is required', 'INVALID_INPUT')
       }
 
       // Call Nano Banana provider to generate from scratch with webhook support
-      const result = await this.provider!.generateImage(promptText, 'jpg', aspectRatio, webhookUrl)
+      const result = await this.provider!.generateImage(promptText, 'jpg', aspectRatio, webhookUrl, resolution)
 
       console.log('✅ Nano Banana generation completed:', result.id)
       return result
