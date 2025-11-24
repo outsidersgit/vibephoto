@@ -93,9 +93,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate prompt length
-    if (prompt.length > 2500) {
+    if (prompt.length > 4000) {
       return NextResponse.json(
-        { error: 'Prompt must be 2500 characters or less' },
+        { error: 'Prompt must be 4000 characters or less' },
         { status: 400 }
       )
     }

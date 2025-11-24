@@ -14,7 +14,7 @@ import { getAspectRatioValue } from '@/lib/utils/aspect-ratio'
 
 const generateImageSchema = z.object({
   modelId: z.string(),
-  prompt: z.string().min(1).max(2500),
+  prompt: z.string().min(1).max(4000),
   negativePrompt: z.string().optional(),
   generationParams: z.object({
     width: z.number().min(512).max(1536).default(1024),
