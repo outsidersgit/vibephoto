@@ -218,6 +218,51 @@ export async function broadcastPackageGenerationUpdate(
 }
 
 /**
+ * Broadcast video status change to connected clients
+ * Used for real-time video generation updates (started, processing, completed, failed)
+ */
+export async function broadcastVideoStatusChange(
+  videoId: string,
+  userId: string,
+  status: string,
+  additionalData?: any
+) {
+  console.log('🎬 [realtime-service] Broadcasting video status change:', {
+    videoId,
+    userId,
+    status,
+    hasVideoUrl: !!additionalData?.videoUrl,
+    hasThumbnailUrl: !!additionalData?.thumbnailUrl
+  })
+
+  const broadcast = await getBroadcastFunction()
+  if (!broadcast) {
+    console.log('❌ [realtime-service] No broadcast function available, skipping video event')
+    return
+  }
+
+  const eventData = {
+    type: EVENT_TYPES.VIDEO_STATUS_CHANGED,
+    userId,
+    data: {
+      videoId,
+      status,
+      timestamp: new Date().toISOString(),
+      ...additionalData
+    }
+  }
+
+  console.log('📤 [realtime-service] Sending video broadcast event:', {
+    type: eventData.type,
+    userId: eventData.userId,
+    videoId: eventData.data.videoId,
+    status: eventData.data.status
+  })
+
+  return broadcast(eventData)
+}
+
+/**
  * Broadcast credits update to user
  * CRITICAL: Incluir creditsBalance para atualização em tempo real do badge
  */
