@@ -403,6 +403,7 @@ export default function NewPhotoPackagePage() {
                       onChange={(e) => updatePrompt(index, 'text', e.target.value)}
                       placeholder="Descreva a imagem que será gerada..."
                       rows={3}
+                      maxLength={4000}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                     />
 
