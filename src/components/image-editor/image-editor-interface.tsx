@@ -867,9 +867,6 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 <span className="text-sm text-gray-700">
                   Gerar em 4K
                 </span>
-                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                  {CREDIT_COSTS.IMAGE_EDIT_4K_PER_IMAGE} créditos
-                </Badge>
               </label>
             </div>
 
@@ -1040,7 +1037,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               </label>
               <div className="flex items-center space-x-2">
                 <div className="text-xs text-gray-600">
-                  {prompt.length}/2500
+                  {prompt.length}/4000
                 </div>
                 {prompt && (
                   <>
@@ -1111,9 +1108,6 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               <span className="text-sm text-gray-700">
                 Gerar em 4K
               </span>
-              <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                {CREDIT_COSTS.IMAGE_EDIT_4K_PER_IMAGE} créditos
-              </Badge>
             </label>
           </div>
 
