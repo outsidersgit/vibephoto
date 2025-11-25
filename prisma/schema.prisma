@@ -396,6 +396,12 @@ enum PackageCategory {
   PREMIUM
 }
 
+enum Gender {
+  MALE
+  FEMALE
+  BOTH
+}
+
 enum PackageStatus {
   ACTIVE
   GENERATING
@@ -409,7 +415,14 @@ model PhotoPackage {
   description String          @db.Text
   category    PackageCategory
 
-  // Package content
+  // Gender support
+  gender            Gender? @default(BOTH) // MALE, FEMALE, or BOTH
+  promptsMale       Json[]  @default([])   // Prompts for male gender
+  promptsFemale     Json[]  @default([])   // Prompts for female gender
+  previewUrlsMale   Json[]  @default([])   // Preview URLs for male
+  previewUrlsFemale Json[]  @default([])   // Preview URLs for female
+
+  // Package content (DEPRECATED - use gender-specific fields above)
   prompts     Json[] // Array of prompt objects with metadata
   previewUrls Json[] // Preview image URLs
 
@@ -437,6 +450,9 @@ model UserPackage {
   userId    String
   packageId String
   status    PackageStatus @default(ACTIVE)
+
+  // Gender selection
+  selectedGender Gender? // Which gender was selected (MALE or FEMALE)
 
   // Progress tracking
   totalImages      Int // Number of images to generate (calculated from package.prompts.length)

@@ -5,13 +5,16 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { X, Upload, Image as ImageIcon, Trash2 } from 'lucide-react'
+import { GenderTabs } from '@/components/admin/gender-tabs'
 
 interface Prompt {
   text: string
   style?: string
   description?: string
-  seed?: number // Seed fixo para reprodutibilidade
+  seed?: number
 }
+
+type GenderType = 'MALE' | 'FEMALE'
 
 export default function NewPhotoPackagePage() {
   const router = useRouter()
@@ -19,9 +22,15 @@ export default function NewPhotoPackagePage() {
   const [isLoading, setIsLoading] = useState(false)
   const [uploadingPreviews, setUploadingPreviews] = useState(false)
   const [error, setError] = useState('')
-  const [previewImages, setPreviewImages] = useState<File[]>([])
-  const [previewUrls, setPreviewUrls] = useState<string[]>([])
-  const [previewPreviews, setPreviewPreviews] = useState<{ url: string; index: number }[]>([])
+
+  // Estados separados por gênero
+  const [previewImagesMale, setPreviewImagesMale] = useState<File[]>([])
+  const [previewImagesFemale, setPreviewImagesFemale] = useState<File[]>([])
+  const [previewUrlsMale, setPreviewUrlsMale] = useState<string[]>([])
+  const [previewUrlsFemale, setPreviewUrlsFemale] = useState<string[]>([])
+  const [previewPreviewsMale, setPreviewPreviewsMale] = useState<{ url: string; index: number }[]>([])
+  const [previewPreviewsFemale, setPreviewPreviewsFemale] = useState<{ url: string; index: number }[]>([])
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -29,56 +38,70 @@ export default function NewPhotoPackagePage() {
     price: '',
     isActive: true,
     isPremium: false,
-    prompts: [] as Prompt[]
+    promptsMale: [] as Prompt[],
+    promptsFemale: [] as Prompt[]
   })
 
-  const handlePreviewImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePreviewImageChange = (e: React.ChangeEvent<HTMLInputElement>, gender: GenderType) => {
     const files = Array.from(e.target.files || [])
     const validFiles = files.filter(f => f.type.startsWith('image/'))
-    
-    // Sem limite - adiciona todas as imagens válidas
-    setPreviewImages([...previewImages, ...validFiles])
-    
-    // Criar previews para exibição - todas as imagens
-    validFiles.forEach((file, idx) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const url = e.target?.result as string
-        setPreviewPreviews(prev => [...prev, { url, index: previewImages.length + idx }])
-      }
-      reader.readAsDataURL(file)
-    })
-  }
 
-  const removePreviewImage = (index: number) => {
-    setPreviewImages(previewImages.filter((_, i) => i !== index))
-    setPreviewPreviews(previewPreviews.filter(p => p.index !== index).map(p => ({
-      ...p,
-      index: p.index > index ? p.index - 1 : p.index
-    })))
-    setPreviewUrls(previewUrls.filter((_, i) => i !== index))
-  }
-
-  const uploadPreviewImages = async (): Promise<string[]> => {
-    if (previewImages.length === 0) {
-      return []
+    if (gender === 'MALE') {
+      setPreviewImagesMale([...previewImagesMale, ...validFiles])
+      validFiles.forEach((file, idx) => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const url = e.target?.result as string
+          setPreviewPreviewsMale(prev => [...prev, { url, index: previewImagesMale.length + idx }])
+        }
+        reader.readAsDataURL(file)
+      })
+    } else {
+      setPreviewImagesFemale([...previewImagesFemale, ...validFiles])
+      validFiles.forEach((file, idx) => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const url = e.target?.result as string
+          setPreviewPreviewsFemale(prev => [...prev, { url, index: previewImagesFemale.length + idx }])
+        }
+        reader.readAsDataURL(file)
+      })
     }
+  }
 
-    setUploadingPreviews(true)
+  const removePreviewImage = (index: number, gender: GenderType) => {
+    if (gender === 'MALE') {
+      setPreviewImagesMale(previewImagesMale.filter((_, i) => i !== index))
+      setPreviewPreviewsMale(previewPreviewsMale.filter(p => p.index !== index).map(p => ({
+        ...p,
+        index: p.index > index ? p.index - 1 : p.index
+      })))
+      setPreviewUrlsMale(previewUrlsMale.filter((_, i) => i !== index))
+    } else {
+      setPreviewImagesFemale(previewImagesFemale.filter((_, i) => i !== index))
+      setPreviewPreviewsFemale(previewPreviewsFemale.filter(p => p.index !== index).map(p => ({
+        ...p,
+        index: p.index > index ? p.index - 1 : p.index
+      })))
+      setPreviewUrlsFemale(previewUrlsFemale.filter((_, i) => i !== index))
+    }
+  }
+
+  const uploadPreviewImages = async (images: File[], gender: GenderType): Promise<string[]> => {
+    if (images.length === 0) return []
 
     try {
-      // 1) Presign request
       const presignRes = await fetch('/api/uploads/presign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: session?.user?.id || 'admin',
-          files: previewImages.map((file) => ({
+          files: images.map((file) => ({
             name: file.name,
             type: file.type,
             category: 'preview'
           })),
-          prefix: 'package-previews'
+          prefix: `package-previews/${gender.toLowerCase()}`
         })
       })
 
@@ -90,13 +113,8 @@ export default function NewPhotoPackagePage() {
       const presignData = await presignRes.json()
       const uploads = presignData.uploads as Array<{ uploadUrl: string; publicUrl: string; key: string; contentType: string }>
 
-      if (!uploads || uploads.length !== previewImages.length) {
-        throw new Error('Resposta de presign inválida')
-      }
-
-      // 2) Upload direto para S3 (PUT)
       await Promise.all(uploads.map((u, idx) => {
-        const file = previewImages[idx]
+        const file = images[idx]
         return fetch(u.uploadUrl, {
           method: 'PUT',
           headers: { 'Content-Type': file.type || 'application/octet-stream' },
@@ -106,16 +124,10 @@ export default function NewPhotoPackagePage() {
         })
       }))
 
-      // 3) Retornar URLs públicas
-      const urls = uploads.map(u => u.publicUrl)
-      setPreviewUrls(urls)
-      return urls
-
+      return uploads.map(u => u.publicUrl)
     } catch (error) {
       console.error('Erro ao fazer upload de preview images:', error)
       throw error
-    } finally {
-      setUploadingPreviews(false)
     }
   }
 
@@ -125,17 +137,29 @@ export default function NewPhotoPackagePage() {
     setError('')
 
     try {
-      // Upload preview images primeiro (se houver)
-      let uploadedPreviewUrls: string[] = []
-      if (previewImages.length > 0) {
-        uploadedPreviewUrls = await uploadPreviewImages()
-      }
+      setUploadingPreviews(true)
+
+      // Upload preview images para ambos os gêneros
+      const [uploadedMaleUrls, uploadedFemaleUrls] = await Promise.all([
+        uploadPreviewImages(previewImagesMale, 'MALE'),
+        uploadPreviewImages(previewImagesFemale, 'FEMALE')
+      ])
+
+      setPreviewUrlsMale(uploadedMaleUrls)
+      setPreviewUrlsFemale(uploadedFemaleUrls)
+      setUploadingPreviews(false)
 
       const price = formData.price ? parseFloat(formData.price) : null
-      
-      // Filtrar prompts vazios antes de enviar
-      const validPrompts = formData.prompts.filter(p => p.text.trim().length > 0)
-      
+
+      // Filtrar prompts vazios
+      const validPromptsMale = formData.promptsMale.filter(p => p.text.trim().length > 0)
+      const validPromptsFemale = formData.promptsFemale.filter(p => p.text.trim().length > 0)
+
+      // Validação: pelo menos 1 prompt por gênero
+      if (validPromptsMale.length === 0 || validPromptsFemale.length === 0) {
+        throw new Error('Você precisa adicionar pelo menos 1 prompt para cada gênero (Masculino e Feminino)')
+      }
+
       const response = await fetch('/api/admin/photo-packages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -146,8 +170,14 @@ export default function NewPhotoPackagePage() {
           price: price,
           isActive: formData.isActive,
           isPremium: formData.isPremium,
-          prompts: validPrompts,
-          previewUrls: uploadedPreviewUrls
+          gender: 'BOTH', // Por padrão, pacotes suportam ambos
+          promptsMale: validPromptsMale,
+          promptsFemale: validPromptsFemale,
+          previewUrlsMale: uploadedMaleUrls,
+          previewUrlsFemale: uploadedFemaleUrls,
+          // Legacy fields para compatibilidade
+          prompts: validPromptsMale, // Use male como fallback
+          previewUrls: uploadedMaleUrls
         })
       })
 
@@ -160,33 +190,225 @@ export default function NewPhotoPackagePage() {
     } catch (err: any) {
       setError(err.message || 'Erro ao criar pacote')
       setIsLoading(false)
+      setUploadingPreviews(false)
     }
   }
 
-  const addPrompt = () => {
-    setFormData({
-      ...formData,
-      prompts: [...formData.prompts, { text: '', style: 'photographic', seed: Math.floor(Math.random() * 1000000) }]
-    })
+  const addPrompt = (gender: GenderType) => {
+    if (gender === 'MALE') {
+      setFormData({
+        ...formData,
+        promptsMale: [...formData.promptsMale, { text: '', style: 'photographic', seed: Math.floor(Math.random() * 1000000) }]
+      })
+    } else {
+      setFormData({
+        ...formData,
+        promptsFemale: [...formData.promptsFemale, { text: '', style: 'photographic', seed: Math.floor(Math.random() * 1000000) }]
+      })
+    }
   }
 
-  const removePrompt = (index: number) => {
-    setFormData({
-      ...formData,
-      prompts: formData.prompts.filter((_, i) => i !== index)
-    })
+  const removePrompt = (index: number, gender: GenderType) => {
+    if (gender === 'MALE') {
+      setFormData({
+        ...formData,
+        promptsMale: formData.promptsMale.filter((_, i) => i !== index)
+      })
+    } else {
+      setFormData({
+        ...formData,
+        promptsFemale: formData.promptsFemale.filter((_, i) => i !== index)
+      })
+    }
   }
 
-  const updatePrompt = (index: number, field: keyof Prompt, value: string | number | undefined) => {
-    const updated = [...formData.prompts]
-    updated[index] = { ...updated[index], [field]: value }
-    setFormData({ ...formData, prompts: updated })
+  const updatePrompt = (index: number, field: keyof Prompt, value: string | number | undefined, gender: GenderType) => {
+    if (gender === 'MALE') {
+      const updated = [...formData.promptsMale]
+      updated[index] = { ...updated[index], [field]: value }
+      setFormData({ ...formData, promptsMale: updated })
+    } else {
+      const updated = [...formData.promptsFemale]
+      updated[index] = { ...updated[index], [field]: value }
+      setFormData({ ...formData, promptsFemale: updated })
+    }
   }
 
-  const clearPrompt = (index: number) => {
-    const updated = [...formData.prompts]
-    updated[index] = { text: '', style: 'photographic', seed: undefined }
-    setFormData({ ...formData, prompts: updated })
+  const clearPrompt = (index: number, gender: GenderType) => {
+    if (gender === 'MALE') {
+      const updated = [...formData.promptsMale]
+      updated[index] = { text: '', style: 'photographic', seed: undefined }
+      setFormData({ ...formData, promptsMale: updated })
+    } else {
+      const updated = [...formData.promptsFemale]
+      updated[index] = { text: '', style: 'photographic', seed: undefined }
+      setFormData({ ...formData, promptsFemale: updated })
+    }
+  }
+
+  const renderGenderContent = (gender: GenderType) => {
+    const previewImages = gender === 'MALE' ? previewImagesMale : previewImagesFemale
+    const previewPreviews = gender === 'MALE' ? previewPreviewsMale : previewPreviewsFemale
+    const prompts = gender === 'MALE' ? formData.promptsMale : formData.promptsFemale
+
+    return (
+      <div className="space-y-6">
+        {/* Preview Images Section */}
+        <div className="border-t pt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Imagens de Preview - {gender === 'MALE' ? 'Masculino' : 'Feminino'}
+          </label>
+          <p className="text-xs text-gray-500 mb-3">
+            Adicione pelo menos 4 imagens de preview para {gender === 'MALE' ? 'masculino' : 'feminino'}
+          </p>
+
+          {/* Preview Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            {previewPreviews.map((preview, index) => (
+              <div key={index} className="relative aspect-square border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50">
+                <img
+                  src={preview.url}
+                  alt={`Preview ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removePreviewImage(index, gender)}
+                  className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+
+            {/* Add Image Slot */}
+            <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-colors">
+              <Upload className="w-6 h-6 text-gray-400 mb-2" />
+              <span className="text-xs text-gray-500 text-center px-2">Adicionar</span>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png"
+                multiple
+                onChange={(e) => handlePreviewImageChange(e, gender)}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          {previewImages.length === 0 && (
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-600 mb-2">
+                Nenhuma imagem selecionada para {gender === 'MALE' ? 'masculino' : 'feminino'}
+              </p>
+              <label className="inline-block bg-purple-600 text-white px-4 py-2 rounded-md text-sm hover:bg-purple-700 cursor-pointer">
+                <Upload className="w-4 h-4 inline mr-2" />
+                Selecionar Imagens
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png"
+                  multiple
+                  onChange={(e) => handlePreviewImageChange(e, gender)}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          )}
+        </div>
+
+        {/* Prompts Section */}
+        <div className="border-t pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <label className="block text-sm font-medium text-gray-700">
+              Prompts de Geração - {gender === 'MALE' ? 'Masculino' : 'Feminino'}
+            </label>
+            <button
+              type="button"
+              onClick={() => addPrompt(gender)}
+              className="text-sm bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700"
+            >
+              + Adicionar Prompt
+            </button>
+          </div>
+
+          {prompts.length === 0 ? (
+            <p className="text-sm text-gray-500 italic">Nenhum prompt cadastrado para {gender === 'MALE' ? 'masculino' : 'feminino'}</p>
+          ) : (
+            <div className="space-y-3">
+              {prompts.map((prompt, index) => (
+                <div key={index} className="border border-gray-200 rounded-md p-3 bg-gray-50">
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-700">Prompt {index + 1}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => clearPrompt(index, gender)}
+                        className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                        title="Limpar campos"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Limpar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removePrompt(index, gender)}
+                        className="text-sm text-red-600 hover:text-red-700"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <textarea
+                      value={prompt.text}
+                      onChange={(e) => updatePrompt(index, 'text', e.target.value, gender)}
+                      placeholder="Descreva a imagem que será gerada..."
+                      rows={3}
+                      maxLength={4000}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    />
+
+                    <select
+                      value={prompt.style || 'photographic'}
+                      onChange={(e) => updatePrompt(index, 'style', e.target.value, gender)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    >
+                      <option value="photographic">Photographic</option>
+                      <option value="cinematic">Cinematic</option>
+                      <option value="artistic">Artistic</option>
+                      <option value="portrait">Portrait</option>
+                      <option value="landscape">Landscape</option>
+                    </select>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Seed (Reprodutibilidade)
+                      </label>
+                      <input
+                        type="number"
+                        value={prompt.seed ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          updatePrompt(index, 'seed', val === '' ? undefined : parseInt(val) || 0, gender)
+                        }}
+                        placeholder="0"
+                        min={0}
+                        max={4294967295}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Seed fixo para reproduzir a mesma imagem. Deixe vazio para gerar aleatório.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -205,6 +427,7 @@ export default function NewPhotoPackagePage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4 bg-white border border-gray-200 rounded-md p-6">
+        {/* Informações Básicas */}
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
             Nome *
@@ -244,10 +467,10 @@ export default function NewPhotoPackagePage() {
             className="w-full border border-gray-300 rounded-md px-3 py-2"
           >
             <option value="PROFESSIONAL">Profissional</option>
-            <option value="SOCIAL">Social</option>
-            <option value="THEMATIC">Temático</option>
-            <option value="ARTISTIC">Artístico</option>
-            <option value="FANTASY">Fantasia</option>
+            <option value="LIFESTYLE">Lifestyle</option>
+            <option value="CREATIVE">Criativo</option>
+            <option value="FASHION">Fashion</option>
+            <option value="PREMIUM">Premium</option>
           </select>
         </div>
 
@@ -290,169 +513,22 @@ export default function NewPhotoPackagePage() {
           </label>
         </div>
 
-        {/* Preview Images Section */}
-        <div className="border-t pt-4 mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Imagens de Preview (sem limite)
-          </label>
-          <p className="text-xs text-gray-500 mb-3">
-            Selecione quantas imagens quiser para exibir como preview do pacote
+        {/* Tabs de Gênero */}
+        <div className="border-t pt-4 mt-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Prompts e Previews por Gênero
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Configure prompts e imagens de preview separadamente para masculino e feminino. Cada gênero deve ter pelo menos 1 prompt e 4 previews.
           </p>
-          
-          {/* Preview Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            {previewPreviews.map((preview, index) => (
-              <div key={index} className="relative aspect-square border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50">
-                <img
-                  src={preview.url}
-                  alt={`Preview ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => removePreviewImage(index)}
-                  className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-            
-            {/* Add Image Slot - sempre visível */}
-            <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-colors">
-              <Upload className="w-6 h-6 text-gray-400 mb-2" />
-              <span className="text-xs text-gray-500 text-center px-2">Adicionar Imagem</span>
-              <input
-                type="file"
-                accept="image/jpeg,image/jpg,image/png"
-                multiple
-                onChange={handlePreviewImageChange}
-                className="hidden"
-              />
-            </label>
-          </div>
 
-          {/* File Input Alternative */}
-          {previewImages.length === 0 && (
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-600 mb-2">
-                Nenhuma imagem selecionada
-              </p>
-              <label className="inline-block bg-purple-600 text-white px-4 py-2 rounded-md text-sm hover:bg-purple-700 cursor-pointer">
-                <Upload className="w-4 h-4 inline mr-2" />
-                Selecionar Imagens
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png"
-                  multiple
-                  onChange={handlePreviewImageChange}
-                  className="hidden"
-                />
-              </label>
-            </div>
-          )}
+          <GenderTabs
+            maleContent={renderGenderContent('MALE')}
+            femaleContent={renderGenderContent('FEMALE')}
+          />
         </div>
 
-        {/* Prompts Section */}
-        <div className="border-t pt-4 mt-4">
-          <div className="flex items-center justify-between mb-3">
-            <label className="block text-sm font-medium text-gray-700">
-              Prompts de Geração
-            </label>
-            <button
-              type="button"
-              onClick={addPrompt}
-              className="text-sm bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700"
-            >
-              + Adicionar Prompt
-            </button>
-          </div>
-          
-          {formData.prompts.length === 0 ? (
-            <p className="text-sm text-gray-500 italic">Nenhum prompt cadastrado</p>
-          ) : (
-            <div className="space-y-3">
-              {formData.prompts.map((prompt, index) => (
-                <div key={index} className="border border-gray-200 rounded-md p-3 bg-gray-50">
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">Prompt {index + 1}</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => clearPrompt(index)}
-                        className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-                        title="Limpar campos"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        Limpar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removePrompt(index)}
-                        className="text-sm text-red-600 hover:text-red-700"
-                      >
-                        Remover
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <textarea
-                      value={prompt.text}
-                      onChange={(e) => updatePrompt(index, 'text', e.target.value)}
-                      placeholder="Descreva a imagem que será gerada..."
-                      rows={3}
-                      maxLength={4000}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                    />
-
-                    <select
-                      value={prompt.style || 'photographic'}
-                      onChange={(e) => updatePrompt(index, 'style', e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                    >
-                      <option value="photographic">Photographic</option>
-                      <option value="cinematic">Cinematic</option>
-                      <option value="artistic">Artistic</option>
-                      <option value="portrait">Portrait</option>
-                      <option value="landscape">Landscape</option>
-                    </select>
-
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Seed (Reprodutibilidade)
-                      </label>
-                      <input
-                        type="number"
-                        value={prompt.seed ?? ''}
-                        onChange={(e) => {
-                          const val = e.target.value
-                          updatePrompt(index, 'seed', val === '' ? undefined : parseInt(val) || 0)
-                        }}
-                        onFocus={(e) => {
-                          // Se o valor atual for 0, limpar o campo para melhor UX
-                          if (e.target.value === '0') {
-                            updatePrompt(index, 'seed', undefined)
-                          }
-                        }}
-                        placeholder="0"
-                        min={0}
-                        max={4294967295}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        Seed fixo para reproduzir a mesma imagem. Deixe vazio para gerar aleatório.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-2 pt-4">
+        <div className="flex gap-2 pt-4 border-t">
           <button
             type="submit"
             disabled={isLoading || uploadingPreviews}
@@ -471,4 +547,3 @@ export default function NewPhotoPackagePage() {
     </div>
   )
 }
-

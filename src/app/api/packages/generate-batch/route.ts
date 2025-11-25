@@ -9,21 +9,30 @@ interface BatchGenerationRequest {
   packageId: string
   modelId: string
   aspectRatio: string
+  gender: 'MALE' | 'FEMALE'
 }
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🎯 Batch generation API called')
     const body: BatchGenerationRequest = await request.json()
-    const { userPackageId, userId, packageId, modelId, aspectRatio } = body
+    const { userPackageId, userId, packageId, modelId, aspectRatio, gender } = body
 
-    console.log('📥 Batch generation request:', { userPackageId, userId, packageId, modelId, aspectRatio })
+    console.log('📥 Batch generation request:', { userPackageId, userId, packageId, modelId, aspectRatio, gender })
 
     // Validate request
     if (!userPackageId || !userId || !packageId || !modelId || !aspectRatio) {
       console.error('❌ Missing required fields')
       return NextResponse.json({
         error: 'Missing required fields: userPackageId, userId, packageId, modelId, aspectRatio'
+      }, { status: 400 })
+    }
+
+    // Validate gender
+    if (!gender || !['MALE', 'FEMALE'].includes(gender)) {
+      console.error('❌ Invalid gender')
+      return NextResponse.json({
+        error: 'Invalid gender. Must be MALE or FEMALE'
       }, { status: 400 })
     }
 
@@ -69,25 +78,41 @@ export async function POST(request: NextRequest) {
       classWord: aiModel.classWord,
       modelUrl: aiModel.modelUrl
     })
-    const packagePrompts = userPackage.package.prompts as Array<{
+
+    // Get prompts based on selected gender
+    const genderField = gender === 'MALE' ? 'promptsMale' : 'promptsFemale'
+    let packagePrompts = userPackage.package[genderField] as Array<{
       text: string
       style?: string
       description?: string
-      seed?: number // Seed fixo para reprodutibilidade
-    }>
+      seed?: number
+    }> | null
+
+    // Fallback to legacy prompts field if gender-specific prompts don't exist
+    if (!packagePrompts || !Array.isArray(packagePrompts) || packagePrompts.length === 0) {
+      console.log(`⚠️ No ${genderField} prompts found, falling back to legacy prompts field`)
+      packagePrompts = userPackage.package.prompts as Array<{
+        text: string
+        style?: string
+        description?: string
+        seed?: number
+      }>
+    }
 
     if (!packagePrompts || packagePrompts.length === 0) {
       await prisma.userPackage.update({
         where: { id: userPackageId },
         data: {
           status: 'FAILED',
-          errorMessage: 'Package has no prompts configured'
+          errorMessage: `Package has no prompts configured for ${gender === 'MALE' ? 'male' : 'female'} gender`
         }
       })
       return NextResponse.json({
-        error: 'Package has no prompts configured'
+        error: `Package has no prompts configured for ${gender === 'MALE' ? 'male' : 'female'} gender`
       }, { status: 400 })
     }
+
+    console.log(`📋 Using ${packagePrompts.length} prompts from ${genderField} for batch generation`)
 
     // Update status to GENERATING
     await prisma.userPackage.update({

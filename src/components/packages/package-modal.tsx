@@ -49,6 +49,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
   const [showProgressModal, setShowProgressModal] = useState(false)
   const [activeUserPackageId, setActiveUserPackageId] = useState<string | null>(null)
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
+  const [previewGender, setPreviewGender] = useState<'MALE' | 'FEMALE'>('MALE')
 
   const router = useRouter()
 
@@ -99,7 +100,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
     setShowConfigModal(true)
   }
 
-  const handleActivatePackage = async (modelId: string, aspectRatio: string) => {
+  const handleActivatePackage = async (modelId: string, aspectRatio: string, gender: 'MALE' | 'FEMALE') => {
     setShowConfigModal(false)
     setIsActivating(true)
     setActivationStatus('activating')
@@ -113,7 +114,8 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
         },
         body: JSON.stringify({
           modelId,
-          aspectRatio
+          aspectRatio,
+          gender
         })
       })
 
@@ -214,11 +216,42 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
         </div>
 
         <div className="p-6">
+              {/* Gender Toggle */}
+              <div className="flex justify-center gap-3 mb-5">
+                <button
+                  type="button"
+                  onClick={() => setPreviewGender('MALE')}
+                  className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    previewGender === 'MALE'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  Masculino
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewGender('FEMALE')}
+                  className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    previewGender === 'FEMALE'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  Feminino
+                </button>
+              </div>
+
               {/* Preview Images */}
-              {pkg.previewImages && pkg.previewImages.length > 0 ? (
-                <>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {pkg.previewImages.slice(0, 4).map((image, index) => (
+              {(() => {
+                const previews = previewGender === 'MALE' ?
+                  (pkg.previewUrlsMale || pkg.previewImages) :
+                  (pkg.previewUrlsFemale || pkg.previewImages)
+
+                return previews && previews.length > 0 ? (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {previews.slice(0, 4).map((image: string, index: number) => (
                       <div 
                         key={index} 
                         className="aspect-square bg-gray-900 rounded-lg overflow-hidden group cursor-pointer border border-gray-700 hover:border-purple-500 transition-colors"
@@ -253,28 +286,29 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
                   </div>
 
                   {/* Ver Todas Button - aparece quando há mais de 4 imagens */}
-                  {Array.isArray(pkg.previewImages) && pkg.previewImages.length > 4 && (
+                  {Array.isArray(previews) && previews.length > 4 && (
                     <div className="mt-4 flex justify-center">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          console.log('🔍 Ver todas clicado. Total de imagens:', pkg.previewImages.length)
+                          console.log('🔍 Ver todas clicado. Total de imagens:', previews.length)
                           setShowAllPreviews(true)
                         }}
                         className="bg-gray-700/50 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
                       >
                         <Eye className="w-4 h-4 mr-2" />
-                        Ver todas ({pkg.previewImages.length} imagens)
+                        Ver todas ({previews.length} imagens - {previewGender === 'MALE' ? 'Masculino' : 'Feminino'})
                       </Button>
                     </div>
                   )}
                 </>
               ) : (
                 <div className="text-center py-8 text-gray-400">
-                  <p>Nenhuma imagem de preview disponível</p>
+                  <p>Nenhuma imagem de preview disponível para {previewGender === 'MALE' ? 'Masculino' : 'Feminino'}</p>
                 </div>
-              )}
+              )
+            })()}
 
               <div className="h-4"></div>
 

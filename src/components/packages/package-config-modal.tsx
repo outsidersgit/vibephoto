@@ -21,7 +21,7 @@ interface PackageConfigModalProps {
   packagePrice: number
   totalImages?: number // Number of images in the package
   onClose: () => void
-  onConfirm: (modelId: string, aspectRatio: string) => void
+  onConfirm: (modelId: string, aspectRatio: string, gender: 'MALE' | 'FEMALE') => void
 }
 
 const ASPECT_RATIOS = [
@@ -42,6 +42,7 @@ export function PackageConfigModal({
 }: PackageConfigModalProps) {
   const [models, setModels] = useState<AIModel[]>([])
   const [selectedModel, setSelectedModel] = useState<string>('')
+  const [selectedGender, setSelectedGender] = useState<'MALE' | 'FEMALE'>('MALE')
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>('1:1')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -83,7 +84,7 @@ export function PackageConfigModal({
       setError('Selecione um modelo')
       return
     }
-    onConfirm(selectedModel, selectedAspectRatio)
+    onConfirm(selectedModel, selectedAspectRatio, selectedGender)
   }
 
   const selectedModelData = models.find(m => m.id === selectedModel)
@@ -136,6 +137,43 @@ export function PackageConfigModal({
                     </p>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Gender Selection */}
+          {!loading && models.length > 0 && (
+            <div>
+              <label className="text-sm font-medium text-white mb-2 block">
+                Selecione o Gênero
+              </label>
+              <p className="text-xs text-slate-400 mb-3">
+                Escolha o gênero para as {totalImages} fotos do pacote
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedGender('MALE')}
+                  className={`px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                    selectedGender === 'MALE'
+                      ? 'bg-purple-600 text-white border-2 border-purple-600'
+                      : 'bg-slate-800 text-slate-300 border-2 border-slate-700 hover:border-slate-600'
+                  }`}
+                >
+                  Masculino
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedGender('FEMALE')}
+                  className={`px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                    selectedGender === 'FEMALE'
+                      ? 'bg-purple-600 text-white border-2 border-purple-600'
+                      : 'bg-slate-800 text-slate-300 border-2 border-slate-700 hover:border-slate-600'
+                  }`}
+                >
+                  Feminino
+                </button>
               </div>
             </div>
           )}
@@ -205,6 +243,10 @@ export function PackageConfigModal({
           {!loading && models.length > 0 && selectedModelData && (
             <div className="bg-slate-800 border border-slate-700 rounded-lg p-3.5">
               <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Gênero:</span>
+                  <span className="text-white font-medium">{selectedGender === 'MALE' ? 'Masculino' : 'Feminino'}</span>
+                </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Modelo:</span>
                   <span className="text-white font-medium">{selectedModelData.name}</span>

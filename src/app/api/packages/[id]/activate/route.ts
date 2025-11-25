@@ -19,16 +19,23 @@ export async function POST(
     const { id: packageId } = await params
     const userId = session.user.id
 
-    // Get modelId and aspectRatio from request body
+    // Get modelId, aspectRatio, and gender from request body
     const body = await request.json()
-    const { modelId, aspectRatio } = body
+    const { modelId, aspectRatio, gender } = body
 
-    console.log('🚀 Package generation request:', { packageId, userId, modelId, aspectRatio })
+    console.log('🚀 Package generation request:', { packageId, userId, modelId, aspectRatio, gender })
 
     // Validate required parameters
     if (!modelId || !aspectRatio) {
       return NextResponse.json({
         error: 'Missing required parameters: modelId and aspectRatio are required'
+      }, { status: 400 })
+    }
+
+    // Validate gender
+    if (!gender || !['MALE', 'FEMALE'].includes(gender)) {
+      return NextResponse.json({
+        error: 'Invalid gender. Must be MALE or FEMALE'
       }, { status: 400 })
     }
 
@@ -84,16 +91,26 @@ export async function POST(
       return NextResponse.json({ error: 'Package is not active' }, { status: 400 })
     }
 
-    // Calculate total images from package prompts
-    const packagePrompts = photoPackage.prompts as Array<{ text: string; style?: string; description?: string }> | null
+    // Calculate total images from package prompts based on selected gender
+    const genderField = gender === 'MALE' ? 'promptsMale' : 'promptsFemale'
+    let packagePrompts = photoPackage[genderField] as Array<{ text: string; style?: string; description?: string }> | null
+
+    // Fallback to legacy prompts field if gender-specific prompts don't exist
+    if (!packagePrompts || !Array.isArray(packagePrompts) || packagePrompts.length === 0) {
+      console.log(`⚠️ No ${genderField} prompts found, falling back to legacy prompts field`)
+      packagePrompts = photoPackage.prompts as Array<{ text: string; style?: string; description?: string }> | null
+    }
+
     const totalImages = Array.isArray(packagePrompts) ? packagePrompts.length : 0
 
     // Validate package has at least one prompt
     if (totalImages === 0) {
       return NextResponse.json({
-        error: 'Package has no prompts configured. Cannot generate package without prompts.'
+        error: `Package has no prompts configured for ${gender === 'MALE' ? 'male' : 'female'} gender. Cannot generate package without prompts.`
       }, { status: 400 })
     }
+
+    console.log(`📋 Using ${totalImages} prompts from ${genderField} for generation`)
 
     // Validate user has enough credits
     const userPlan = ((session.user as any).plan || 'STARTER') as Plan
@@ -115,6 +132,7 @@ export async function POST(
           userId,
           packageId,
           status: 'ACTIVE',
+          selectedGender: gender, // Store selected gender
           totalImages: totalImages,
           generatedImages: 0,
           failedImages: 0
@@ -197,6 +215,7 @@ export async function POST(
       packageId,
       modelId,
       aspectRatio,
+      gender,
       url: batchGenerationUrl
     })
 
@@ -212,7 +231,8 @@ export async function POST(
           userId,
           packageId,
           modelId,
-          aspectRatio
+          aspectRatio,
+          gender
         })
       })
 

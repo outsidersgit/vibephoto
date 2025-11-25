@@ -1,4 +1,4 @@
-import { Plan, ModelStatus, ModelClass, GenerationStatus, PackageCategory, PackageStatus } from '@prisma/client'
+import { Plan, ModelStatus, ModelClass, GenerationStatus, PackageCategory, PackageStatus, Gender } from '@prisma/client'
 
 export type {
   Plan,
@@ -6,7 +6,8 @@ export type {
   ModelClass,
   GenerationStatus,
   PackageCategory,
-  PackageStatus
+  PackageStatus,
+  Gender
 }
 
 // Media types for gallery operations
@@ -87,12 +88,32 @@ export interface PhotoPackage {
   name: string
   description: string
   category: PackageCategory
+
+  // Gender support
+  gender?: Gender
+  promptsMale?: Array<{
+    text: string
+    style?: string
+    description?: string
+    seed?: number
+  }>
+  promptsFemale?: Array<{
+    text: string
+    style?: string
+    description?: string
+    seed?: number
+  }>
+  previewUrlsMale?: string[]
+  previewUrlsFemale?: string[]
+
+  // DEPRECATED - use gender-specific fields
   prompts: Array<{
     text: string
     style?: string
     description?: string
   }>
   previewUrls: string[]
+
   isPremium: boolean
   isActive: boolean
   price?: number
@@ -106,6 +127,7 @@ export interface UserPackage {
   userId: string
   packageId: string
   status: PackageStatus
+  selectedGender?: Gender // Which gender was selected for generation
   totalImages: number
   generatedImages: number
   failedImages: number
