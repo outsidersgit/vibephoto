@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Sparkles, User, Settings, LogOut, CreditCard, Camera, ImageIcon, Users, Package, Crown, History, UserCircle, MessageSquare, Coins, Plus, Receipt, List } from 'lucide-react'
+import { Menu, X, Sparkles, User, Settings, LogOut, CreditCard, Camera, ImageIcon, Users, Package, Crown, History, UserCircle, MessageSquare, Coins, Plus, Receipt, List, Wand2 } from 'lucide-react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useLogout } from '@/hooks/useLogout'
 import { VibePhotoLogo } from '@/components/ui/vibephoto-logo'
@@ -28,6 +29,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showPackageSelector, setShowPackageSelector] = useState(false)
+  const pathname = usePathname()
   const queryClient = useQueryClient()
   const { data: session, status, update: updateSession } = useSession()
   const { logout } = useLogout()
@@ -124,10 +126,16 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
   const navigationItems = hasActiveAccess() ? [
     { name: 'Modelos', href: '/models', icon: <Users className="w-4 h-4" /> },
     { name: 'Gerar', href: '/generate', icon: <Camera className="w-4 h-4" /> },
+    { name: 'Editor', href: '/editor', icon: <Wand2 className="w-4 h-4" /> },
     { name: 'Galeria', href: '/gallery', icon: <ImageIcon className="w-4 h-4" /> },
     { name: 'Pacotes', href: '/packages', icon: <Package className="w-4 h-4" /> },
     { name: 'Créditos', href: '/credits', icon: <Coins className="w-4 h-4" /> },
   ] : []
+
+  // Helper: Check if current path matches the nav item
+  const isActivePath = (href: string) => {
+    return pathname === href || pathname?.startsWith(href + '/')
+  }
 
   return (
     <motion.header
@@ -157,21 +165,44 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-8">
-            {navigationItems.map((item) => (
-              <motion.div
-                key={item.name}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Link
-                  href={item.href}
-                  className="flex items-center space-x-2 text-slate-600 hover:text-slate-900 font-medium transition-colors duration-200"
+            {navigationItems.map((item) => {
+              const isActive = isActivePath(item.href)
+              return (
+                <motion.div
+                  key={item.name}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="relative"
                 >
-                  {item.icon}
-                  <span>{item.name}</span>
-                </Link>
-              </motion.div>
-            ))}
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "flex items-center space-x-2 font-medium transition-all duration-200 relative",
+                      isActive
+                        ? "text-slate-900"
+                        : "text-slate-600 hover:text-slate-900"
+                    )}
+                  >
+                    {item.icon}
+                    <span>{item.name}</span>
+
+                    {/* Active indicator - animated underline */}
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeNav"
+                        className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-[#667EEA] to-[#764BA2] rounded-full"
+                        initial={false}
+                        transition={{
+                          type: "spring",
+                          stiffness: 380,
+                          damping: 30
+                        }}
+                      />
+                    )}
+                  </Link>
+                </motion.div>
+              )
+            })}
           </nav>
 
           {/* Desktop Actions */}
@@ -347,23 +378,34 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
           >
             <div className="px-4 py-6 space-y-4">
               {/* Navigation Items */}
-              {navigationItems.map((item, index) => (
-                <motion.div
-                  key={item.name}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <Link
-                    href={item.href}
-                    className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
+              {navigationItems.map((item, index) => {
+                const isActive = isActivePath(item.href)
+                return (
+                  <motion.div
+                    key={item.name}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
                   >
-                    {item.icon}
-                    <span className="font-medium text-slate-700">{item.name}</span>
-                  </Link>
-                </motion.div>
-              ))}
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        "flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors relative",
+                        isActive
+                          ? "bg-gradient-to-r from-purple-50 to-blue-50 text-slate-900 border border-purple-200"
+                          : "hover:bg-slate-100 text-slate-700"
+                      )}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {item.icon}
+                      <span className="font-medium">{item.name}</span>
+                      {isActive && (
+                        <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#667EEA] to-[#764BA2]" />
+                      )}
+                    </Link>
+                  </motion.div>
+                )
+              })}
 
                 {/* Mobile Actions */}
                 <div className="pt-4 border-t border-slate-200 space-y-3">
