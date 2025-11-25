@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -48,6 +49,8 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
   const [showProgressModal, setShowProgressModal] = useState(false)
   const [activeUserPackageId, setActiveUserPackageId] = useState<string | null>(null)
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
+
+  const router = useRouter()
 
   // Debug: verificar preview images
   React.useEffect(() => {
@@ -125,18 +128,21 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
         // Invalidar cache de créditos (React Query atualiza automaticamente)
         invalidateBalance()
 
-        // 🔥 NOVO FLUXO: Abrir modal de progresso em vez de redirecionar
+        // 🔄 NOVO FLUXO: Fechar modal e redirecionar para galeria
         setActiveUserPackageId(data.userPackage.id)
-        
-        // Marcar no localStorage que o modal está aberto
-        localStorage.setItem(`package_modal_open_${data.userPackage.id}`, 'true')
-        
+
+        // Marcar no localStorage para exibir painel de progresso na página /packages
+        localStorage.setItem(`package_progress_${data.userPackage.id}`, 'true')
+
         // Fechar o modal de seleção
         onClose()
-        
-        // Abrir modal de progresso
-        setShowProgressModal(true)
+
         setIsActivating(false)
+
+        // Redirecionar para galeria após fechar o modal
+        setTimeout(() => {
+          router.push('/gallery')
+        }, 300)
       } else {
         throw new Error(data.error || 'Erro desconhecido')
       }

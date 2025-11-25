@@ -94,12 +94,28 @@ export function PackageProgressBarMinimal({ className }: PackageProgressBarMinim
           progress: data.progress
         })
         setIsVisible(true)
-      } else if (data.status === 'COMPLETED' || data.status === 'FAILED') {
-        // Remover após 2 segundos
+      } else if (data.status === 'COMPLETED') {
+        // Atualizar para mostrar estado de sucesso
+        setActivePackage({
+          userPackageId: packageId,
+          packageName: data.packageName || 'Pacote',
+          status: 'COMPLETED',
+          generatedImages: data.totalImages,
+          totalImages: data.totalImages,
+          progress: 100
+        })
+        setIsVisible(true)
+        // Remover após 5 segundos
         setTimeout(() => {
           setActivePackage(null)
           setIsVisible(false)
-        }, 2000)
+        }, 5000)
+      } else if (data.status === 'FAILED') {
+        // Remover após 3 segundos se falhar
+        setTimeout(() => {
+          setActivePackage(null)
+          setIsVisible(false)
+        }, 3000)
       }
     }
   })
@@ -115,13 +131,18 @@ export function PackageProgressBarMinimal({ className }: PackageProgressBarMinim
     return null
   }
 
+  const isCompleted = activePackage.status === 'COMPLETED'
+  const isFailed = activePackage.status === 'FAILED'
+
   return (
-    <div 
+    <div
       className={cn(
         "fixed bottom-4 left-1/2 -translate-x-1/2 z-40",
-        "bg-white border border-gray-200 rounded-lg shadow-lg",
-        "px-4 py-2.5 min-w-[320px] max-w-md",
+        "rounded-lg shadow-lg px-4 py-2.5 min-w-[320px] max-w-md",
         "animate-in slide-in-from-bottom-5 duration-300",
+        isCompleted && "bg-gradient-to-r from-green-500 to-emerald-600 border-2 border-green-400",
+        isFailed && "bg-gradient-to-r from-red-500 to-red-600 border-2 border-red-400",
+        !isCompleted && !isFailed && "bg-white border border-gray-200",
         className
       )}
     >
@@ -129,24 +150,49 @@ export function PackageProgressBarMinimal({ className }: PackageProgressBarMinim
         {/* Progress Section */}
         <div className="flex-1 space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-900">
-              Gerando pacote...
+            <span className={cn(
+              "text-xs font-semibold",
+              isCompleted && "text-white drop-shadow-md",
+              isFailed && "text-white drop-shadow-md",
+              !isCompleted && !isFailed && "text-gray-900"
+            )}>
+              {isCompleted ? '✓ Pacote concluído!' : isFailed ? '✗ Erro na geração' : 'Gerando pacote...'}
             </span>
-            <span className="text-xs text-gray-600">
+            <span className={cn(
+              "text-xs font-medium",
+              isCompleted && "text-white drop-shadow-md",
+              isFailed && "text-white drop-shadow-md",
+              !isCompleted && !isFailed && "text-gray-600"
+            )}>
               {activePackage.generatedImages}/{activePackage.totalImages}
             </span>
           </div>
-          
-          <Progress 
-            value={activePackage.progress} 
-            className="h-1.5 bg-gray-100"
+
+          <Progress
+            value={activePackage.progress}
+            className={cn(
+              "h-1.5",
+              isCompleted && "bg-green-300/50",
+              isFailed && "bg-red-300/50",
+              !isCompleted && !isFailed && "bg-gray-100"
+            )}
           />
-          
+
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500">
+            <span className={cn(
+              "text-xs font-medium",
+              isCompleted && "text-green-50 drop-shadow",
+              isFailed && "text-red-50 drop-shadow",
+              !isCompleted && !isFailed && "text-gray-500"
+            )}>
               {activePackage.packageName}
             </span>
-            <span className="text-xs font-medium text-purple-600">
+            <span className={cn(
+              "text-xs font-bold",
+              isCompleted && "text-white drop-shadow-md",
+              isFailed && "text-white drop-shadow-md",
+              !isCompleted && !isFailed && "text-purple-600"
+            )}>
               {activePackage.progress}%
             </span>
           </div>
@@ -155,9 +201,14 @@ export function PackageProgressBarMinimal({ className }: PackageProgressBarMinim
         {/* Close Button */}
         <button
           onClick={() => setIsVisible(false)}
-          className="flex-shrink-0 p-1 hover:bg-gray-100 rounded transition-colors"
+          className={cn(
+            "flex-shrink-0 p-1 rounded transition-colors",
+            isCompleted && "hover:bg-green-400/30 text-white",
+            isFailed && "hover:bg-red-400/30 text-white",
+            !isCompleted && !isFailed && "hover:bg-gray-100 text-gray-500"
+          )}
         >
-          <X className="h-3.5 w-3.5 text-gray-500" />
+          <X className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>

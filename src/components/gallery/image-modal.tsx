@@ -23,6 +23,7 @@ import { MediaItem } from '@/types'
 import { getGenerationCostDescription } from '@/lib/utils/gallery-cost'
 import { getAspectRatioLabel } from '@/lib/utils/aspect-ratio'
 import { FeedbackBadge } from '@/components/feedback/feedback-badge'
+import { FeedbackModal } from '@/components/feedback/feedback-modal'
 import { useFeedback } from '@/hooks/useFeedback'
 import { CREDIT_COSTS } from '@/lib/credits/pricing'
 import { useRouter } from 'next/navigation'
@@ -663,6 +664,19 @@ export function ImageModal({
         promptPreview={currentImage?.generation?.prompt}
         className="top-6 left-6 bottom-auto right-auto"
       />
+
+      {/* FeedbackModal - z-index alto para ficar acima de tudo, incluindo o modal de imagem */}
+      {generationId && (
+        <FeedbackModal
+          isOpen={feedback.isVisible}
+          onClose={feedback.dismiss}
+          generationId={generationId}
+          generationPrompt={currentImage?.generation?.prompt}
+          onSuccess={() => {
+            console.log('✅ Feedback enviado com sucesso')
+          }}
+        />
+      )}
     </div>
   )
 }
