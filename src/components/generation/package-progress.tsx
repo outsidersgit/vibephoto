@@ -145,40 +145,33 @@ export function PackageProgressPanel() {
               : 'Gerando...'
 
           return (
-            <Card 
-              key={pkg.id} 
-              className={cn(
-                'border shadow-sm transition-all duration-300',
-                isComplete 
-                  ? 'border-green-300 bg-green-50/50' 
-                  : 'border-gray-200 bg-white'
-              )}
+            <Card
+              key={pkg.id}
+              className="border border-gray-200 bg-white shadow-sm transition-all duration-300"
             >
               <CardHeader className="space-y-1">
-                <CardTitle className={cn(
-                  'text-sm font-semibold',
-                  isComplete ? 'text-green-800' : 'text-gray-900'
-                )}>
+                <CardTitle className="text-sm font-semibold text-gray-900">
                   {pkg.packageName || 'Pacote de fotos'}
                 </CardTitle>
-                <CardDescription className={cn(
-                  'text-xs',
-                  isComplete ? 'text-green-600' : 'text-gray-500'
-                )}>
-                  {isComplete ? '✅ ' : ''}{statusLabel} • {pkg.generatedImages}/{pkg.totalImages} fotos
+                <CardDescription className="text-xs text-gray-500 flex items-center gap-1.5">
+                  {isComplete && (
+                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-600">
+                      <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
+                  )}
+                  {statusLabel} • {pkg.generatedImages}/{pkg.totalImages} fotos
                   {isComplete && ' - Pronto na galeria!'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Progress 
-                  value={progress} 
-                  className={cn(
-                    'h-2',
-                    isComplete && 'bg-green-200'
-                  )} 
+                <Progress
+                  value={progress}
+                  className="h-2"
                 />
                 <div className="flex justify-between text-xs">
-                  <span className={isComplete ? 'text-green-700 font-medium' : 'text-gray-500'}>
+                  <span className="text-gray-500">
                     {progress}%
                   </span>
                   {pkg.failedImages > 0 && (
@@ -191,8 +184,8 @@ export function PackageProgressPanel() {
                     size="sm"
                     className={cn(
                       'flex-1 text-xs font-medium',
-                      isComplete 
-                        ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' 
+                      isComplete
+                        ? 'bg-green-600 hover:bg-green-700 text-white border-green-600'
                         : 'border-gray-200 text-gray-700'
                     )}
                     onClick={() => {

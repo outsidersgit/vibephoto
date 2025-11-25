@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { X, Star, Send, Loader2 } from 'lucide-react'
-import { Dialog } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useFeedback } from '@/hooks/useFeedback'
@@ -64,10 +63,16 @@ export function FeedbackModal({
     }, 300)
   }
 
+  if (!isOpen) return null
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div className="relative w-full max-w-md bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden animate-in fade-in zoom-in duration-200">
+    <>
+      <div
+        className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm"
+        onClick={handleSkip}
+      />
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
+        <div className="relative w-full max-w-md bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden animate-in fade-in zoom-in duration-200 pointer-events-auto">
           {/* Close button */}
           <button
             onClick={handleSkip}
@@ -225,6 +230,6 @@ export function FeedbackModal({
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
         </div>
       </div>
-    </Dialog>
+    </>
   )
 }
