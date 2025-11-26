@@ -23,6 +23,8 @@ export async function GET() {
             description: p.description || '',
             promptCount: Array.isArray(p.prompts) ? p.prompts.length : 0,
             previewImages: p.previewUrls || [], // ✅ Campo correto do banco: previewUrls
+            previewUrlsMale: p.previewUrlsMale || [], // ✅ Previews masculinas
+            previewUrlsFemale: p.previewUrlsFemale || [], // ✅ Previews femininas
             price: p.price || 200,
             isPremium: p.isPremium ?? true,
             estimatedTime: p.estimatedTime || '5-8 min',
