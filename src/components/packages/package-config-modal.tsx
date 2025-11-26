@@ -141,24 +141,21 @@ export function PackageConfigModal({
             </div>
           )}
 
-          {/* Gender Selection */}
+          {/* Gender Selection - Discreto */}
           {!loading && models.length > 0 && (
             <div>
               <label className="text-sm font-medium text-white mb-2 block">
-                Selecione o Gênero
+                Gênero
               </label>
-              <p className="text-xs text-slate-400 mb-3">
-                Escolha o gênero para as {totalImages} fotos do pacote
-              </p>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="inline-flex gap-1 bg-slate-800 rounded-lg p-1 border border-slate-700">
                 <button
                   type="button"
                   onClick={() => setSelectedGender('MALE')}
-                  className={`px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                     selectedGender === 'MALE'
-                      ? 'bg-purple-600 text-white border-2 border-purple-600'
-                      : 'bg-slate-800 text-slate-300 border-2 border-slate-700 hover:border-slate-600'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-slate-400 hover:text-slate-300'
                   }`}
                 >
                   Masculino
@@ -166,10 +163,10 @@ export function PackageConfigModal({
                 <button
                   type="button"
                   onClick={() => setSelectedGender('FEMALE')}
-                  className={`px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
                     selectedGender === 'FEMALE'
-                      ? 'bg-purple-600 text-white border-2 border-purple-600'
-                      : 'bg-slate-800 text-slate-300 border-2 border-slate-700 hover:border-slate-600'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-slate-400 hover:text-slate-300'
                   }`}
                 >
                   Feminino

@@ -24,6 +24,8 @@ interface Package {
   description: string
   promptCount: number
   previewImages: string[]
+  previewUrlsMale?: string[]
+  previewUrlsFemale?: string[]
   price: number
   isPremium: boolean
   estimatedTime: string
@@ -216,37 +218,43 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
         </div>
 
         <div className="p-6">
-              {/* Gender Toggle */}
-              <div className="flex justify-center gap-3 mb-5">
-                <button
-                  type="button"
-                  onClick={() => setPreviewGender('MALE')}
-                  className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    previewGender === 'MALE'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  Masculino
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewGender('FEMALE')}
-                  className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    previewGender === 'FEMALE'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  Feminino
-                </button>
+              {/* Gender Toggle - Discreto */}
+              <div className="flex justify-end mb-3">
+                <div className="inline-flex gap-1 bg-gray-700/30 rounded-md p-1">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewGender('MALE')}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                      previewGender === 'MALE'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-400 hover:text-gray-300'
+                    }`}
+                  >
+                    Masculino
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewGender('FEMALE')}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                      previewGender === 'FEMALE'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-400 hover:text-gray-300'
+                    }`}
+                  >
+                    Feminino
+                  </button>
+                </div>
               </div>
 
               {/* Preview Images */}
               {(() => {
-                const previews = previewGender === 'MALE' ?
-                  (pkg.previewUrlsMale || pkg.previewImages) :
-                  (pkg.previewUrlsFemale || pkg.previewImages)
+                const previews = previewGender === 'MALE'
+                  ? (pkg.previewUrlsMale && Array.isArray(pkg.previewUrlsMale) && pkg.previewUrlsMale.length > 0
+                      ? pkg.previewUrlsMale
+                      : pkg.previewImages)
+                  : (pkg.previewUrlsFemale && Array.isArray(pkg.previewUrlsFemale) && pkg.previewUrlsFemale.length > 0
+                      ? pkg.previewUrlsFemale
+                      : pkg.previewImages)
 
                 return previews && previews.length > 0 ? (
                   <>
