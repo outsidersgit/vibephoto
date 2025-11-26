@@ -91,7 +91,7 @@ export function PackageConfigModal({
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-      <div className="bg-[#1e293b] rounded-xl max-w-xl w-full max-h-[85vh] overflow-y-auto border border-slate-700 shadow-2xl" style={{fontFamily: 'SF Pro Display, -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+      <div className="bg-[#1e293b] rounded-xl max-w-lg w-full border border-slate-700 shadow-2xl" style={{fontFamily: 'SF Pro Display, -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
         {/* Header */}
         <div className="sticky top-0 bg-[#1e293b] border-b border-slate-700 px-5 py-4 z-10">
           <div className="flex items-start justify-between">
@@ -110,7 +110,7 @@ export function PackageConfigModal({
           </div>
         </div>
 
-        <div className="px-5 py-4 space-y-5">
+        <div className="px-5 py-4 space-y-4">
           {/* Loading State */}
           {loading && (
             <div className="bg-slate-800 border border-slate-700 rounded-lg p-3.5">
@@ -143,11 +143,7 @@ export function PackageConfigModal({
 
           {/* Gender Selection - Discreto */}
           {!loading && models.length > 0 && (
-            <div>
-              <label className="text-sm font-medium text-white mb-2 block">
-                Gênero
-              </label>
-
+            <div className="flex justify-center">
               <div className="inline-flex gap-1 bg-slate-800 rounded-lg p-1 border border-slate-700">
                 <button
                   type="button"
@@ -158,7 +154,7 @@ export function PackageConfigModal({
                       : 'text-slate-400 hover:text-slate-300'
                   }`}
                 >
-                  Masculino
+                  Para homem
                 </button>
                 <button
                   type="button"
@@ -169,7 +165,7 @@ export function PackageConfigModal({
                       : 'text-slate-400 hover:text-slate-300'
                   }`}
                 >
-                  Feminino
+                  Para mulher
                 </button>
               </div>
             </div>
@@ -178,10 +174,10 @@ export function PackageConfigModal({
           {/* Model Selection */}
           {!loading && models.length > 0 && (
             <div>
-              <label className="text-sm font-medium text-white mb-2 block">
+              <label className="text-sm font-medium text-white mb-1.5 block">
                 Selecione o Modelo
               </label>
-              <p className="text-xs text-slate-400 mb-3">
+              <p className="text-xs text-slate-400 mb-2.5">
                 Escolha qual modelo será usado nas {totalImages} fotos do pacote
               </p>
 
@@ -198,11 +194,11 @@ export function PackageConfigModal({
               </select>
 
               {selectedModelData?.sampleImages?.[0] && (
-                <div className="mt-3 flex items-center gap-3 text-xs text-slate-400">
+                <div className="mt-2.5 flex items-center gap-2.5 text-xs text-slate-400">
                   <img
                     src={selectedModelData.sampleImages[0]}
                     alt={selectedModelData.name}
-                    className="w-12 h-12 rounded-md object-cover border border-slate-700"
+                    className="w-10 h-10 rounded-md object-cover border border-slate-700"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none'
                     }}
@@ -219,7 +215,7 @@ export function PackageConfigModal({
           {/* Aspect Ratio Selection */}
           {!loading && models.length > 0 && (
             <div>
-              <label className="text-sm font-medium text-white mb-2 block">
+              <label className="text-sm font-medium text-white mb-1.5 block">
                 Selecione o Formato
               </label>
               <select
@@ -238,7 +234,7 @@ export function PackageConfigModal({
 
           {/* Summary */}
           {!loading && models.length > 0 && selectedModelData && (
-            <div className="bg-slate-800 border border-slate-700 rounded-lg p-3.5">
+            <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
                   <span className="text-slate-400">Gênero:</span>
