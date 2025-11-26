@@ -405,42 +405,52 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
       </div>
 
       {/* Modal Ver Todas as Preview Images */}
-      {showAllPreviews && (
-        <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-4" onClick={() => setShowAllPreviews(false)}>
-          <div className="bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto border border-gray-700" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-700 flex items-center justify-between">
-              <h3 className="text-xl font-bold text-white">Todas as Preview Images</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowAllPreviews(false)} className="text-gray-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {pkg.previewImages.map((image, index) => (
-                  <div 
-                    key={index} 
-                    className="aspect-square bg-gray-900 rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-purple-500 transition-colors"
-                    onClick={() => setSelectedImageIndex(index)}
-                  >
-                    <img
-                      src={image}
-                      alt={`Preview ${index + 1}`}
-                      className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                        e.currentTarget.nextElementSibling?.classList.remove('hidden')
-                      }}
-                    />
-                    <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center relative hidden">
-                      <span className="text-3xl opacity-50 text-gray-400">🖼️</span>
+      {showAllPreviews && (() => {
+        const allPreviews = previewGender === 'MALE'
+          ? (pkg.previewUrlsMale && Array.isArray(pkg.previewUrlsMale) && pkg.previewUrlsMale.length > 0
+              ? pkg.previewUrlsMale
+              : pkg.previewImages)
+          : (pkg.previewUrlsFemale && Array.isArray(pkg.previewUrlsFemale) && pkg.previewUrlsFemale.length > 0
+              ? pkg.previewUrlsFemale
+              : pkg.previewImages)
+
+        return (
+          <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-4" onClick={() => setShowAllPreviews(false)}>
+            <div className="bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto border border-gray-700" onClick={(e) => e.stopPropagation()}>
+              <div className="p-6 border-b border-gray-700 flex items-center justify-between">
+                <h3 className="text-xl font-bold text-white">Todas as Preview Images - {previewGender === 'MALE' ? 'Masculino' : 'Feminino'}</h3>
+                <Button variant="ghost" size="sm" onClick={() => setShowAllPreviews(false)} className="text-gray-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {allPreviews.map((image, index) => (
+                    <div
+                      key={index}
+                      className="aspect-square bg-gray-900 rounded-lg overflow-hidden border border-gray-700 cursor-pointer hover:border-purple-500 transition-colors"
+                      onClick={() => setSelectedImageIndex(index)}
+                    >
+                      <img
+                        src={image}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                        }}
+                      />
+                      <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center relative hidden">
+                        <span className="text-3xl opacity-50 text-gray-400">🖼️</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Modal de Compra Rápida de Créditos */}
       {showCreditsPurchase && (
@@ -526,61 +536,71 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
       )}
 
       {/* Modal de Visualização de Imagem em Tamanho Real */}
-      {selectedImageIndex !== null && (
-        <div
-          className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center"
-          onClick={() => setSelectedImageIndex(null)}
-        >
-          {/* Botão Fechar */}
-          <button
+      {selectedImageIndex !== null && (() => {
+        const currentPreviews = previewGender === 'MALE'
+          ? (pkg.previewUrlsMale && Array.isArray(pkg.previewUrlsMale) && pkg.previewUrlsMale.length > 0
+              ? pkg.previewUrlsMale
+              : pkg.previewImages)
+          : (pkg.previewUrlsFemale && Array.isArray(pkg.previewUrlsFemale) && pkg.previewUrlsFemale.length > 0
+              ? pkg.previewUrlsFemale
+              : pkg.previewImages)
+
+        return (
+          <div
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center"
             onClick={() => setSelectedImageIndex(null)}
-            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10"
           >
-            <X className="w-8 h-8" />
-          </button>
+            {/* Botão Fechar */}
+            <button
+              onClick={() => setSelectedImageIndex(null)}
+              className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10"
+            >
+              <X className="w-8 h-8" />
+            </button>
 
-          {/* Imagem */}
-          <img
-            src={pkg.previewImages[selectedImageIndex]}
-            alt={`Preview ${selectedImageIndex + 1}`}
-            className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          />
+            {/* Imagem */}
+            <img
+              src={currentPreviews[selectedImageIndex]}
+              alt={`Preview ${selectedImageIndex + 1}`}
+              className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
 
-          {/* Navegação */}
-          {pkg.previewImages.length > 1 && (
-            <>
-              {selectedImageIndex > 0 && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setSelectedImageIndex(selectedImageIndex - 1)
-                  }}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-colors"
-                >
-                  ←
-                </button>
-              )}
-              {selectedImageIndex < pkg.previewImages.length - 1 && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setSelectedImageIndex(selectedImageIndex + 1)
-                  }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-colors"
-                >
-                  →
-                </button>
-              )}
-            </>
-          )}
+            {/* Navegação */}
+            {currentPreviews.length > 1 && (
+              <>
+                {selectedImageIndex > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedImageIndex(selectedImageIndex - 1)
+                    }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-colors"
+                  >
+                    ←
+                  </button>
+                )}
+                {selectedImageIndex < currentPreviews.length - 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedImageIndex(selectedImageIndex + 1)
+                    }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-3 rounded-full transition-colors"
+                  >
+                    →
+                  </button>
+                )}
+              </>
+            )}
 
-          {/* Contador */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm">
-            {selectedImageIndex + 1} / {pkg.previewImages.length}
+            {/* Contador */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm">
+              {selectedImageIndex + 1} / {currentPreviews.length}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
