@@ -11,6 +11,8 @@ interface Package {
   description: string
   promptCount: number
   previewImages: string[]
+  previewUrlsMale?: string[]
+  previewUrlsFemale?: string[]
   price: number
   isPremium: boolean
   estimatedTime: string
@@ -44,6 +46,21 @@ export function PackageGrid({ packages, onPackageSelect }: PackageGridProps) {
     }
   }
 
+  const getMixedPreviews = (pkg: Package): string[] => {
+    const malePreviews = pkg.previewUrlsMale && pkg.previewUrlsMale.length > 0
+      ? pkg.previewUrlsMale
+      : pkg.previewImages
+
+    const femalePreviews = pkg.previewUrlsFemale && pkg.previewUrlsFemale.length > 0
+      ? pkg.previewUrlsFemale
+      : pkg.previewImages
+
+    return [
+      ...malePreviews.slice(0, 2),     // Top row: 2 masculinas
+      ...femalePreviews.slice(0, 2)    // Bottom row: 2 femininas
+    ]
+  }
+
   if (packages.length === 0) {
     return (
       <div className="text-center py-12">
@@ -70,7 +87,7 @@ export function PackageGrid({ packages, onPackageSelect }: PackageGridProps) {
           {/* Preview Images Grid */}
           <div className="aspect-[4/3] overflow-hidden bg-gray-900">
             <div className="grid grid-cols-2 h-full gap-1">
-              {(pkg.previewImages || []).slice(0, 4).map((image, index) => (
+              {getMixedPreviews(pkg).map((image, index) => (
                 <div key={index} className="relative overflow-hidden">
                   <Image
                     src={image}
