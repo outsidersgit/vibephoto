@@ -476,9 +476,14 @@ export class AstriaProvider extends AIProvider {
       // Se der erro 422, tentar removendo este parâmetro
       formData.append('prompt[inpaint_faces]', true) // Boolean conforme documentação
 
+      // film_grain: enviar apenas se true (para pacotes específicos)
+      if (request.params.film_grain === true) {
+        formData.append('prompt[film_grain]', true)
+        console.log('🎬 [ASTRIA_DEBUG] film_grain=true added to request (for specific packages)')
+      }
+
       // NOTA: style não é enviado (conforme solicitado)
       // NOTA: color_grading não é enviado (conforme solicitado)
-      // NOTA: film_grain sempre false, então não enviamos (conforme solicitado)
       // NOTA: use_lpw sempre false, então não enviamos (conforme solicitado)
 
       // CRÍTICO: NÃO enviar face_correct, face_swap, hires_fix para LoRA
@@ -504,7 +509,8 @@ export class AstriaProvider extends AIProvider {
         console.log(`  ${param}: ${formDataParams[param] || 'NOT SET'}`)
       })
       console.log(`  ✅ Fixed values: super_resolution=true, inpaint_faces=true, cfg_scale=3`)
-      console.log(`  ✅ Omitted params: style, color_grading, film_grain (false), use_lpw (false)`)
+      console.log(`  ✅ film_grain: ${request.params.film_grain === true ? 'true (sent)' : 'false (not sent)'}`)
+      console.log(`  ✅ Omitted params: style, color_grading, use_lpw (false)`)
       console.log(`  ✅ Incompatible LoRA params (face_correct, face_swap, hires_fix) are NOT sent`)
 
       // Configurar callback se disponível - permitir HTTP em desenvolvimento
@@ -544,7 +550,7 @@ export class AstriaProvider extends AIProvider {
           cfg_scale: '3',
           super_resolution: 'true',
           inpaint_faces: 'true',
-          film_grain: 'false (not sent)',
+          film_grain: request.params.film_grain === true ? 'true (sent)' : 'false (not sent)',
           use_lpw: 'false (not sent)'
         },
         omittedParams: ['style', 'color_grading'],

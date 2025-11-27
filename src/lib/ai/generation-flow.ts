@@ -247,6 +247,15 @@ export async function executeGenerationFlow(params: ExecuteGenerationFlowParams)
       hasClassWord: !!model.classWord,
       willUseFallbacks: !model.triggerWord || !model.classWord
     })
+    console.log(`📸 [GENERATION_DEBUG] Generation params:`, {
+      width: generationRequest.params.width,
+      height: generationRequest.params.height,
+      steps: generationRequest.params.steps,
+      guidance_scale: generationRequest.params.guidance_scale,
+      film_grain: generationRequest.params.film_grain, // ✅ Verificar se film_grain está definido
+      super_resolution: generationRequest.params.super_resolution,
+      packageName: packageMetadata?.packageName
+    })
     
     const generationResponse = await aiProvider.generateImage(generationRequest)
     
