@@ -4,7 +4,6 @@ import { NextAuthOptions } from 'next-auth'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
-import GitHubProvider from 'next-auth/providers/github'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword } from '@/lib/db/users'
 import { Plan } from '@prisma/client'
@@ -140,10 +139,6 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    GitHubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
     })
   ],
   callbacks: {
@@ -281,8 +276,7 @@ export const authOptions: NextAuthOptions = {
             profileData.emailVerified === true ||
             profileData.verified === true ||
             user.emailVerified instanceof Date ||
-            !!existingUser.emailVerified ||
-            account.provider === 'github' // GitHub only returns verified emails
+            !!existingUser.emailVerified
 
           if (!emailVerified) {
             console.warn(`⚠️ OAuth email não verificado para ${email}, bloqueando vínculo automático.`)
