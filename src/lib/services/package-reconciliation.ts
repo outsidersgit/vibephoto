@@ -79,6 +79,14 @@ export async function reconcileUserPackageStatus(userPackageId: string): Promise
       return false
     })
 
+    console.log(`🔍 [RECONCILE] Found ${allGenerations.length} total generations, ${packageGenerations.length} match package ${userPackageId}`)
+    console.log(`📋 [RECONCILE] Generation IDs for this package:`, packageGenerations.map(g => ({
+      id: g.id,
+      status: g.status,
+      hasPackageId: !!g.packageId,
+      hasMetadata: !!g.metadata
+    })))
+
     // Count by status
     const stats = {
       total: packageGenerations.length,
@@ -140,6 +148,17 @@ export async function reconcileUserPackageStatus(userPackageId: string): Promise
 
     // Update if needed
     if (shouldUpdate || userPackage.generatedImages !== stats.completed || userPackage.failedImages !== stats.failed) {
+      console.log(`🔄 [RECONCILE] Updating package ${userPackageId}:`, {
+        previousStatus,
+        newStatus,
+        previousGeneratedImages: userPackage.generatedImages,
+        newGeneratedImages: stats.completed,
+        previousFailedImages: userPackage.failedImages,
+        newFailedImages: stats.failed,
+        shouldUpdate,
+        statsChanged: userPackage.generatedImages !== stats.completed || userPackage.failedImages !== stats.failed
+      })
+
       await prisma.userPackage.update({
         where: { id: userPackageId },
         data: {
@@ -148,7 +167,7 @@ export async function reconcileUserPackageStatus(userPackageId: string): Promise
           failedImages: stats.failed,
           ...(newStatus === 'COMPLETED' && { completedAt: new Date() }),
           ...(newStatus === 'FAILED' && !userPackage.errorMessage && {
-            errorMessage: stats.total === 0 
+            errorMessage: stats.total === 0
               ? 'Nenhuma geração foi criada. O pacote pode ter falhado ao iniciar.'
               : stats.failed === stats.total
               ? 'Todas as gerações falharam.'

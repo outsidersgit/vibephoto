@@ -37,6 +37,16 @@ export function PackageProgressPanel() {
       }
       const payload = await response.json()
       const loadedPackages = payload.userPackages || []
+
+      console.log('[PACKAGE_PROGRESS] Loaded packages from API:', loadedPackages.map(p => ({
+        id: p.id,
+        name: p.packageName,
+        status: p.status,
+        generatedImages: p.generatedImages,
+        totalImages: p.totalImages,
+        progress: Math.round((p.generatedImages / p.totalImages) * 100)
+      })))
+
       setPackages(loadedPackages)
       
       // Na primeira carga, inicializar previousPackagesRef com os dados carregados
