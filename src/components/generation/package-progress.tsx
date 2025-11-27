@@ -68,7 +68,7 @@ export function PackageProgressPanel() {
     return () => clearInterval(interval)
   }, [])
 
-  // Detectar quando um pacote completa e mostrar notificação
+  // Detectar quando um pacote completa e mostrar notificação + recarregar página
   // IMPORTANTE: Só detectar mudanças REAIS de status (não na primeira carga)
   useEffect(() => {
     // Ignorar primeira carga (já foi tratada no loadPackages)
@@ -83,42 +83,40 @@ export function PackageProgressPanel() {
     currentPackages.forEach((currentPkg) => {
       if (currentPkg.status === 'COMPLETED') {
         const previousPkg = previousPackages.find((p) => p.id === currentPkg.id)
-        
+
         // Só considerar uma mudança real se:
         // 1. O pacote existia antes E estava em ACTIVE ou GENERATING
         // 2. Agora está COMPLETED
-        // Isso evita mostrar pacotes já completados na primeira carga
-        const wasInProgress = previousPkg && 
+        // 3. E todas as imagens foram geradas (generatedImages === totalImages)
+        const wasInProgress = previousPkg &&
           (previousPkg.status === 'ACTIVE' || previousPkg.status === 'GENERATING')
         const isNowCompleted = currentPkg.status === 'COMPLETED'
-        
-        if (wasInProgress && isNowCompleted) {
+        const allImagesGenerated = currentPkg.generatedImages >= currentPkg.totalImages
+
+        if (wasInProgress && isNowCompleted && allImagesGenerated) {
+          console.log('[PACKAGE_PROGRESS] Package completed, reloading page in 3 seconds:', {
+            packageId: currentPkg.id,
+            packageName: currentPkg.packageName,
+            generatedImages: currentPkg.generatedImages,
+            totalImages: currentPkg.totalImages
+          })
+
           // Adicionar aos pacotes completados para mostrar por mais tempo
           setCompletedPackages((prev) => new Set(prev).add(currentPkg.id))
-          
+
           // Mostrar notificação toast
           addToast({
             type: 'success',
             title: 'Pacote concluído! 🎉',
-            description: `${currentPkg.packageName || 'Pacote'} está pronto com ${currentPkg.generatedImages} fotos. Veja na galeria!`,
-            duration: 8000,
-            action: {
-              label: 'Abrir galeria',
-              onClick: () => {
-                const url = `/gallery?package=${currentPkg.packageId}`
-                window.location.href = url
-              }
-            }
+            description: `${currentPkg.packageName || 'Pacote'} está pronto com ${currentPkg.generatedImages} fotos. Recarregando galeria...`,
+            duration: 3000
           })
 
-          // Remover da lista de completados após 10 segundos
+          // Recarregar página após 3 segundos para garantir que usuário vê as fotos
           setTimeout(() => {
-            setCompletedPackages((prev) => {
-              const newSet = new Set(prev)
-              newSet.delete(currentPkg.id)
-              return newSet
-            })
-          }, 10000)
+            console.log('[PACKAGE_PROGRESS] Reloading page to show completed package')
+            window.location.reload()
+          }, 3000)
         }
       }
     })
