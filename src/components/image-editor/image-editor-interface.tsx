@@ -238,10 +238,10 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   }, [addToast, clearForm, clearEditProcessingState, invalidateBalance])
 
   const triggerEditFallback = useCallback(async (editId: string) => {
-    console.warn('⏱️ [IMAGE_EDITOR] Fallback triggered after 15s timeout', { editId })
+    console.warn('⏱️ [IMAGE_EDITOR] Fallback triggered after 120s timeout', { editId })
 
     try {
-      // Tentar buscar do histórico uma única vez
+      // Tentar buscar do histórico
       const response = await fetch(`/api/edit-history/${editId}`)
       if (response.ok) {
         const payload = await response.json()
@@ -254,25 +254,26 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         }
       }
 
-      console.warn('⚠️ [IMAGE_EDITOR] Fallback timeout - clearing loading state')
-      clearEditProcessingState()
+      // NÃO limpar loading - apenas avisar usuário que está demorando
+      // SSE ainda pode chegar e completar normalmente
+      console.warn('⚠️ [IMAGE_EDITOR] Fallback: still waiting for SSE, keeping loading active')
 
       addToast({
-        title: "Ainda processando",
-        description: "A imagem está demorando mais que o esperado. Verifique a galeria em alguns instantes.",
-        type: "warning"
+        title: "Ainda processando...",
+        description: "A geração está demorando mais que o esperado. Por favor aguarde, você será notificado quando concluir.",
+        type: "info"
       })
     } catch (error) {
       console.error('❌ [IMAGE_EDITOR] Fallback error:', error)
-      clearEditProcessingState()
 
+      // Só avisar, não limpar loading
       addToast({
-        title: "Tempo esgotado",
-        description: "A geração está demorando. Verifique a galeria em alguns minutos.",
-        type: "warning"
+        title: "Processando...",
+        description: "A geração está em andamento. Por favor aguarde.",
+        type: "info"
       })
     }
-  }, [clearEditProcessingState, openModalWithValidation, invalidateBalance, addToast])
+  }, [openModalWithValidation, invalidateBalance, addToast])
 
   const handleDownloadPreview = useCallback(async () => {
     if (!previewMedia?.url) return
@@ -332,19 +333,13 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   // Monitor async processing via SSE - use useCallback to ensure stable reference
   const handleGenerationStatusChange = useCallback((generationId: string, status: string, data: any) => {
     console.log('🔔 [IMAGE_EDITOR] ========== SSE EVENT RECEIVED ==========')
-    console.log('🔔 [IMAGE_EDITOR] SSE event received:', {
-      generationId,
-      status,
-      statusType: typeof status,
-      currentEditId: currentEditIdRef.current,
-      dataEditHistoryId: data.editHistoryId,
-      dataGenerationId: data.generationId,
-      hasImageUrls: !!(data.imageUrls && data.imageUrls.length > 0),
-      hasTemporaryUrls: !!(data.temporaryUrls && data.temporaryUrls.length > 0),
-      currentLoadingState: loadingRef.current,
-      allDataKeys: Object.keys(data || {}),
-      fullData: JSON.stringify(data, null, 2)
-    })
+    console.log('🔔 [IMAGE_EDITOR] Current monitoring editId:', currentEditIdRef.current)
+    console.log('🔔 [IMAGE_EDITOR] SSE event generationId:', generationId)
+    console.log('🔔 [IMAGE_EDITOR] SSE event status:', status)
+    console.log('🔔 [IMAGE_EDITOR] SSE event data.editHistoryId:', data.editHistoryId)
+    console.log('🔔 [IMAGE_EDITOR] SSE event data.generationId:', data.generationId)
+    console.log('🔔 [IMAGE_EDITOR] Current loading state:', loadingRef.current)
+    console.log('🔔 [IMAGE_EDITOR] Full SSE data:', JSON.stringify(data, null, 2))
     
     // Check if this is our edit (by editHistoryId or generationId matching currentEditId)
     // IMPORTANT: The webhook broadcasts with editHistory.id as generationId, so we need to match on that
@@ -435,6 +430,14 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
             
             if (temporaryUrl || permanentUrl) {
               console.log('🚀 [IMAGE_EDITOR] Calling openModalWithValidation...')
+
+              // CRITICAL: Limpar fallback timer imediatamente quando SSE chegar
+              if (editFallbackTimerRef.current) {
+                clearTimeout(editFallbackTimerRef.current)
+                editFallbackTimerRef.current = null
+                console.log('✅ [IMAGE_EDITOR] Fallback timer cleared - SSE arrived in time')
+              }
+
               // Use validation function to open modal (async, fire and forget)
               openModalWithValidation(temporaryUrl, permanentUrl).then(() => {
                 console.log('✅ [IMAGE_EDITOR] Modal opened successfully')
@@ -659,7 +662,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
           editFallbackTimerRef.current = setTimeout(() => {
             if (!currentEditIdRef.current) return
             triggerEditFallback(currentEditIdRef.current)
-          }, 15000)
+          }, 120000) // 120 segundos - modelo nano banana pode demorar
           console.log('✅ [IMAGE_EDITOR] ===== MONITORING EDIT VIA SSE =====')
           console.log('✅ [IMAGE_EDITOR] Edit History ID:', editId)
           console.log('✅ [IMAGE_EDITOR] ID Length:', editId.length)
