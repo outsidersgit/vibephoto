@@ -202,34 +202,18 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       perm: permanentUrl?.substring(0, 100)
     })
 
-    let urlToUse: string | null = null
-    let urlType: 'temporary' | 'permanent' | null = null
+    // Use primeira URL disponível
+    const urlToUse = temporaryUrl || permanentUrl
 
-    // 1. Test temporary URL first
-    if (temporaryUrl) {
-      const isAccessible = await testUrlAccessibility(temporaryUrl)
-      if (isAccessible) {
-        urlToUse = temporaryUrl
-        urlType = 'temporary'
-      }
-    }
-
-    // 2. Fallback to permanent URL
-    if (!urlToUse && permanentUrl) {
-      const isAccessible = await testUrlAccessibility(permanentUrl)
-      if (isAccessible) {
-        urlToUse = permanentUrl
-        urlType = 'permanent'
-      }
-    }
-
-    // 3. Open modal with validated URL
     if (urlToUse) {
-      clearEditProcessingState()
-
-      // Update preview state and ensure lightbox starts closed
+      // Update preview state PRIMEIRO
       setPreviewMedia({ url: urlToUse, type: 'image' })
       setIsPreviewLightboxOpen(false)
+
+      // CRITICAL: Limpar loading DEPOIS de atualizar preview
+      // Aguardar um frame para garantir que o preview renderizou
+      await new Promise(resolve => setTimeout(resolve, 100))
+      clearEditProcessingState()
 
       addToast({
         title: "Sucesso!",
@@ -240,9 +224,9 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       clearForm()
       invalidateBalance()
 
-      console.log('✅ [IMAGE_EDITOR] Preview updated successfully')
+      console.log('✅ [IMAGE_EDITOR] Preview updated successfully with URL:', urlToUse.substring(0, 100))
     } else {
-      console.error('❌ [IMAGE_EDITOR] NO VALID URL')
+      console.error('❌ [IMAGE_EDITOR] NO URL AVAILABLE')
       clearEditProcessingState()
 
       addToast({
@@ -251,50 +235,44 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
         type: "warning"
       })
     }
-  }, [addToast, testUrlAccessibility, clearForm, clearEditProcessingState, invalidateBalance])
+  }, [addToast, clearForm, clearEditProcessingState, invalidateBalance])
 
   const triggerEditFallback = useCallback(async (editId: string) => {
-    console.warn('⏱️ [IMAGE_EDITOR] Fallback triggered to force preview display', { editId })
-
-    const fetchEditHistoryWithRetry = async (attempts = 5): Promise<string | null> => {
-      for (let attempt = 1; attempt <= attempts; attempt++) {
-        try {
-          const response = await fetch(`/api/edit-history/${editId}`)
-          if (response.ok) {
-            const payload = await response.json()
-            const editedUrl = payload?.editHistory?.editedImageUrl || null
-            if (editedUrl) {
-              return editedUrl
-            }
-          } else {
-            console.warn(`⚠️ [IMAGE_EDITOR] Retry ${attempt} failed with status ${response.status}`)
-          }
-        } catch (error) {
-          console.error(`❌ [IMAGE_EDITOR] Retry ${attempt} error:`, error)
-        }
-
-        const backoff = attempt * 1500
-        await new Promise(resolve => setTimeout(resolve, backoff))
-      }
-
-      return null
-    }
+    console.warn('⏱️ [IMAGE_EDITOR] Fallback triggered after 15s timeout', { editId })
 
     try {
-      const fallbackUrl = await fetchEditHistoryWithRetry()
-      if (fallbackUrl) {
-        console.log('✅ [IMAGE_EDITOR] Fallback located edit URL, opening preview now')
-        await openModalWithValidation(fallbackUrl, fallbackUrl)
-        invalidateBalance()
-      } else {
-        console.warn('⚠️ [IMAGE_EDITOR] Fallback could not retrieve edited image URL after retries')
-        clearEditProcessingState()
+      // Tentar buscar do histórico uma única vez
+      const response = await fetch(`/api/edit-history/${editId}`)
+      if (response.ok) {
+        const payload = await response.json()
+        const editedUrl = payload?.editHistory?.editedImageUrl || null
+        if (editedUrl) {
+          console.log('✅ [IMAGE_EDITOR] Fallback located edit URL, opening preview now')
+          await openModalWithValidation(editedUrl, editedUrl)
+          invalidateBalance()
+          return
+        }
       }
-    } catch (error) {
-      console.error('❌ [IMAGE_EDITOR] Error during fallback handling:', error)
+
+      console.warn('⚠️ [IMAGE_EDITOR] Fallback timeout - clearing loading state')
       clearEditProcessingState()
+
+      addToast({
+        title: "Ainda processando",
+        description: "A imagem está demorando mais que o esperado. Verifique a galeria em alguns instantes.",
+        type: "warning"
+      })
+    } catch (error) {
+      console.error('❌ [IMAGE_EDITOR] Fallback error:', error)
+      clearEditProcessingState()
+
+      addToast({
+        title: "Tempo esgotado",
+        description: "A geração está demorando. Verifique a galeria em alguns minutos.",
+        type: "warning"
+      })
     }
-  }, [clearEditProcessingState, openModalWithValidation, invalidateBalance])
+  }, [clearEditProcessingState, openModalWithValidation, invalidateBalance, addToast])
 
   const handleDownloadPreview = useCallback(async () => {
     if (!previewMedia?.url) return
@@ -708,26 +686,34 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       // Use temporary URL for modal (faster display), permanent URL for gallery
       const temporaryUrl = data.temporaryUrl || data.data?.temporaryUrl || data.resultImage
       const permanentUrl = data.resultUrl || data.data?.resultImage || data.resultImage
-      
-      console.log('✅ [IMAGE_EDITOR] Image processed successfully:', {
+
+      console.log('✅ [IMAGE_EDITOR] Image processed successfully (SYNC):', {
         hasTemporaryUrl: !!temporaryUrl,
         hasPermanentUrl: !!permanentUrl,
         temporaryUrl: temporaryUrl?.substring(0, 100) + '...',
         permanentUrl: permanentUrl?.substring(0, 100) + '...',
         fullResponse: data
       })
-      
+
       // Use temporary URL for modal (faster), fallback to permanent if no temporary
       const modalUrl = temporaryUrl || permanentUrl
-      
+
       if (!modalUrl) {
         throw new Error('URL da imagem não foi retornada pela API')
       }
-      
+
+      // CRITICAL: Atualizar preview ANTES de limpar loading
       setPreviewMedia({ url: modalUrl, type: 'image' })
       setIsPreviewLightboxOpen(false)
 
       console.log('✅ [IMAGE_EDITOR] Inline preview updated with', temporaryUrl ? 'temporary URL' : 'permanent URL')
+
+      // Aguardar um momento para garantir que preview renderizou
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Agora sim limpar loading
+      clearEditProcessingState()
+      loadingRef.current = false
 
       addToast({
         title: "Sucesso!",
@@ -736,9 +722,7 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       })
 
       clearForm()
-
-      clearEditProcessingState()
-      loadingRef.current = false
+      invalidateBalance()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido'
       setError(errorMessage)
