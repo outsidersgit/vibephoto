@@ -88,6 +88,18 @@ export async function reconcileUserPackageStatus(userPackageId: string): Promise
       failed: packageGenerations.filter(g => g.status === 'FAILED').length
     }
 
+    console.log(`📊 [RECONCILE] Package ${userPackageId} stats:`, {
+      totalGenerations: stats.total,
+      pending: stats.pending,
+      processing: stats.processing,
+      completed: stats.completed,
+      failed: stats.failed,
+      currentGeneratedImages: userPackage.generatedImages,
+      currentFailedImages: userPackage.failedImages,
+      currentStatus: userPackage.status,
+      totalImages: userPackage.totalImages
+    })
+
     // Determine new status based on generation states
     let newStatus: PackageStatus = userPackage.status
     let shouldUpdate = false

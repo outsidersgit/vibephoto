@@ -123,6 +123,19 @@ export function PackageProgressPanel() {
     return packages.filter((pkg) => {
       const isInProgress = pkg.status === 'ACTIVE' || pkg.status === 'GENERATING'
       const isRecentlyCompleted = pkg.status === 'COMPLETED' && completedPackages.has(pkg.id)
+
+      // Log para debug
+      if (pkg.status === 'COMPLETED') {
+        console.log(`[PACKAGE_PROGRESS] Package ${pkg.id} (${pkg.packageName}):`, {
+          status: pkg.status,
+          generatedImages: pkg.generatedImages,
+          totalImages: pkg.totalImages,
+          isRecentlyCompleted,
+          inCompletedSet: completedPackages.has(pkg.id),
+          willBeVisible: isInProgress || isRecentlyCompleted
+        })
+      }
+
       return isInProgress || isRecentlyCompleted
     })
   }, [packages, completedPackages])
@@ -136,13 +149,27 @@ export function PackageProgressPanel() {
       <h3 className="text-sm font-semibold text-white">Pacotes em andamento</h3>
       <div className="grid gap-3">
         {visiblePackages.map((pkg) => {
-          const progress = Math.min(100, Math.round(((pkg.generatedImages || 0) / (pkg.totalImages || 1)) * 100))
-          const isComplete = pkg.status === 'COMPLETED' || progress === 100
+          // CRITICAL: Calculate progress based on actual completed images vs total
+          const generatedCount = pkg.generatedImages || 0
+          const totalCount = pkg.totalImages || 1
+          const progress = Math.min(100, Math.round((generatedCount / totalCount) * 100))
+
+          // Package is complete when status is COMPLETED AND all images are generated
+          const isComplete = pkg.status === 'COMPLETED' && generatedCount >= totalCount
+
           const statusLabel = isComplete
             ? 'Concluído'
             : pkg.status === 'FAILED'
               ? 'Erro'
               : 'Gerando...'
+
+          console.log(`[PACKAGE_PROGRESS] Rendering ${pkg.packageName}:`, {
+            generatedCount,
+            totalCount,
+            progress,
+            status: pkg.status,
+            isComplete
+          })
 
           return (
             <Card

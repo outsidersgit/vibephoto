@@ -177,6 +177,16 @@ export async function executeGenerationFlow(params: ExecuteGenerationFlowParams)
     const optimalSteps = calculateOptimalSteps(userPlan, megapixels, effectiveModelUrl ? 'custom' : 'base')
     const optimalGuidance = calculateOptimalGuidance(userPlan, megapixels)
     
+    // Check if film_grain should be enabled for specific packages
+    const filmGrainPackages = ['Quiet Luxury', 'Conceitual', 'Life Aesthetic', 'Golden Hour']
+    const shouldEnableFilmGrain = packageMetadata?.packageName && filmGrainPackages.includes(packageMetadata.packageName)
+
+    console.log('🎬 Film grain check:', {
+      packageName: packageMetadata?.packageName,
+      shouldEnableFilmGrain,
+      filmGrainPackages
+    })
+
     // Build generation request - same parameters as /api/generations
     const generationRequest: GenerationRequest = {
       modelUrl: effectiveModelUrl,
@@ -197,7 +207,8 @@ export async function executeGenerationFlow(params: ExecuteGenerationFlowParams)
         inpaint_faces: true,
         safety_tolerance: safety_tolerance || 2,
         raw_mode: raw_mode || false,
-        output_format: output_format || 'webp'
+        output_format: output_format || 'webp',
+        ...(shouldEnableFilmGrain && { film_grain: true })
       },
       webhookUrl: (() => {
         const baseUrl = process.env.NEXTAUTH_URL
