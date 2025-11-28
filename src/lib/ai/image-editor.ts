@@ -249,8 +249,8 @@ export class ImageEditor {
         throw new AIError('At least one image file is required', 'INVALID_INPUT')
       }
 
-      if (imageFiles.length > 3) {
-        throw new AIError('Maximum 3 images can be blended at once', 'TOO_MANY_IMAGES')
+      if (imageFiles.length > 14) {
+        throw new AIError('Maximum 14 images can be blended at once', 'TOO_MANY_IMAGES')
       }
 
       if (!prompt?.trim()) {

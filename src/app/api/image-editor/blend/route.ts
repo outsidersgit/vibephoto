@@ -44,9 +44,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (images.length > 3) {
+    if (images.length > 14) {
       return NextResponse.json(
-        { error: 'Máximo 3 imagens podem ser mescladas' },
+        { error: 'Máximo 14 imagens podem ser mescladas' },
         { status: 400 }
       )
     }
@@ -133,10 +133,10 @@ export async function GET() {
       'Seamless texture and color merging', 
       'Character consistency preservation',
       'Natural lighting and shadow blending',
-      'Support for 2-3 images maximum'
+      'Support for 2-14 images maximum'
     ],
     supportedFormats: ['image/jpeg', 'image/png', 'image/webp'],
-    maxImages: 3,
+    maxImages: 14,
     maxFileSize: '10MB'
   })
 }

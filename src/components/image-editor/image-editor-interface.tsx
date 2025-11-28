@@ -523,10 +523,10 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
       reader.onload = (e) => {
         const base64Image = e.target?.result as string
         setImages(prev => {
-          if (prev.length >= 3) {
+          if (prev.length >= 14) {
             addToast({
               title: "Limite atingido",
-              description: "Máximo 3 imagens",
+              description: "Máximo 14 imagens",
               type: "error"
             })
             return prev

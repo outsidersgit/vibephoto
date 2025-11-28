@@ -57,7 +57,7 @@ export const AI_CONFIG = {
     topK: 40,
     // Nano Banana specific settings
     nanoBanana: {
-      maxImagesPerRequest: 3, // Can blend up to 3 images
+      maxImagesPerRequest: 14, // Can blend up to 14 images (Nano Banana Pro limit)
       supportedOperations: ['edit', 'add', 'remove', 'style', 'combine', 'blend'],
       maxFileSize: 10 * 1024 * 1024, // 10MB limit
       supportedFormats: ['image/jpeg', 'image/png', 'image/webp']
