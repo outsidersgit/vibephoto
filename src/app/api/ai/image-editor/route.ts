@@ -106,10 +106,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // For other operations, images can be empty (generation from scratch) or have 1 image (edit)
-    if (['edit', 'add', 'remove', 'style'].includes(operation) && images.length > 1) {
+    // For other operations, images can be empty (generation from scratch) or have up to 14 images (edit)
+    if (['edit', 'add', 'remove', 'style'].includes(operation) && images.length > 14) {
       return NextResponse.json(
-        { error: 'Operação requer no máximo 1 imagem' },
+        { error: 'Operação requer no máximo 14 imagens' },
         { status: 400 }
       )
     }

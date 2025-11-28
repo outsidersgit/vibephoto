@@ -305,8 +305,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
                         }}
                         className="bg-gray-700/50 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
                       >
-                        <Eye className="w-4 h-4 mr-2" />
-                        Ver todas
+                        Ver todas as previews
                       </Button>
                     </div>
                   )}
@@ -418,7 +417,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
           <div className="fixed inset-0 bg-black/80 z-[70] flex items-center justify-center p-4" onClick={() => setShowAllPreviews(false)}>
             <div className="bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto border border-gray-700" onClick={(e) => e.stopPropagation()}>
               <div className="p-6 border-b border-gray-700 flex items-center justify-between">
-                <h3 className="text-xl font-bold text-white">Todas as Preview Images - {previewGender === 'MALE' ? 'Masculino' : 'Feminino'}</h3>
+                <h3 className="text-xl font-bold text-white">Todas as Previews - {previewGender === 'MALE' ? 'Masculino' : 'Feminino'}</h3>
                 <Button variant="ghost" size="sm" onClick={() => setShowAllPreviews(false)} className="text-gray-400 hover:text-white">
                   <X className="w-5 h-5" />
                 </Button>

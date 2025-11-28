@@ -863,12 +863,12 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
                 asChild
                 type="button"
                 variant="outline"
-                disabled={images.length >= 3 || loading}
+                disabled={images.length >= 14 || loading}
                 className="flex-1 border border-gray-900 bg-white hover:border-[#667EEA] hover:bg-[#667EEA]/5 text-gray-900 rounded-lg px-4 py-2 text-xs font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               >
                 <label htmlFor={fileInputId} className="flex items-center justify-center w-full cursor-pointer">
                   <ImageIcon className="w-3 h-3 mr-1.5" />
-                  {images.length > 0 ? `${images.length}/3` : 'Adicionar'}
+                  {images.length > 0 ? `${images.length}/14 imagens` : 'Adicionar imagens'}
                 </label>
               </Button>
               <Button
@@ -1104,12 +1104,12 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
               asChild
               type="button"
               variant="outline"
-              disabled={images.length >= 3 || loading}
+              disabled={images.length >= 14 || loading}
               className="flex items-center gap-2 border border-gray-900 bg-white hover:border-[#667EEA] hover:bg-[#667EEA]/5 text-gray-900 rounded-lg px-4 py-3 text-sm font-medium transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
             >
               <label htmlFor={fileInputId} className="flex items-center gap-2 cursor-pointer">
                 <ImageIcon className="w-4 h-4" />
-                {images.length > 0 ? `${images.length}/3 imagens` : 'Adicionar imagens'}
+                {images.length > 0 ? `${images.length}/14 imagens` : 'Adicionar imagens'}
               </label>
             </Button>
             <Button

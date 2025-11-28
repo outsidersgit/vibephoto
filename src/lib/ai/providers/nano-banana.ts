@@ -265,12 +265,12 @@ export class NanoBananaProvider {
    * Blend multiple images using Nano Banana's multi-image capabilities
    */
   async blendImages(imageUrls: string[], prompt: string, outputFormat: 'jpg' | 'png' = 'jpg'): Promise<NanoBananaEditResponse> {
-    if (imageUrls.length > 3) {
-      throw new AIError('Maximum 3 images can be processed with Nano Banana', 'TOO_MANY_IMAGES')
+    if (imageUrls.length > 14) {
+      throw new AIError('Maximum 14 images can be processed with Nano Banana Pro', 'TOO_MANY_IMAGES')
     }
 
     const enhancedPrompt = `Blend these ${imageUrls.length} images together: ${prompt}. Create a seamless fusion that combines the best elements, textures, colors, and lighting from all images into one cohesive, natural-looking result.`
-    
+
     return this.editImage({
       prompt: enhancedPrompt,
       imageInput: imageUrls,
