@@ -25,10 +25,26 @@ export async function POST(request: NextRequest) {
     // Parse form data first to get resolution
     const formData = await request.formData()
     const image = formData.get('image') as File | null
+    const multipleImages = formData.get('multipleImages') === 'true'
     const prompt = formData.get('prompt') as string
     const aspectRatio = formData.get('aspectRatio') as string | null
     const resolutionParam = formData.get('resolution') as string | null
     const resolution: EditorResolution = resolutionParam === '4k' ? '4k' : 'standard'
+
+    // If multiple images flag is set, collect all images
+    const images: File[] = []
+    if (multipleImages) {
+      let imageIndex = 0
+      while (true) {
+        const img = formData.get(`image${imageIndex}`) as File | null
+        if (!img) break
+        images.push(img)
+        imageIndex++
+      }
+      console.log(`📸 Multiple images mode: ${images.length} images received`)
+    } else if (image) {
+      images.push(image)
+    }
 
     const userPlan = ((session.user as any)?.plan || 'STARTER') as Plan
     const creditsNeeded = getImageEditCost(1, resolution) // Custo baseado na resolução
@@ -48,17 +64,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Image is optional - if not provided, generate from scratch
-    if (image) {
+    // Validate all images (if any)
+    for (const img of images) {
       // Validate file type and size
-      if (!imageEditor.isValidImageFile(image)) {
+      if (!imageEditor.isValidImageFile(img)) {
         return NextResponse.json(
           { error: 'Invalid image format. Supported formats: JPEG, PNG, WebP, GIF' },
           { status: 400 }
         )
       }
 
-      if (image.size > imageEditor.getMaxFileSize()) {
+      if (img.size > imageEditor.getMaxFileSize()) {
         return NextResponse.json(
           { error: 'Image file too large. Maximum size: 10MB' },
           { status: 400 }
@@ -67,10 +83,10 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`🎨 Image edit/generation request from ${session.user.email}:`, {
-      hasImage: !!image,
-      filename: image?.name || 'none',
-      size: image?.size || 0,
-      type: image?.type || 'none',
+      imageCount: images.length,
+      multipleImages,
+      filenames: images.map(img => img.name),
+      sizes: images.map(img => img.size),
       prompt: prompt.substring(0, 100) + '...'
     })
 
@@ -102,11 +118,14 @@ export async function POST(request: NextRequest) {
     const nanoBananaResolution = resolution === '4k' ? '4K' : '2K'
 
     let result
-    if (image) {
-      // Edit existing image
-      result = await imageEditor.editImageWithPrompt(image, prompt, aspectRatioValue, webhookUrl, nanoBananaResolution)
+    if (images.length > 1) {
+      // Multiple images - use edit with multiple images (Nano Banana Pro feature)
+      result = await imageEditor.editWithMultipleImages(images, prompt, aspectRatioValue, webhookUrl, nanoBananaResolution)
+    } else if (images.length === 1) {
+      // Single image - edit existing image
+      result = await imageEditor.editImageWithPrompt(images[0], prompt, aspectRatioValue, webhookUrl, nanoBananaResolution)
     } else {
-      // Generate from scratch
+      // No images - generate from scratch
       result = await imageEditor.generateImageFromPrompt(prompt, aspectRatioValue, webhookUrl, nanoBananaResolution)
     }
 
@@ -116,22 +135,22 @@ export async function POST(request: NextRequest) {
       console.log('📡 Editor using async webhook processing, creating edit_history record:', result.id)
       
       // Get original image URL from form data or create a placeholder
-      const originalImageUrl = image 
-        ? (formData.get('originalUrl') as string || `data:${image.type};base64,original`)
+      const originalImageUrl = images.length > 0
+        ? (formData.get('originalUrl') as string || `data:${images[0].type};base64,original`)
         : 'generated-from-scratch'
-      
+
       // Create edit_history with PROCESSING status - webhook will update when complete
       const editHistoryEntry = await createEditHistory({
         userId: session.user.id,
         originalImageUrl: originalImageUrl,
         editedImageUrl: '', // Will be updated by webhook
         thumbnailUrl: '', // Will be updated by webhook
-        operation: image ? 'nano_banana_edit' : 'nano_banana_generate',
+        operation: images.length > 0 ? 'nano_banana_edit' : 'nano_banana_generate',
         prompt: prompt,
         metadata: {
           replicateId: result.id,
           status: 'PROCESSING',
-          generatedFromScratch: !image,
+          generatedFromScratch: images.length === 0,
           webhookEnabled: true,
           async: true
         }
@@ -157,7 +176,7 @@ export async function POST(request: NextRequest) {
             source: image ? 'editor' : 'editor_generate',
             editHistoryId: editHistoryEntry.id,
             replicateId: result.id,
-            generatedFromScratch: !image,
+            generatedFromScratch: images.length === 0,
             processingStartedAt: new Date().toISOString(),
             webhookEnabled: true
           }
@@ -281,7 +300,7 @@ export async function POST(request: NextRequest) {
           fileType: image?.type || 'image/png',
           processingTime: result.metadata?.processingTime,
           replicateId: result.id,
-          generatedFromScratch: !image,
+          generatedFromScratch: images.length === 0,
           permanentUrl: permanentImageUrl,
           temporaryUrl: result.resultImage // Keep original for reference
         }
@@ -336,7 +355,7 @@ export async function POST(request: NextRequest) {
           source: image ? 'editor' : 'editor_generate',
           editHistoryId: editHistoryEntry?.id,
           replicateId: result.id,
-          generatedFromScratch: !image,
+          generatedFromScratch: images.length === 0,
           temporaryUrl: result.resultImage,
           permanentUrl: permanentImageUrl,
           cost: creditsNeeded,

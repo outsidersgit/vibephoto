@@ -124,10 +124,20 @@ export async function POST(request: NextRequest) {
       formData.append('resolution', resolution) // 'standard' ou '4k'
     }
 
-    // For single image operations (only if image is provided)
+    // For operations with images (send all images if multiple are provided)
     if (['edit', 'add', 'remove', 'style'].includes(operation) && images.length > 0) {
-      const imageFile = await urlToFile(images[0], 'image.jpg')
-      formData.append('image', imageFile)
+      // If multiple images, send them as an array (Nano Banana Pro supports up to 14)
+      if (images.length > 1) {
+        for (let index = 0; index < images.length; index++) {
+          const imageFile = await urlToFile(images[index], `image_${index}.jpg`)
+          formData.append(`image${index}`, imageFile)
+        }
+        formData.append('multipleImages', 'true') // Flag to indicate multiple images
+      } else {
+        // Single image - use traditional 'image' field
+        const imageFile = await urlToFile(images[0], 'image.jpg')
+        formData.append('image', imageFile)
+      }
     }
     // For blend operation (multiple images)
     else if (operation === 'blend') {

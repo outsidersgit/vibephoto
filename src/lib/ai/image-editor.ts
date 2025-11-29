@@ -91,6 +91,77 @@ export class ImageEditor {
   }
 
   /**
+   * Edit with multiple images (Nano Banana Pro supports up to 14 images)
+   * @param imageFiles - Array of image files to process
+   * @param promptText - Text description of the desired edit/composition
+   * @param aspectRatio - Aspect ratio for the output image
+   * @param webhookUrl - Optional webhook URL for async processing
+   * @param resolution - Output resolution ('2K' or '4K')
+   * @returns Promise<ImageEditResponse>
+   */
+  async editWithMultipleImages(imageFiles: File[], promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string, resolution?: string): Promise<ImageEditResponse> {
+    this.checkConfiguration()
+
+    try {
+      console.log('🍌 Starting Nano Banana multi-image edit via Replicate:', {
+        imageCount: imageFiles.length,
+        prompt: promptText,
+        resolution
+      })
+
+      // Validate input
+      if (!imageFiles || imageFiles.length === 0) {
+        throw new AIError('At least one image file is required', 'INVALID_INPUT')
+      }
+
+      if (imageFiles.length > 14) {
+        throw new AIError('Maximum 14 images can be processed at once', 'TOO_MANY_IMAGES')
+      }
+
+      if (!promptText || promptText.trim().length === 0) {
+        throw new AIError('Prompt text is required', 'INVALID_INPUT')
+      }
+
+      // Validate all files
+      for (const imageFile of imageFiles) {
+        if (!imageFile.type.startsWith('image/')) {
+          throw new AIError('All files must be images', 'INVALID_FILE_TYPE')
+        }
+
+        const maxSize = 10 * 1024 * 1024 // 10MB
+        if (imageFile.size > maxSize) {
+          throw new AIError('Image file too large (max 10MB)', 'FILE_TOO_LARGE')
+        }
+      }
+
+      // Convert all files to data URLs for Replicate
+      const imageUrls = await Promise.all(
+        imageFiles.map(file => NanoBananaProvider.fileToUrl(file))
+      )
+
+      // Call Nano Banana provider with multiple images
+      const result = await this.provider!.editImage({
+        prompt: promptText,
+        imageInput: imageUrls,
+        outputFormat: 'jpg',
+        aspectRatio,
+        resolution,
+        webhookUrl
+      })
+
+      console.log('✅ Nano Banana multi-image edit completed:', result.id)
+      return result
+
+    } catch (error) {
+      console.error('❌ Nano Banana multi-image edit failed:', error)
+      throw error instanceof AIError ? error : new AIError(
+        `Nano Banana multi-image editing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'NANO_BANANA_MULTI_IMAGE_ERROR'
+      )
+    }
+  }
+
+  /**
    * Generate an image from text prompt only (no input image)
    * @param promptText - Text description of the desired image
    * @param aspectRatio - Aspect ratio for the output image
