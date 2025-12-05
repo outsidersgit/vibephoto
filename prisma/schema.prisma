@@ -81,6 +81,7 @@ model User {
   paymentMethods     PaymentMethod[]
   creditTransactions CreditTransaction[]
   feedbacks          Feedback[]
+  couponUsages       CouponUsage[]
 
   @@index([lastLoginAt])
   @@index([plan])
@@ -101,9 +102,10 @@ model Influencer {
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
-  user           User     @relation("InfluencerOwner", fields: [userId], references: [id], onDelete: Cascade)
-  referredUsers  User[]   @relation("InfluencerReferrals")
-  payments       Payment[] @relation("InfluencerPayments")
+  user           User             @relation("InfluencerOwner", fields: [userId], references: [id], onDelete: Cascade)
+  referredUsers  User[]           @relation("InfluencerReferrals")
+  payments       Payment[]        @relation("InfluencerPayments")
+  coupons        DiscountCoupon[] @relation("CouponInfluencer")
 
   @@map("influencers")
 }
@@ -634,6 +636,8 @@ model Payment {
   externalReference String? // Our internal reference
   influencerId      String? @map("influencer_id")
   referralCodeUsed  String? @map("codigo_usado")
+  couponCodeUsed    String? @map("coupon_code_used") // Discount coupon code applied
+  discountApplied   Float? @map("discount_applied") // Discount amount applied
 
   // Related data
   planType     Plan? // If subscription payment
@@ -649,6 +653,7 @@ model Payment {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   influencer Influencer? @relation("InfluencerPayments", fields: [influencerId], references: [id])
+  couponUsages CouponUsage[]
 
   @@index([userId])
   @@index([status])
@@ -927,4 +932,76 @@ model Feedback {
   @@index([rating])
   @@index([createdAt(sort: Desc)])
   @@map("feedbacks")
+}
+
+// Enums for Discount Coupons
+enum CouponType {
+  DISCOUNT // Only discount
+  HYBRID   // Discount + influencer split
+}
+
+enum DiscountType {
+  FIXED      // Fixed value discount
+  PERCENTAGE // Percentage discount
+}
+
+// Discount Coupons Model
+model DiscountCoupon {
+  id               String       @id @default(cuid())
+  code             String       @unique // Coupon code (uppercase)
+  type             CouponType   @default(DISCOUNT) // DISCOUNT or HYBRID
+  discountType     DiscountType @default(PERCENTAGE) @map("discount_type")
+  discountValue    Decimal      @db.Decimal(10, 2) @map("discount_value") // Value or percentage
+
+  // Influencer relation (only for HYBRID coupons)
+  influencerId     String?      @map("influencer_id")
+  influencer       Influencer?  @relation("CouponInfluencer", fields: [influencerId], references: [id], onDelete: SetNull)
+
+  // Plan restrictions
+  applicablePlans  String[]     @default([]) @map("applicable_plans") // Empty = all plans, or ["STARTER", "PREMIUM", "GOLD"]
+
+  // Status and validity
+  isActive         Boolean      @default(true) @map("is_active")
+  validFrom        DateTime     @default(now()) @map("valid_from")
+  validUntil       DateTime?    @map("valid_until")
+
+  // Usage limits
+  maxUses          Int?         @map("max_uses") // Total usage limit (null = unlimited)
+  maxUsesPerUser   Int?         @default(1) @map("max_uses_per_user") // Per user limit
+  totalUses        Int          @default(0) @map("total_uses")
+
+  // Timestamps
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  usages           CouponUsage[]
+
+  // Indexes
+  @@index([code])
+  @@index([influencerId])
+  @@index([isActive])
+  @@map("discount_coupons")
+}
+
+// Coupon Usage Tracking
+model CouponUsage {
+  id              String        @id @default(cuid())
+  couponId        String        @map("coupon_id")
+  userId          String        @map("user_id")
+  paymentId       String        @map("payment_id")
+  discountApplied Decimal       @db.Decimal(10, 2) @map("discount_applied")
+  usedAt          DateTime      @default(now()) @map("used_at")
+
+  // Relations
+  coupon          DiscountCoupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment         Payment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([couponId])
+  @@index([userId])
+  @@index([paymentId])
+  @@unique([couponId, userId, paymentId]) // Prevent duplicate usage
+  @@map("coupon_usage")
 }

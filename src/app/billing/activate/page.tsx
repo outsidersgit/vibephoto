@@ -45,6 +45,18 @@ function ActivatePageContent() {
   const [referralDetails, setReferralDetails] = useState<{ couponCode: string; name: string | null } | null>(null)
   const [referralMessage, setReferralMessage] = useState<string | null>(null)
 
+  // Discount coupon state
+  const [couponCode, setCouponCode] = useState('')
+  const [couponStatus, setCouponStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle')
+  const [couponDetails, setCouponDetails] = useState<{
+    code: string
+    type: 'DISCOUNT' | 'HYBRID'
+    discountAmount: number
+    finalPrice: number
+    originalPrice: number
+  } | null>(null)
+  const [couponMessage, setCouponMessage] = useState<string | null>(null)
+
   useEffect(() => {
     if (session?.user) {
       setCustomerData(prev => ({
@@ -297,6 +309,92 @@ function ActivatePageContent() {
     }
   }
 
+  // Validate discount coupon
+  const couponCodeNormalized = couponCode.trim().toUpperCase()
+
+  const validateCouponCode = async ({ silent = false } = {}) => {
+    if (!couponCodeNormalized) {
+      setCouponStatus('idle')
+      setCouponDetails(null)
+      setCouponMessage(null)
+      return true
+    }
+
+    if (couponStatus === 'valid' && couponDetails?.code === couponCodeNormalized) {
+      return true
+    }
+
+    try {
+      setCouponStatus('loading')
+      setCouponMessage(null)
+
+      const response = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: couponCodeNormalized,
+          planId: selectedPlan,
+          cycle: billingCycle === 'annual' ? 'YEARLY' : 'MONTHLY'
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.valid) {
+        const message = data.error || 'Cupom inválido'
+        setCouponStatus('invalid')
+        setCouponDetails(null)
+        setCouponMessage(message)
+        if (!silent) {
+          addToast({
+            type: 'error',
+            title: 'Cupom inválido',
+            description: message
+          })
+        }
+        return false
+      }
+
+      // Cupom válido
+      setCouponStatus('valid')
+      setCouponDetails({
+        code: data.coupon.code,
+        type: data.coupon.type,
+        discountAmount: data.coupon.discountAmount,
+        finalPrice: data.coupon.finalPrice,
+        originalPrice: data.coupon.originalPrice
+      })
+
+      const discountPercent = ((data.coupon.discountAmount / data.coupon.originalPrice) * 100).toFixed(0)
+      const message = `Cupom aplicado! Desconto de R$ ${data.coupon.discountAmount.toFixed(2)} (${discountPercent}%) - Novo valor: R$ ${data.coupon.finalPrice.toFixed(2)}`
+      setCouponMessage(message)
+
+      if (!silent) {
+        addToast({
+          type: 'success',
+          title: 'Cupom aplicado com sucesso!',
+          description: message
+        })
+      }
+      return true
+
+    } catch (error) {
+      console.error('Erro ao validar cupom:', error)
+      setCouponStatus('invalid')
+      setCouponDetails(null)
+      const fallbackMessage = 'Não foi possível validar o cupom. Tente novamente.'
+      setCouponMessage(fallbackMessage)
+      if (!silent) {
+        addToast({
+          type: 'error',
+          title: 'Erro ao validar cupom',
+          description: fallbackMessage
+        })
+      }
+      return false
+    }
+  }
+
   const handleCreateCheckout = async () => {
     setLoading(true)
     try {
@@ -363,6 +461,22 @@ function ActivatePageContent() {
         return
       }
 
+      // Validate and prepare coupon code for checkout
+      let couponCodeForCheckout: string | undefined
+      if (couponCodeNormalized) {
+        const couponValid = await validateCouponCode({ silent: true })
+        if (couponValid) {
+          couponCodeForCheckout = couponCodeNormalized
+        } else {
+          // Cupom inválido não bloqueia o checkout, apenas avisa
+          addToast({
+            type: 'warning',
+            title: 'Cupom não aplicado',
+            description: 'O cupom informado não é válido. Continuaremos com o preço normal.'
+          })
+        }
+      }
+
       // Criar checkout transparente
       const response = await fetch('/api/checkout/subscription', {
         method: 'POST',
@@ -370,7 +484,8 @@ function ActivatePageContent() {
         body: JSON.stringify({
           planId: selectedPlan,
           cycle: billingCycle === 'annual' ? 'YEARLY' : 'MONTHLY',
-          referralCode: referralCodeForCheckout
+          referralCode: referralCodeForCheckout,
+          couponCode: couponCodeForCheckout
         })
       })
 
@@ -722,6 +837,56 @@ function ActivatePageContent() {
                 )}
                 {referralStatus === 'invalid' && referralMessage && (
                   <p className="mt-3 text-sm text-red-300">{referralMessage}</p>
+                )}
+              </div>
+
+              {/* Cupom de Desconto (Opcional) */}
+              <div className="border-t border-slate-600 pt-6">
+                <h3 className="text-base font-semibold text-white mb-2">Cupom de Desconto (Opcional)</h3>
+                <p className="text-sm text-slate-300 mb-3">
+                  Tem um cupom de desconto? Aplique aqui e economize na sua assinatura!
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(event) => {
+                      setCouponCode(event.target.value.toUpperCase())
+                      setCouponStatus('idle')
+                      setCouponDetails(null)
+                      setCouponMessage(null)
+                    }}
+                    placeholder="Ex: DESCONTO20"
+                    className="flex-1 h-11 px-3 py-2 bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 uppercase"
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => validateCouponCode()}
+                    disabled={couponStatus === 'loading'}
+                    className="h-11 bg-emerald-600 text-white hover:bg-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-0 disabled:opacity-70"
+                  >
+                    {couponStatus === 'loading' ? 'Validando...' : 'Aplicar cupom'}
+                  </Button>
+                </div>
+                {couponStatus === 'valid' && couponMessage && (
+                  <div className="mt-3 p-3 bg-emerald-900/30 border border-emerald-500/50 rounded-md">
+                    <p className="text-sm text-emerald-300">{couponMessage}</p>
+                    {couponDetails && (
+                      <div className="mt-2 text-xs text-emerald-200">
+                        <div className="flex justify-between">
+                          <span>Valor original:</span>
+                          <span className="line-through">R$ {couponDetails.originalPrice.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between font-bold">
+                          <span>Valor final:</span>
+                          <span>R$ {couponDetails.finalPrice.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {couponStatus === 'invalid' && couponMessage && (
+                  <p className="mt-3 text-sm text-red-300">{couponMessage}</p>
                 )}
               </div>
 

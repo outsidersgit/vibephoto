@@ -5,6 +5,7 @@ import { getPlanById, PLANS_FALLBACK } from '@/config/pricing'
 import { CreditPackageService } from '@/lib/services/credit-package-service'
 import { getAsaasEnvironment, getAsaasCheckoutUrl, getWebhookBaseUrl } from '@/lib/utils/environment'
 import { findInfluencerByCouponCode } from '@/lib/db/influencers'
+import { validateCoupon } from '@/lib/services/coupon-service'
 
 // URLs de callback para Asaas - usa domínio de produção
 const CALLBACK_BASE = getWebhookBaseUrl() || 'https://vibephoto.app'
@@ -286,7 +287,8 @@ export async function createSubscriptionCheckout(
   planId: 'STARTER' | 'PREMIUM' | 'GOLD',
   cycle: 'MONTHLY' | 'YEARLY',
   userId: string,
-  referralCode?: string
+  referralCode?: string,
+  couponCode?: string
 ): Promise<{ checkoutId: string; checkoutUrl: string }> {
   // Buscar plano do banco de dados
   console.log('🔍 [CHECKOUT] Buscando plano:', planId)
@@ -359,7 +361,51 @@ export async function createSubscriptionCheckout(
   }
 
   // Calcular valor baseado no ciclo
-  const value = cycle === 'YEARLY' ? plan.annualPrice : plan.monthlyPrice
+  let value = cycle === 'YEARLY' ? plan.annualPrice : plan.monthlyPrice
+  let discountApplied = 0
+  let validatedCoupon: Awaited<ReturnType<typeof validateCoupon>>['coupon'] | null = null
+
+  // Validate discount coupon if provided
+  if (couponCode) {
+    const couponValidation = await validateCoupon(couponCode, planId, cycle, userId)
+
+    if (couponValidation.valid && couponValidation.coupon) {
+      validatedCoupon = couponValidation.coupon
+      value = couponValidation.coupon.finalPrice
+      discountApplied = couponValidation.coupon.discountAmount
+
+      console.log('🎟️ [CHECKOUT] Cupom de desconto aplicado:', {
+        code: couponValidation.coupon.code,
+        type: couponValidation.coupon.type,
+        originalPrice: couponValidation.coupon.originalPrice,
+        discountAmount: discountApplied,
+        finalPrice: value
+      })
+
+      // If HYBRID coupon with influencer data, use it for split
+      if (couponValidation.coupon.type === 'HYBRID' && couponValidation.coupon.influencer) {
+        // Override influencer from referral code with coupon influencer
+        influencer = {
+          id: couponValidation.coupon.influencer.id,
+          couponCode: couponValidation.coupon.influencer.couponCode,
+          commissionPercentage: couponValidation.coupon.influencer.commissionPercentage,
+          commissionFixedValue: couponValidation.coupon.influencer.commissionFixedValue,
+          asaasWalletId: couponValidation.coupon.influencer.asaasWalletId,
+          userId: '',
+          asaasApiKey: null,
+          monthlyIncome: null,
+          totalReferrals: 0,
+          totalCommissions: 0,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+        console.log('🎟️ [CHECKOUT] Cupom HÍBRIDO - usando influencer do cupom para split')
+      }
+    } else {
+      console.warn('⚠️ [CHECKOUT] Cupom inválido, continuando com preço normal:', couponCode)
+      // Don't throw error - just continue with normal price
+    }
+  }
 
   // Data de cobrança IMEDIATA (hoje no fuso horário do Brasil)
   // Usar fuso horário do Brasil (America/Sao_Paulo, UTC-3) para evitar problemas com UTC
@@ -454,25 +500,33 @@ export async function createSubscriptionCheckout(
   // Converter nextDueDate (string YYYY-MM-DD) para Date no início do dia no fuso horário do Brasil
   const dueDateObj = new Date(`${nextDueDate}T00:00:00-03:00`) // -03:00 é UTC-3 (fuso do Brasil)
 
-  await prisma.payment.create({
-    data: {
-      userId: user.id,
-      asaasCheckoutId: checkout.id,
-      type: 'SUBSCRIPTION',
-      status: 'PENDING',
-      billingType: 'CREDIT_CARD',
-      value,
-      description: `Assinatura ${plan.name} - ${cycle}`,
-      dueDate: dueDateObj, // Agora é um Date object válido
-      planType: planId,
-      billingCycle: cycle,
-      ...(influencer
-        ? {
-            influencerId: influencer.id,
-            referralCodeUsed: referralCode
-          }
-        : {})
-    }
+  const paymentData: any = {
+    userId: user.id,
+    asaasCheckoutId: checkout.id,
+    type: 'SUBSCRIPTION',
+    status: 'PENDING',
+    billingType: 'CREDIT_CARD',
+    value,
+    description: `Assinatura ${plan.name} - ${cycle}`,
+    dueDate: dueDateObj, // Agora é um Date object válido
+    planType: planId,
+    billingCycle: cycle
+  }
+
+  // Add influencer data if applicable
+  if (influencer) {
+    paymentData.influencerId = influencer.id
+    paymentData.referralCodeUsed = referralCode || validatedCoupon?.code
+  }
+
+  // Add coupon data if applicable
+  if (validatedCoupon) {
+    paymentData.couponCodeUsed = validatedCoupon.code
+    paymentData.discountApplied = discountApplied
+  }
+
+  const payment = await prisma.payment.create({
+    data: paymentData
   })
 
   // CRÍTICO: Salvar plan e billingCycle diretamente na tabela users

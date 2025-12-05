@@ -3,6 +3,7 @@ import { asaas } from '@/lib/payments/asaas'
 import { updateSubscriptionStatus, getUserByAsaasCustomerId, logUsage } from '@/lib/db/subscriptions'
 import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
+import { recordCouponUsage } from '@/lib/services/coupon-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -488,6 +489,21 @@ async function handleCheckoutPaid(checkout: any) {
           asaasCheckoutId: checkout.id || paymentRecord.asaasCheckoutId
         }
       })
+
+      // Record coupon usage if coupon was used
+      if (paymentRecord.couponCodeUsed && paymentRecord.discountApplied) {
+        await recordCouponUsage(
+          paymentRecord.couponCodeUsed,
+          paymentRecord.userId,
+          paymentRecord.id,
+          paymentRecord.discountApplied
+        )
+        console.log('✅ [WEBHOOK] Coupon usage recorded:', {
+          code: paymentRecord.couponCodeUsed,
+          discount: paymentRecord.discountApplied,
+          paymentId: paymentRecord.id
+        })
+      }
     } else {
       await prisma.payment.create({
         data: {

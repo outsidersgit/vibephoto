@@ -28,6 +28,10 @@ export async function POST(req: NextRequest) {
       typeof body.referralCode === 'string'
         ? body.referralCode.trim().toUpperCase()
         : undefined
+    const couponCode =
+      typeof body.couponCode === 'string'
+        ? body.couponCode.trim().toUpperCase()
+        : undefined
 
     // Validação
     if (!planId || !cycle) {
@@ -60,7 +64,8 @@ export async function POST(req: NextRequest) {
       planId,
       cycle,
       userId,
-      referralCode
+      referralCode,
+      couponCode
     )
 
     return NextResponse.json({
