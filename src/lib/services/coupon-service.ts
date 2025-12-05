@@ -155,7 +155,10 @@ export async function validateCoupon(
       discountAmount = originalPrice
     }
 
-    const finalPrice = originalPrice - discountAmount
+    // Round to 2 decimal places for Asaas compatibility
+    // Use Math.ceil to always round UP for better user experience
+    discountAmount = Math.floor(discountAmount * 100) / 100
+    const finalPrice = Math.ceil((originalPrice - discountAmount) * 100) / 100
 
     // Build validated coupon response
     const validatedCoupon: ValidatedCoupon = {
