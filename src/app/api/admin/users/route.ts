@@ -26,11 +26,24 @@ const RoleEnumUpper = z.enum(['USER','ADMIN'])
 const SubscriptionStatusEnum = z.enum(['ACTIVE','CANCELLED','OVERDUE','EXPIRED','PENDING']).optional()
 
 const walletIdRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const CouponConfigSchema = z.object({
+  type: z.literal('HYBRID').default('HYBRID'),
+  discountType: z.enum(['PERCENTAGE', 'FIXED']).default('PERCENTAGE'),
+  discountValue: z.number().min(0).optional(),
+  applicablePlans: z.array(z.string()).default([]),
+  isActive: z.boolean().default(true),
+  validFrom: z.string().optional(),
+  validUntil: z.string().optional(),
+  maxUses: z.number().int().min(1).optional(),
+  maxUsesPerUser: z.number().int().min(1).default(1)
+}).optional()
+
 const InfluencerSchema = z.object({
   couponCode: z.string().trim().optional(),
   walletId: z.string().regex(walletIdRegex, 'Wallet ID inválido'),
   commissionPercentage: z.number().min(0).max(100).optional(),
-  commissionFixedValue: z.number().min(0).optional()
+  commissionFixedValue: z.number().min(0).optional(),
+  coupon: CouponConfigSchema
 }).optional()
 
 export async function POST(request: NextRequest) {
@@ -133,7 +146,7 @@ export async function POST(request: NextRequest) {
         throw new Error('DUPLICATE_WALLET')
       }
 
-      await createInfluencer({
+      const influencer = await createInfluencer({
         userId: created.id,
         couponCode,
         asaasWalletId: normalizedWallet,
@@ -142,6 +155,32 @@ export async function POST(request: NextRequest) {
         name: payload.name || created.name || created.email,
         incomeValue: undefined
       })
+
+      // Create discount coupon linked to influencer
+      if (influencerData.coupon && influencerData.coupon.discountValue) {
+        try {
+          await prisma.discountCoupon.create({
+            data: {
+              code: couponCode,
+              type: 'HYBRID',
+              discountType: influencerData.coupon.discountType || 'PERCENTAGE',
+              discountValue: influencerData.coupon.discountValue,
+              influencerId: influencer.id,
+              applicablePlans: influencerData.coupon.applicablePlans || [],
+              isActive: influencerData.coupon.isActive ?? true,
+              validFrom: influencerData.coupon.validFrom ? new Date(influencerData.coupon.validFrom) : new Date(),
+              validUntil: influencerData.coupon.validUntil ? new Date(influencerData.coupon.validUntil) : null,
+              maxUses: influencerData.coupon.maxUses || null,
+              maxUsesPerUser: influencerData.coupon.maxUsesPerUser || 1,
+              totalUses: 0
+            }
+          })
+          console.log('✅ [Admin Users] Cupom de desconto criado para influenciador:', couponCode)
+        } catch (couponError) {
+          console.error('❌ [Admin Users] Erro ao criar cupom de desconto:', couponError)
+          // Don't fail influencer creation if coupon creation fails
+        }
+      }
     } catch (error) {
       console.error('❌ [Admin Users] Erro ao configurar influenciador:', error)
       await prisma.user.delete({ where: { id: created.id } }).catch(() => null)

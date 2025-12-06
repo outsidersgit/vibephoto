@@ -45,15 +45,16 @@ function ActivatePageContent() {
   const [referralDetails, setReferralDetails] = useState<{ couponCode: string; name: string | null } | null>(null)
   const [referralMessage, setReferralMessage] = useState<string | null>(null)
 
-  // Discount coupon state
+  // Unified coupon state (handles both referral and discount coupons)
   const [couponCode, setCouponCode] = useState('')
-  const [couponStatus, setCouponStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle')
+  const [couponStatus, setCouponStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid' | 'expired' | 'exhausted'>('idle')
   const [couponDetails, setCouponDetails] = useState<{
     code: string
-    type: 'DISCOUNT' | 'HYBRID'
-    discountAmount: number
-    finalPrice: number
-    originalPrice: number
+    type: 'DISCOUNT' | 'HYBRID' | 'REFERRAL'
+    discountAmount?: number
+    finalPrice?: number
+    originalPrice?: number
+    name?: string | null
   } | null>(null)
   const [couponMessage, setCouponMessage] = useState<string | null>(null)
 
@@ -309,7 +310,7 @@ function ActivatePageContent() {
     }
   }
 
-  // Validate discount coupon
+  // Unified coupon validation (tries discount coupon first, then referral code)
   const couponCodeNormalized = couponCode.trim().toUpperCase()
 
   const validateCouponCode = async ({ silent = false } = {}) => {
@@ -328,7 +329,8 @@ function ActivatePageContent() {
       setCouponStatus('loading')
       setCouponMessage(null)
 
-      const response = await fetch('/api/coupons/validate', {
+      // Try discount coupon first
+      const discountResponse = await fetch('/api/coupons/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -338,51 +340,99 @@ function ActivatePageContent() {
         })
       })
 
-      const data = await response.json()
+      const discountData = await discountResponse.json()
 
-      if (!response.ok || !data.valid) {
-        const message = data.error || 'Cupom inválido'
-        setCouponStatus('invalid')
-        setCouponDetails(null)
+      if (discountResponse.ok && discountData.valid && discountData.coupon) {
+        setCouponStatus('valid')
+        setCouponDetails({
+          ...discountData.coupon,
+          type: discountData.coupon.type
+        })
+
+        const couponType = discountData.coupon.type === 'HYBRID' ? 'HÍBRIDO' : 'DESCONTO'
+        const discountPercent = ((discountData.coupon.discountAmount / discountData.coupon.originalPrice) * 100).toFixed(0)
+        const message = `✓ Cupom ${couponType} aplicado! Desconto de R$ ${discountData.coupon.discountAmount.toFixed(2)} (${discountPercent}%)`
         setCouponMessage(message)
+
         if (!silent) {
           addToast({
-            type: 'error',
-            title: 'Cupom inválido',
+            type: 'success',
+            title: 'Cupom aplicado!',
             description: message
           })
         }
-        return false
+        return true
       }
 
-      // Cupom válido
-      setCouponStatus('valid')
-      setCouponDetails({
-        code: data.coupon.code,
-        type: data.coupon.type,
-        discountAmount: data.coupon.discountAmount,
-        finalPrice: data.coupon.finalPrice,
-        originalPrice: data.coupon.originalPrice
+      // If discount coupon failed, try referral code
+      const referralResponse = await fetch('/api/influencers/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCodeNormalized })
       })
 
-      const discountPercent = ((data.coupon.discountAmount / data.coupon.originalPrice) * 100).toFixed(0)
-      const message = `Cupom aplicado! Desconto de R$ ${data.coupon.discountAmount.toFixed(2)} (${discountPercent}%) - Novo valor: R$ ${data.coupon.finalPrice.toFixed(2)}`
-      setCouponMessage(message)
+      const referralData = await referralResponse.json()
+
+      if (referralResponse.ok && referralData.valid && referralData.influencer) {
+        setCouponStatus('valid')
+        setCouponDetails({
+          code: referralData.influencer.couponCode,
+          type: 'REFERRAL',
+          name: referralData.influencer.name
+        })
+        const influencerName = referralData.influencer.name ? ` de ${referralData.influencer.name}` : ''
+        const message = `✓ Código de indicação${influencerName} aplicado com sucesso!`
+        setCouponMessage(message)
+
+        if (!silent) {
+          addToast({
+            type: 'success',
+            title: 'Código de indicação aplicado!',
+            description: message
+          })
+        }
+        return true
+      }
+
+      // Neither worked - determine error type from discount response
+      let errorStatus: typeof couponStatus = 'invalid'
+      let errorMessage = '⚠ Cupom não encontrado ou inválido'
+
+      if (discountData.error) {
+        const errorLower = discountData.error.toLowerCase()
+        if (errorLower.includes('expirado') || errorLower.includes('expir')) {
+          errorStatus = 'expired'
+          errorMessage = '⚠ Cupom expirado'
+        } else if (errorLower.includes('limite') || errorLower.includes('esgot') || errorLower.includes('atingido')) {
+          errorStatus = 'exhausted'
+          errorMessage = '⚠ Cupom esgotado (limite de uso atingido)'
+        } else if (errorLower.includes('inativo')) {
+          errorMessage = '⚠ Cupom inativo'
+        } else if (errorLower.includes('plano')) {
+          errorMessage = '⚠ Cupom não aplicável a este plano'
+        } else {
+          errorMessage = `⚠ ${discountData.error}`
+        }
+      }
+
+      setCouponStatus(errorStatus)
+      setCouponDetails(null)
+      setCouponMessage(errorMessage)
 
       if (!silent) {
         addToast({
-          type: 'success',
-          title: 'Cupom aplicado com sucesso!',
-          description: message
+          type: 'error',
+          title: 'Cupom inválido',
+          description: errorMessage
         })
       }
-      return true
+      return false
 
     } catch (error) {
       console.error('Erro ao validar cupom:', error)
       setCouponStatus('invalid')
       setCouponDetails(null)
-      const fallbackMessage = 'Não foi possível validar o cupom. Tente novamente.'
+      const fallbackMessage = '⚠ Não foi possível validar o cupom. Tente novamente.'
       setCouponMessage(fallbackMessage)
       if (!silent) {
         addToast({
@@ -419,22 +469,6 @@ function ActivatePageContent() {
         return
       }
 
-      let referralCodeForCheckout: string | undefined
-      if (referralCodeNormalized) {
-        const referralValid = await validateReferralCode({ silent: true })
-
-        if (referralValid) {
-          referralCodeForCheckout = referralCodeNormalized
-        } else {
-          referralCodeForCheckout = undefined
-          addToast({
-            type: 'warning',
-            title: 'Código de indicação não encontrado',
-            description: 'Não encontramos esse código. Continuaremos sem aplicar a indicação.'
-          })
-        }
-      }
-
       // Atualizar dados do usuário no banco antes de criar o checkout
       const updateResponse = await fetch('/api/profile/personal-data', {
         method: 'PUT',
@@ -461,12 +495,21 @@ function ActivatePageContent() {
         return
       }
 
-      // Validate and prepare coupon code for checkout
+      // Validate and prepare unified coupon code for checkout
+      let referralCodeForCheckout: string | undefined
       let couponCodeForCheckout: string | undefined
+
       if (couponCodeNormalized) {
         const couponValid = await validateCouponCode({ silent: true })
-        if (couponValid) {
-          couponCodeForCheckout = couponCodeNormalized
+
+        if (couponValid && couponDetails) {
+          // Determine if it's a referral code or discount coupon
+          if (couponDetails.type === 'REFERRAL') {
+            referralCodeForCheckout = couponCodeNormalized
+          } else {
+            // DISCOUNT or HYBRID coupon
+            couponCodeForCheckout = couponCodeNormalized
+          }
         } else {
           // Cupom inválido não bloqueia o checkout, apenas avisa
           addToast({
@@ -805,46 +848,11 @@ function ActivatePageContent() {
                 </div>
               </div>
 
+              {/* Unified Coupon Section */}
               <div className="border-t border-slate-600 pt-6">
-                <h3 className="text-base font-semibold text-white mb-2">Código de Indicação (Opcional)</h3>
+                <h3 className="text-base font-semibold text-white mb-2">Cupom (Opcional)</h3>
                 <p className="text-sm text-slate-300 mb-3">
-                  Se alguém indicou você, informe o código de indicação (opcional). Caso não tenha, continue normalmente.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="text"
-                    value={referralCode}
-                    onChange={(event) => {
-                      setReferralCode(event.target.value.toUpperCase())
-                      setReferralStatus('idle')
-                      setReferralDetails(null)
-                      setReferralMessage(null)
-                    }}
-                    placeholder="Ex: MARIA10"
-                    className="flex-1 h-11 px-3 py-2 bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 uppercase"
-                  />
-                  <Button
-                    type="button"
-                    onClick={() => validateReferralCode()}
-                    disabled={referralStatus === 'loading'}
-                    className="h-11 bg-purple-600 text-white hover:bg-purple-500 focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-0 disabled:opacity-70"
-                  >
-                    {referralStatus === 'loading' ? 'Validando...' : 'Validar código'}
-                  </Button>
-                </div>
-                {referralStatus === 'valid' && referralMessage && (
-                  <p className="mt-3 text-sm text-emerald-300">{referralMessage}</p>
-                )}
-                {referralStatus === 'invalid' && referralMessage && (
-                  <p className="mt-3 text-sm text-red-300">{referralMessage}</p>
-                )}
-              </div>
-
-              {/* Cupom de Desconto (Opcional) */}
-              <div className="border-t border-slate-600 pt-6">
-                <h3 className="text-base font-semibold text-white mb-2">Cupom de Desconto (Opcional)</h3>
-                <p className="text-sm text-slate-300 mb-3">
-                  Tem um cupom de desconto? Aplique aqui e economize na sua assinatura!
+                  Possui um cupom de desconto ou código de indicação? Aplique aqui para economizar!
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <input
@@ -856,37 +864,62 @@ function ActivatePageContent() {
                       setCouponDetails(null)
                       setCouponMessage(null)
                     }}
-                    placeholder="Ex: DESCONTO20"
+                    placeholder="Ex: DESCONTO20 ou MARIA10"
                     className="flex-1 h-11 px-3 py-2 bg-slate-700 border border-slate-600 text-white placeholder-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 uppercase"
                   />
                   <Button
                     type="button"
                     onClick={() => validateCouponCode()}
                     disabled={couponStatus === 'loading'}
-                    className="h-11 bg-emerald-600 text-white hover:bg-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-0 disabled:opacity-70"
+                    className="h-11 bg-purple-600 text-white hover:bg-purple-500 focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-0 disabled:opacity-70"
                   >
                     {couponStatus === 'loading' ? 'Validando...' : 'Aplicar cupom'}
                   </Button>
                 </div>
-                {couponStatus === 'valid' && couponMessage && (
+
+                {/* Valid Coupon Feedback */}
+                {couponStatus === 'valid' && couponDetails && (
                   <div className="mt-3 p-3 bg-emerald-900/30 border border-emerald-500/50 rounded-md">
-                    <p className="text-sm text-emerald-300">{couponMessage}</p>
-                    {couponDetails && (
-                      <div className="mt-2 text-xs text-emerald-200">
-                        <div className="flex justify-between">
-                          <span>Valor original:</span>
-                          <span className="line-through">R$ {couponDetails.originalPrice.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between font-bold">
-                          <span>Valor final:</span>
-                          <span>R$ {couponDetails.finalPrice.toFixed(2)}</span>
-                        </div>
+                    <div className="flex items-start gap-2">
+                      <Check className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-emerald-300">{couponMessage}</p>
+                        {couponDetails.type !== 'REFERRAL' && couponDetails.originalPrice && couponDetails.finalPrice && (
+                          <div className="mt-2 space-y-1 text-xs text-emerald-200">
+                            <div className="flex justify-between">
+                              <span>Valor original:</span>
+                              <span className="line-through">R$ {couponDetails.originalPrice.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between font-bold text-sm">
+                              <span>Valor com desconto:</span>
+                              <span className="text-emerald-300">R$ {couponDetails.finalPrice.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
+
+                {/* Invalid Coupon Feedback */}
                 {couponStatus === 'invalid' && couponMessage && (
-                  <p className="mt-3 text-sm text-red-300">{couponMessage}</p>
+                  <div className="mt-3 p-3 bg-red-900/30 border border-red-500/50 rounded-md">
+                    <p className="text-sm text-red-300">{couponMessage}</p>
+                  </div>
+                )}
+
+                {/* Expired Coupon Feedback */}
+                {couponStatus === 'expired' && couponMessage && (
+                  <div className="mt-3 p-3 bg-orange-900/30 border border-orange-500/50 rounded-md">
+                    <p className="text-sm text-orange-300">{couponMessage}</p>
+                  </div>
+                )}
+
+                {/* Exhausted Coupon Feedback */}
+                {couponStatus === 'exhausted' && couponMessage && (
+                  <div className="mt-3 p-3 bg-yellow-900/30 border border-yellow-500/50 rounded-md">
+                    <p className="text-sm text-yellow-300">{couponMessage}</p>
+                  </div>
                 )}
               </div>
 

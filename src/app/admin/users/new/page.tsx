@@ -15,6 +15,17 @@ export default function NewUserPage() {
   const [commissionPercentage, setCommissionPercentage] = useState('20')
   const [commissionFixedValue, setCommissionFixedValue] = useState('')
 
+  // Coupon configuration
+  const [couponType, setCouponType] = useState<'HYBRID'>('HYBRID')
+  const [discountType, setDiscountType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE')
+  const [discountValue, setDiscountValue] = useState('')
+  const [applicablePlans, setApplicablePlans] = useState<string[]>([])
+  const [isActive, setIsActive] = useState(true)
+  const [validFrom, setValidFrom] = useState(new Date().toISOString().split('T')[0])
+  const [validUntil, setValidUntil] = useState('')
+  const [maxUses, setMaxUses] = useState('')
+  const [maxUsesPerUser, setMaxUsesPerUser] = useState('1')
+
   const generatedDefaultCoupon = useMemo(() => {
     const seed = nameInput.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
     const random = Math.random().toString(36).substring(2, 6).toUpperCase()
@@ -57,6 +68,16 @@ export default function NewUserPage() {
           ? parseFloat(fixedValueRaw.replace(',', '.'))
           : undefined
 
+        // Coupon configuration from form
+        const couponDiscountValue = formData.get('discountValue') as string
+        const couponDiscountType = formData.get('discountType') as string
+        const couponApplicablePlans = applicablePlans
+        const couponIsActive = formData.get('couponIsActive') === 'on'
+        const couponValidFrom = formData.get('validFrom') as string
+        const couponValidUntil = formData.get('validUntil') as string
+        const couponMaxUses = formData.get('maxUses') as string
+        const couponMaxUsesPerUser = formData.get('maxUsesPerUser') as string
+
         body.influencer = {
           walletId: walletInput,
           couponCode: coupon || undefined,
@@ -65,7 +86,19 @@ export default function NewUserPage() {
             : undefined,
           commissionFixedValue: commissionMode === 'fixed' && Number.isFinite(fixedValue)
             ? fixedValue
-            : undefined
+            : undefined,
+          // Coupon configuration
+          coupon: {
+            type: 'HYBRID',
+            discountType: couponDiscountType || 'PERCENTAGE',
+            discountValue: couponDiscountValue ? parseFloat(couponDiscountValue) : undefined,
+            applicablePlans: couponApplicablePlans,
+            isActive: couponIsActive,
+            validFrom: couponValidFrom || undefined,
+            validUntil: couponValidUntil || undefined,
+            maxUses: couponMaxUses ? parseInt(couponMaxUses) : undefined,
+            maxUsesPerUser: couponMaxUsesPerUser ? parseInt(couponMaxUsesPerUser) : 1
+          }
         }
       }
 
@@ -239,6 +272,143 @@ export default function NewUserPage() {
                     className="mt-1 w-full border rounded-md px-3 py-2"
                     disabled={commissionMode !== 'fixed'}
                   />
+                </div>
+              </div>
+
+              {/* Coupon Configuration */}
+              <div className="border-t pt-4 mt-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Configuração do Cupom de Desconto</h3>
+                <p className="text-xs text-gray-500 mb-4">
+                  O código de cupom será automaticamente criado como um cupom HÍBRIDO (desconto + comissão do influenciador)
+                </p>
+
+                {/* Discount Type and Value */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-sm text-gray-700">Tipo de Desconto</label>
+                    <select
+                      name="discountType"
+                      value={discountType}
+                      onChange={(e) => setDiscountType(e.target.value as 'PERCENTAGE' | 'FIXED')}
+                      className="mt-1 w-full border rounded-md px-3 py-2"
+                    >
+                      <option value="PERCENTAGE">Percentual (%)</option>
+                      <option value="FIXED">Valor Fixo (R$)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700">Valor do Desconto</label>
+                    <input
+                      name="discountValue"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max={discountType === 'PERCENTAGE' ? '100' : undefined}
+                      value={discountValue}
+                      onChange={(e) => setDiscountValue(e.target.value)}
+                      placeholder={discountType === 'PERCENTAGE' ? '10' : '19.90'}
+                      className="mt-1 w-full border rounded-md px-3 py-2"
+                    />
+                  </div>
+                </div>
+
+                {/* Applicable Plans */}
+                <div className="mb-3">
+                  <label className="block text-sm text-gray-700 mb-2">Planos Aplicáveis</label>
+                  <div className="space-y-2">
+                    {['STARTER', 'PREMIUM', 'GOLD'].map((plan) => (
+                      <label key={plan} className="flex items-center gap-2 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={applicablePlans.includes(plan)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setApplicablePlans([...applicablePlans, plan])
+                            } else {
+                              setApplicablePlans(applicablePlans.filter((p) => p !== plan))
+                            }
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                        {plan}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Deixe vazio para aplicar a todos os planos
+                  </p>
+                </div>
+
+                {/* Status */}
+                <div className="mb-3">
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      name="couponIsActive"
+                      checked={isActive}
+                      onChange={(e) => setIsActive(e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    Cupom ativo
+                  </label>
+                </div>
+
+                {/* Validity Dates */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-sm text-gray-700">Válido Desde</label>
+                    <input
+                      name="validFrom"
+                      type="date"
+                      value={validFrom}
+                      onChange={(e) => setValidFrom(e.target.value)}
+                      className="mt-1 w-full border rounded-md px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700">Válido Até</label>
+                    <input
+                      name="validUntil"
+                      type="date"
+                      value={validUntil}
+                      onChange={(e) => setValidUntil(e.target.value)}
+                      className="mt-1 w-full border rounded-md px-3 py-2"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Deixe vazio para sem data de expiração
+                    </p>
+                  </div>
+                </div>
+
+                {/* Usage Limits */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm text-gray-700">Máximo de Usos Totais</label>
+                    <input
+                      name="maxUses"
+                      type="number"
+                      min="1"
+                      value={maxUses}
+                      onChange={(e) => setMaxUses(e.target.value)}
+                      placeholder="Ilimitado"
+                      className="mt-1 w-full border rounded-md px-3 py-2"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Deixe vazio para ilimitado
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700">Máximo de Usos por Usuário</label>
+                    <input
+                      name="maxUsesPerUser"
+                      type="number"
+                      min="1"
+                      value={maxUsesPerUser}
+                      onChange={(e) => setMaxUsesPerUser(e.target.value)}
+                      placeholder="1"
+                      className="mt-1 w-full border rounded-md px-3 py-2"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
