@@ -216,7 +216,7 @@ export default function EditCouponPage() {
     return (
       <div className="p-8">
         <div className="flex items-center justify-center py-12">
-          <div className="text-zinc-400">Carregando cupom...</div>
+          <div className="text-zinc-200">Carregando cupom...</div>
         </div>
       </div>
     )
@@ -237,12 +237,12 @@ export default function EditCouponPage() {
       <div className="mb-8">
         <Link
           href="/admin/coupons"
-          className="mb-4 inline-flex items-center text-sm text-zinc-400 hover:text-white"
+          className="mb-4 inline-flex items-center text-sm text-zinc-200 hover:text-white"
         >
           ← Voltar para cupons
         </Link>
         <h1 className="text-3xl font-bold text-white">Editar Cupom</h1>
-        <p className="mt-2 text-zinc-400">
+        <p className="mt-2 text-zinc-200">
           Editando cupom: <span className="font-mono font-bold text-white">{coupon.code}</span>
         </p>
         {coupon.totalUses > 0 && (
@@ -419,7 +419,7 @@ export default function EditCouponPage() {
               </label>
             ))}
           </div>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-zinc-300">
             Deixe vazio para aplicar a todos os planos
           </p>
         </div>
@@ -468,7 +468,7 @@ export default function EditCouponPage() {
               }
               className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white focus:border-purple-500 focus:outline-none"
             />
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-zinc-300">
               Deixe vazio para sem data de expiração
             </p>
           </div>
@@ -490,7 +490,7 @@ export default function EditCouponPage() {
               className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white focus:border-purple-500 focus:outline-none"
               placeholder="Ilimitado"
             />
-            <p className="mt-1 text-xs text-zinc-400">
+            <p className="mt-1 text-xs text-zinc-300">
               Usado {coupon.totalUses} vez(es)
             </p>
           </div>

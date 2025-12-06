@@ -135,12 +135,12 @@ export default function NewCouponPage() {
       <div className="mb-8">
         <Link
           href="/admin/coupons"
-          className="mb-4 inline-flex items-center text-sm text-zinc-400 hover:text-white"
+          className="mb-4 inline-flex items-center text-sm text-zinc-200 hover:text-white"
         >
           ← Voltar para cupons
         </Link>
         <h1 className="text-3xl font-bold text-white">Novo Cupom</h1>
-        <p className="mt-2 text-zinc-400">
+        <p className="mt-2 text-zinc-200">
           Crie um novo cupom de desconto ou híbrido
         </p>
       </div>
@@ -179,7 +179,7 @@ export default function NewCouponPage() {
             placeholder="DESCONTO10"
             required
           />
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-zinc-300">
             Será convertido para maiúsculas automaticamente
           </p>
         </div>
@@ -292,7 +292,7 @@ export default function NewCouponPage() {
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-zinc-300">
               Comissão será enviada para este influenciador
             </p>
           </div>
@@ -319,7 +319,7 @@ export default function NewCouponPage() {
               </label>
             ))}
           </div>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-zinc-300">
             Deixe vazio para aplicar a todos os planos
           </p>
         </div>
@@ -368,7 +368,7 @@ export default function NewCouponPage() {
               }
               className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white focus:border-purple-500 focus:outline-none"
             />
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-zinc-300">
               Deixe vazio para sem data de expiração
             </p>
           </div>
@@ -390,7 +390,7 @@ export default function NewCouponPage() {
               className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white focus:border-purple-500 focus:outline-none"
               placeholder="Ilimitado"
             />
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-zinc-300">
               Deixe vazio para ilimitado
             </p>
           </div>
