@@ -19,6 +19,7 @@ export default function NewUserPage() {
   const [couponType, setCouponType] = useState<'HYBRID'>('HYBRID')
   const [discountType, setDiscountType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE')
   const [discountValue, setDiscountValue] = useState('')
+  const [durationType, setDurationType] = useState<'RECURRENT' | 'FIRST_CYCLE'>('FIRST_CYCLE')
   const [applicablePlans, setApplicablePlans] = useState<string[]>([])
   const [isActive, setIsActive] = useState(true)
   const [validFrom, setValidFrom] = useState(new Date().toISOString().split('T')[0])
@@ -71,6 +72,7 @@ export default function NewUserPage() {
         // Coupon configuration from form
         const couponDiscountValue = formData.get('discountValue') as string
         const couponDiscountType = formData.get('discountType') as string
+        const couponDurationType = formData.get('durationType') as string
         const couponApplicablePlans = applicablePlans
         const couponIsActive = formData.get('couponIsActive') === 'on'
         const couponValidFrom = formData.get('validFrom') as string
@@ -92,6 +94,7 @@ export default function NewUserPage() {
             type: 'HYBRID',
             discountType: couponDiscountType || 'PERCENTAGE',
             discountValue: couponDiscountValue ? parseFloat(couponDiscountValue) : undefined,
+            durationType: couponDurationType || 'FIRST_CYCLE',
             applicablePlans: couponApplicablePlans,
             isActive: couponIsActive,
             validFrom: couponValidFrom || undefined,
@@ -310,6 +313,43 @@ export default function NewUserPage() {
                       className="mt-1 w-full border rounded-md px-3 py-2"
                     />
                   </div>
+                </div>
+
+                {/* Duration Type */}
+                <div className="mb-3">
+                  <label className="block text-sm text-gray-700 mb-2">Duração do Desconto</label>
+                  <input type="hidden" name="durationType" value={durationType} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDurationType('RECURRENT')}
+                      className={`px-3 py-2 text-sm rounded border text-left ${
+                        durationType === 'RECURRENT'
+                          ? 'border-green-500 bg-green-50 text-green-700'
+                          : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className="font-semibold">Recorrente</div>
+                      <div className="text-xs opacity-70">Todas as cobranças</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDurationType('FIRST_CYCLE')}
+                      className={`px-3 py-2 text-sm rounded border text-left ${
+                        durationType === 'FIRST_CYCLE'
+                          ? 'border-orange-500 bg-orange-50 text-orange-700'
+                          : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className="font-semibold">Primeira Cobrança</div>
+                      <div className="text-xs opacity-70">Apenas primeiro mês</div>
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {durationType === 'RECURRENT'
+                      ? 'Desconto aplicado em todas as cobranças'
+                      : 'Desconto apenas na primeira cobrança, valor ajustado automaticamente depois'}
+                  </p>
                 </div>
 
                 {/* Applicable Plans */}

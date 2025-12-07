@@ -360,10 +360,12 @@ export async function createSubscriptionCheckout(
     }
   }
 
-  // Calcular valor baseado no ciclo
-  let value = cycle === 'YEARLY' ? plan.annualPrice : plan.monthlyPrice
+  // Calcular valor baseado no ciclo (SEMPRE pegar do banco de dados)
+  const originalPrice = cycle === 'YEARLY' ? plan.annualPrice : plan.monthlyPrice
+  let value = originalPrice
   let discountApplied = 0
   let validatedCoupon: Awaited<ReturnType<typeof validateCoupon>>['coupon'] | null = null
+  let needsPriceUpdate = false // Flag para indicar se preço deve ser atualizado após primeiro pagamento
 
   // Validate discount coupon if provided
   if (couponCode) {
@@ -374,12 +376,20 @@ export async function createSubscriptionCheckout(
       value = couponValidation.coupon.finalPrice
       discountApplied = couponValidation.coupon.discountAmount
 
+      // Se cupom é FIRST_CYCLE, marcar para atualizar preço após primeiro pagamento
+      if (couponValidation.coupon.durationType === 'FIRST_CYCLE') {
+        needsPriceUpdate = true
+        console.log('🔄 [CHECKOUT] Cupom FIRST_CYCLE detectado - preço será atualizado após primeiro pagamento')
+      }
+
       console.log('🎟️ [CHECKOUT] Cupom de desconto aplicado:', {
         code: couponValidation.coupon.code,
         type: couponValidation.coupon.type,
+        durationType: couponValidation.coupon.durationType,
         originalPrice: couponValidation.coupon.originalPrice,
         discountAmount: discountApplied,
-        finalPrice: value
+        finalPrice: value,
+        needsPriceUpdate
       })
 
       // If HYBRID coupon with influencer data, use it for split
@@ -523,6 +533,12 @@ export async function createSubscriptionCheckout(
   if (validatedCoupon) {
     paymentData.couponCodeUsed = validatedCoupon.code
     paymentData.discountApplied = discountApplied
+
+    // Se cupom é FIRST_CYCLE, salvar preço original e flag de atualização
+    if (needsPriceUpdate) {
+      paymentData.originalPrice = originalPrice
+      paymentData.needsPriceUpdate = true
+    }
   }
 
   const payment = await prisma.payment.create({

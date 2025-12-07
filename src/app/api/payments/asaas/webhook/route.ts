@@ -4,6 +4,7 @@ import { updateSubscriptionStatus, getUserByAsaasCustomerId, logUsage } from '@/
 import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
 import { recordCouponUsage } from '@/lib/services/coupon-service'
+import { getPlanById } from '@/config/pricing'
 
 export async function POST(request: NextRequest) {
   try {
@@ -379,6 +380,10 @@ async function handlePaymentSuccess(payment: any) {
         await updateSubscriptionStatus(user.id, 'ACTIVE')
         console.log(`⚠️ Activated subscription for user ${user.id} (plan could not be determined)`)
       }
+
+      // ⚡ CRITICAL: Check if subscription price needs to be updated (FIRST_CYCLE coupons)
+      // This happens when user uses a coupon that only applies to first payment
+      await handleFirstCycleCouponPriceUpdate(payment, user.id)
     }
 
     // Log the payment
@@ -886,6 +891,69 @@ async function handlePaymentRestored(payment: any) {
     })
   } catch (error) {
     console.error('Error handling payment restored:', error)
+  }
+}
+
+/**
+ * Handle FIRST_CYCLE coupon price update
+ * When user uses a coupon that only applies to first payment,
+ * we need to update the subscription price to normal after first payment is confirmed
+ */
+async function handleFirstCycleCouponPriceUpdate(payment: any, userId: string) {
+  try {
+    // Find payment record with needsPriceUpdate flag
+    const paymentRecord = await prisma.payment.findFirst({
+      where: {
+        userId,
+        subscriptionId: payment.subscription,
+        needsPriceUpdate: true
+      },
+      select: {
+        id: true,
+        originalPrice: true,
+        planType: true,
+        billingCycle: true,
+        subscriptionId: true
+      }
+    })
+
+    if (!paymentRecord) {
+      console.log('💡 [WEBHOOK] No price update needed for this payment')
+      return
+    }
+
+    if (!paymentRecord.originalPrice || !paymentRecord.subscriptionId) {
+      console.error('❌ [WEBHOOK] Payment record missing originalPrice or subscriptionId:', paymentRecord.id)
+      return
+    }
+
+    console.log('🔄 [WEBHOOK] FIRST_CYCLE coupon detected - updating subscription price to normal')
+    console.log('📊 [WEBHOOK] Original price from database:', paymentRecord.originalPrice)
+
+    // Update subscription price in Asaas
+    try {
+      await asaas.updateSubscription(paymentRecord.subscriptionId, {
+        value: paymentRecord.originalPrice
+      })
+
+      console.log(`✅ [WEBHOOK] Subscription ${paymentRecord.subscriptionId} price updated to R$ ${paymentRecord.originalPrice}`)
+
+      // Mark payment as updated
+      await prisma.payment.update({
+        where: { id: paymentRecord.id },
+        data: { needsPriceUpdate: false }
+      })
+
+      console.log(`✅ [WEBHOOK] Payment ${paymentRecord.id} marked as price updated`)
+
+    } catch (updateError: any) {
+      console.error('❌ [WEBHOOK] Error updating subscription price in Asaas:', updateError)
+      // Don't throw - log error but continue webhook processing
+    }
+
+  } catch (error) {
+    console.error('❌ [WEBHOOK] Error in handleFirstCycleCouponPriceUpdate:', error)
+    // Don't throw - this is a non-critical operation
   }
 }
 

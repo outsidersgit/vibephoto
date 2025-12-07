@@ -639,6 +639,10 @@ model Payment {
   couponCodeUsed    String? @map("coupon_code_used") // Discount coupon code applied
   discountApplied   Float? @map("discount_applied") // Discount amount applied
 
+  // Coupon duration handling (for FIRST_CYCLE coupons)
+  needsPriceUpdate  Boolean? @default(false) @map("needs_price_update") // If true, webhook should update subscription price
+  originalPrice     Float? @map("original_price") // Original plan price before discount (from database)
+
   // Related data
   planType     Plan? // If subscription payment
   billingCycle String? // MONTHLY or YEARLY for subscription
@@ -945,6 +949,11 @@ enum DiscountType {
   PERCENTAGE // Percentage discount
 }
 
+enum DurationType {
+  RECURRENT   // Discount applies to all billing cycles
+  FIRST_CYCLE // Discount applies only to first payment
+}
+
 // Discount Coupons Model
 model DiscountCoupon {
   id               String       @id @default(cuid())
@@ -952,6 +961,9 @@ model DiscountCoupon {
   type             CouponType   @default(DISCOUNT) // DISCOUNT or HYBRID
   discountType     DiscountType @default(PERCENTAGE) @map("discount_type")
   discountValue    Decimal      @db.Decimal(10, 2) @map("discount_value") // Value or percentage
+
+  // Duration type (RECURRENT or FIRST_CYCLE)
+  durationType     DurationType @default(FIRST_CYCLE) @map("duration_type")
 
   // Influencer relation (only for HYBRID coupons)
   influencerId     String?      @map("influencer_id")

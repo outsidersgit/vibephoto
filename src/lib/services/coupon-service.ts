@@ -7,6 +7,7 @@ export interface ValidatedCoupon {
   type: CouponType
   discountType: DiscountType
   discountValue: number
+  durationType: 'RECURRENT' | 'FIRST_CYCLE' // Duration of the discount
   discountAmount: number // Calculated discount in BRL
   finalPrice: number // Price after discount
   originalPrice: number
@@ -166,6 +167,7 @@ export async function validateCoupon(
       type: coupon.type,
       discountType: coupon.discountType,
       discountValue: Number(coupon.discountValue),
+      durationType: coupon.durationType,
       discountAmount,
       finalPrice,
       originalPrice

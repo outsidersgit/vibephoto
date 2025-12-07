@@ -25,6 +25,7 @@ export default function NewCouponPage() {
     type: 'DISCOUNT' as 'DISCOUNT' | 'HYBRID',
     discountType: 'PERCENTAGE' as 'FIXED' | 'PERCENTAGE',
     discountValue: '',
+    durationType: 'FIRST_CYCLE' as 'RECURRENT' | 'FIRST_CYCLE',
     influencerId: '',
     applicablePlans: [] as string[],
     isActive: true,
@@ -297,6 +298,52 @@ export default function NewCouponPage() {
             </p>
           </div>
         )}
+
+        {/* Duration Type */}
+        <div className="mb-6">
+          <label className="mb-2 block text-sm font-semibold text-white">
+            Duração do Desconto *
+          </label>
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() =>
+                setFormData((prev) => ({ ...prev, durationType: 'RECURRENT' }))
+              }
+              className={`rounded-lg border px-4 py-3 text-left transition ${
+                formData.durationType === 'RECURRENT'
+                  ? 'border-green-500 bg-green-500/10 text-green-400'
+                  : 'border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-600'
+              }`}
+            >
+              <div className="font-semibold">Recorrente</div>
+              <div className="mt-1 text-xs opacity-70">
+                Desconto em todas as cobranças
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setFormData((prev) => ({ ...prev, durationType: 'FIRST_CYCLE' }))
+              }
+              className={`rounded-lg border px-4 py-3 text-left transition ${
+                formData.durationType === 'FIRST_CYCLE'
+                  ? 'border-orange-500 bg-orange-500/10 text-orange-400'
+                  : 'border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-600'
+              }`}
+            >
+              <div className="font-semibold">Primeira Cobrança</div>
+              <div className="mt-1 text-xs opacity-70">
+                Desconto apenas no primeiro mês
+              </div>
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-zinc-300">
+            {formData.durationType === 'RECURRENT'
+              ? 'O desconto será aplicado automaticamente em todas as cobranças enquanto a assinatura estiver ativa'
+              : 'O desconto será aplicado apenas na primeira cobrança. Nas próximas cobranças, o valor será automaticamente ajustado para o preço normal do plano'}
+          </p>
+        </div>
 
         {/* Applicable Plans */}
         <div className="mb-6">
