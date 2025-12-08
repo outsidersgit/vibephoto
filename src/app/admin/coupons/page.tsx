@@ -98,7 +98,7 @@ export default function CouponsAdminPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">Cupons de Desconto</h1>
-          <p className="mt-2 text-zinc-200">
+          <p className="mt-2 text-zinc-300">
             Gerencie cupons de desconto e cupons híbridos
           </p>
         </div>
@@ -117,8 +117,8 @@ export default function CouponsAdminPage() {
       )}
 
       {coupons.length === 0 ? (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-12 text-center">
-          <p className="text-zinc-200">Nenhum cupom cadastrado</p>
+        <div className="rounded-lg border border-zinc-700 bg-zinc-800/80 p-12 text-center">
+          <p className="text-zinc-100">Nenhum cupom cadastrado</p>
           <Link
             href="/admin/coupons/new"
             className="mt-4 inline-block rounded-lg bg-purple-600 px-6 py-3 font-semibold text-white transition hover:bg-purple-700"
@@ -127,7 +127,7 @@ export default function CouponsAdminPage() {
           </Link>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/50">
+        <div className="overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800/80">
           <table className="w-full">
             <thead className="border-b border-zinc-800 bg-zinc-900">
               <tr>
@@ -189,17 +189,17 @@ export default function CouponsAdminPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-zinc-100">
+                      <div className="text-sm text-zinc-200">
                         {formatPlans(coupon.applicablePlans)}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       {coupon.influencer ? (
                         <div className="text-sm">
-                          <div className="text-zinc-100">
+                          <div className="text-zinc-200">
                             {coupon.influencer.user.name || 'Sem nome'}
                           </div>
-                          <div className="text-xs text-zinc-300">
+                          <div className="text-xs text-zinc-400">
                             {coupon.influencer.couponCode}
                           </div>
                         </div>
@@ -241,13 +241,13 @@ export default function CouponsAdminPage() {
                         )}
                       </div>
                       {coupon.maxUsesPerUser && (
-                        <div className="text-xs text-zinc-300">
+                        <div className="text-xs text-zinc-400">
                           Máx {coupon.maxUsesPerUser} por usuário
                         </div>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-zinc-100">
+                      <div className="text-sm text-zinc-200">
                         {formatDate(coupon.validUntil)}
                       </div>
                     </td>
