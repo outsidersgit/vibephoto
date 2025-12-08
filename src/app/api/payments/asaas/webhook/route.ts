@@ -901,47 +901,79 @@ async function handlePaymentRestored(payment: any) {
  */
 async function handleFirstCycleCouponPriceUpdate(payment: any, userId: string) {
   try {
+    console.log('🔍 [WEBHOOK] Checking for FIRST_CYCLE coupon price update...', {
+      userId,
+      paymentId: payment.id,
+      subscription: payment.subscription,
+      checkoutSession: payment.checkoutSession
+    })
+
     // Find payment record with needsPriceUpdate flag
+    // Search by userId + needsPriceUpdate flag (don't rely on subscriptionId as it's not set during checkout)
     const paymentRecord = await prisma.payment.findFirst({
       where: {
         userId,
-        subscriptionId: payment.subscription,
-        needsPriceUpdate: true
+        needsPriceUpdate: true,
+        OR: [
+          { subscriptionId: payment.subscription },
+          { asaasCheckoutId: payment.checkoutSession }
+        ]
       },
       select: {
         id: true,
         originalPrice: true,
         planType: true,
         billingCycle: true,
-        subscriptionId: true
+        subscriptionId: true,
+        asaasCheckoutId: true
+      },
+      orderBy: {
+        createdAt: 'desc' // Get most recent
       }
     })
+
+    console.log('🔎 [WEBHOOK] Payment record search result:', paymentRecord)
 
     if (!paymentRecord) {
       console.log('💡 [WEBHOOK] No price update needed for this payment')
       return
     }
 
-    if (!paymentRecord.originalPrice || !paymentRecord.subscriptionId) {
-      console.error('❌ [WEBHOOK] Payment record missing originalPrice or subscriptionId:', paymentRecord.id)
+    if (!paymentRecord.originalPrice) {
+      console.error('❌ [WEBHOOK] Payment record missing originalPrice:', paymentRecord.id)
+      return
+    }
+
+    // Get subscription ID from payment webhook or from payment record
+    const subscriptionId = payment.subscription || paymentRecord.subscriptionId
+
+    if (!subscriptionId) {
+      console.error('❌ [WEBHOOK] No subscription ID available:', {
+        paymentRecordId: paymentRecord.id,
+        paymentSubscription: payment.subscription
+      })
       return
     }
 
     console.log('🔄 [WEBHOOK] FIRST_CYCLE coupon detected - updating subscription price to normal')
     console.log('📊 [WEBHOOK] Original price from database:', paymentRecord.originalPrice)
+    console.log('📋 [WEBHOOK] Subscription ID:', subscriptionId)
 
     // Update subscription price in Asaas
     try {
-      await asaas.updateSubscription(paymentRecord.subscriptionId, {
+      await asaas.updateSubscription(subscriptionId, {
         value: paymentRecord.originalPrice
       })
 
-      console.log(`✅ [WEBHOOK] Subscription ${paymentRecord.subscriptionId} price updated to R$ ${paymentRecord.originalPrice}`)
+      console.log(`✅ [WEBHOOK] Subscription ${subscriptionId} price updated to R$ ${paymentRecord.originalPrice}`)
 
-      // Mark payment as updated
+      // Mark payment as updated AND save subscription ID if not saved
       await prisma.payment.update({
         where: { id: paymentRecord.id },
-        data: { needsPriceUpdate: false }
+        data: {
+          needsPriceUpdate: false,
+          subscriptionId: subscriptionId // Save subscription ID for future reference
+        }
       })
 
       console.log(`✅ [WEBHOOK] Payment ${paymentRecord.id} marked as price updated`)
