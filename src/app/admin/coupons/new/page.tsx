@@ -136,35 +136,35 @@ export default function NewCouponPage() {
       <div className="mb-8">
         <Link
           href="/admin/coupons"
-          className="mb-4 inline-flex items-center text-sm text-zinc-200 hover:text-white"
+          className="mb-4 inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
         >
           ← Voltar para cupons
         </Link>
-        <h1 className="text-3xl font-bold text-white">Novo Cupom</h1>
-        <p className="mt-2 text-zinc-200">
+        <h1 className="text-3xl font-bold text-gray-900">Novo Cupom</h1>
+        <p className="mt-2 text-gray-600">
           Crie um novo cupom de desconto ou híbrido
         </p>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="mx-auto max-w-2xl rounded-lg border border-zinc-800 bg-zinc-900/50 p-8"
+        className="mx-auto max-w-2xl rounded-lg border border-gray-200 bg-white p-8 shadow-sm"
       >
         {error && (
-          <div className="mb-6 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-red-400">
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mb-6 rounded-lg border border-green-500/20 bg-green-500/10 px-4 py-3 text-green-400">
+          <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
             Cupom criado com sucesso! Redirecionando...
           </div>
         )}
 
         {/* Code */}
         <div className="mb-6">
-          <label className="mb-2 block text-sm font-semibold text-white">
+          <label className="mb-2 block text-sm font-semibold text-gray-900">
             Código do Cupom *
           </label>
           <input
@@ -176,18 +176,18 @@ export default function NewCouponPage() {
                 code: e.target.value.toUpperCase()
               }))
             }
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 font-mono text-white placeholder-zinc-500 focus:border-purple-500 focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 font-mono text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
             placeholder="DESCONTO10"
             required
           />
-          <p className="mt-1 text-xs text-zinc-300">
+          <p className="mt-1 text-xs text-gray-500">
             Será convertido para maiúsculas automaticamente
           </p>
         </div>
 
         {/* Type */}
         <div className="mb-6">
-          <label className="mb-2 block text-sm font-semibold text-white">
+          <label className="mb-2 block text-sm font-semibold text-gray-900">
             Tipo de Cupom *
           </label>
           <div className="grid grid-cols-2 gap-4">
@@ -198,8 +198,8 @@ export default function NewCouponPage() {
               }
               className={`rounded-lg border px-4 py-3 text-left transition ${
                 formData.type === 'DISCOUNT'
-                  ? 'border-blue-500 bg-blue-500/10 text-blue-400'
-                  : 'border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-600'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300'
               }`}
             >
               <div className="font-semibold">Desconto</div>
@@ -214,8 +214,8 @@ export default function NewCouponPage() {
               }
               className={`rounded-lg border px-4 py-3 text-left transition ${
                 formData.type === 'HYBRID'
-                  ? 'border-purple-500 bg-purple-500/10 text-purple-400'
-                  : 'border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-600'
+                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                  : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300'
               }`}
             >
               <div className="font-semibold">Híbrido</div>
@@ -229,7 +229,7 @@ export default function NewCouponPage() {
         {/* Discount Type and Value */}
         <div className="mb-6 grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white">
+            <label className="mb-2 block text-sm font-semibold text-gray-900">
               Tipo de Desconto *
             </label>
             <select
@@ -240,14 +240,14 @@ export default function NewCouponPage() {
                   discountType: e.target.value as 'FIXED' | 'PERCENTAGE'
                 }))
               }
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white focus:border-purple-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
             >
               <option value="PERCENTAGE">Percentual (%)</option>
               <option value="FIXED">Valor Fixo (R$)</option>
             </select>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white">
+            <label className="mb-2 block text-sm font-semibold text-gray-900">
               Valor do Desconto *
             </label>
             <input
@@ -262,7 +262,7 @@ export default function NewCouponPage() {
                   discountValue: e.target.value
                 }))
               }
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white focus:border-purple-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-purple-500 focus:outline-none"
               placeholder={formData.discountType === 'PERCENTAGE' ? '10' : '19.90'}
               required
             />
@@ -272,7 +272,7 @@ export default function NewCouponPage() {
         {/* Influencer (only for HYBRID) */}
         {formData.type === 'HYBRID' && (
           <div className="mb-6">
-            <label className="mb-2 block text-sm font-semibold text-white">
+            <label className="mb-2 block text-sm font-semibold text-gray-900">
               Influenciador Vinculado *
             </label>
             <select
@@ -283,7 +283,7 @@ export default function NewCouponPage() {
                   influencerId: e.target.value
                 }))
               }
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white focus:border-purple-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-purple-500 focus:outline-none"
               required={formData.type === 'HYBRID'}
             >
               <option value="">Selecione um influenciador</option>
@@ -293,7 +293,7 @@ export default function NewCouponPage() {
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-zinc-300">
+            <p className="mt-1 text-xs text-gray-500">
               Comissão será enviada para este influenciador
             </p>
           </div>
@@ -338,7 +338,7 @@ export default function NewCouponPage() {
               </div>
             </button>
           </div>
-          <p className="mt-2 text-xs text-zinc-300">
+          <p className="mt-2 text-xs text-gray-500">
             {formData.durationType === 'RECURRENT'
               ? 'O desconto será aplicado automaticamente em todas as cobranças enquanto a assinatura estiver ativa'
               : 'O desconto será aplicado apenas na primeira cobrança. Nas próximas cobranças, o valor será automaticamente ajustado para o preço normal do plano'}
@@ -366,7 +366,7 @@ export default function NewCouponPage() {
               </label>
             ))}
           </div>
-          <p className="mt-1 text-xs text-zinc-300">
+          <p className="mt-1 text-xs text-gray-500">
             Deixe vazio para aplicar a todos os planos
           </p>
         </div>
@@ -391,7 +391,7 @@ export default function NewCouponPage() {
         {/* Validity Dates */}
         <div className="mb-6 grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white">
+            <label className="mb-2 block text-sm font-semibold text-gray-900">
               Válido Desde
             </label>
             <input
@@ -400,11 +400,11 @@ export default function NewCouponPage() {
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, validFrom: e.target.value }))
               }
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white focus:border-purple-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-purple-500 focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white">
+            <label className="mb-2 block text-sm font-semibold text-gray-900">
               Válido Até
             </label>
             <input
@@ -413,9 +413,9 @@ export default function NewCouponPage() {
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, validUntil: e.target.value }))
               }
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white focus:border-purple-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-purple-500 focus:outline-none"
             />
-            <p className="mt-1 text-xs text-zinc-300">
+            <p className="mt-1 text-xs text-gray-500">
               Deixe vazio para sem data de expiração
             </p>
           </div>
@@ -424,7 +424,7 @@ export default function NewCouponPage() {
         {/* Usage Limits */}
         <div className="mb-6 grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white">
+            <label className="mb-2 block text-sm font-semibold text-gray-900">
               Máximo de Usos Totais
             </label>
             <input
@@ -434,15 +434,15 @@ export default function NewCouponPage() {
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, maxUses: e.target.value }))
               }
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white focus:border-purple-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-purple-500 focus:outline-none"
               placeholder="Ilimitado"
             />
-            <p className="mt-1 text-xs text-zinc-300">
+            <p className="mt-1 text-xs text-gray-500">
               Deixe vazio para ilimitado
             </p>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white">
+            <label className="mb-2 block text-sm font-semibold text-gray-900">
               Máximo de Usos por Usuário
             </label>
             <input
@@ -455,7 +455,7 @@ export default function NewCouponPage() {
                   maxUsesPerUser: e.target.value
                 }))
               }
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white focus:border-purple-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-purple-500 focus:outline-none"
               placeholder="1"
             />
           </div>

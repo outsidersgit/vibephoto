@@ -123,49 +123,49 @@ export default function NewSubscriptionPlanPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">Novo Plano de Assinatura</h1>
-        <p className="mt-2 text-zinc-300">Crie um novo plano FREE ou PAID com configurações personalizadas</p>
+        <h1 className="text-3xl font-bold text-gray-900">Novo Plano de Assinatura</h1>
+        <p className="mt-2 text-gray-600">Crie um novo plano FREE ou PAID com configurações personalizadas</p>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-900/30 border border-red-500/50 text-red-300 rounded-lg">
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg">
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Info */}
-        <Card className="bg-zinc-800/80 border-zinc-700">
+        <Card className="bg-white border-gray-200">
           <CardHeader>
-            <CardTitle className="text-white">Informações Básicas</CardTitle>
-            <CardDescription className="text-zinc-400">Configurações gerais do plano</CardDescription>
+            <CardTitle className="text-gray-900">Informações Básicas</CardTitle>
+            <CardDescription className="text-gray-600">Configurações gerais do plano</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   ID do Plano *
-                  <span className="text-zinc-400 font-normal ml-2">(ex: FREE_TRIAL, STARTER, PRO)</span>
+                  <span className="text-gray-500 font-normal ml-2">(ex: FREE_TRIAL, STARTER, PRO)</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.planId}
                   onChange={(e) => setFormData({ ...formData, planId: e.target.value.toUpperCase() })}
-                  className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 uppercase"
+                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 uppercase"
                   placeholder="FREE_TRIAL"
                 />
-                <p className="mt-1 text-xs text-zinc-400">Identificador único (apenas letras maiúsculas e underscores)</p>
+                <p className="mt-1 text-xs text-gray-500">Identificador único (apenas letras maiúsculas e underscores)</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Nome *</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Nome *</label>
                 <input
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="Ex: Free Trial"
                 />
               </div>
@@ -177,7 +177,7 @@ export default function NewSubscriptionPlanPage() {
                 required
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full bg-white border border-gray-300 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 rows={3}
                 placeholder="Ex: Perfeito para começar sua jornada com IA"
               />
@@ -185,12 +185,12 @@ export default function NewSubscriptionPlanPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Tipo de Plano *</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Tipo de Plano *</label>
                 <select
                   required
                   value={formData.planType}
                   onChange={(e) => setFormData({ ...formData, planType: e.target.value as any })}
-                  className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   <option value="PAID">💳 PAID - Renovação mensal/anual de créditos</option>
                   <option value="FREE">🎁 FREE - Créditos únicos, sem renovação</option>
@@ -228,17 +228,17 @@ export default function NewSubscriptionPlanPage() {
         </Card>
 
         {/* Pricing */}
-        <Card className="bg-zinc-800/80 border-zinc-700">
+        <Card className="bg-white border-gray-200">
           <CardHeader>
-            <CardTitle className="text-white">Precificação</CardTitle>
-            <CardDescription className="text-zinc-400">
+            <CardTitle className="text-gray-900">Precificação</CardTitle>
+            <CardDescription className="text-gray-600">
               Defina os valores do plano {isFree && '(pode ser R$ 0 para planos gratuitos)'}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Preço Mensal (R$) *</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Preço Mensal (R$) *</label>
                 <input
                   type="number"
                   required
@@ -246,13 +246,13 @@ export default function NewSubscriptionPlanPage() {
                   step="0.01"
                   value={formData.monthlyPrice}
                   onChange={(e) => setFormData({ ...formData, monthlyPrice: e.target.value })}
-                  className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="0.00"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Preço Anual (R$) *</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Preço Anual (R$) *</label>
                 <input
                   type="number"
                   required
@@ -260,13 +260,13 @@ export default function NewSubscriptionPlanPage() {
                   step="0.01"
                   value={formData.annualPrice}
                   onChange={(e) => setFormData({ ...formData, annualPrice: e.target.value })}
-                  className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="0.00"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Equivalente Mensal (R$) *</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Equivalente Mensal (R$) *</label>
                 <input
                   type="number"
                   required
@@ -274,27 +274,27 @@ export default function NewSubscriptionPlanPage() {
                   step="0.01"
                   value={formData.monthlyEquivalent}
                   onChange={(e) => setFormData({ ...formData, monthlyEquivalent: e.target.value })}
-                  className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="0.00"
                 />
-                <p className="mt-1 text-xs text-zinc-400">Valor mensal do plano anual (anual ÷ 12)</p>
+                <p className="mt-1 text-xs text-gray-500">Valor mensal do plano anual (anual ÷ 12)</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Credits & Features */}
-        <Card className="bg-zinc-800/80 border-zinc-700">
+        <Card className="bg-white border-gray-200">
           <CardHeader>
-            <CardTitle className="text-white">Créditos e Recursos</CardTitle>
-            <CardDescription className="text-zinc-400">
+            <CardTitle className="text-gray-900">Créditos e Recursos</CardTitle>
+            <CardDescription className="text-gray-600">
               Configure os recursos incluídos {isFree && '(créditos serão entregues uma única vez)'}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Créditos {isFree ? 'Únicos' : 'Mensais'} *
                 </label>
                 <input
@@ -303,7 +303,7 @@ export default function NewSubscriptionPlanPage() {
                   min="0"
                   value={formData.credits}
                   onChange={(e) => setFormData({ ...formData, credits: e.target.value })}
-                  className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="100"
                 />
                 {isFree && (
@@ -314,26 +314,26 @@ export default function NewSubscriptionPlanPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Modelos de IA *</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Modelos de IA *</label>
                 <input
                   type="number"
                   required
                   min="1"
                   value={formData.models}
                   onChange={(e) => setFormData({ ...formData, models: e.target.value })}
-                  className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="1"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Resolução *</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Resolução *</label>
                 <input
                   type="text"
                   required
                   value={formData.resolution}
                   onChange={(e) => setFormData({ ...formData, resolution: e.target.value })}
-                  className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="1024x1024"
                 />
               </div>
@@ -342,62 +342,62 @@ export default function NewSubscriptionPlanPage() {
         </Card>
 
         {/* Feature Limits */}
-        <Card className="bg-zinc-800/80 border-zinc-700">
+        <Card className="bg-white border-gray-200">
           <CardHeader>
-            <CardTitle className="text-white">Limites de Features</CardTitle>
-            <CardDescription className="text-zinc-400">
+            <CardTitle className="text-gray-900">Limites de Features</CardTitle>
+            <CardDescription className="text-gray-600">
               Opcional - Limites são baseados nos créditos do usuário. Deixe em branco para ilimitado.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-md text-blue-200 text-sm">
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-blue-700 text-sm">
               <strong>💡 Dica:</strong> Os limites são controlados pelos créditos. Usuários de planos FREE podem continuar usando o app comprando pacotes de créditos avulsos.
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Máx. Fotos/Mês</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Máx. Fotos/Mês</label>
                 <input
                   type="number"
                   min="0"
                   value={formData.maxPhotos}
                   onChange={(e) => setFormData({ ...formData, maxPhotos: e.target.value })}
-                  className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="Ilimitado"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Máx. Vídeos/Mês</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Máx. Vídeos/Mês</label>
                 <input
                   type="number"
                   min="0"
                   value={formData.maxVideos}
                   onChange={(e) => setFormData({ ...formData, maxVideos: e.target.value })}
-                  className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="Ilimitado"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Máx. Modelos IA</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Máx. Modelos IA</label>
                 <input
                   type="number"
                   min="0"
                   value={formData.maxModels}
                   onChange={(e) => setFormData({ ...formData, maxModels: e.target.value })}
-                  className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="Ilimitado"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Máx. Storage (GB)</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Máx. Storage (GB)</label>
                 <input
                   type="number"
                   min="0"
                   value={formData.maxStorage}
                   onChange={(e) => setFormData({ ...formData, maxStorage: e.target.value })}
-                  className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="Ilimitado"
                 />
               </div>
@@ -406,10 +406,10 @@ export default function NewSubscriptionPlanPage() {
         </Card>
 
         {/* Features List */}
-        <Card className="bg-zinc-800/80 border-zinc-700">
+        <Card className="bg-white border-gray-200">
           <CardHeader>
-            <CardTitle className="text-white">Features do Plano *</CardTitle>
-            <CardDescription className="text-zinc-400">Lista de funcionalidades exibidas no card do plano (mantém identidade visual padrão)</CardDescription>
+            <CardTitle className="text-gray-900">Features do Plano *</CardTitle>
+            <CardDescription className="text-gray-600">Lista de funcionalidades exibidas no card do plano (mantém identidade visual padrão)</CardDescription>
           </CardHeader>
           <CardContent>
             {features.map((feature, index) => (
@@ -418,7 +418,7 @@ export default function NewSubscriptionPlanPage() {
                   type="text"
                   value={feature}
                   onChange={(e) => handleFeatureChange(index, e.target.value)}
-                  className="flex-1 bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="flex-1 bg-white border border-gray-300 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder={`Feature ${index + 1} (ex: 100 créditos únicos)`}
                 />
                 {features.length > 1 && (
@@ -435,7 +435,7 @@ export default function NewSubscriptionPlanPage() {
             <button
               type="button"
               onClick={addFeature}
-              className="mt-2 px-4 py-2 bg-zinc-700 border border-zinc-600 text-zinc-300 rounded-md hover:bg-zinc-600 transition-colors text-sm"
+              className="mt-2 px-4 py-2 bg-white border border-gray-300 text-gray-600 rounded-md hover:bg-zinc-600 transition-colors text-sm"
             >
               + Adicionar Feature
             </button>
@@ -455,7 +455,7 @@ export default function NewSubscriptionPlanPage() {
             type="button"
             variant="outline"
             onClick={() => router.back()}
-            className="border-zinc-600 text-zinc-300 hover:bg-zinc-800"
+            className="border-zinc-600 text-gray-600 hover:bg-zinc-800"
           >
             Cancelar
           </Button>
