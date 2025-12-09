@@ -181,6 +181,12 @@ model SubscriptionPlan {
   models            Int      // Modelos incluídos
   resolution        String   // Ex: "1024x1024"
   features          Json[]   // Array de strings com features
+
+  // Feature limits (optional - for enforcement)
+  maxPhotos         Int?     // Limite de fotos por mês
+  maxVideos         Int?     // Limite de vídeos por mês
+  maxModels         Int?     // Limite de modelos IA
+  maxStorage        Int?     // Limite de armazenamento em GB
   
   // Timestamps
   createdAt         DateTime @default(now())

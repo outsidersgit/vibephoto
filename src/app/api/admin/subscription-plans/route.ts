@@ -19,14 +19,19 @@ const createPlanSchema = z.object({
   description: z.string().min(1),
   isActive: z.boolean().default(true),
   popular: z.boolean().default(false),
-  color: z.enum(['blue', 'purple', 'yellow']).optional(),
+  color: z.enum(['blue', 'purple', 'yellow']).optional().default('purple'),
   monthlyPrice: z.number().positive(),
   annualPrice: z.number().positive(),
   monthlyEquivalent: z.number().positive(),
   credits: z.number().int().positive(),
   models: z.number().int().positive(),
   resolution: z.string().min(1),
-  features: z.array(z.string()).min(1)
+  features: z.array(z.string()).min(1),
+  // Limites de features (opcionais)
+  maxPhotos: z.number().int().positive().optional(),
+  maxVideos: z.number().int().positive().optional(),
+  maxModels: z.number().int().positive().optional(),
+  maxStorage: z.number().int().positive().optional()
 })
 
 export async function GET() {
