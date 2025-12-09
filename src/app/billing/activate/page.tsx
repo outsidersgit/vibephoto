@@ -629,7 +629,21 @@ function ActivatePageContent() {
                   </CardTitle>
                   <div className="flex items-center gap-4">
                     <div className="text-white font-semibold text-xl">
-                      R$ {billingCycle === 'annual' ? currentPlan.annualPrice : currentPlan.monthlyPrice}
+                      {/* Show promotional price if valid discount coupon is applied */}
+                      {couponStatus === 'valid' && couponDetails && couponDetails.type !== 'REFERRAL' && couponDetails.finalPrice ? (
+                        <>
+                          <span className="line-through text-slate-400 text-base mr-2">
+                            R$ {billingCycle === 'annual' ? currentPlan.annualPrice : currentPlan.monthlyPrice}
+                          </span>
+                          <span className="text-green-400">
+                            R$ {couponDetails.finalPrice.toFixed(2)}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          R$ {billingCycle === 'annual' ? currentPlan.annualPrice : currentPlan.monthlyPrice}
+                        </>
+                      )}
                       <span className="text-sm text-slate-300 font-normal">
                         {billingCycle === 'annual' ? '/ano' : '/mês'}
                       </span>
@@ -637,6 +651,12 @@ function ActivatePageContent() {
                     <Badge className="bg-purple-600 text-white">
                       {billingCycle === 'annual' ? 'Cobrança Anual' : 'Cobrança Mensal'}
                     </Badge>
+                    {/* Show discount badge */}
+                    {couponStatus === 'valid' && couponDetails && couponDetails.type !== 'REFERRAL' && couponDetails.discountAmount && (
+                      <Badge className="bg-green-600 text-white">
+                        {((couponDetails.discountAmount / (couponDetails.originalPrice || 1)) * 100).toFixed(0)}% OFF
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-slate-300 text-sm mt-2">
                     {currentPlan.features.slice(0, 2).join(' • ')}
