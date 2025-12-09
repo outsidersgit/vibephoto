@@ -160,24 +160,30 @@ enum Plan {
   GOLD
 }
 
+enum PlanType {
+  FREE      // Plano gratuito - créditos únicos, sem renovação mensal
+  PAID      // Plano pago - renovação mensal/anual de créditos
+}
+
 model SubscriptionPlan {
   id                String   @id @default(cuid())
-  planId            Plan     @unique // STARTER, PREMIUM, or GOLD
-  
+  planId            String   @unique // ID único do plano (ex: STARTER, PREMIUM, FREE_TRIAL, etc)
+
   // Basic info
   name              String
   description       String   @db.Text
+  planType          PlanType @default(PAID) // FREE ou PAID
   isActive          Boolean  @default(true)
   popular           Boolean  @default(false)
-  color             String?  // 'blue', 'purple', 'yellow'
-  
+  color             String?  // 'blue', 'purple', 'yellow' - DEPRECATED: manter apenas para compatibilidade
+
   // Pricing
-  monthlyPrice      Float
-  annualPrice       Float
+  monthlyPrice      Float    // Pode ser 0 para planos FREE
+  annualPrice       Float    // Pode ser 0 para planos FREE
   monthlyEquivalent Float    // Preço equivalente mensal para planos anuais
-  
+
   // Limits and features
-  credits           Int      // Créditos mensais
+  credits           Int      // Créditos (únicos para FREE, mensais para PAID)
   models            Int      // Modelos incluídos
   resolution        String   // Ex: "1024x1024"
   features          Json[]   // Array de strings com features

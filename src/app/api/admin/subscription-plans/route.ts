@@ -14,16 +14,17 @@ async function ensureAdmin() {
 }
 
 const createPlanSchema = z.object({
-  planId: z.enum(['STARTER', 'PREMIUM', 'GOLD']),
+  planId: z.string().min(1).regex(/^[A-Z_]+$/, 'ID must contain only uppercase letters and underscores'),
   name: z.string().min(1),
   description: z.string().min(1),
+  planType: z.enum(['FREE', 'PAID']).default('PAID'),
   isActive: z.boolean().default(true),
   popular: z.boolean().default(false),
-  color: z.enum(['blue', 'purple', 'yellow']).optional().default('purple'),
-  monthlyPrice: z.number().positive(),
-  annualPrice: z.number().positive(),
-  monthlyEquivalent: z.number().positive(),
-  credits: z.number().int().positive(),
+  color: z.enum(['blue', 'purple', 'yellow']).optional().nullable(),
+  monthlyPrice: z.number().min(0), // Can be 0 for FREE plans
+  annualPrice: z.number().min(0),  // Can be 0 for FREE plans
+  monthlyEquivalent: z.number().min(0),
+  credits: z.number().int().min(0),
   models: z.number().int().positive(),
   resolution: z.string().min(1),
   features: z.array(z.string()).min(1),

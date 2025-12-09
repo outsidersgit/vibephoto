@@ -12,17 +12,17 @@ export default function NewSubscriptionPlanPage() {
   const [features, setFeatures] = useState<string[]>([''])
 
   const [formData, setFormData] = useState({
-    planId: 'STARTER' as 'STARTER' | 'PREMIUM' | 'GOLD',
+    planId: '',
     name: '',
     description: '',
+    planType: 'PAID' as 'FREE' | 'PAID',
     isActive: true,
     popular: false,
-    color: 'purple' as 'blue' | 'purple' | 'yellow',
-    monthlyPrice: 0,
-    annualPrice: 0,
-    monthlyEquivalent: 0,
-    credits: 0,
-    models: 1,
+    monthlyPrice: '' as string,
+    annualPrice: '' as string,
+    monthlyEquivalent: '' as string,
+    credits: '' as string,
+    models: '1' as string,
     resolution: '1024x1024',
     maxPhotos: '' as string,
     maxVideos: '' as string,
@@ -54,6 +54,19 @@ export default function NewSubscriptionPlanPage() {
     setLoading(true)
     setError(null)
 
+    // Validations
+    if (!formData.planId.trim()) {
+      setError('ID do plano é obrigatório')
+      setLoading(false)
+      return
+    }
+
+    if (!/^[A-Z_]+$/.test(formData.planId)) {
+      setError('ID do plano deve conter apenas letras maiúsculas e underscores (ex: FREE_TRIAL, STARTER)')
+      setLoading(false)
+      return
+    }
+
     const validFeatures = features.filter(f => f.trim().length > 0)
     if (validFeatures.length === 0) {
       setError('Adicione pelo menos uma feature')
@@ -63,7 +76,18 @@ export default function NewSubscriptionPlanPage() {
 
     try {
       const payload: any = {
-        ...formData,
+        planId: formData.planId.toUpperCase().trim(),
+        name: formData.name,
+        description: formData.description,
+        planType: formData.planType,
+        isActive: formData.isActive,
+        popular: formData.popular,
+        monthlyPrice: parseFloat(formData.monthlyPrice) || 0,
+        annualPrice: parseFloat(formData.annualPrice) || 0,
+        monthlyEquivalent: parseFloat(formData.monthlyEquivalent) || 0,
+        credits: parseInt(formData.credits) || 0,
+        models: parseInt(formData.models) || 1,
+        resolution: formData.resolution,
         features: validFeatures
       }
 
@@ -94,11 +118,13 @@ export default function NewSubscriptionPlanPage() {
     }
   }
 
+  const isFree = formData.planType === 'FREE'
+
   return (
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white">Novo Plano de Assinatura</h1>
-        <p className="mt-2 text-zinc-300">Crie um novo plano com limites e features configuráveis</p>
+        <p className="mt-2 text-zinc-300">Crie um novo plano FREE ou PAID com configurações personalizadas</p>
       </div>
 
       {error && (
@@ -117,17 +143,19 @@ export default function NewSubscriptionPlanPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white mb-2">ID do Plano *</label>
-                <select
+                <label className="block text-sm font-medium text-white mb-2">
+                  ID do Plano *
+                  <span className="text-zinc-400 font-normal ml-2">(ex: FREE_TRIAL, STARTER, PRO)</span>
+                </label>
+                <input
+                  type="text"
                   required
                   value={formData.planId}
-                  onChange={(e) => setFormData({ ...formData, planId: e.target.value as any })}
-                  className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="STARTER">STARTER</option>
-                  <option value="PREMIUM">PREMIUM</option>
-                  <option value="GOLD">GOLD</option>
-                </select>
+                  onChange={(e) => setFormData({ ...formData, planId: e.target.value.toUpperCase() })}
+                  className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 uppercase"
+                  placeholder="FREE_TRIAL"
+                />
+                <p className="mt-1 text-xs text-zinc-400">Identificador único (apenas letras maiúsculas e underscores)</p>
               </div>
 
               <div>
@@ -138,7 +166,7 @@ export default function NewSubscriptionPlanPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  placeholder="Ex: Starter"
+                  placeholder="Ex: Free Trial"
                 />
               </div>
             </div>
@@ -157,16 +185,21 @@ export default function NewSubscriptionPlanPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Cor do Card</label>
+                <label className="block text-sm font-medium text-white mb-2">Tipo de Plano *</label>
                 <select
-                  value={formData.color}
-                  onChange={(e) => setFormData({ ...formData, color: e.target.value as any })}
+                  required
+                  value={formData.planType}
+                  onChange={(e) => setFormData({ ...formData, planType: e.target.value as any })}
                   className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
-                  <option value="blue">🔵 Azul</option>
-                  <option value="purple">🟣 Roxo</option>
-                  <option value="yellow">🟡 Amarelo</option>
+                  <option value="PAID">💳 PAID - Renovação mensal/anual de créditos</option>
+                  <option value="FREE">🎁 FREE - Créditos únicos, sem renovação</option>
                 </select>
+                {isFree && (
+                  <p className="mt-1 text-xs text-yellow-400">
+                    ⚠️ Plano FREE: créditos entregues apenas uma vez. Usuário pode comprar pacotes avulsos depois.
+                  </p>
+                )}
               </div>
 
               <div className="flex items-end gap-4 pb-2">
@@ -198,7 +231,9 @@ export default function NewSubscriptionPlanPage() {
         <Card className="bg-zinc-800/80 border-zinc-700">
           <CardHeader>
             <CardTitle className="text-white">Precificação</CardTitle>
-            <CardDescription className="text-zinc-400">Defina os valores do plano</CardDescription>
+            <CardDescription className="text-zinc-400">
+              Defina os valores do plano {isFree && '(pode ser R$ 0 para planos gratuitos)'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -209,8 +244,8 @@ export default function NewSubscriptionPlanPage() {
                   required
                   min="0"
                   step="0.01"
-                  value={formData.monthlyPrice || ''}
-                  onChange={(e) => setFormData({ ...formData, monthlyPrice: parseFloat(e.target.value) || 0 })}
+                  value={formData.monthlyPrice}
+                  onChange={(e) => setFormData({ ...formData, monthlyPrice: e.target.value })}
                   className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="0.00"
                 />
@@ -223,8 +258,8 @@ export default function NewSubscriptionPlanPage() {
                   required
                   min="0"
                   step="0.01"
-                  value={formData.annualPrice || ''}
-                  onChange={(e) => setFormData({ ...formData, annualPrice: parseFloat(e.target.value) || 0 })}
+                  value={formData.annualPrice}
+                  onChange={(e) => setFormData({ ...formData, annualPrice: e.target.value })}
                   className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="0.00"
                 />
@@ -237,8 +272,8 @@ export default function NewSubscriptionPlanPage() {
                   required
                   min="0"
                   step="0.01"
-                  value={formData.monthlyEquivalent || ''}
-                  onChange={(e) => setFormData({ ...formData, monthlyEquivalent: parseFloat(e.target.value) || 0 })}
+                  value={formData.monthlyEquivalent}
+                  onChange={(e) => setFormData({ ...formData, monthlyEquivalent: e.target.value })}
                   className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="0.00"
                 />
@@ -252,21 +287,30 @@ export default function NewSubscriptionPlanPage() {
         <Card className="bg-zinc-800/80 border-zinc-700">
           <CardHeader>
             <CardTitle className="text-white">Créditos e Recursos</CardTitle>
-            <CardDescription className="text-zinc-400">Configure os recursos incluídos no plano</CardDescription>
+            <CardDescription className="text-zinc-400">
+              Configure os recursos incluídos {isFree && '(créditos serão entregues uma única vez)'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Créditos Mensais *</label>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Créditos {isFree ? 'Únicos' : 'Mensais'} *
+                </label>
                 <input
                   type="number"
                   required
-                  min="1"
-                  value={formData.credits || ''}
-                  onChange={(e) => setFormData({ ...formData, credits: parseInt(e.target.value) || 0 })}
+                  min="0"
+                  value={formData.credits}
+                  onChange={(e) => setFormData({ ...formData, credits: e.target.value })}
                   className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  placeholder="500"
+                  placeholder="100"
                 />
+                {isFree && (
+                  <p className="mt-1 text-xs text-yellow-400">
+                    Créditos entregues apenas uma vez (sem renovação)
+                  </p>
+                )}
               </div>
 
               <div>
@@ -275,8 +319,8 @@ export default function NewSubscriptionPlanPage() {
                   type="number"
                   required
                   min="1"
-                  value={formData.models || ''}
-                  onChange={(e) => setFormData({ ...formData, models: parseInt(e.target.value) || 1 })}
+                  value={formData.models}
+                  onChange={(e) => setFormData({ ...formData, models: e.target.value })}
                   className="w-full bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="1"
                 />
@@ -301,9 +345,14 @@ export default function NewSubscriptionPlanPage() {
         <Card className="bg-zinc-800/80 border-zinc-700">
           <CardHeader>
             <CardTitle className="text-white">Limites de Features</CardTitle>
-            <CardDescription className="text-zinc-400">Opcional - Defina limites de uso (deixe em branco para ilimitado)</CardDescription>
+            <CardDescription className="text-zinc-400">
+              Opcional - Limites são baseados nos créditos do usuário. Deixe em branco para ilimitado.
+            </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-md text-blue-200 text-sm">
+              <strong>💡 Dica:</strong> Os limites são controlados pelos créditos. Usuários de planos FREE podem continuar usando o app comprando pacotes de créditos avulsos.
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white mb-2">Máx. Fotos/Mês</label>
@@ -360,7 +409,7 @@ export default function NewSubscriptionPlanPage() {
         <Card className="bg-zinc-800/80 border-zinc-700">
           <CardHeader>
             <CardTitle className="text-white">Features do Plano *</CardTitle>
-            <CardDescription className="text-zinc-400">Lista de funcionalidades exibidas no card do plano</CardDescription>
+            <CardDescription className="text-zinc-400">Lista de funcionalidades exibidas no card do plano (mantém identidade visual padrão)</CardDescription>
           </CardHeader>
           <CardContent>
             {features.map((feature, index) => (
@@ -370,7 +419,7 @@ export default function NewSubscriptionPlanPage() {
                   value={feature}
                   onChange={(e) => handleFeatureChange(index, e.target.value)}
                   className="flex-1 bg-zinc-700 border border-zinc-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  placeholder={`Feature ${index + 1} (ex: 500 créditos/mês)`}
+                  placeholder={`Feature ${index + 1} (ex: 100 créditos únicos)`}
                 />
                 {features.length > 1 && (
                   <button
