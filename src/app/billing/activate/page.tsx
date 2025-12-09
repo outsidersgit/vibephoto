@@ -54,6 +54,7 @@ function ActivatePageContent() {
     discountAmount?: number
     finalPrice?: number
     originalPrice?: number
+    durationType?: 'RECURRENT' | 'FIRST_CYCLE'
     name?: string | null
   } | null>(null)
   const [couponMessage, setCouponMessage] = useState<string | null>(null)
@@ -346,12 +347,19 @@ function ActivatePageContent() {
         setCouponStatus('valid')
         setCouponDetails({
           ...discountData.coupon,
-          type: discountData.coupon.type
+          type: discountData.coupon.type,
+          durationType: discountData.coupon.durationType
         })
 
         const couponType = discountData.coupon.type === 'HYBRID' ? 'HÍBRIDO' : 'DESCONTO'
         const discountPercent = ((discountData.coupon.discountAmount / discountData.coupon.originalPrice) * 100).toFixed(0)
-        const message = `✓ Cupom ${couponType} aplicado! Desconto de R$ ${discountData.coupon.discountAmount.toFixed(2)} (${discountPercent}%)`
+
+        // Add duration info to message
+        const durationText = discountData.coupon.durationType === 'RECURRENT'
+          ? 'em todas as cobranças'
+          : 'apenas na primeira cobrança'
+
+        const message = `✓ Cupom ${couponType} aplicado! Desconto de R$ ${discountData.coupon.discountAmount.toFixed(2)} (${discountPercent}%) ${durationText}`
         setCouponMessage(message)
 
         if (!silent) {
@@ -651,11 +659,23 @@ function ActivatePageContent() {
                     <Badge className="bg-purple-600 text-white">
                       {billingCycle === 'annual' ? 'Cobrança Anual' : 'Cobrança Mensal'}
                     </Badge>
-                    {/* Show discount badge */}
+                    {/* Show discount badge with duration info */}
                     {couponStatus === 'valid' && couponDetails && couponDetails.type !== 'REFERRAL' && couponDetails.discountAmount && (
-                      <Badge className="bg-green-600 text-white">
-                        {((couponDetails.discountAmount / (couponDetails.originalPrice || 1)) * 100).toFixed(0)}% OFF
-                      </Badge>
+                      <>
+                        <Badge className="bg-green-600 text-white">
+                          {((couponDetails.discountAmount / (couponDetails.originalPrice || 1)) * 100).toFixed(0)}% OFF
+                        </Badge>
+                        {couponDetails.durationType === 'FIRST_CYCLE' && (
+                          <Badge className="bg-yellow-600 text-white">
+                            Apenas 1ª cobrança
+                          </Badge>
+                        )}
+                        {couponDetails.durationType === 'RECURRENT' && (
+                          <Badge className="bg-blue-600 text-white">
+                            Desconto permanente
+                          </Badge>
+                        )}
+                      </>
                     )}
                   </div>
                   <p className="text-slate-300 text-sm mt-2">
@@ -914,6 +934,22 @@ function ActivatePageContent() {
                               <span>Valor com desconto:</span>
                               <span className="text-emerald-300">R$ {couponDetails.finalPrice.toFixed(2)}</span>
                             </div>
+                            {/* Duration type info */}
+                            {couponDetails.durationType && (
+                              <div className="mt-2 pt-2 border-t border-emerald-500/30">
+                                {couponDetails.durationType === 'RECURRENT' ? (
+                                  <div className="flex items-center gap-1.5 text-emerald-200">
+                                    <span className="text-lg">🔄</span>
+                                    <span className="font-medium">Desconto permanente em todas as cobranças</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1.5 text-yellow-200">
+                                    <span className="text-lg">⚠️</span>
+                                    <span className="font-medium">Desconto apenas na primeira cobrança. Próximas cobranças serão pelo valor normal (R$ {couponDetails.originalPrice.toFixed(2)})</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
