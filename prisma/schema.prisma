@@ -981,6 +981,10 @@ model DiscountCoupon {
   influencerId     String?      @map("influencer_id")
   influencer       Influencer?  @relation("CouponInfluencer", fields: [influencerId], references: [id], onDelete: SetNull)
 
+  // Custom commission for this specific coupon (overrides influencer defaults)
+  customCommissionPercentage Decimal? @map("custom_commission_percentage") @db.Decimal(5, 2)
+  customCommissionFixedValue Decimal? @map("custom_commission_fixed_value") @db.Decimal(10, 2)
+
   // Plan restrictions
   applicablePlans  String[]     @default([]) @map("applicable_plans") // Empty = all plans, or ["STARTER", "PREMIUM", "GOLD"]
 

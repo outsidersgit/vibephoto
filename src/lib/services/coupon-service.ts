@@ -173,17 +173,32 @@ export async function validateCoupon(
       originalPrice
     }
 
-    // If HYBRID coupon, include influencer data
+    // If HYBRID coupon, include influencer data with custom commission if set
     if (coupon.type === 'HYBRID' && coupon.influencer) {
+      // Use custom commission from coupon if available, otherwise use influencer defaults
+      const commissionPercentage = coupon.customCommissionPercentage
+        ? Number(coupon.customCommissionPercentage)
+        : Number(coupon.influencer.commissionPercentage)
+
+      const commissionFixedValue = coupon.customCommissionFixedValue
+        ? Number(coupon.customCommissionFixedValue)
+        : (coupon.influencer.commissionFixedValue ? Number(coupon.influencer.commissionFixedValue) : null)
+
       validatedCoupon.influencer = {
         id: coupon.influencer.id,
         couponCode: coupon.influencer.couponCode,
-        commissionPercentage: Number(coupon.influencer.commissionPercentage),
-        commissionFixedValue: coupon.influencer.commissionFixedValue
-          ? Number(coupon.influencer.commissionFixedValue)
-          : null,
+        commissionPercentage,
+        commissionFixedValue,
         asaasWalletId: coupon.influencer.asaasWalletId
       }
+
+      console.log('💰 [COUPON] Commission for HYBRID coupon:', {
+        customPercentage: coupon.customCommissionPercentage ? Number(coupon.customCommissionPercentage) : null,
+        customFixed: coupon.customCommissionFixedValue ? Number(coupon.customCommissionFixedValue) : null,
+        finalPercentage: commissionPercentage,
+        finalFixed: commissionFixedValue,
+        source: coupon.customCommissionPercentage || coupon.customCommissionFixedValue ? 'CUSTOM' : 'INFLUENCER_DEFAULT'
+      })
     }
 
     console.log('✅ [COUPON] Coupon validated successfully:', {

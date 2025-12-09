@@ -130,7 +130,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se já existe plano com este planId
-    // CRÍTICO: Usar $queryRaw para contornar problema do Prisma com Json[] vs Json
     const existingPlans = await prisma.$queryRaw<Array<{
       id: string
       planId: string
@@ -138,7 +137,7 @@ export async function POST(request: NextRequest) {
     }>>`
       SELECT id, "planId", "deletedAt"
       FROM subscription_plans
-      WHERE "planId" = ${parsed.data.planId}::"Plan"
+      WHERE "planId" = ${parsed.data.planId}
       LIMIT 1
     `
 

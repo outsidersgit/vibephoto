@@ -27,6 +27,9 @@ export default function NewCouponPage() {
     discountValue: '',
     durationType: 'FIRST_CYCLE' as 'RECURRENT' | 'FIRST_CYCLE',
     influencerId: '',
+    commissionType: 'PERCENTAGE' as 'PERCENTAGE' | 'FIXED',
+    customCommissionPercentage: '',
+    customCommissionFixedValue: '',
     applicablePlans: [] as string[],
     isActive: true,
     validFrom: new Date().toISOString().split('T')[0],
@@ -100,7 +103,13 @@ export default function NewCouponPage() {
             ? parseInt(formData.maxUsesPerUser)
             : 1,
           validUntil: formData.validUntil || null,
-          influencerId: formData.influencerId || null
+          influencerId: formData.influencerId || null,
+          customCommissionPercentage: formData.customCommissionPercentage
+            ? parseFloat(formData.customCommissionPercentage)
+            : null,
+          customCommissionFixedValue: formData.customCommissionFixedValue
+            ? parseFloat(formData.customCommissionFixedValue)
+            : null
         })
       })
 
@@ -271,32 +280,123 @@ export default function NewCouponPage() {
 
         {/* Influencer (only for HYBRID) */}
         {formData.type === 'HYBRID' && (
-          <div className="mb-6">
-            <label className="mb-2 block text-sm font-semibold text-gray-900">
-              Influenciador Vinculado *
-            </label>
-            <select
-              value={formData.influencerId}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  influencerId: e.target.value
-                }))
-              }
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-purple-500 focus:outline-none"
-              required={formData.type === 'HYBRID'}
-            >
-              <option value="">Selecione um influenciador</option>
-              {influencers.map((inf) => (
-                <option key={inf.id} value={inf.id}>
-                  {inf.user.name || inf.user.email} ({inf.couponCode})
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-gray-500">
-              Comissão será enviada para este influenciador
-            </p>
-          </div>
+          <>
+            <div className="mb-6">
+              <label className="mb-2 block text-sm font-semibold text-gray-900">
+                Influenciador Vinculado *
+              </label>
+              <select
+                value={formData.influencerId}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    influencerId: e.target.value
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                required={formData.type === 'HYBRID'}
+              >
+                <option value="">Selecione um influenciador</option>
+                {influencers.map((inf) => (
+                  <option key={inf.id} value={inf.id}>
+                    {inf.user.name || inf.user.email} ({inf.couponCode})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Custom Commission Configuration */}
+            {formData.influencerId && (
+              <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                <h3 className="text-sm font-semibold text-purple-900 mb-3">
+                  Configuração de Comissão para este Cupom
+                </h3>
+
+                <div className="mb-4">
+                  <label className="mb-2 block text-sm font-medium text-gray-900">
+                    Tipo de Comissão *
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({ ...prev, commissionType: 'PERCENTAGE' }))
+                      }
+                      className={`rounded-lg border px-4 py-2 text-sm transition ${
+                        formData.commissionType === 'PERCENTAGE'
+                          ? 'border-purple-500 bg-purple-100 text-purple-700 font-semibold'
+                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Percentual (%)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({ ...prev, commissionType: 'FIXED' }))
+                      }
+                      className={`rounded-lg border px-4 py-2 text-sm transition ${
+                        formData.commissionType === 'FIXED'
+                          ? 'border-purple-500 bg-purple-100 text-purple-700 font-semibold'
+                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      Valor Fixo (R$)
+                    </button>
+                  </div>
+                </div>
+
+                {formData.commissionType === 'PERCENTAGE' ? (
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-900">
+                      Porcentagem de Comissão * (ex: 20 para 20%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={formData.customCommissionPercentage}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          customCommissionPercentage: e.target.value
+                        }))
+                      }
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                      placeholder="20.00"
+                      required={formData.type === 'HYBRID' && !!formData.influencerId}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-900">
+                      Valor Fixo da Comissão * (R$)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.customCommissionFixedValue}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          customCommissionFixedValue: e.target.value
+                        }))
+                      }
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                      placeholder="50.00"
+                      required={formData.type === 'HYBRID' && !!formData.influencerId}
+                    />
+                  </div>
+                )}
+
+                <p className="mt-2 text-xs text-gray-600">
+                  Esta comissão será aplicada especificamente para este cupom, sobrescrevendo a comissão padrão do influenciador.
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         {/* Duration Type */}

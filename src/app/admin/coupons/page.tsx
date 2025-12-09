@@ -87,7 +87,7 @@ export default function CouponsAdminPage() {
     return (
       <div className="p-8">
         <div className="flex items-center justify-center py-12">
-          <div className="text-zinc-200">Carregando cupons...</div>
+          <div className="text-gray-700">Carregando cupons...</div>
         </div>
       </div>
     )
@@ -97,8 +97,8 @@ export default function CouponsAdminPage() {
     <div className="p-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Cupons de Desconto</h1>
-          <p className="mt-2 text-zinc-300">
+          <h1 className="text-3xl font-bold text-gray-900">Cupons de Desconto</h1>
+          <p className="mt-2 text-gray-600">
             Gerencie cupons de desconto e cupons híbridos
           </p>
         </div>
@@ -111,14 +111,14 @@ export default function CouponsAdminPage() {
       </div>
 
       {error && (
-        <div className="mb-6 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-red-400">
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
           {error}
         </div>
       )}
 
       {coupons.length === 0 ? (
-        <div className="rounded-lg border border-zinc-700 bg-zinc-800/80 p-12 text-center">
-          <p className="text-zinc-100">Nenhum cupom cadastrado</p>
+        <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm">
+          <p className="text-gray-600">Nenhum cupom cadastrado</p>
           <Link
             href="/admin/coupons/new"
             className="mt-4 inline-block rounded-lg bg-purple-600 px-6 py-3 font-semibold text-white transition hover:bg-purple-700"
@@ -127,11 +127,11 @@ export default function CouponsAdminPage() {
           </Link>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800/80">
+        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
           <table className="w-full">
-            <thead className="border-b border-zinc-800 bg-zinc-900">
+            <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-white">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                   Código
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-white">
@@ -189,14 +189,14 @@ export default function CouponsAdminPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-zinc-200">
+                      <div className="text-sm text-gray-700">
                         {formatPlans(coupon.applicablePlans)}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       {coupon.influencer ? (
                         <div className="text-sm">
-                          <div className="text-zinc-200">
+                          <div className="text-gray-700">
                             {coupon.influencer.user.name || 'Sem nome'}
                           </div>
                           <div className="text-xs text-zinc-400">
@@ -247,7 +247,7 @@ export default function CouponsAdminPage() {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-zinc-200">
+                      <div className="text-sm text-gray-700">
                         {formatDate(coupon.validUntil)}
                       </div>
                     </td>
