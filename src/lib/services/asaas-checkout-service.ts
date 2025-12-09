@@ -409,7 +409,12 @@ export async function createSubscriptionCheckout(
           createdAt: new Date(),
           updatedAt: new Date()
         }
-        console.log('🎟️ [CHECKOUT] Cupom HÍBRIDO - usando influencer do cupom para split')
+        console.log('🎟️ [CHECKOUT] Cupom HÍBRIDO detectado - configurando split:', {
+          influencerId: influencer.id,
+          asaasWalletId: influencer.asaasWalletId,
+          commissionPercentage: influencer.commissionPercentage,
+          commissionFixedValue: influencer.commissionFixedValue
+        })
       }
     } else {
       console.warn('⚠️ [CHECKOUT] Cupom inválido, continuando com preço normal:', couponCode)
@@ -457,18 +462,32 @@ export async function createSubscriptionCheckout(
     }
   }
 
+  console.log('💰 [CHECKOUT] Verificando split para influencer:', {
+    hasInfluencer: !!influencer,
+    asaasWalletId: influencer?.asaasWalletId,
+    commissionPercentage: influencer?.commissionPercentage,
+    commissionFixedValue: influencer?.commissionFixedValue
+  })
+
   if (influencer?.asaasWalletId) {
     const influencerSplit: Record<string, any> = {
       walletId: influencer.asaasWalletId
     }
 
-    const fixedValue = influencer.commissionFixedValue?.toNumber?.() ?? null
-    const percentage = influencer.commissionPercentage?.toNumber?.() ?? null
+    // Convert Decimal to number if needed
+    const fixedValue = influencer.commissionFixedValue?.toNumber?.() ??
+                       (typeof influencer.commissionFixedValue === 'number' ? influencer.commissionFixedValue : null)
+    const percentage = influencer.commissionPercentage?.toNumber?.() ??
+                       (typeof influencer.commissionPercentage === 'number' ? influencer.commissionPercentage : null)
+
+    console.log('💰 [CHECKOUT] Comissões convertidas:', { fixedValue, percentage })
 
     if (fixedValue && fixedValue > 0) {
       influencerSplit.fixedValue = fixedValue
+      console.log('✅ [CHECKOUT] Split configurado com fixedValue:', fixedValue)
     } else if (percentage && percentage > 0) {
       influencerSplit.percentageValue = percentage
+      console.log('✅ [CHECKOUT] Split configurado com percentageValue:', percentage)
     }
 
     if (influencerSplit.fixedValue || influencerSplit.percentageValue) {
@@ -476,9 +495,16 @@ export async function createSubscriptionCheckout(
         checkoutData.splits = []
       }
       checkoutData.splits.push(influencerSplit)
+      console.log('✅ [CHECKOUT] Split adicionado ao checkoutData:', influencerSplit)
     } else {
-      console.warn('⚠️ [CHECKOUT] Influenciador sem fixedValue/percentageValue válido, split ignorado:', influencer.id)
+      console.warn('⚠️ [CHECKOUT] Influenciador sem fixedValue/percentageValue válido, split ignorado:', {
+        influencerId: influencer.id,
+        fixedValue,
+        percentage
+      })
     }
+  } else {
+    console.log('⚠️ [CHECKOUT] Nenhum influencer válido ou asaasWalletId ausente')
   }
 
   // Validar dados do cliente
