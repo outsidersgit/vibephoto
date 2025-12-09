@@ -920,39 +920,35 @@ function ActivatePageContent() {
                 {/* Valid Coupon Feedback */}
                 {couponStatus === 'valid' && couponDetails && (
                   <div className="mt-3 p-3 bg-emerald-900/30 border border-emerald-500/50 rounded-md">
-                    <div className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-emerald-300">{couponMessage}</p>
-                        {couponDetails.type !== 'REFERRAL' && couponDetails.originalPrice && couponDetails.finalPrice && (
-                          <div className="mt-2 space-y-1 text-xs text-emerald-200">
-                            <div className="flex justify-between">
-                              <span>Valor original:</span>
-                              <span className="line-through">R$ {couponDetails.originalPrice.toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between font-bold text-sm">
-                              <span>Valor com desconto:</span>
-                              <span className="text-emerald-300">R$ {couponDetails.finalPrice.toFixed(2)}</span>
-                            </div>
-                            {/* Duration type info */}
-                            {couponDetails.durationType && (
-                              <div className="mt-2 pt-2 border-t border-emerald-500/30">
-                                {couponDetails.durationType === 'RECURRENT' ? (
-                                  <div className="flex items-center gap-1.5 text-emerald-200">
-                                    <span className="text-lg">🔄</span>
-                                    <span className="font-medium">Desconto permanente em todas as cobranças</span>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1.5 text-yellow-200">
-                                    <span className="text-lg">⚠️</span>
-                                    <span className="font-medium">Desconto apenas na primeira cobrança. Próximas cobranças serão pelo valor normal (R$ {couponDetails.originalPrice.toFixed(2)})</span>
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-emerald-300">{couponMessage}</p>
+                      {couponDetails.type !== 'REFERRAL' && couponDetails.originalPrice && couponDetails.finalPrice && (
+                        <div className="mt-2 space-y-1 text-xs text-emerald-200">
+                          <div className="flex justify-between">
+                            <span>Valor original:</span>
+                            <span className="line-through">R$ {couponDetails.originalPrice.toFixed(2)}</span>
                           </div>
-                        )}
-                      </div>
+                          <div className="flex justify-between font-bold text-sm">
+                            <span>Valor com desconto:</span>
+                            <span className="text-emerald-300">R$ {couponDetails.finalPrice.toFixed(2)}</span>
+                          </div>
+                          {/* Duration type info */}
+                          {couponDetails.durationType && (
+                            <div className="mt-2 pt-2 border-t border-emerald-500/30">
+                              {couponDetails.durationType === 'RECURRENT' ? (
+                                <div className="flex items-start gap-1.5 text-emerald-200">
+                                  <span className="text-base mt-0.5">🔄</span>
+                                  <span className="font-medium">Desconto permanente em todas as cobranças</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-start gap-1.5 text-yellow-200">
+                                  <span className="font-medium">Desconto apenas na primeira cobrança. Próximas cobranças serão pelo valor normal (R$ {couponDetails.originalPrice.toFixed(2)})</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
