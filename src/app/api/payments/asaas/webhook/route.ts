@@ -71,6 +71,41 @@ export async function POST(request: NextRequest) {
 
     console.log('📝 Webhook event recorded:', webhookEvent.id)
 
+    // ⚡ FAST RESPONSE: Process webhook in background to avoid timeout
+    // Return 200 OK immediately, then process asynchronously
+    const responsePromise = NextResponse.json({
+      received: true,
+      eventId: webhookEvent.id
+    })
+
+    // Process webhook asynchronously (don't await)
+    processWebhookAsync(event, payment, subscription, checkout, webhookEvent.id).catch((error) => {
+      console.error('❌ Async webhook processing error:', error)
+    })
+
+    return responsePromise
+
+  } catch (error: any) {
+    console.error('❌ Webhook error:', error)
+
+    return NextResponse.json(
+      { error: 'Webhook processing failed', message: error.message },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * Process webhook asynchronously to avoid timeout
+ */
+async function processWebhookAsync(
+  event: string,
+  payment: any,
+  subscription: any,
+  checkout: any,
+  webhookEventId: string
+) {
+  try {
     // Handle all Asaas webhook events
     switch (event) {
       // Payment events - Success flow
@@ -199,44 +234,31 @@ export async function POST(request: NextRequest) {
 
     // Mark webhook as processed
     await prisma.webhookEvent.update({
-      where: { id: webhookEvent.id },
+      where: { id: webhookEventId },
       data: {
         status: 'PROCESSED',
         processedAt: new Date()
       }
     })
 
-    console.log('✅ Webhook processed successfully:', webhookEvent.id)
-
-    return NextResponse.json({
-      received: true,
-      webhookEventId: webhookEvent.id,
-      event
-    })
+    console.log('✅ Webhook processed successfully:', webhookEventId)
 
   } catch (error: any) {
-    console.error('❌ Webhook error:', error)
+    console.error('❌ Async webhook processing error:', error)
 
-    // Try to log the error if we have a webhookEvent
+    // Try to log the error
     try {
-      if (error.webhookEventId) {
-        await prisma.webhookEvent.update({
-          where: { id: error.webhookEventId },
-          data: {
-            status: 'FAILED',
-            errorMessage: error.message,
-            retryCount: { increment: 1 }
-          }
-        })
-      }
+      await prisma.webhookEvent.update({
+        where: { id: webhookEventId },
+        data: {
+          status: 'FAILED',
+          errorMessage: error.message,
+          retryCount: { increment: 1 }
+        }
+      })
     } catch (logError) {
       console.error('Failed to log webhook error:', logError)
     }
-
-    return NextResponse.json(
-      { error: 'Webhook processing failed', message: error.message },
-      { status: 500 }
-    )
   }
 }
 
