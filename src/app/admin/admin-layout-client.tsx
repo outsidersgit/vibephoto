@@ -10,6 +10,7 @@ const items = [
   { href: '/admin/subscription-plans', label: 'Planos de Assinatura' },
   { href: '/admin/credit-packages', label: 'Pacotes de Créditos' },
   { href: '/admin/photo-packages', label: 'Pacotes de Fotos' },
+  { href: '/admin/coupons', label: 'Cupons de Desconto' },
   { href: '/admin/analytics', label: 'Analytics' },
   { href: '/admin/retention', label: 'Retenção' },
   { href: '/admin/feedback', label: 'Feedback' },
