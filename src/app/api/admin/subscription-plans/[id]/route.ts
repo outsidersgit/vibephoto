@@ -20,6 +20,7 @@ const updatePlanSchema = z.object({
   description: z.string().optional(), // Permite string vazia
   isActive: z.boolean().optional(),
   popular: z.boolean().optional(),
+  displayOrder: z.number().int().nonnegative().optional(), // Order for display
   color: z.enum(['blue', 'purple', 'yellow']).optional().nullable(),
   monthlyPrice: z.number().nonnegative().optional(), // Permite 0 (não negativo)
   annualPrice: z.number().nonnegative().optional(), // Permite 0 (não negativo)
@@ -50,6 +51,7 @@ export async function GET(
       description: string
       isActive: boolean
       popular: boolean
+      displayOrder: number
       color: string | null
       monthlyPrice: number
       annualPrice: number
@@ -62,23 +64,24 @@ export async function GET(
       updatedAt: Date
       deletedAt: Date | null
     }>>`
-      SELECT 
-        id, 
+      SELECT
+        id,
         "planId",
-        name, 
-        description, 
-        "isActive", 
-        popular, 
-        color, 
-        "monthlyPrice", 
-        "annualPrice", 
-        "monthlyEquivalent", 
-        credits, 
-        models, 
-        resolution, 
+        name,
+        description,
+        "isActive",
+        popular,
+        display_order as "displayOrder",
+        color,
+        "monthlyPrice",
+        "annualPrice",
+        "monthlyEquivalent",
+        credits,
+        models,
+        resolution,
         features,
-        "createdAt", 
-        "updatedAt", 
+        "createdAt",
+        "updatedAt",
         "deletedAt"
       FROM subscription_plans
       WHERE id = ${id}

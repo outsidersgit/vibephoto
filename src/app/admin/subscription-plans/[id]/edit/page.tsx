@@ -25,6 +25,7 @@ export default function EditSubscriptionPlanPage() {
     description: '',
     isActive: true,
     popular: false,
+    displayOrder: 0,
     color: 'blue' as 'blue' | 'purple' | 'yellow',
     monthlyPrice: 0,
     annualPrice: 0,
@@ -67,6 +68,7 @@ export default function EditSubscriptionPlanPage() {
           description: plan.description || '',
           isActive: plan.isActive !== undefined ? plan.isActive : true,
           popular: plan.popular !== undefined ? plan.popular : false,
+          displayOrder: plan.displayOrder !== undefined ? plan.displayOrder : 0,
           color: (plan.color || 'blue') as 'blue' | 'purple' | 'yellow',
           monthlyPrice: plan.monthlyPrice || 0,
           annualPrice: plan.annualPrice || 0,
@@ -473,6 +475,24 @@ export default function EditSubscriptionPlanPage() {
               <option value="purple">Roxo</option>
               <option value="yellow">Amarelo</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Ordem de Exibição</label>
+            <NumericInput
+              value={formData.displayOrder}
+              onChange={(value) => {
+                setFormData({ ...formData, displayOrder: value })
+              }}
+              onBlur={() => {
+                if (formData.displayOrder !== originalData?.displayOrder) {
+                  handleFieldUpdate('displayOrder', formData.displayOrder)
+                }
+              }}
+              min={0}
+              className="w-32"
+            />
+            <p className="mt-1 text-xs text-gray-600">Menor número aparece primeiro</p>
           </div>
 
           <div className="flex items-center gap-4">
