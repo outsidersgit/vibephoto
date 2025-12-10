@@ -418,14 +418,14 @@ export default function NewSubscriptionPlanPage() {
                   type="text"
                   value={feature}
                   onChange={(e) => handleFeatureChange(index, e.target.value)}
-                  className="flex-1 bg-white border border-gray-300 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="flex-1 bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder={`Feature ${index + 1} (ex: 100 créditos únicos)`}
                 />
                 {features.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeFeature(index)}
-                    className="px-4 py-2 bg-red-900/30 border border-red-500/50 text-red-300 rounded-md hover:bg-red-900/50 transition-colors"
+                    className="px-4 py-2 bg-red-50 border border-red-300 text-red-700 rounded-md hover:bg-red-100 transition-colors"
                   >
                     Remover
                   </button>
@@ -435,7 +435,7 @@ export default function NewSubscriptionPlanPage() {
             <button
               type="button"
               onClick={addFeature}
-              className="mt-2 px-4 py-2 bg-white border border-gray-300 text-gray-600 rounded-md hover:bg-zinc-600 transition-colors text-sm"
+              className="mt-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors text-sm"
             >
               + Adicionar Feature
             </button>
