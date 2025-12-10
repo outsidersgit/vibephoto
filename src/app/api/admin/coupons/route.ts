@@ -103,6 +103,19 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Determine which commission to save (only one should be set)
+    // If both are provided, fixed takes priority
+    let finalCustomPercentage = null
+    let finalCustomFixed = null
+
+    if (customCommissionFixedValue && parseFloat(customCommissionFixedValue) > 0) {
+      finalCustomFixed = parseFloat(customCommissionFixedValue)
+      finalCustomPercentage = null // Clear percentage when using fixed
+    } else if (customCommissionPercentage && parseFloat(customCommissionPercentage) > 0) {
+      finalCustomPercentage = parseFloat(customCommissionPercentage)
+      finalCustomFixed = null // Clear fixed when using percentage
+    }
+
     // Criar cupom
     const coupon = await prisma.discountCoupon.create({
       data: {
@@ -112,8 +125,8 @@ export async function POST(req: NextRequest) {
         discountValue: parseFloat(discountValue),
         durationType: durationType || 'FIRST_CYCLE',
         influencerId: influencerId || null,
-        customCommissionPercentage: customCommissionPercentage ? parseFloat(customCommissionPercentage) : null,
-        customCommissionFixedValue: customCommissionFixedValue ? parseFloat(customCommissionFixedValue) : null,
+        customCommissionPercentage: finalCustomPercentage,
+        customCommissionFixedValue: finalCustomFixed,
         applicablePlans: applicablePlans || [],
         isActive: isActive !== undefined ? isActive : true,
         validFrom: validFrom ? new Date(validFrom) : new Date(),

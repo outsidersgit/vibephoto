@@ -15,7 +15,22 @@ export async function GET(
 
     const coupon = await prisma.discountCoupon.findUnique({
       where: { id: params.id },
-      include: {
+      select: {
+        id: true,
+        code: true,
+        type: true,
+        discountType: true,
+        discountValue: true,
+        durationType: true,
+        customCommissionPercentage: true,
+        customCommissionFixedValue: true,
+        applicablePlans: true,
+        isActive: true,
+        validFrom: true,
+        validUntil: true,
+        maxUses: true,
+        maxUsesPerUser: true,
+        totalUses: true,
         influencer: {
           select: {
             id: true,
@@ -118,25 +133,47 @@ export async function PUT(
       )
     }
 
+    // Determine which commission to save (only one should be set)
+    // If both are provided, fixed takes priority
+    let updateData: any = {
+      code: code ? code.trim().toUpperCase() : undefined,
+      type: type || undefined,
+      discountType: discountType || undefined,
+      discountValue: discountValue !== undefined ? parseFloat(discountValue) : undefined,
+      durationType: durationType || undefined,
+      influencerId: influencerId !== undefined ? (influencerId || null) : undefined,
+      applicablePlans: applicablePlans !== undefined ? applicablePlans : undefined,
+      isActive: isActive !== undefined ? isActive : undefined,
+      validFrom: validFrom ? new Date(validFrom) : undefined,
+      validUntil: validUntil !== undefined ? (validUntil ? new Date(validUntil) : null) : undefined,
+      maxUses: maxUses !== undefined ? (maxUses ? parseInt(maxUses) : null) : undefined,
+      maxUsesPerUser: maxUsesPerUser !== undefined ? (maxUsesPerUser ? parseInt(maxUsesPerUser) : 1) : undefined
+    }
+
+    // Handle custom commission - only one type should be set at a time
+    if (customCommissionFixedValue !== undefined || customCommissionPercentage !== undefined) {
+      const fixedValue = customCommissionFixedValue ? parseFloat(customCommissionFixedValue) : 0
+      const percentageValue = customCommissionPercentage ? parseFloat(customCommissionPercentage) : 0
+
+      if (fixedValue > 0) {
+        // Using fixed value - clear percentage
+        updateData.customCommissionFixedValue = fixedValue
+        updateData.customCommissionPercentage = null
+      } else if (percentageValue > 0) {
+        // Using percentage - clear fixed value
+        updateData.customCommissionPercentage = percentageValue
+        updateData.customCommissionFixedValue = null
+      } else {
+        // Neither set - clear both (use influencer defaults)
+        updateData.customCommissionPercentage = null
+        updateData.customCommissionFixedValue = null
+      }
+    }
+
     // Atualizar cupom
     const coupon = await prisma.discountCoupon.update({
       where: { id: params.id },
-      data: {
-        code: code ? code.trim().toUpperCase() : undefined,
-        type: type || undefined,
-        discountType: discountType || undefined,
-        discountValue: discountValue !== undefined ? parseFloat(discountValue) : undefined,
-        durationType: durationType || undefined,
-        influencerId: influencerId !== undefined ? (influencerId || null) : undefined,
-        customCommissionPercentage: customCommissionPercentage !== undefined ? (customCommissionPercentage ? parseFloat(customCommissionPercentage) : null) : undefined,
-        customCommissionFixedValue: customCommissionFixedValue !== undefined ? (customCommissionFixedValue ? parseFloat(customCommissionFixedValue) : null) : undefined,
-        applicablePlans: applicablePlans !== undefined ? applicablePlans : undefined,
-        isActive: isActive !== undefined ? isActive : undefined,
-        validFrom: validFrom ? new Date(validFrom) : undefined,
-        validUntil: validUntil !== undefined ? (validUntil ? new Date(validUntil) : null) : undefined,
-        maxUses: maxUses !== undefined ? (maxUses ? parseInt(maxUses) : null) : undefined,
-        maxUsesPerUser: maxUsesPerUser !== undefined ? (maxUsesPerUser ? parseInt(maxUsesPerUser) : 1) : undefined
-      },
+      data: updateData,
       include: {
         influencer: {
           select: {

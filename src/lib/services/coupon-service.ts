@@ -192,14 +192,41 @@ export async function validateCoupon(
 
     // If HYBRID coupon, include influencer data with custom commission if set
     if (coupon.type === 'HYBRID' && coupon.influencer) {
-      // Use custom commission from coupon if available, otherwise use influencer defaults
-      const commissionPercentage = coupon.customCommissionPercentage
-        ? Number(coupon.customCommissionPercentage)
-        : Number(coupon.influencer.commissionPercentage)
+      // Priority logic:
+      // 1. If customCommissionFixedValue exists and > 0, use FIXED (takes priority)
+      // 2. Else if customCommissionPercentage exists and > 0, use PERCENTAGE
+      // 3. Else use influencer defaults
 
-      const commissionFixedValue = coupon.customCommissionFixedValue
-        ? Number(coupon.customCommissionFixedValue)
-        : (coupon.influencer.commissionFixedValue ? Number(coupon.influencer.commissionFixedValue) : null)
+      const hasCustomFixed = coupon.customCommissionFixedValue !== null &&
+                            coupon.customCommissionFixedValue !== undefined &&
+                            Number(coupon.customCommissionFixedValue) > 0
+
+      const hasCustomPercentage = coupon.customCommissionPercentage !== null &&
+                                 coupon.customCommissionPercentage !== undefined &&
+                                 Number(coupon.customCommissionPercentage) > 0
+
+      let commissionPercentage: number
+      let commissionFixedValue: number | null
+
+      if (hasCustomFixed) {
+        // Use custom fixed value, set percentage to 0
+        commissionFixedValue = Number(coupon.customCommissionFixedValue)
+        commissionPercentage = 0
+        console.log('💰 [COUPON] Using CUSTOM FIXED commission:', commissionFixedValue)
+      } else if (hasCustomPercentage) {
+        // Use custom percentage, set fixed to null
+        commissionPercentage = Number(coupon.customCommissionPercentage)
+        commissionFixedValue = null
+        console.log('💰 [COUPON] Using CUSTOM PERCENTAGE commission:', commissionPercentage)
+      } else {
+        // Use influencer defaults
+        commissionPercentage = Number(coupon.influencer.commissionPercentage)
+        commissionFixedValue = coupon.influencer.commissionFixedValue ? Number(coupon.influencer.commissionFixedValue) : null
+        console.log('💰 [COUPON] Using INFLUENCER DEFAULT commission:', {
+          percentage: commissionPercentage,
+          fixed: commissionFixedValue
+        })
+      }
 
       validatedCoupon.influencer = {
         id: coupon.influencer.id,
@@ -209,12 +236,12 @@ export async function validateCoupon(
         asaasWalletId: coupon.influencer.asaasWalletId
       }
 
-      console.log('💰 [COUPON] Commission for HYBRID coupon:', {
-        customPercentage: coupon.customCommissionPercentage ? Number(coupon.customCommissionPercentage) : null,
-        customFixed: coupon.customCommissionFixedValue ? Number(coupon.customCommissionFixedValue) : null,
-        finalPercentage: commissionPercentage,
-        finalFixed: commissionFixedValue,
-        source: coupon.customCommissionPercentage || coupon.customCommissionFixedValue ? 'CUSTOM' : 'INFLUENCER_DEFAULT'
+      console.log('✅ [COUPON] Final commission for HYBRID coupon:', {
+        code: coupon.code,
+        influencerId: coupon.influencer.id,
+        type: hasCustomFixed ? 'FIXED' : hasCustomPercentage ? 'PERCENTAGE' : 'INFLUENCER_DEFAULT',
+        percentage: commissionPercentage,
+        fixed: commissionFixedValue
       })
     }
 
