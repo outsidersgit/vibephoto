@@ -170,13 +170,14 @@ export default function EditSubscriptionPlanPage() {
   // Verificar se houve alterações
   const hasChanges = () => {
     if (!originalData) return false
-    
+
     // Comparar campos básicos
-    const basicFieldsChanged = 
+    const basicFieldsChanged =
       formData.name !== originalData.name ||
       formData.description !== originalData.description ||
       formData.isActive !== originalData.isActive ||
       formData.popular !== originalData.popular ||
+      formData.displayOrder !== originalData.displayOrder ||
       formData.color !== originalData.color ||
       formData.monthlyPrice !== originalData.monthlyPrice ||
       formData.annualPrice !== originalData.annualPrice ||
@@ -184,12 +185,12 @@ export default function EditSubscriptionPlanPage() {
       formData.credits !== originalData.credits ||
       formData.models !== originalData.models ||
       formData.resolution !== originalData.resolution
-    
+
     // Comparar features
     const originalFeatures = Array.isArray(originalData.features) ? originalData.features : []
     const currentFeatures = features.filter(f => f.trim().length > 0)
     const featuresChanged = JSON.stringify(originalFeatures.sort()) !== JSON.stringify(currentFeatures.sort())
-    
+
     return basicFieldsChanged || featuresChanged
   }
 
@@ -210,11 +211,12 @@ export default function EditSubscriptionPlanPage() {
     try {
       // Preparar dados para atualização (apenas campos que foram alterados)
       const updateData: any = {}
-      
+
       if (formData.name !== originalData.name) updateData.name = formData.name
       if (formData.description !== originalData.description) updateData.description = formData.description
       if (formData.isActive !== originalData.isActive) updateData.isActive = formData.isActive
       if (formData.popular !== originalData.popular) updateData.popular = formData.popular
+      if (formData.displayOrder !== originalData.displayOrder) updateData.displayOrder = formData.displayOrder
       if (formData.color !== originalData.color) updateData.color = formData.color
       if (formData.monthlyPrice !== originalData.monthlyPrice) updateData.monthlyPrice = formData.monthlyPrice
       if (formData.annualPrice !== originalData.annualPrice) updateData.annualPrice = formData.annualPrice

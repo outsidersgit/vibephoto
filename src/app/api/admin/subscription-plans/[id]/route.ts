@@ -217,6 +217,12 @@ export async function PUT(
       paramIndex++
       updateData.popular = parsed.data.popular
     }
+    if (parsed.data.displayOrder !== undefined) {
+      setParts.push(`display_order = $${paramIndex}`)
+      sqlParams.push(parsed.data.displayOrder)
+      paramIndex++
+      updateData.displayOrder = parsed.data.displayOrder
+    }
     if (parsed.data.color !== undefined) {
       if (parsed.data.color === null) {
         setParts.push(`color = NULL`)
