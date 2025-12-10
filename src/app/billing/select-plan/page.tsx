@@ -173,7 +173,9 @@ function SelectPlanPageContent() {
         </div>
 
         {/* Plans Grid */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-12">
+        <div className={`grid gap-8 max-w-7xl mx-auto mb-12 ${
+          plans.length === 4 ? 'md:grid-cols-4' : 'md:grid-cols-3'
+        }`}>
           {plans.map((plan) => (
             <Card 
               key={plan.id} 

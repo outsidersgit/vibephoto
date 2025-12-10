@@ -18,6 +18,7 @@ export default function NewSubscriptionPlanPage() {
     planType: 'PAID' as 'FREE' | 'PAID',
     isActive: true,
     popular: false,
+    displayOrder: '0' as string,
     monthlyPrice: '' as string,
     annualPrice: '' as string,
     monthlyEquivalent: '' as string,
@@ -82,6 +83,7 @@ export default function NewSubscriptionPlanPage() {
         planType: formData.planType,
         isActive: formData.isActive,
         popular: formData.popular,
+        displayOrder: parseInt(formData.displayOrder) || 0,
         monthlyPrice: parseFloat(formData.monthlyPrice) || 0,
         annualPrice: parseFloat(formData.annualPrice) || 0,
         monthlyEquivalent: parseFloat(formData.monthlyEquivalent) || 0,
@@ -202,26 +204,42 @@ export default function NewSubscriptionPlanPage() {
                 )}
               </div>
 
-              <div className="flex items-end gap-4 pb-2">
-                <label className="flex items-center gap-2 cursor-pointer">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">Ordem de Exibição *</label>
                   <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="rounded border-gray-300"
+                    type="number"
+                    required
+                    min="0"
+                    value={formData.displayOrder}
+                    onChange={(e) => setFormData({ ...formData, displayOrder: e.target.value })}
+                    className="w-full bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="0"
                   />
-                  <span className="text-sm font-medium text-gray-900">Ativo</span>
-                </label>
+                  <p className="mt-1 text-xs text-gray-500">Menor número aparece primeiro</p>
+                </div>
 
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.popular}
-                    onChange={(e) => setFormData({ ...formData, popular: e.target.checked })}
-                    className="rounded border-gray-300"
-                  />
-                  <span className="text-sm font-medium text-gray-900">Popular</span>
-                </label>
+                <div className="flex items-end gap-4 pb-2 md:col-span-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                      className="rounded border-gray-300"
+                    />
+                    <span className="text-sm font-medium text-gray-900">Ativo</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.popular}
+                      onChange={(e) => setFormData({ ...formData, popular: e.target.checked })}
+                      className="rounded border-gray-300"
+                    />
+                    <span className="text-sm font-medium text-gray-900">Popular</span>
+                  </label>
+                </div>
               </div>
             </div>
           </CardContent>

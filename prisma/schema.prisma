@@ -175,6 +175,7 @@ model SubscriptionPlan {
   planType          PlanType @default(PAID) // FREE ou PAID
   isActive          Boolean  @default(true)
   popular           Boolean  @default(false)
+  displayOrder      Int      @default(0) @map("display_order") // Order for display in UI
   color             String?  // 'blue', 'purple', 'yellow' - DEPRECATED: manter apenas para compatibilidade
 
   // Pricing

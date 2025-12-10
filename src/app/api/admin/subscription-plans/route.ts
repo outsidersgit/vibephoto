@@ -20,6 +20,7 @@ const createPlanSchema = z.object({
   planType: z.enum(['FREE', 'PAID']).default('PAID'),
   isActive: z.boolean().default(true),
   popular: z.boolean().default(false),
+  displayOrder: z.number().int().min(0).default(0),
   color: z.enum(['blue', 'purple', 'yellow']).optional().nullable(),
   monthlyPrice: z.number().min(0), // Can be 0 for FREE plans
   annualPrice: z.number().min(0),  // Can be 0 for FREE plans
