@@ -12,6 +12,7 @@ export default function EditCreditPackagePage() {
   
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   
@@ -137,10 +138,10 @@ export default function EditCreditPackagePage() {
       }
 
       setSuccess('Pacote atualizado com sucesso!')
-      
+
       // Atualizar dados originais
       setOriginalData({ ...originalData, ...updateData })
-      
+
       // Redirecionar após 1 segundo
       setTimeout(() => {
         router.push('/admin/credit-packages')
@@ -148,6 +149,32 @@ export default function EditCreditPackagePage() {
     } catch (err: any) {
       setError(err.message || 'Erro ao atualizar pacote')
       setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Tem certeza que deseja deletar este pacote? Esta ação irá desativá-lo.')) {
+      return
+    }
+
+    try {
+      setDeleting(true)
+      const response = await fetch(`/api/admin/credit-packages/${id}`, {
+        method: 'DELETE'
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        router.push('/admin/credit-packages')
+      } else {
+        setError(data.error || 'Erro ao deletar pacote')
+      }
+    } catch (err) {
+      setError('Erro ao deletar pacote')
+      console.error(err)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -313,6 +340,14 @@ export default function EditCreditPackagePage() {
             className="bg-purple-600 hover:bg-purple-700"
           >
             {saving ? 'Salvando...' : 'Salvar Alterações'}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting || saving}
+            className="bg-red-500/10 border border-red-500/50 text-red-600 hover:bg-red-500/20 hover:border-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {deleting ? 'Deletando...' : 'Deletar'}
           </Button>
           <Button
             type="button"

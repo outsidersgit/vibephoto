@@ -36,6 +36,7 @@ export async function getAllSubscriptionPlans(): Promise<SubscriptionPlanData[]>
     description: string
     isActive: boolean
     popular: boolean
+    displayOrder: number
     color: string | null
     monthlyPrice: number
     annualPrice: number
@@ -48,33 +49,28 @@ export async function getAllSubscriptionPlans(): Promise<SubscriptionPlanData[]>
     updatedAt: Date
     deletedAt: Date | null
   }>>`
-    SELECT 
-      id, 
+    SELECT
+      id,
       "planId",
-      name, 
-      description, 
-      "isActive", 
-      popular, 
-      color, 
-      "monthlyPrice", 
-      "annualPrice", 
-      "monthlyEquivalent", 
-      credits, 
-      models, 
-      resolution, 
+      name,
+      description,
+      "isActive",
+      popular,
+      display_order as "displayOrder",
+      color,
+      "monthlyPrice",
+      "annualPrice",
+      "monthlyEquivalent",
+      credits,
+      models,
+      resolution,
       features,
-      "createdAt", 
-      "updatedAt", 
+      "createdAt",
+      "updatedAt",
       "deletedAt"
     FROM subscription_plans
     WHERE "deletedAt" IS NULL
-    ORDER BY 
-      CASE "planId"
-        WHEN 'STARTER' THEN 1
-        WHEN 'PREMIUM' THEN 2
-        WHEN 'GOLD' THEN 3
-        ELSE 4
-      END ASC
+    ORDER BY display_order ASC, "planId" ASC
   `
 
   return plans.map(planRaw => {

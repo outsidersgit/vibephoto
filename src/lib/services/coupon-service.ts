@@ -65,6 +65,7 @@ export async function validateCoupon(
         totalUses: true,
         maxUsesPerUser: true,
         applicablePlans: true,
+        applicableCycles: true,
         customCommissionPercentage: true,
         customCommissionFixedValue: true,
         influencer: {
@@ -145,6 +146,18 @@ export async function validateCoupon(
       return {
         valid: false,
         error: 'Cupom não aplicável a este plano'
+      }
+    }
+
+    // Check if coupon applies to this billing cycle
+    if ((coupon as any).applicableCycles && (coupon as any).applicableCycles.length > 0) {
+      const cycleStr = cycle === 'YEARLY' ? 'ANNUAL' : cycle
+      if (!(coupon as any).applicableCycles.includes(cycleStr)) {
+        console.log('❌ [COUPON] Coupon not applicable to billing cycle:', { coupon: normalizedCode, cycle: cycleStr })
+        return {
+          valid: false,
+          error: 'Cupom não aplicável a este ciclo de cobrança'
+        }
       }
     }
 

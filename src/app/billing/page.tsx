@@ -637,7 +637,7 @@ function BillingPageContent() {
 
             {/* Plans Grid - Mostrar planos se houver (do banco ou fallback) */}
             {!loadingPlans && plans.length > 0 && (
-            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-8" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+            <div className={`grid gap-8 mx-auto mb-8 ${plans.length === 4 ? 'md:grid-cols-4 max-w-7xl' : 'md:grid-cols-3 max-w-6xl'}`} style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
               {plans.map((plan) => {
                 const userPlan = (session.user as any)?.plan || 'STARTER'
                 const userBillingCycle = (session.user as any)?.billingCycle || 'MONTHLY'

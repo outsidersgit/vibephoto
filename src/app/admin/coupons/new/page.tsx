@@ -31,6 +31,7 @@ export default function NewCouponPage() {
     customCommissionPercentage: '',
     customCommissionFixedValue: '',
     applicablePlans: [] as string[],
+    applicableCycles: [] as string[],
     isActive: true,
     validFrom: new Date().toISOString().split('T')[0],
     validUntil: '',
@@ -137,6 +138,15 @@ export default function NewCouponPage() {
       applicablePlans: prev.applicablePlans.includes(plan)
         ? prev.applicablePlans.filter((p) => p !== plan)
         : [...prev.applicablePlans, plan]
+    }))
+  }
+
+  const toggleCycle = (cycle: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      applicableCycles: prev.applicableCycles.includes(cycle)
+        ? prev.applicableCycles.filter((c) => c !== cycle)
+        : [...prev.applicableCycles, cycle]
     }))
   }
 
@@ -468,6 +478,35 @@ export default function NewCouponPage() {
           </div>
           <p className="mt-1 text-xs text-gray-500">
             Deixe vazio para aplicar a todos os planos
+          </p>
+        </div>
+
+        {/* Applicable Cycles */}
+        <div className="mb-6">
+          <label className="mb-2 block text-sm font-semibold text-gray-900">
+            Ciclos de Cobrança Aplicáveis
+          </label>
+          <div className="space-y-2">
+            {[
+              { value: 'MONTHLY', label: 'Mensal' },
+              { value: 'ANNUAL', label: 'Anual' }
+            ].map((cycle) => (
+              <label
+                key={cycle.value}
+                className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 transition hover:border-gray-300"
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.applicableCycles.includes(cycle.value)}
+                  onChange={() => toggleCycle(cycle.value)}
+                  className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                />
+                <span className="text-gray-900">{cycle.label}</span>
+              </label>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-gray-600">
+            Deixe vazio para aplicar a ambos os ciclos (mensal e anual)
           </p>
         </div>
 

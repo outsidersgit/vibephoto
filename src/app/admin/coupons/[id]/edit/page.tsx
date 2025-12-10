@@ -56,6 +56,7 @@ export default function EditCouponPage() {
     customCommissionPercentage: '',
     customCommissionFixedValue: '',
     applicablePlans: [] as string[],
+    applicableCycles: [] as string[],
     isActive: true,
     validFrom: '',
     validUntil: '',
@@ -93,6 +94,7 @@ export default function EditCouponPage() {
           customCommissionPercentage: c.customCommissionPercentage?.toString() || '',
           customCommissionFixedValue: c.customCommissionFixedValue?.toString() || '',
           applicablePlans: c.applicablePlans || [],
+          applicableCycles: (c as any).applicableCycles || [],
           isActive: c.isActive,
           validFrom: c.validFrom ? new Date(c.validFrom).toISOString().split('T')[0] : '',
           validUntil: c.validUntil ? new Date(c.validUntil).toISOString().split('T')[0] : '',
@@ -231,6 +233,15 @@ export default function EditCouponPage() {
       applicablePlans: prev.applicablePlans.includes(plan)
         ? prev.applicablePlans.filter((p) => p !== plan)
         : [...prev.applicablePlans, plan]
+    }))
+  }
+
+  const toggleCycle = (cycle: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      applicableCycles: prev.applicableCycles.includes(cycle)
+        ? prev.applicableCycles.filter((c) => c !== cycle)
+        : [...prev.applicableCycles, cycle]
     }))
   }
 
@@ -585,6 +596,35 @@ export default function EditCouponPage() {
           </div>
           <p className="mt-1 text-xs text-gray-600">
             Deixe vazio para aplicar a todos os planos
+          </p>
+        </div>
+
+        {/* Applicable Billing Cycles */}
+        <div className="mb-6">
+          <label className="mb-2 block text-sm font-semibold text-gray-900">
+            Ciclos de Cobrança Aplicáveis
+          </label>
+          <div className="space-y-2">
+            {[
+              { value: 'MONTHLY', label: 'Mensal' },
+              { value: 'ANNUAL', label: 'Anual' }
+            ].map((cycle) => (
+              <label
+                key={cycle.value}
+                className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 transition hover:border-zinc-600"
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.applicableCycles.includes(cycle.value)}
+                  onChange={() => toggleCycle(cycle.value)}
+                  className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                />
+                <span className="text-gray-900">{cycle.label}</span>
+              </label>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-gray-600">
+            Deixe vazio para aplicar a ambos os ciclos (mensal e anual)
           </p>
         </div>
 

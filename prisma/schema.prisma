@@ -988,6 +988,7 @@ model DiscountCoupon {
 
   // Plan restrictions
   applicablePlans  String[]     @default([]) @map("applicable_plans") // Empty = all plans, or ["STARTER", "PREMIUM", "GOLD"]
+  applicableCycles String[]     @default([]) @map("applicable_cycles") // Empty = all cycles, or ["MONTHLY", "ANNUAL"]
 
   // Status and validity
   isActive         Boolean      @default(true) @map("is_active")

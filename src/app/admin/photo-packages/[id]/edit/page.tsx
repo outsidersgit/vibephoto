@@ -23,6 +23,7 @@ export default function EditPhotoPackagePage() {
   const id = params.id as string
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [uploadingPreviews, setUploadingPreviews] = useState(false)
   const [error, setError] = useState('')
 
@@ -286,6 +287,34 @@ export default function EditPhotoPackagePage() {
       setError(err.message || 'Erro ao atualizar pacote')
       setIsSaving(false)
       setUploadingPreviews(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Tem certeza que deseja deletar este pacote? Esta ação irá desativá-lo.')) {
+      return
+    }
+
+    try {
+      setDeleting(true)
+      const response = await fetch('/api/admin/photo-packages', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        router.push('/admin/photo-packages')
+      } else {
+        setError('Erro ao deletar pacote')
+      }
+    } catch (err) {
+      setError('Erro ao deletar pacote')
+      console.error(err)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -625,6 +654,21 @@ export default function EditPhotoPackagePage() {
               </>
             ) : (
               'Salvar Alterações'
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting || isSaving || uploadingPreviews}
+            className="rounded-md bg-red-500/10 border border-red-500/50 text-red-600 px-4 py-2 text-sm hover:bg-red-500/20 hover:border-red-500 disabled:opacity-50 flex items-center gap-2"
+          >
+            {deleting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Deletando...
+              </>
+            ) : (
+              'Deletar'
             )}
           </button>
           <Link

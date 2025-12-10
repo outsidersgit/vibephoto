@@ -12,6 +12,7 @@ export default function EditSubscriptionPlanPage() {
   
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [features, setFeatures] = useState<string[]>([''])
@@ -272,6 +273,32 @@ export default function EditSubscriptionPlanPage() {
     } catch (err: any) {
       setError(err.message || 'Erro ao atualizar plano')
       setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Tem certeza que deseja deletar este plano? Esta ação irá desativá-lo.')) {
+      return
+    }
+
+    try {
+      setDeleting(true)
+      const response = await fetch(`/api/admin/subscription-plans/${id}`, {
+        method: 'DELETE'
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        router.push('/admin/subscription-plans')
+      } else {
+        setError(data.error || 'Erro ao deletar plano')
+      }
+    } catch (err) {
+      setError('Erro ao deletar plano')
+      console.error(err)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -569,6 +596,14 @@ export default function EditSubscriptionPlanPage() {
             className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? 'Salvando...' : hasChanges() ? 'Salvar Alterações' : 'Nenhuma Alteração'}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting || saving}
+            className="bg-red-500/10 border border-red-500/50 text-red-600 hover:bg-red-500/20 hover:border-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {deleting ? 'Deletando...' : 'Deletar'}
           </Button>
           <Button
             type="button"
