@@ -131,26 +131,26 @@ export async function getSubscriptionPlanById(planId: Plan): Promise<Subscriptio
       updatedAt: Date
       deletedAt: Date | null
     }>>`
-      SELECT 
-        id, 
+      SELECT
+        id,
         "planId",
-        name, 
-        description, 
-        "isActive", 
-        popular, 
-        color, 
-        "monthlyPrice", 
-        "annualPrice", 
-        "monthlyEquivalent", 
-        credits, 
-        models, 
-        resolution, 
+        name,
+        description,
+        "isActive",
+        popular,
+        color,
+        "monthlyPrice",
+        "annualPrice",
+        "monthlyEquivalent",
+        credits,
+        models,
+        resolution,
         features,
-        "createdAt", 
-        "updatedAt", 
+        "createdAt",
+        "updatedAt",
         "deletedAt"
       FROM subscription_plans
-      WHERE "planId" = ${planId}::"Plan"
+      WHERE "planId" = ${planId}
         AND "deletedAt" IS NULL
       LIMIT 1
     `
