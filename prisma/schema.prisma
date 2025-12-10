@@ -186,7 +186,7 @@ model SubscriptionPlan {
   credits           Int      // Créditos (únicos para FREE, mensais para PAID)
   models            Int      // Modelos incluídos
   resolution        String   // Ex: "1024x1024"
-  features          Json[]   // Array de strings com features
+  features          Json     // Array de strings com features (stored as single JSON array)
 
   // Feature limits (optional - for enforcement)
   maxPhotos         Int?     // Limite de fotos por mês

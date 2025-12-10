@@ -152,12 +152,11 @@ export async function POST(request: NextRequest) {
 
     // Se existe mas está deletado, restaurar
     if (existing && existing.deletedAt) {
-      const { features, ...restData } = parsed.data
       const updated = await prisma.subscriptionPlan.update({
         where: { id: existing.id },
         data: {
-          ...restData,
-          features: features.map(f => ({ text: f })), // Convert to Json array format
+          ...parsed.data,
+          features: parsed.data.features, // Array of strings as single JSON
           deletedAt: null,
           updatedAt: new Date()
         }
@@ -166,12 +165,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ plan: updated })
     }
 
-    // Converter features de string[] para Json[] format
-    const { features, ...restData } = parsed.data
+    // Create new plan with features as JSON array
     const created = await prisma.subscriptionPlan.create({
       data: {
-        ...restData,
-        features: features.map(f => ({ text: f })) // Each feature becomes { text: "feature" }
+        ...parsed.data,
+        features: parsed.data.features // Store array directly as single JSON
       }
     })
 
