@@ -172,12 +172,12 @@ export default function NewSubscriptionPlanPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Descrição *</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Descrição *</label>
               <textarea
                 required
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full bg-white border border-gray-300 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full bg-white border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 rows={3}
                 placeholder="Ex: Perfeito para começar sua jornada com IA"
               />
@@ -196,7 +196,7 @@ export default function NewSubscriptionPlanPage() {
                   <option value="FREE">🎁 FREE - Créditos únicos, sem renovação</option>
                 </select>
                 {isFree && (
-                  <p className="mt-1 text-xs text-yellow-400">
+                  <p className="mt-1 text-xs text-yellow-700 bg-yellow-50 p-2 rounded">
                     ⚠️ Plano FREE: créditos entregues apenas uma vez. Usuário pode comprar pacotes avulsos depois.
                   </p>
                 )}
@@ -208,9 +208,9 @@ export default function NewSubscriptionPlanPage() {
                     type="checkbox"
                     checked={formData.isActive}
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="rounded bg-zinc-700 border-zinc-600"
+                    className="rounded border-gray-300"
                   />
-                  <span className="text-sm font-medium text-white">Ativo</span>
+                  <span className="text-sm font-medium text-gray-900">Ativo</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -218,9 +218,9 @@ export default function NewSubscriptionPlanPage() {
                     type="checkbox"
                     checked={formData.popular}
                     onChange={(e) => setFormData({ ...formData, popular: e.target.checked })}
-                    className="rounded bg-zinc-700 border-zinc-600"
+                    className="rounded border-gray-300"
                   />
-                  <span className="text-sm font-medium text-white">Popular</span>
+                  <span className="text-sm font-medium text-gray-900">Popular</span>
                 </label>
               </div>
             </div>

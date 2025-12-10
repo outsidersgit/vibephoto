@@ -299,7 +299,7 @@ export default function NewCouponPage() {
                 <option value="">Selecione um influenciador</option>
                 {influencers.map((inf) => (
                   <option key={inf.id} value={inf.id}>
-                    {inf.user.name || inf.user.email} ({inf.couponCode})
+                    {inf.user.name || inf.user.email}
                   </option>
                 ))}
               </select>

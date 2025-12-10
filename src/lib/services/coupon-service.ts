@@ -47,9 +47,26 @@ export async function validateCoupon(
     })
 
     // Find coupon in database
+    // CRITICAL: Include custom commission fields from this specific coupon
+    // This ensures multi-coupon support - each coupon can have different commission
     const coupon = await prisma.discountCoupon.findUnique({
       where: { code: normalizedCode },
-      include: {
+      select: {
+        id: true,
+        code: true,
+        type: true,
+        discountType: true,
+        discountValue: true,
+        durationType: true,
+        isActive: true,
+        validFrom: true,
+        validUntil: true,
+        maxUses: true,
+        totalUses: true,
+        maxUsesPerUser: true,
+        applicablePlans: true,
+        customCommissionPercentage: true,
+        customCommissionFixedValue: true,
         influencer: {
           select: {
             id: true,

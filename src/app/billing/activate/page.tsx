@@ -351,10 +351,9 @@ function ActivatePageContent() {
           durationType: discountData.coupon.durationType
         })
 
-        const couponType = discountData.coupon.type === 'HYBRID' ? 'HÍBRIDO' : 'DESCONTO'
         const discountPercent = ((discountData.coupon.discountAmount / discountData.coupon.originalPrice) * 100).toFixed(0)
 
-        const message = `✓ Cupom ${couponType} aplicado! Desconto de R$ ${discountData.coupon.discountAmount.toFixed(2)} (${discountPercent}%)`
+        const message = `✓ Cupom aplicado! Desconto de R$ ${discountData.coupon.discountAmount.toFixed(2)} (${discountPercent}%)`
         setCouponMessage(message)
 
         if (!silent) {

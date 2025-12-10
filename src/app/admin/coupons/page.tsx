@@ -134,41 +134,41 @@ export default function CouponsAdminPage() {
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                   Código
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-white">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                   Tipo
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-white">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                   Desconto
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-white">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                   Planos
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-white">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                   Influencer
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-white">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                   Status
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-white">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                   Usos
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-white">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                   Validade
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-white">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                   Ações
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800">
+            <tbody className="divide-y divide-gray-100">
               {coupons.map((coupon) => {
                 const expired = isExpired(coupon.validUntil)
                 const limitReached = coupon.maxUses && coupon.totalUses >= coupon.maxUses
 
                 return (
-                  <tr key={coupon.id} className="hover:bg-zinc-800/50">
+                  <tr key={coupon.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
-                      <div className="font-mono text-sm font-bold text-white">
+                      <div className="font-mono text-sm font-bold text-gray-900">
                         {coupon.code}
                       </div>
                     </td>
@@ -176,15 +176,15 @@ export default function CouponsAdminPage() {
                       <span
                         className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
                           coupon.type === 'HYBRID'
-                            ? 'bg-purple-500/20 text-purple-400'
-                            : 'bg-blue-500/20 text-blue-400'
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-blue-100 text-blue-700'
                         }`}
                       >
                         {coupon.type === 'HYBRID' ? 'Híbrido' : 'Desconto'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-white">
+                      <div className="text-sm text-gray-900">
                         {formatDiscount(coupon)}
                       </div>
                     </td>
@@ -199,12 +199,12 @@ export default function CouponsAdminPage() {
                           <div className="text-gray-700">
                             {coupon.influencer.user.name || 'Sem nome'}
                           </div>
-                          <div className="text-xs text-zinc-400">
+                          <div className="text-xs text-gray-500">
                             {coupon.influencer.couponCode}
                           </div>
                         </div>
                       ) : (
-                        <div className="text-sm text-zinc-400">-</div>
+                        <div className="text-sm text-gray-400">-</div>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -212,26 +212,26 @@ export default function CouponsAdminPage() {
                         <span
                           className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${
                             coupon.isActive
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-zinc-500/20 text-zinc-400'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-600'
                           }`}
                         >
                           {coupon.isActive ? 'Ativo' : 'Inativo'}
                         </span>
                         {expired && (
-                          <span className="inline-flex w-fit rounded-full bg-red-500/20 px-3 py-1 text-xs font-semibold text-red-400">
+                          <span className="inline-flex w-fit rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
                             Expirado
                           </span>
                         )}
                         {limitReached && (
-                          <span className="inline-flex w-fit rounded-full bg-orange-500/20 px-3 py-1 text-xs font-semibold text-orange-400">
+                          <span className="inline-flex w-fit rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
                             Limite atingido
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-white">
+                      <div className="text-sm text-gray-900">
                         {coupon.totalUses}
                         {coupon.maxUses && (
                           <span className="text-zinc-400">
