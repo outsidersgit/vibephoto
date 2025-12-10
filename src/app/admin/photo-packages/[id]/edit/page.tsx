@@ -297,22 +297,32 @@ export default function EditPhotoPackagePage() {
 
     try {
       setDeleting(true)
+      setError('')
+
+      console.log('🗑️ [DELETE_PHOTO_PKG] Iniciando deleção do pacote:', id)
+
       const response = await fetch('/api/admin/photo-packages', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id })
       })
 
+      console.log('🗑️ [DELETE_PHOTO_PKG] Response status:', response.status)
+
       const data = await response.json()
+      console.log('🗑️ [DELETE_PHOTO_PKG] Response data:', data)
 
       if (response.ok) {
+        console.log('✅ [DELETE_PHOTO_PKG] Pacote deletado com sucesso, redirecionando...')
         router.push('/admin/photo-packages')
       } else {
-        setError('Erro ao deletar pacote')
+        const errorMsg = data.error || 'Erro ao deletar pacote'
+        console.error('❌ [DELETE_PHOTO_PKG] Erro na resposta:', errorMsg)
+        setError(errorMsg)
       }
     } catch (err) {
+      console.error('❌ [DELETE_PHOTO_PKG] Erro ao deletar pacote:', err)
       setError('Erro ao deletar pacote')
-      console.error(err)
     } finally {
       setDeleting(false)
     }

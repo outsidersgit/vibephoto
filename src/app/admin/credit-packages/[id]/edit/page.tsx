@@ -159,20 +159,30 @@ export default function EditCreditPackagePage() {
 
     try {
       setDeleting(true)
+      setError(null)
+
+      console.log('🗑️ [DELETE_CREDIT_PKG] Iniciando deleção do pacote:', id)
+
       const response = await fetch(`/api/admin/credit-packages/${id}`, {
         method: 'DELETE'
       })
 
+      console.log('🗑️ [DELETE_CREDIT_PKG] Response status:', response.status)
+
       const data = await response.json()
+      console.log('🗑️ [DELETE_CREDIT_PKG] Response data:', data)
 
       if (response.ok) {
+        console.log('✅ [DELETE_CREDIT_PKG] Pacote deletado com sucesso, redirecionando...')
         router.push('/admin/credit-packages')
       } else {
-        setError(data.error || 'Erro ao deletar pacote')
+        const errorMsg = data.error || 'Erro ao deletar pacote'
+        console.error('❌ [DELETE_CREDIT_PKG] Erro na resposta:', errorMsg)
+        setError(errorMsg)
       }
     } catch (err) {
+      console.error('❌ [DELETE_CREDIT_PKG] Erro ao deletar pacote:', err)
       setError('Erro ao deletar pacote')
-      console.error(err)
     } finally {
       setDeleting(false)
     }

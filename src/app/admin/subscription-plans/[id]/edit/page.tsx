@@ -285,20 +285,30 @@ export default function EditSubscriptionPlanPage() {
 
     try {
       setDeleting(true)
+      setError(null)
+
+      console.log('🗑️ [DELETE_PLAN] Iniciando deleção do plano:', id)
+
       const response = await fetch(`/api/admin/subscription-plans/${id}`, {
         method: 'DELETE'
       })
 
+      console.log('🗑️ [DELETE_PLAN] Response status:', response.status)
+
       const data = await response.json()
+      console.log('🗑️ [DELETE_PLAN] Response data:', data)
 
       if (response.ok) {
+        console.log('✅ [DELETE_PLAN] Plano deletado com sucesso, redirecionando...')
         router.push('/admin/subscription-plans')
       } else {
-        setError(data.error || 'Erro ao deletar plano')
+        const errorMsg = data.error || 'Erro ao deletar plano'
+        console.error('❌ [DELETE_PLAN] Erro na resposta:', errorMsg)
+        setError(errorMsg)
       }
     } catch (err) {
+      console.error('❌ [DELETE_PLAN] Erro ao deletar plano:', err)
       setError('Erro ao deletar plano')
-      console.error(err)
     } finally {
       setDeleting(false)
     }
