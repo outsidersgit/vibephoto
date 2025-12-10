@@ -470,20 +470,16 @@ export async function DELETE(
 
     const existing = existingPlans[0]
 
-    // Soft delete
-    console.log('✅ [ADMIN_SUBSCRIPTION_PLANS] Soft deleting plan:', { id: existing.id, planId: existing.planId })
-    const deleted = await prisma.subscriptionPlan.update({
-      where: { id },
-      data: {
-        deletedAt: new Date(),
-        isActive: false
-      }
+    // Hard delete - Excluir permanentemente do banco de dados
+    console.log('🗑️ [ADMIN_SUBSCRIPTION_PLANS] Deleting plan permanently:', { id: existing.id, planId: existing.planId })
+    await prisma.subscriptionPlan.delete({
+      where: { id }
     })
 
     revalidateTag('subscription-plans')
-    console.log('✅ [ADMIN_SUBSCRIPTION_PLANS] Plan soft deleted:', id)
+    console.log('✅ [ADMIN_SUBSCRIPTION_PLANS] Plan permanently deleted:', id)
 
-    return NextResponse.json({ plan: deleted })
+    return NextResponse.json({ success: true, message: 'Plano deletado com sucesso' })
   } catch (error: any) {
     console.error('❌ [ADMIN_SUBSCRIPTION_PLANS] Error deleting plan:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

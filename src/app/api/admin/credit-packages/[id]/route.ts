@@ -198,19 +198,19 @@ export async function DELETE(
       )
     }
 
-    // Soft delete: apenas desativar
-    const deleted = await prisma.creditPackage.update({
-      where: { id },
-      data: { isActive: false }
+    // Hard delete - Excluir permanentemente do banco de dados
+    console.log('🗑️ [ADMIN_CREDIT_PACKAGES] Deleting package permanently:', id)
+    await prisma.creditPackage.delete({
+      where: { id }
     })
 
     // Invalidar cache
     await revalidateTag('credit-packages')
 
+    console.log('✅ [ADMIN_CREDIT_PACKAGES] Package permanently deleted:', id)
     return NextResponse.json({
       success: true,
-      message: 'Pacote removido com sucesso',
-      package: deleted
+      message: 'Pacote deletado com sucesso'
     })
   } catch (error: any) {
     console.error('❌ [ADMIN] Erro ao remover pacote:', error)

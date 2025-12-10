@@ -145,16 +145,17 @@ export async function DELETE(request: NextRequest) {
   if (!ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const { id } = await request.json()
 
-  // Soft delete - apenas desativa o pacote
-  await prisma.photoPackage.update({
-    where: { id },
-    data: { isActive: false }
+  // Hard delete - Excluir permanentemente do banco de dados
+  console.log('🗑️ [ADMIN_PHOTO_PACKAGES] Deleting package permanently:', id)
+  await prisma.photoPackage.delete({
+    where: { id }
   })
 
   // Invalidar cache para que usuários vejam que o pacote foi removido imediatamente
   revalidateTag('packages')
 
-  return NextResponse.json({ ok: true })
+  console.log('✅ [ADMIN_PHOTO_PACKAGES] Package permanently deleted:', id)
+  return NextResponse.json({ ok: true, message: 'Pacote deletado com sucesso' })
 }
 
 

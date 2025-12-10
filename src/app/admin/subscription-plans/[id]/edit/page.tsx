@@ -279,7 +279,7 @@ export default function EditSubscriptionPlanPage() {
   }
 
   const handleDelete = async () => {
-    if (!confirm('Tem certeza que deseja deletar este plano? Esta ação irá desativá-lo.')) {
+    if (!confirm('Tem certeza que deseja deletar este plano PERMANENTEMENTE? Esta ação NÃO PODE ser desfeita. O plano será completamente removido do banco de dados.')) {
       return
     }
 

@@ -291,7 +291,7 @@ export default function EditPhotoPackagePage() {
   }
 
   const handleDelete = async () => {
-    if (!confirm('Tem certeza que deseja deletar este pacote? Esta ação irá desativá-lo.')) {
+    if (!confirm('Tem certeza que deseja deletar este pacote PERMANENTEMENTE? Esta ação NÃO PODE ser desfeita. O pacote será completamente removido do banco de dados.')) {
       return
     }
 
