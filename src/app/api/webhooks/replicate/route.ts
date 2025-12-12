@@ -1292,7 +1292,46 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
             }
           }
         })
+
+        // Delete placeholder generation
+        const existingPlaceholderNoOutput = await prisma.generation.findFirst({
+          where: {
+            userId: editHistory.userId,
+            status: 'PROCESSING',
+            metadata: {
+              path: ['editHistoryId'],
+              equals: editHistory.id
+            }
+          }
+        })
+
+        if (existingPlaceholderNoOutput) {
+          await prisma.generation.delete({
+            where: { id: existingPlaceholderNoOutput.id }
+          })
+          console.log(`🗑️ Deleted placeholder generation ${existingPlaceholderNoOutput.id} due to missing output`)
+        }
+
+        // Refund credits
+        await refundEditCredits(editHistory.id, editHistory.userId)
         creditRefund = true
+
+        // Broadcast failure
+        const { broadcastGenerationStatusChange: broadcastNoOutput } = await import('@/lib/services/realtime-service')
+        await broadcastNoOutput(
+          editHistory.id,
+          editHistory.userId,
+          'FAILED',
+          {
+            errorMessage: 'No output provided by Replicate',
+            webhook: true,
+            timestamp: new Date().toISOString(),
+            editHistoryId: editHistory.id,
+            generationId: editHistory.id
+          }
+        )
+
+        console.log(`❌ Broadcasted FAILED status for edit ${editHistory.id} (no output)`)
       }
       break
 
@@ -1331,6 +1370,8 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
         console.log(`🗑️ Deleted placeholder generation ${existingPlaceholderFailed.id} due to failure`)
       }
 
+      // Refund credits for failed edit
+      await refundEditCredits(editHistory.id, editHistory.userId)
       creditRefund = true
 
       // Broadcast failure
@@ -1343,9 +1384,16 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
           errorMessage: payload.error || 'Processing failed',
           webhook: true,
           timestamp: new Date().toISOString(),
-          editHistoryId: editHistory.id
+          editHistoryId: editHistory.id,
+          generationId: editHistory.id // CRITICAL: Include generationId for frontend matching
         }
       )
+
+      console.log(`❌ Broadcasted FAILED status for edit ${editHistory.id}:`, {
+        editHistoryId: editHistory.id,
+        error: payload.error,
+        userId: editHistory.userId
+      })
       break
   }
 
@@ -1624,6 +1672,56 @@ async function refundTrainingCredits(modelId: string, userId: string) {
     }
   } catch (error) {
     console.error('Failed to refund training credits:', error)
+  }
+}
+
+/**
+ * Refund de créditos para edição de imagem
+ */
+async function refundEditCredits(editHistoryId: string, userId: string) {
+  try {
+    const originalUsage = await prisma.usageLog.findFirst({
+      where: {
+        userId,
+        action: 'image_edit',
+        details: {
+          path: ['editId'],
+          equals: editHistoryId
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    if (originalUsage && originalUsage.creditsUsed > 0) {
+      await prisma.$transaction(async (tx) => {
+        await tx.usageLog.create({
+          data: {
+            userId,
+            action: 'image_edit_refund',
+            details: {
+              editHistoryId,
+              originalCreditsUsed: originalUsage.creditsUsed,
+              reason: 'Edit failed/cancelled',
+              webhook: true
+            },
+            creditsUsed: -originalUsage.creditsUsed
+          }
+        })
+
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            creditsUsed: {
+              decrement: originalUsage.creditsUsed
+            }
+          }
+        })
+      })
+
+      console.log(`💰 Refunded ${originalUsage.creditsUsed} credits to user ${userId} for failed edit`)
+    }
+  } catch (error) {
+    console.error('Failed to refund edit credits:', error)
   }
 }
 

@@ -11,6 +11,9 @@ import { CreditManager } from '@/lib/credits/manager'
 import { getImageEditCost, EditorResolution } from '@/lib/credits/pricing'
 import { Plan } from '@prisma/client'
 
+// Vercel timeout: 60s for webhook initialization (actual processing happens via webhook)
+export const maxDuration = 60
+
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
@@ -163,7 +166,7 @@ export async function POST(request: NextRequest) {
         data: {
           userId: session.user.id,
           modelId: null,
-          prompt: image ? `[EDITOR] ${prompt}` : `[GERADO] ${prompt}`,
+          prompt: images.length > 0 ? `[EDITOR] ${prompt}` : `[GERADO] ${prompt}`,
           status: 'PROCESSING',
           imageUrls: [],
           thumbnailUrls: [],
@@ -173,7 +176,7 @@ export async function POST(request: NextRequest) {
           operationType: 'edit',
           aiProvider: 'nano-banana',
           metadata: {
-            source: image ? 'editor' : 'editor_generate',
+            source: images.length > 0 ? 'editor' : 'editor_generate',
             editHistoryId: editHistoryEntry.id,
             replicateId: result.id,
             generatedFromScratch: images.length === 0,
@@ -282,8 +285,9 @@ export async function POST(request: NextRequest) {
     let editHistoryEntry = null
     try {
       // Get original image URL from form data or create a placeholder
-      const originalImageUrl = image 
-        ? (formData.get('originalUrl') as string || `data:${image.type};base64,original`)
+      const firstImage = images.length > 0 ? images[0] : null
+      const originalImageUrl = firstImage
+        ? (formData.get('originalUrl') as string || `data:${firstImage.type};base64,original`)
         : 'generated-from-scratch'
 
       editHistoryEntry = await createEditHistory({
@@ -291,13 +295,13 @@ export async function POST(request: NextRequest) {
         originalImageUrl: originalImageUrl,
         editedImageUrl: permanentImageUrl, // Use permanent S3 URL
         thumbnailUrl: permanentThumbnailUrl, // Use permanent S3 URL
-        operation: image ? 'nano_banana_edit' : 'nano_banana_generate',
+        operation: firstImage ? 'nano_banana_edit' : 'nano_banana_generate',
         prompt: prompt,
         metadata: {
           ...result.metadata,
-          originalFileName: image?.name || 'generated',
-          fileSize: image?.size || 0,
-          fileType: image?.type || 'image/png',
+          originalFileName: firstImage?.name || 'generated',
+          fileSize: firstImage?.size || 0,
+          fileType: firstImage?.type || 'image/png',
           processingTime: result.metadata?.processingTime,
           replicateId: result.id,
           generatedFromScratch: images.length === 0,
@@ -347,31 +351,33 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Update placeholder generation with final results
+    // Create generation record for gallery (synchronous mode - no webhook used)
     let generationRecord = null
     try {
       if (result.resultImage) {
         const generationMetadata = {
-          source: image ? 'editor' : 'editor_generate',
+          source: images.length > 0 ? 'editor' : 'editor_generate',
           editHistoryId: editHistoryEntry?.id,
           replicateId: result.id,
           generatedFromScratch: images.length === 0,
           temporaryUrl: result.resultImage,
           permanentUrl: permanentImageUrl,
           cost: creditsNeeded,
-          originalImageUrl: originalImageUrl || (image ? 'uploaded-image' : 'generated-from-scratch'),
+          originalImageUrl: images.length > 0 ? 'uploaded-image' : 'generated-from-scratch',
           processingCompletedAt: new Date().toISOString()
         }
 
-        // Update the placeholder generation to COMPLETED with final data
-        generationRecord = await prisma.generation.update({
-          where: { id: placeholderGeneration.id },
+        // Create new generation record for gallery
+        generationRecord = await prisma.generation.create({
           data: {
+            userId: session.user.id,
+            modelId: null,
+            prompt: images.length > 0 ? `[EDITOR] ${prompt}` : `[GERADO] ${prompt}`,
             status: 'COMPLETED',
             imageUrls: [permanentImageUrl], // Use permanent S3 URL
             thumbnailUrls: [permanentThumbnailUrl], // Use permanent S3 URL
             aspectRatio: aspectRatioValue || '1:1',
-            resolution: aspectRatioValue ? 
+            resolution: aspectRatioValue ?
               (aspectRatioValue === '1:1' ? '1024x1024' :
                aspectRatioValue === '4:3' ? '1024x768' :
                aspectRatioValue === '3:4' ? '768x1024' :
@@ -379,7 +385,11 @@ export async function POST(request: NextRequest) {
                aspectRatioValue === '16:9' ? '1280x720' : '1024x1024') : '1024x1024',
             storageProvider: 'aws',
             storageContext: 'edited',
-            metadata: generationMetadata
+            operationType: 'edit',
+            aiProvider: 'nano-banana',
+            estimatedCost: creditsNeeded,
+            metadata: generationMetadata,
+            completedAt: new Date()
           },
           include: {
             model: {
@@ -388,11 +398,11 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        console.log('✅ Generation record updated to COMPLETED with permanent S3 URL:', generationRecord.id)
+        console.log('✅ Generation record created for gallery with permanent S3 URL:', generationRecord.id)
       }
     } catch (galleryError) {
-      console.error('❌ Failed to update generation in gallery:', galleryError)
-      // Don't fail the whole request if gallery update fails
+      console.error('❌ Failed to create generation in gallery:', galleryError)
+      // Don't fail the whole request if gallery creation fails
     }
 
     return NextResponse.json({
