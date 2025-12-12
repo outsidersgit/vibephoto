@@ -70,7 +70,7 @@ export class NanoBananaProvider {
 
       // 🔥 NEW: Nano Banana Pro parameters
       // Add resolution (default: "2K")
-      input.output_resolution = request.resolution || '2K'
+      input.resolution = request.resolution || '2K'
       
       // Add safety filter level (default: "block_only_high")
       input.safety_filter_level = request.safetyFilterLevel || 'block_only_high'
@@ -90,7 +90,7 @@ export class NanoBananaProvider {
         prompt: input.prompt.substring(0, 50) + '...',
         imageCount: input.image_input.length,
         outputFormat: input.output_format,
-        resolution: input.output_resolution,
+        resolution: input.resolution,
         safetyLevel: input.safety_filter_level
       })
 
