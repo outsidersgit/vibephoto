@@ -1311,8 +1311,28 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
           }
         }
       })
+
+      // Delete placeholder generation on failure
+      const existingPlaceholderFailed = await prisma.generation.findFirst({
+        where: {
+          userId: editHistory.userId,
+          status: 'PROCESSING',
+          metadata: {
+            path: ['editHistoryId'],
+            equals: editHistory.id
+          }
+        }
+      })
+
+      if (existingPlaceholderFailed) {
+        await prisma.generation.delete({
+          where: { id: existingPlaceholderFailed.id }
+        })
+        console.log(`🗑️ Deleted placeholder generation ${existingPlaceholderFailed.id} due to failure`)
+      }
+
       creditRefund = true
-      
+
       // Broadcast failure
       const { broadcastGenerationStatusChange } = await import('@/lib/services/realtime-service')
       await broadcastGenerationStatusChange(
@@ -1322,7 +1342,8 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
         {
           errorMessage: payload.error || 'Processing failed',
           webhook: true,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          editHistoryId: editHistory.id
         }
       )
       break
