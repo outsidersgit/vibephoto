@@ -656,6 +656,9 @@ model Payment {
   needsPriceUpdate  Boolean? @default(false) @map("needs_price_update") // If true, webhook should update subscription price
   originalPrice     Float? @map("original_price") // Original plan price before discount (from database)
 
+  // Split duration handling (for FIRST_CYCLE splits on HYBRID coupons)
+  needsSplitRemoval Boolean? @default(false) @map("needs_split_removal") // If true, webhook should remove split from subscription
+
   // Related data
   planType     Plan? // If subscription payment
   billingCycle String? // MONTHLY or YEARLY for subscription
@@ -975,7 +978,7 @@ model DiscountCoupon {
   discountType     DiscountType @default(PERCENTAGE) @map("discount_type")
   discountValue    Decimal      @db.Decimal(10, 2) @map("discount_value") // Value or percentage
 
-  // Duration type (RECURRENT or FIRST_CYCLE)
+  // Duration type for DISCOUNT (RECURRENT or FIRST_CYCLE)
   durationType     DurationType @default(FIRST_CYCLE) @map("duration_type")
 
   // Influencer relation (only for HYBRID coupons)
@@ -985,6 +988,9 @@ model DiscountCoupon {
   // Custom commission for this specific coupon (overrides influencer defaults)
   customCommissionPercentage Decimal? @map("custom_commission_percentage") @db.Decimal(5, 2)
   customCommissionFixedValue Decimal? @map("custom_commission_fixed_value") @db.Decimal(10, 2)
+
+  // Duration type for SPLIT (RECURRENT or FIRST_CYCLE) - independent from discount duration
+  splitDurationType DurationType @default(FIRST_CYCLE) @map("split_duration_type")
 
   // Plan restrictions
   applicablePlans  String[]     @default([]) @map("applicable_plans") // Empty = all plans, or ["STARTER", "PREMIUM", "GOLD"]

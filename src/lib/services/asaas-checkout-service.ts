@@ -560,10 +560,19 @@ export async function createSubscriptionCheckout(
     paymentData.couponCodeUsed = validatedCoupon.code
     paymentData.discountApplied = discountApplied
 
-    // Se cupom é FIRST_CYCLE, salvar preço original e flag de atualização
+    // Se cupom DISCOUNT é FIRST_CYCLE, salvar preço original e flag de atualização
     if (needsPriceUpdate) {
       paymentData.originalPrice = originalPrice
       paymentData.needsPriceUpdate = true
+    }
+
+    // Se cupom HYBRID tem SPLIT com FIRST_CYCLE, marcar para remover split após primeiro pagamento
+    // CRITICAL: Só aplica se for HYBRID com influencer E splitDurationType for FIRST_CYCLE
+    if (validatedCoupon.type === 'HYBRID' &&
+        validatedCoupon.influencer &&
+        validatedCoupon.splitDurationType === 'FIRST_CYCLE') {
+      paymentData.needsSplitRemoval = true
+      console.log('🔄 [CHECKOUT] HYBRID coupon with FIRST_CYCLE split detected - will remove split after first payment')
     }
   }
 

@@ -26,6 +26,7 @@ export default function NewCouponPage() {
     discountType: 'PERCENTAGE' as 'FIXED' | 'PERCENTAGE',
     discountValue: '',
     durationType: 'FIRST_CYCLE' as 'RECURRENT' | 'FIRST_CYCLE',
+    splitDurationType: 'FIRST_CYCLE' as 'RECURRENT' | 'FIRST_CYCLE', // NEW: independent split duration
     influencerId: '',
     commissionType: 'PERCENTAGE' as 'PERCENTAGE' | 'FIXED',
     customCommissionPercentage: '',
@@ -454,6 +455,54 @@ export default function NewCouponPage() {
               : 'O desconto será aplicado apenas na primeira cobrança. Nas próximas cobranças, o valor será automaticamente ajustado para o preço normal do plano'}
           </p>
         </div>
+
+        {/* Split Duration Type - Only for HYBRID coupons */}
+        {formData.type === 'HYBRID' && (
+          <div className="mb-6">
+            <label className="mb-2 block text-sm font-semibold text-white">
+              Duração do Split (Comissão) *
+            </label>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData((prev) => ({ ...prev, splitDurationType: 'RECURRENT' }))
+                }
+                className={`rounded-lg border px-4 py-3 text-left transition ${
+                  formData.splitDurationType === 'RECURRENT'
+                    ? 'border-green-500 bg-green-500/10 text-green-400'
+                    : 'border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-600'
+                }`}
+              >
+                <div className="font-semibold">Recorrente</div>
+                <div className="mt-1 text-xs opacity-70">
+                  Split em todas as cobranças
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData((prev) => ({ ...prev, splitDurationType: 'FIRST_CYCLE' }))
+                }
+                className={`rounded-lg border px-4 py-3 text-left transition ${
+                  formData.splitDurationType === 'FIRST_CYCLE'
+                    ? 'border-orange-500 bg-orange-500/10 text-orange-400'
+                    : 'border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-600'
+                }`}
+              >
+                <div className="font-semibold">Primeira Cobrança</div>
+                <div className="mt-1 text-xs opacity-70">
+                  Split apenas no primeiro mês
+                </div>
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              {formData.splitDurationType === 'RECURRENT'
+                ? 'A comissão do influencer será aplicada em todas as cobranças enquanto a assinatura estiver ativa'
+                : 'A comissão do influencer será aplicada apenas na primeira cobrança. Nas próximas cobranças, o split será automaticamente removido'}
+            </p>
+          </div>
+        )}
 
         {/* Applicable Plans */}
         <div className="mb-6">

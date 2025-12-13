@@ -923,22 +923,29 @@ async function handlePaymentRestored(payment: any) {
  */
 async function handleFirstCycleCouponPriceUpdate(payment: any, userId: string) {
   try {
-    console.log('🔍 [WEBHOOK] Checking for FIRST_CYCLE coupon price update...', {
+    console.log('🔍 [WEBHOOK] Checking for FIRST_CYCLE coupon updates (price/split)...', {
       userId,
       paymentId: payment.id,
       subscription: payment.subscription,
       checkoutSession: payment.checkoutSession
     })
 
-    // Find payment record with needsPriceUpdate flag
-    // Search by userId + needsPriceUpdate flag (don't rely on subscriptionId as it's not set during checkout)
+    // Find payment record with needsPriceUpdate OR needsSplitRemoval flags
+    // Search by userId + flags (don't rely on subscriptionId as it's not set during checkout)
     const paymentRecord = await prisma.payment.findFirst({
       where: {
         userId,
-        needsPriceUpdate: true,
         OR: [
-          { subscriptionId: payment.subscription },
-          { asaasCheckoutId: payment.checkoutSession }
+          { needsPriceUpdate: true },
+          { needsSplitRemoval: true }
+        ],
+        AND: [
+          {
+            OR: [
+              { subscriptionId: payment.subscription },
+              { asaasCheckoutId: payment.checkoutSession }
+            ]
+          }
         ]
       },
       select: {
@@ -947,7 +954,11 @@ async function handleFirstCycleCouponPriceUpdate(payment: any, userId: string) {
         planType: true,
         billingCycle: true,
         subscriptionId: true,
-        asaasCheckoutId: true
+        asaasCheckoutId: true,
+        influencerId: true,
+        couponCodeUsed: true,
+        needsPriceUpdate: true,
+        needsSplitRemoval: true
       },
       orderBy: {
         createdAt: 'desc' // Get most recent
@@ -957,12 +968,7 @@ async function handleFirstCycleCouponPriceUpdate(payment: any, userId: string) {
     console.log('🔎 [WEBHOOK] Payment record search result:', paymentRecord)
 
     if (!paymentRecord) {
-      console.log('💡 [WEBHOOK] No price update needed for this payment')
-      return
-    }
-
-    if (!paymentRecord.originalPrice) {
-      console.error('❌ [WEBHOOK] Payment record missing originalPrice:', paymentRecord.id)
+      console.log('💡 [WEBHOOK] No coupon updates needed for this payment')
       return
     }
 
@@ -977,32 +983,58 @@ async function handleFirstCycleCouponPriceUpdate(payment: any, userId: string) {
       return
     }
 
-    console.log('🔄 [WEBHOOK] FIRST_CYCLE coupon detected - updating subscription price to normal')
-    console.log('📊 [WEBHOOK] Original price from database:', paymentRecord.originalPrice)
     console.log('📋 [WEBHOOK] Subscription ID:', subscriptionId)
 
-    // Update subscription price in Asaas
-    try {
-      await asaas.updateSubscription(subscriptionId, {
-        value: paymentRecord.originalPrice
-      })
+    const updateData: any = {}
+    const flagsToUpdate: any = {}
 
-      console.log(`✅ [WEBHOOK] Subscription ${subscriptionId} price updated to R$ ${paymentRecord.originalPrice}`)
+    // Handle price update (FIRST_CYCLE discount)
+    if (paymentRecord.needsPriceUpdate && paymentRecord.originalPrice) {
+      console.log('🔄 [WEBHOOK] FIRST_CYCLE discount detected - updating subscription price to normal')
+      console.log('📊 [WEBHOOK] Original price from database:', paymentRecord.originalPrice)
 
-      // Mark payment as updated AND save subscription ID if not saved
-      await prisma.payment.update({
-        where: { id: paymentRecord.id },
-        data: {
-          needsPriceUpdate: false,
-          subscriptionId: subscriptionId // Save subscription ID for future reference
-        }
-      })
+      updateData.value = paymentRecord.originalPrice
+      flagsToUpdate.needsPriceUpdate = false
+    }
 
-      console.log(`✅ [WEBHOOK] Payment ${paymentRecord.id} marked as price updated`)
+    // Handle split removal (FIRST_CYCLE split on HYBRID coupon)
+    if (paymentRecord.needsSplitRemoval) {
+      console.log('🔄 [WEBHOOK] FIRST_CYCLE split detected - removing split from subscription')
 
-    } catch (updateError: any) {
-      console.error('❌ [WEBHOOK] Error updating subscription price in Asaas:', updateError)
-      // Don't throw - log error but continue webhook processing
+      // To remove split, we send split as empty array
+      updateData.split = []
+      flagsToUpdate.needsSplitRemoval = false
+    }
+
+    // Update subscription in Asaas if there are changes
+    if (Object.keys(updateData).length > 0) {
+      try {
+        await asaas.updateSubscription(subscriptionId, updateData)
+
+        console.log(`✅ [WEBHOOK] Subscription ${subscriptionId} updated:`, {
+          priceUpdated: !!updateData.value,
+          splitRemoved: !!updateData.split,
+          newPrice: updateData.value,
+          updates: Object.keys(updateData)
+        })
+
+        // Mark payment as updated AND save subscription ID if not saved
+        await prisma.payment.update({
+          where: { id: paymentRecord.id },
+          data: {
+            ...flagsToUpdate,
+            subscriptionId: subscriptionId // Save subscription ID for future reference
+          }
+        })
+
+        console.log(`✅ [WEBHOOK] Payment ${paymentRecord.id} flags updated:`, flagsToUpdate)
+
+      } catch (updateError: any) {
+        console.error('❌ [WEBHOOK] Error updating subscription in Asaas:', updateError)
+        // Don't throw - log error but continue webhook processing
+      }
+    } else {
+      console.log('⚠️ [WEBHOOK] No updates needed despite flags being set')
     }
 
   } catch (error) {

@@ -8,6 +8,7 @@ export interface ValidatedCoupon {
   discountType: DiscountType
   discountValue: number
   durationType: 'RECURRENT' | 'FIRST_CYCLE' // Duration of the discount
+  splitDurationType: 'RECURRENT' | 'FIRST_CYCLE' // Duration of the split (independent from discount)
   discountAmount: number // Calculated discount in BRL
   finalPrice: number // Price after discount
   originalPrice: number
@@ -58,6 +59,7 @@ export async function validateCoupon(
         discountType: true,
         discountValue: true,
         durationType: true,
+        splitDurationType: true, // NEW: independent duration for split
         isActive: true,
         validFrom: true,
         validUntil: true,
@@ -198,6 +200,7 @@ export async function validateCoupon(
       discountType: coupon.discountType,
       discountValue: Number(coupon.discountValue),
       durationType: coupon.durationType,
+      splitDurationType: coupon.splitDurationType, // Independent from discount duration
       discountAmount,
       finalPrice,
       originalPrice
