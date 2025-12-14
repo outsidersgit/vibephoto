@@ -167,6 +167,7 @@ export async function POST(request: NextRequest) {
               discountType: influencerData.coupon.discountType || 'PERCENTAGE',
               discountValue: influencerData.coupon.discountValue,
               durationType: influencerData.coupon.durationType || 'FIRST_CYCLE',
+              splitDurationType: influencerData.coupon.splitDurationType || 'FIRST_CYCLE', // NEW: independent split duration
               influencerId: influencer.id,
               applicablePlans: influencerData.coupon.applicablePlans || [],
               isActive: influencerData.coupon.isActive ?? true,

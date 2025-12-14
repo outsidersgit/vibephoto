@@ -20,6 +20,7 @@ export default function NewUserPage() {
   const [discountType, setDiscountType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE')
   const [discountValue, setDiscountValue] = useState('')
   const [durationType, setDurationType] = useState<'RECURRENT' | 'FIRST_CYCLE'>('FIRST_CYCLE')
+  const [splitDurationType, setSplitDurationType] = useState<'RECURRENT' | 'FIRST_CYCLE'>('FIRST_CYCLE') // NEW: independent split duration
   const [applicablePlans, setApplicablePlans] = useState<string[]>([])
   const [isActive, setIsActive] = useState(true)
   const [validFrom, setValidFrom] = useState(new Date().toISOString().split('T')[0])
@@ -73,6 +74,7 @@ export default function NewUserPage() {
         const couponDiscountValue = formData.get('discountValue') as string
         const couponDiscountType = formData.get('discountType') as string
         const couponDurationType = formData.get('durationType') as string
+        const couponSplitDurationType = formData.get('splitDurationType') as string // NEW
         const couponApplicablePlans = applicablePlans
         const couponIsActive = formData.get('couponIsActive') === 'on'
         const couponValidFrom = formData.get('validFrom') as string
@@ -95,6 +97,7 @@ export default function NewUserPage() {
             discountType: couponDiscountType || 'PERCENTAGE',
             discountValue: couponDiscountValue ? parseFloat(couponDiscountValue) : undefined,
             durationType: couponDurationType || 'FIRST_CYCLE',
+            splitDurationType: couponSplitDurationType || 'FIRST_CYCLE', // NEW: independent split duration
             applicablePlans: couponApplicablePlans,
             isActive: couponIsActive,
             validFrom: couponValidFrom || undefined,
@@ -349,6 +352,43 @@ export default function NewUserPage() {
                     {durationType === 'RECURRENT'
                       ? 'Desconto aplicado em todas as cobranças'
                       : 'Desconto apenas na primeira cobrança, valor ajustado automaticamente depois'}
+                  </p>
+                </div>
+
+                {/* Split Duration Type - NEW */}
+                <div className="mb-3">
+                  <label className="block text-sm text-gray-700 mb-2">Duração do Split (Comissão)</label>
+                  <input type="hidden" name="splitDurationType" value={splitDurationType} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSplitDurationType('RECURRENT')}
+                      className={`px-3 py-2 text-sm rounded border text-left ${
+                        splitDurationType === 'RECURRENT'
+                          ? 'border-green-500 bg-green-50 text-green-700'
+                          : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className="font-semibold">Recorrente</div>
+                      <div className="text-xs opacity-70">Todas as cobranças</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSplitDurationType('FIRST_CYCLE')}
+                      className={`px-3 py-2 text-sm rounded border text-left ${
+                        splitDurationType === 'FIRST_CYCLE'
+                          ? 'border-orange-500 bg-orange-50 text-orange-700'
+                          : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className="font-semibold">Primeira Cobrança</div>
+                      <div className="text-xs opacity-70">Apenas primeiro mês</div>
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {splitDurationType === 'RECURRENT'
+                      ? 'Comissão aplicada em todas as cobranças'
+                      : 'Comissão apenas na primeira cobrança, split removido automaticamente depois'}
                   </p>
                 </div>
 

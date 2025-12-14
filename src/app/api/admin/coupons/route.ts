@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
       discountType,
       discountValue,
       durationType,
+      splitDurationType, // NEW: independent split duration
       influencerId,
       customCommissionPercentage,
       customCommissionFixedValue,
@@ -125,6 +126,7 @@ export async function POST(req: NextRequest) {
         discountType,
         discountValue: parseFloat(discountValue),
         durationType: durationType || 'FIRST_CYCLE',
+        splitDurationType: splitDurationType || 'FIRST_CYCLE', // NEW: independent split duration
         influencerId: influencerId || null,
         customCommissionPercentage: finalCustomPercentage,
         customCommissionFixedValue: finalCustomFixed,

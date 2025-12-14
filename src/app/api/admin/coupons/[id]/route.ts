@@ -22,6 +22,7 @@ export async function GET(
         discountType: true,
         discountValue: true,
         durationType: true,
+        splitDurationType: true, // NEW: independent split duration
         customCommissionPercentage: true,
         customCommissionFixedValue: true,
         applicablePlans: true,
@@ -88,6 +89,7 @@ export async function PUT(
       discountType,
       discountValue,
       durationType,
+      splitDurationType, // NEW: independent split duration
       influencerId,
       customCommissionPercentage,
       customCommissionFixedValue,
@@ -143,6 +145,7 @@ export async function PUT(
       discountType: discountType || undefined,
       discountValue: discountValue !== undefined ? parseFloat(discountValue) : undefined,
       durationType: durationType || undefined,
+      splitDurationType: splitDurationType || undefined, // NEW: independent split duration
       influencerId: influencerId !== undefined ? (influencerId || null) : undefined,
       applicablePlans: applicablePlans !== undefined ? applicablePlans : undefined,
       applicableCycles: applicableCycles !== undefined ? applicableCycles : undefined,
