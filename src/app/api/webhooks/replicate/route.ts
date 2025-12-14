@@ -593,9 +593,32 @@ async function processGenerationWebhook(payload: WebhookPayload, generation: any
       break
 
     case 'failed':
+      // Extract error message from payload.error or logs
+      let generationErrorMessage = payload.error || 'Generation failed'
+
+      // If no explicit error but has logs, try to extract error from logs
+      if (!payload.error && payload.logs) {
+        const logs = payload.logs.toString()
+
+        // Check for common error patterns in logs
+        if (logs.includes('nsfw') || logs.includes('NSFW') || logs.includes('safety')) {
+          generationErrorMessage = 'Conteúdo bloqueado por filtro de segurança. Por favor, ajuste sua solicitação e tente novamente.'
+        } else if (logs.includes('Error:')) {
+          const errorMatch = logs.match(/Error:\s*(.+?)(?:\n|$)/i)
+          if (errorMatch && errorMatch[1].trim()) {
+            generationErrorMessage = errorMatch[1].trim()
+          }
+        } else if (logs.includes('Failed')) {
+          const failedMatch = logs.match(/Failed[:\s]+(.+?)(?:\n|$)/i)
+          if (failedMatch && failedMatch[1].trim()) {
+            generationErrorMessage = failedMatch[1].trim()
+          }
+        }
+      }
+
       updateData.status = 'FAILED'
       updateData.completedAt = new Date()
-      updateData.errorMessage = payload.error || 'Generation failed'
+      updateData.errorMessage = generationErrorMessage
       creditRefund = true
       break
 
@@ -705,9 +728,25 @@ async function processUpscaleWebhook(payload: WebhookPayload, generation: any) {
       break
 
     case 'failed':
+      // Extract error message from payload.error or logs
+      let upscaleErrorMessage = payload.error || 'Unknown error'
+
+      // If no explicit error but has logs, try to extract error from logs
+      if (!payload.error && payload.logs) {
+        const logs = payload.logs.toString()
+        if (logs.includes('nsfw') || logs.includes('NSFW') || logs.includes('safety')) {
+          upscaleErrorMessage = 'Conteúdo bloqueado por filtro de segurança'
+        } else if (logs.includes('Error:')) {
+          const errorMatch = logs.match(/Error:\s*(.+?)(?:\n|$)/i)
+          if (errorMatch && errorMatch[1].trim()) {
+            upscaleErrorMessage = errorMatch[1].trim()
+          }
+        }
+      }
+
       updateData.status = 'FAILED'
       updateData.completedAt = new Date()
-      updateData.errorMessage = `Upscale failed: ${payload.error || 'Unknown error'}`
+      updateData.errorMessage = `Upscale failed: ${upscaleErrorMessage}`
       creditRefund = true
       break
 
@@ -955,10 +994,31 @@ async function processTrainingWebhook(payload: WebhookPayload, model: any) {
       break
 
     case 'failed':
+      // Extract error message from payload.error or logs
+      let trainingErrorMessage = payload.error || 'Training failed'
+
+      // If no explicit error but has logs, try to extract error from logs
+      if (!payload.error && payload.logs) {
+        const logs = payload.logs.toString()
+        if (logs.includes('nsfw') || logs.includes('NSFW') || logs.includes('safety')) {
+          trainingErrorMessage = 'Conteúdo bloqueado por filtro de segurança nas imagens de treinamento'
+        } else if (logs.includes('Error:')) {
+          const errorMatch = logs.match(/Error:\s*(.+?)(?:\n|$)/i)
+          if (errorMatch && errorMatch[1].trim()) {
+            trainingErrorMessage = errorMatch[1].trim()
+          }
+        } else if (logs.includes('Failed')) {
+          const failedMatch = logs.match(/Failed[:\s]+(.+?)(?:\n|$)/i)
+          if (failedMatch && failedMatch[1].trim()) {
+            trainingErrorMessage = failedMatch[1].trim()
+          }
+        }
+      }
+
       updateData.status = 'ERROR'
       updateData.trainedAt = new Date()
       updateData.progress = 0
-      updateData.errorMessage = payload.error || 'Training failed'
+      updateData.errorMessage = trainingErrorMessage
       creditRefund = true
       break
 
@@ -1337,6 +1397,30 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
 
     case 'failed':
     case 'canceled':
+      // Extract error message from payload.error or logs
+      let errorMessage = payload.error || 'Processing failed'
+
+      // If no explicit error but has logs, try to extract error from logs
+      if (!payload.error && payload.logs) {
+        const logs = payload.logs.toString()
+
+        // Check for common error patterns in logs
+        if (logs.includes('nsfw') || logs.includes('NSFW') || logs.includes('safety')) {
+          errorMessage = 'Conteúdo bloqueado por filtro de segurança. Por favor, ajuste sua solicitação e tente novamente.'
+        } else if (logs.includes('Error:')) {
+          // Extract error line from logs
+          const errorMatch = logs.match(/Error:\s*(.+?)(?:\n|$)/i)
+          if (errorMatch && errorMatch[1].trim()) {
+            errorMessage = errorMatch[1].trim()
+          }
+        } else if (logs.includes('Failed')) {
+          const failedMatch = logs.match(/Failed[:\s]+(.+?)(?:\n|$)/i)
+          if (failedMatch && failedMatch[1].trim()) {
+            errorMessage = failedMatch[1].trim()
+          }
+        }
+      }
+
       await prisma.editHistory.update({
         where: { id: editHistory.id },
         data: {
@@ -1344,7 +1428,8 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
             ...(editHistory.metadata || {}),
             status: 'FAILED',
             replicateId: payload.id,
-            errorMessage: payload.error || 'Processing failed',
+            errorMessage: errorMessage,
+            logs: payload.logs, // Save logs for debugging
             webhook: true,
             completedAt: new Date().toISOString()
           }
@@ -1381,7 +1466,7 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
         editHistory.userId,
         'FAILED',
         {
-          errorMessage: payload.error || 'Processing failed',
+          errorMessage: errorMessage, // Use extracted error message (includes logs parsing)
           webhook: true,
           timestamp: new Date().toISOString(),
           editHistoryId: editHistory.id,
@@ -1391,7 +1476,9 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
 
       console.log(`❌ Broadcasted FAILED status for edit ${editHistory.id}:`, {
         editHistoryId: editHistory.id,
-        error: payload.error,
+        error: errorMessage,
+        originalError: payload.error,
+        hasLogs: !!payload.logs,
         userId: editHistory.userId
       })
       break
