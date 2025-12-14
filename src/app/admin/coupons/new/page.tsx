@@ -412,7 +412,7 @@ export default function NewCouponPage() {
 
         {/* Duration Type */}
         <div className="mb-6">
-          <label className="mb-2 block text-sm font-semibold text-white">
+          <label className="mb-2 block text-sm font-semibold text-gray-900">
             Duração do Desconto *
           </label>
           <div className="grid grid-cols-2 gap-4">
@@ -459,7 +459,7 @@ export default function NewCouponPage() {
         {/* Split Duration Type - Only for HYBRID coupons */}
         {formData.type === 'HYBRID' && (
           <div className="mb-6">
-            <label className="mb-2 block text-sm font-semibold text-white">
+            <label className="mb-2 block text-sm font-semibold text-gray-900">
               Duração do Split (Comissão) *
             </label>
             <div className="grid grid-cols-2 gap-4">
@@ -506,7 +506,7 @@ export default function NewCouponPage() {
 
         {/* Applicable Plans */}
         <div className="mb-6">
-          <label className="mb-2 block text-sm font-semibold text-white">
+          <label className="mb-2 block text-sm font-semibold text-gray-900">
             Planos Aplicáveis
           </label>
           <div className="space-y-2">
@@ -570,7 +570,7 @@ export default function NewCouponPage() {
               }
               className="h-4 w-4 rounded border-zinc-600 bg-zinc-700 text-purple-600 focus:ring-purple-500"
             />
-            <span className="text-sm font-semibold text-white">
+            <span className="text-sm font-semibold text-gray-900">
               Cupom ativo
             </span>
           </label>
