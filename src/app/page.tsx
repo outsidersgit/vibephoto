@@ -869,7 +869,7 @@ const AIToolsShowcase = () => {
       ]
     },
     editor: {
-      title: "Editor",
+      title: "Studio IA",
       description: "Modifique, adicione, remova e combine fotos como quiser,  liberdade criativa absoluta.",
       type: "sidebyside",
       beforeImage: "/examples/tools/editor-after-1.jpg",

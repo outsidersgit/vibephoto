@@ -126,7 +126,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
   const navigationItems = hasActiveAccess() ? [
     { name: 'Modelos', href: '/models', icon: <Users className="w-4 h-4" /> },
     { name: 'Gerar', href: '/generate', icon: <Camera className="w-4 h-4" /> },
-    { name: 'Editor', href: '/editor', icon: <Wand2 className="w-4 h-4" /> },
+    { name: 'Studio IA', href: '/editor', icon: <Wand2 className="w-4 h-4" /> },
     { name: 'Galeria', href: '/gallery', icon: <ImageIcon className="w-4 h-4" /> },
     { name: 'Pacotes', href: '/packages', icon: <Package className="w-4 h-4" /> },
     { name: 'Créditos', href: '/credits', icon: <Coins className="w-4 h-4" /> },
