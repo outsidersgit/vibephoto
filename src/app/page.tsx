@@ -1634,7 +1634,7 @@ export default function HomePage() {
                     size="sm"
                     className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:opacity-90 text-white px-4 py-2.5 text-sm font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
                   >
-                    Começar agora
+                    Começe a criar agora
                     <span>→</span>
                   </Button>
                 </form>
