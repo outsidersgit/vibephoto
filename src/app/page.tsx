@@ -1578,20 +1578,54 @@ export default function HomePage() {
                 Crie fotos profissionais, ensaios fotográficos e imagens únicas de Você mesmo com IA.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center w-full sm:w-auto px-4 sm:px-0">
-                <Button
-                  size="lg"
-                  asChild
-                  className="bg-white text-black hover:bg-gray-100 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-lg border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 w-full sm:w-auto sm:min-w-[180px]"
+              {/* Email Lead Capture Form */}
+              <div className="max-w-2xl mx-auto mb-6 px-4 sm:px-0">
+                <form 
+                  onSubmit={async (e) => {
+                    e.preventDefault()
+                    const form = e.target as HTMLFormElement
+                    const emailInput = form.email as HTMLInputElement
+                    const email = emailInput.value.trim().toLowerCase()
+                    
+                    if (!email) return
+                    
+                    // Verificar se é email do Google (gmail.com, googlemail.com)
+                    const isGoogleEmail = email.endsWith('@gmail.com') || email.endsWith('@googlemail.com')
+                    
+                    if (isGoogleEmail) {
+                      // Redirecionar diretamente para pricing após login
+                      await signIn('google', { callbackUrl: '/pricing' })
+                    } else {
+                      // Redirecionar para signup com email preenchido
+                      window.location.href = `/auth/signup?email=${encodeURIComponent(email)}`
+                    }
+                  }}
+                  className="flex flex-col sm:flex-row gap-3"
                 >
-                  <Link href="/auth/signup">
-                    Começar Agora
-                  </Link>
-                </Button>
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="Digite seu email para começar"
+                    required
+                    className="flex-1 px-4 sm:px-6 py-3 sm:py-4 text-base sm:text-lg border-2 border-white/30 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
+                  />
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="bg-white text-black hover:bg-gray-100 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                  >
+                    <span className="hidden sm:inline">Começe a criar fotos com IA agora mesmo</span>
+                    <span className="inline sm:hidden">Começar agora</span>
+                  </Button>
+                </form>
+              </div>
+
+              {/* Ver Exemplos Button */}
+              <div className="flex justify-center px-4 sm:px-0">
                 <Button
                   variant="outline"
                   size="lg"
-                  className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-black px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-lg backdrop-blur-sm hover:shadow-lg transform hover:scale-105 transition-all duration-200 w-full sm:w-auto sm:min-w-[180px]"
+                  className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-black px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-lg backdrop-blur-sm hover:shadow-lg transform hover:scale-105 transition-all duration-200 w-full sm:w-auto sm:min-w-[200px]"
                   onClick={() => {
                     const gallerySection = document.querySelector('#gallery-section');
                     if (gallerySection) {
