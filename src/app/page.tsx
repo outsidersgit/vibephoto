@@ -1555,6 +1555,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
       {!session ? (
+        <>
         <section className="relative h-screen w-full overflow-hidden" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
           {/* Background Image */}
           <div
@@ -1765,6 +1766,7 @@ export default function HomePage() {
             </Button>
           </div>
         </section>
+        </>
       ) : (
         <>
           <section className="relative py-6 bg-gradient-to-b from-gray-50 to-white">
