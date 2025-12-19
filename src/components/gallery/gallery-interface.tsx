@@ -938,7 +938,7 @@ export function GalleryInterface({
                 </h3>
                 <p className="text-gray-600 mb-6" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
                   {activeTab === 'generated' ? 'Comece gerando fotos com IA para construir sua galeria' :
-                   activeTab === 'edited' ? 'Edite suas fotos existentes com nosso Editor IA' :
+                   activeTab === 'edited' ? 'Edite suas fotos existentes com nosso Studio IA' :
                    'Crie vídeos incríveis a partir de suas fotos'}
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-4">

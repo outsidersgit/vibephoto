@@ -1213,8 +1213,8 @@ function NavigationSteps() {
     },
     {
       id: 3,
-      title: 'Editor IA',
-      description: 'Quer ajustar algo ou criar do zero? Acesse o Editor IA e explore. Gere fotos únicas, de pessoas fictícias, editoriais, vitrines de moda, postagens ou outfits virtuais, tudo em um só lugar, com liberdade total para criar.',
+      title: 'Studio IA',
+      description: 'Quer ajustar algo ou criar do zero? Acesse o Studio IA e explore. Gere fotos únicas, de pessoas fictícias, editoriais, vitrines de moda, postagens ou outfits virtuais, tudo em um só lugar, com liberdade total para criar.',
       action: 'Editar Fotos',
       href: '/editor'
     },
@@ -2206,7 +2206,7 @@ export default function HomePage() {
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-semibold">
                   {activeToolModal === 'upscale' && 'Upscale IA - Demonstração'}
-                  {activeToolModal === 'editor' && 'Editor IA - Demonstração'}
+                  {activeToolModal === 'editor' && 'Studio IA - Demonstração'}
                   {activeToolModal === 'video' && 'Vídeos IA - Demonstração'}
                 </h2>
                 <button

@@ -29,7 +29,7 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-4 sm:py-6">
               <h1 className="text-3xl font-bold text-gray-900" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                Editor IA
+                Studio IA
               </h1>
             </div>
           </div>
@@ -47,7 +47,7 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
                   Créditos Insuficientes
                 </h2>
                 <p className="text-red-600 mb-4">
-                  Você precisa de pelo menos {creditsNeeded} créditos para usar o Editor IA.
+                  Você precisa de pelo menos {creditsNeeded} créditos para usar o Studio IA.
                 </p>
                 <a
                   href="/credits"
@@ -70,7 +70,7 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
 }
 
 export const metadata = {
-  title: 'Editor IA | VibePhoto',
-  description: 'Edite suas fotos com inteligência artificial de última geração. VibePhoto oferece edição precisa, blend inteligente e qualidade superior.',
-  keywords: ['editor de imagem', 'inteligência artificial', 'IA', 'edição de fotos', 'blend de imagens', 'vibephoto']
+  title: 'Studio IA | VibePhoto',
+  description: 'Crie e edite suas fotos com inteligência artificial de última geração. VibePhoto oferece criação, edição precisa, blend inteligente e qualidade superior.',
+  keywords: ['studio de imagem', 'inteligência artificial', 'IA', 'criação de fotos', 'edição de fotos', 'blend de imagens', 'vibephoto']
 }

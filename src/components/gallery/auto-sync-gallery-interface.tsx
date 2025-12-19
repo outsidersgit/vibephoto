@@ -2016,7 +2016,7 @@ export function AutoSyncGalleryInterface({
                               <a href="/generate" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>Gere Sua Primeira Foto</a>
                             </Button>
                             <Button asChild variant="outline" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                              <a href="/editor">Usar Editor IA</a>
+                              <a href="/editor">Usar Studio IA</a>
                             </Button>
                           </>
                         ) : (
