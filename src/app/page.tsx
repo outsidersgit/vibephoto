@@ -1764,7 +1764,6 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-        </>
       ) : (
         <>
           <section className="relative py-6 bg-gradient-to-b from-gray-50 to-white">
