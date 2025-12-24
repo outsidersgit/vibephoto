@@ -338,6 +338,43 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
     }
   }
 
+  // Helper: Convert base64 to File
+  const base64ToFile = (base64: string, filename: string): File => {
+    const arr = base64.split(',')
+    const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg'
+    const bstr = atob(arr[1])
+    let n = bstr.length
+    const u8arr = new Uint8Array(n)
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n)
+    }
+    return new File([u8arr], filename, { type: mime })
+  }
+
+  // Helper: Upload image to S3
+  const uploadImageToS3 = async (base64Image: string, filename: string): Promise<string> => {
+    const file = base64ToFile(base64Image, filename)
+    
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('type', 'images')
+    formData.append('category', 'images')
+    formData.append('useStandardizedStructure', 'true')
+
+    const uploadResponse = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!uploadResponse.ok) {
+      const errorData = await uploadResponse.json()
+      throw new Error(errorData.error || 'Falha no upload da imagem')
+    }
+
+    const uploadResult = await uploadResponse.json()
+    return uploadResult.data.url
+  }
+
   const handleSubmit = async () => {
     setLoading(true)
     loadingRef.current = true
@@ -377,16 +414,51 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         return
       }
 
-      // Prepare request data
+      // 🚀 Upload images to S3 BEFORE sending generation request
+      let sourceImageUrl: string | undefined
+      let lastFrameUrl: string | undefined
+
+      try {
+        // Upload source image if present
+        if (activeMode === 'image-to-video' && uploadedImage) {
+          console.log('📤 [VIDEO-GENERATION] Uploading source image to S3...')
+          sourceImageUrl = await uploadImageToS3(uploadedImage, `video-source-${Date.now()}.jpg`)
+          console.log('✅ [VIDEO-GENERATION] Source image uploaded:', sourceImageUrl)
+        }
+
+        // Upload last frame if present
+        if (uploadedLastFrame) {
+          console.log('📤 [VIDEO-GENERATION] Uploading last frame to S3...')
+          lastFrameUrl = await uploadImageToS3(uploadedLastFrame, `video-lastframe-${Date.now()}.jpg`)
+          console.log('✅ [VIDEO-GENERATION] Last frame uploaded:', lastFrameUrl)
+        }
+      } catch (uploadError) {
+        console.error('❌ [VIDEO-GENERATION] Image upload failed:', uploadError)
+        addToast({
+          type: 'error',
+          title: "Erro no upload de imagens",
+          description: uploadError instanceof Error ? uploadError.message : 'Erro desconhecido',
+        })
+        setLoading(false)
+        loadingRef.current = false
+        return
+      }
+
+      // Prepare request data with S3 URLs (not base64)
       const requestData = {
         ...formData,
-        image: activeMode === 'image-to-video' ? uploadedImage : undefined,
-        sourceImageUrl: activeMode === 'image-to-video' ? uploadedImage : undefined,
-        lastFrame: uploadedLastFrame || undefined,
+        sourceImageUrl,
+        lastFrame: lastFrameUrl,
+        // Remove base64 images from request
+        image: undefined,
         generateAudio: formData.generateAudio !== false
       }
 
-      console.log('🎬 [VIDEO-GENERATION] Creating video with data:', requestData)
+      console.log('🎬 [VIDEO-GENERATION] Creating video with data:', {
+        ...requestData,
+        sourceImageUrl: sourceImageUrl ? sourceImageUrl.substring(0, 50) + '...' : undefined,
+        lastFrame: lastFrameUrl ? lastFrameUrl.substring(0, 50) + '...' : undefined
+      })
 
       const response = await fetch('/api/ai/video/generate', {
         method: 'POST',

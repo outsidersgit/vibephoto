@@ -20,6 +20,13 @@ const nextConfig = {
       },
     ]
   },
+  // 🔧 Aumentar limite de payload para APIs (50MB para uploads)
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb',
+    },
+    responseLimit: false,
+  },
   turbopack: {
     rules: {
       '*.svg': {
