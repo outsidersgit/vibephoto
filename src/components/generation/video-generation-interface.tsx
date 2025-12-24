@@ -19,6 +19,7 @@ interface VideoGenerationInterfaceProps {
     plan: string
     creditsUsed: number
     creditsLimit: number
+    creditsBalance?: number // Créditos comprados
   }
   canUseCredits: boolean
   sourceImageUrl?: string

@@ -34,39 +34,8 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
   const activeTab = params.tab === 'video' ? 'video' : 'image'
   const sourceImage = params.sourceImage ? decodeURIComponent(params.sourceImage) : undefined
 
-  // Check if user has any ready models
-  if (models.length === 0 && activeTab !== 'video') {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900" style={{ fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif' }}>
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              Gere Fotos com IA
-            </h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 max-w-2xl">
-              Para gerar imagens personalizadas, primeiro crie um modelo com suas fotos. Em seguida, volte aqui para produzir variações exclusivas.
-            </p>
-          </div>
-        </header>
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="rounded-3xl bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Nenhum modelo encontrado
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-8 max-w-xl mx-auto leading-relaxed">
-              Crie um modelo com suas fotos para liberar a geração de imagens personalizadas. O processo leva apenas alguns minutos e garante resultados mais realistas.
-            </p>
-            <a
-              href="/models/create"
-              className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white font-semibold shadow-lg hover:shadow-xl transition"
-            >
-              Criar meu modelo agora
-            </a>
-          </div>
-        </main>
-      </div>
-    )
-  }
+  // Verificar se usuário tem modelos
+  const hasNoModels = models.length === 0
 
   const userPlan = ((session.user as any).plan || 'STARTER') as Plan
   const imageCreditsNeeded = getImageGenerationCost(1)
@@ -97,17 +66,30 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
 
             {/* Tabs - Mobile optimized */}
             <div className="flex border-b border-gray-200 dark:border-gray-700 -mx-4 sm:mx-0">
-              <a
-                href="/generate"
-                className={`flex-1 sm:flex-none py-3 sm:py-4 px-4 sm:px-6 text-xs sm:text-sm font-medium transition-colors text-center ${
-                  activeTab === 'image'
-                    ? 'text-[#667EEA] border-b-2 border-[#667EEA] bg-[#667EEA]/5 dark:bg-[#667EEA]/10'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-                style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
-              >
-                Imagens
-              </a>
+              {/* Tab de Imagens - desabilitada se não tiver modelos */}
+              {hasNoModels ? (
+                <div
+                  className="flex-1 sm:flex-none py-3 sm:py-4 px-4 sm:px-6 text-xs sm:text-sm font-medium text-center text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
+                  style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
+                  title="Crie um modelo para gerar imagens"
+                >
+                  Imagens
+                </div>
+              ) : (
+                <a
+                  href="/generate"
+                  className={`flex-1 sm:flex-none py-3 sm:py-4 px-4 sm:px-6 text-xs sm:text-sm font-medium transition-colors text-center ${
+                    activeTab === 'image'
+                      ? 'text-[#667EEA] border-b-2 border-[#667EEA] bg-[#667EEA]/5 dark:bg-[#667EEA]/10'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                  style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
+                >
+                  Imagens
+                </a>
+              )}
+              
+              {/* Tab de Vídeos - sempre disponível */}
               <a
                 href="/generate?tab=video"
                 className={`flex-1 sm:flex-none py-3 sm:py-4 px-4 sm:px-6 text-xs sm:text-sm font-medium transition-colors text-center ${
@@ -126,12 +108,38 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'image' ? (
-          <GenerationInterface
-            models={models}
-            selectedModelId={selectedModelId}
-            user={session.user}
-            canUseCredits={canUseImageCredits}
-          />
+          hasNoModels ? (
+            // Mensagem quando não tem modelos e tenta acessar tab de imagens
+            <div className="rounded-3xl bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                Nenhum modelo encontrado
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-8 max-w-xl mx-auto leading-relaxed">
+                Crie um modelo com suas fotos para liberar a geração de imagens personalizadas. O processo leva apenas alguns minutos e garante resultados mais realistas.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+                <a
+                  href="/models/create"
+                  className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white font-semibold shadow-lg hover:shadow-xl transition"
+                >
+                  Criar meu modelo agora
+                </a>
+                <a
+                  href="/generate?tab=video"
+                  className="inline-flex items-center justify-center px-6 py-3 rounded-full border-2 border-[#667EEA] text-[#667EEA] font-semibold hover:bg-[#667EEA]/5 transition"
+                >
+                  Gerar vídeos com IA
+                </a>
+              </div>
+            </div>
+          ) : (
+            <GenerationInterface
+              models={models}
+              selectedModelId={selectedModelId}
+              user={session.user}
+              canUseCredits={canUseImageCredits}
+            />
+          )
         ) : (
           <VideoGenerationInterface
             user={session.user}

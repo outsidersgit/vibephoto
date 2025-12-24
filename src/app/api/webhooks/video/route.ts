@@ -412,12 +412,13 @@ export async function POST(request: NextRequest) {
           webhookStatus: replicateStatus
         }
         
-        // Use updateVideoGenerationByJobId if we have jobId, otherwise update by id
+        // 🔒 CRITICAL: Do NOT save videoUrl yet - only after storage succeeds
+        // Save only status and metadata first, videoUrl will be saved after download/storage
         if (jobId) {
           updatedVideo = await updateVideoGenerationByJobId(
             jobId,
             internalStatus,
-            videoUrl,
+            undefined, // ❌ Don't save temporary URL yet
             errorMessage,
             undefined, // thumbnailUrl
             mergedMetadata // Include Replicate metadata
@@ -428,7 +429,7 @@ export async function POST(request: NextRequest) {
             where: { id: currentVideo.id },
             data: {
               status: internalStatus,
-              videoUrl: videoUrl || undefined,
+              // videoUrl: videoUrl || undefined, // ❌ Don't save temporary URL yet
               errorMessage: errorMessage || undefined,
               metadata: mergedMetadata,
               updatedAt: new Date()
@@ -646,17 +647,23 @@ export async function POST(request: NextRequest) {
             // Thumbnail is optional, continue without it
           }
 
-          // CRITICAL: Update database with video URL (permanent if storage succeeded, temporary if it failed)
-          // This ensures the frontend can at least show the video even if storage fails
-          const videoUrlToSave = storageResult.success && storageResult.videoUrl 
-            ? storageResult.videoUrl  // Permanent URL from storage
-            : videoUrl  // Temporary URL from Replicate (fallback)
+          // 🔒 CRITICAL: ONLY save permanent URL from storage
+          // If storage failed, mark as FAILED - DO NOT save temporary Replicate URLs
+          if (!storageResult.success || !storageResult.videoUrl) {
+            throw new Error(`Storage failed: ${storageResult.error || 'No permanent URL generated'}`)
+          }
+          
+          const videoUrlToSave = storageResult.videoUrl  // ✅ ONLY permanent URL from storage
           
           const isPermanentUrl = videoUrlToSave.includes('amazonaws.com') || 
                                 videoUrlToSave.includes('cloudfront.net') ||
                                 videoUrlToSave.includes('s3')
           
-          console.log(`💾 [WEBHOOK_VIDEO] Updating database with ${isPermanentUrl ? 'PERMANENT' : 'TEMPORARY'} URL: ${videoUrlToSave.substring(0, 100)}...`)
+          if (!isPermanentUrl) {
+            throw new Error(`Generated URL is not permanent: ${videoUrlToSave}`)
+          }
+          
+          console.log(`💾 [WEBHOOK_VIDEO] Updating database with PERMANENT URL: ${videoUrlToSave.substring(0, 100)}...`)
           
           // Update video with URL (permanent or temporary), thumbnail, status COMPLETED, and metadata
           // Use transaction to ensure atomicity
@@ -720,10 +727,10 @@ export async function POST(request: NextRequest) {
                     ? Math.round(replicateMetadata.metrics.total_time * 1000) // Convert to milliseconds
                     : null
                   
-                  // Build update data based on whether storage succeeded
+                  // Build update data with ONLY permanent URL
                   const updateData: any = {
                     status: VideoStatus.COMPLETED,
-                    videoUrl: videoUrlToSave, // Use permanent URL if available, otherwise temporary
+                    videoUrl: videoUrlToSave, // ✅ ONLY permanent URL from storage
                     thumbnailUrl: finalThumbnailUrl || undefined,
                     processingCompletedAt: completedAt ? new Date(completedAt) : new Date(),
                     progress: 100,
@@ -734,9 +741,9 @@ export async function POST(request: NextRequest) {
                     jobId: jobId || updatedVideo.jobId || undefined,
                     metadata: {
                       ...metadata,
-                      // Original Replicate data
-                      originalUrl: videoUrl,
-                      temporaryVideoUrl: videoUrl,
+                      // Original Replicate data (saved only in metadata, not as videoUrl)
+                      originalReplicateUrl: videoUrl,
+                      temporaryVideoUrl: videoUrl, // Keep for debugging
                       
                       // Replicate webhook metadata (complete response data)
                       replicate: {
@@ -766,39 +773,22 @@ export async function POST(request: NextRequest) {
                     }
                   }
                   
-                  // Only add storage fields if storage succeeded
-                  if (storageResult.success && isPermanentUrl) {
-                    updateData.storageProvider = 'aws'
-                    updateData.publicUrl = videoUrlToSave
-                    updateData.storageKey = storageResult.storageKey || storageKey || undefined
-                    updateData.storageBucket = storageBucket || undefined
-                    updateData.mimeType = storageResult.mimeType || 'video/mp4'
-                    updateData.sizeBytes = storageResult.sizeBytes ? BigInt(storageResult.sizeBytes) : undefined
-                    updateData.durationSec = durationSec
-                    
-                    // Add storage info to metadata
-                    updateData.metadata.storageProvider = 'aws'
-                    updateData.metadata.storageType = 'public'
-                    updateData.metadata.mimeType = storageResult.mimeType || 'video/mp4'
-                    updateData.metadata.fileExtension = 'mp4'
-                    updateData.metadata.stored = true
-                    updateData.metadata.sizeBytes = storageResult.sizeBytes
-                  } else {
-                    // Storage failed or URL is temporary - mark in metadata
-                    updateData.metadata.stored = false
-                    updateData.metadata.storageFailed = !storageResult.success
-                    updateData.metadata.storageError = storageResult.error || undefined
-                    updateData.metadata.isTemporaryUrl = true
-                    console.warn(`⚠️ [WEBHOOK_VIDEO] Storage failed, saving temporary URL. Error: ${storageResult.error}`)
-                    
-                    // Still save Replicate metadata even if storage failed
-                    updateData.metadata.replicate = {
-                      ...replicateMetadata,
-                      processingTime: replicateMetadata.metrics?.predict_time || null,
-                      totalTime: replicateMetadata.metrics?.total_time || null,
-                      streamUrl: replicateMetadata.urls?.stream || null
-                    }
-                  }
+                  // ✅ Storage succeeded - add all storage fields
+                  updateData.storageProvider = 'aws'
+                  updateData.publicUrl = videoUrlToSave
+                  updateData.storageKey = storageResult.storageKey || storageKey || undefined
+                  updateData.storageBucket = storageBucket || undefined
+                  updateData.mimeType = storageResult.mimeType || 'video/mp4'
+                  updateData.sizeBytes = storageResult.sizeBytes ? BigInt(storageResult.sizeBytes) : undefined
+                  updateData.durationSec = durationSec
+                  
+                  // Add storage info to metadata
+                  updateData.metadata.storageProvider = 'aws'
+                  updateData.metadata.storageType = 'public'
+                  updateData.metadata.mimeType = storageResult.mimeType || 'video/mp4'
+                  updateData.metadata.fileExtension = 'mp4'
+                  updateData.metadata.stored = true
+                  updateData.metadata.sizeBytes = storageResult.sizeBytes
                   
                   await tx.videoGeneration.update({
                     where: { id: updatedVideo.id },
@@ -849,27 +839,66 @@ export async function POST(request: NextRequest) {
             }
         } catch (storageError) {
           console.error('❌ Error storing video permanently:', storageError)
-          // Update status to COMPLETED even if storage fails (use temporary URL)
+          
+          // 🔒 CRITICAL: Mark video as FAILED if storage fails
+          // DO NOT save temporary Replicate URLs
           try {
-            await updateVideoGenerationByJobId(
-              jobId,
-              VideoStatus.COMPLETED,
-              videoUrl, // Use temporary URL
-              undefined,
-              undefined,
-              {
-                temporaryVideoUrl: videoUrl,
-                storageError: true,
-                storageErrorDetails: storageError instanceof Error ? storageError.message : String(storageError),
-                processedAt: new Date().toISOString(),
-                stored: false
+            await prisma.videoGeneration.update({
+              where: { id: updatedVideo.id },
+              data: {
+                status: 'FAILED',
+                errorMessage: `Storage failed: ${storageError instanceof Error ? storageError.message : String(storageError)}`,
+                metadata: {
+                  ...((updatedVideo.metadata as any) || {}),
+                  storageError: true,
+                  storageErrorDetails: storageError instanceof Error ? storageError.message : String(storageError),
+                  temporaryVideoUrl: videoUrl,
+                  failedAt: new Date().toISOString()
+                }
               }
-            )
+            })
+            
+            console.error(`⚠️ [WEBHOOK_VIDEO] Video marked as FAILED due to storage error`)
+            
+            // Broadcast failure notification
+            const userId = updatedVideo.user?.id || updatedVideo.userId
+            try {
+              await broadcastVideoStatusChange(
+                updatedVideo.id,
+                userId,
+                'FAILED',
+                {
+                  errorMessage: 'Falha ao armazenar vídeo'
+                }
+              )
+              
+              await broadcastNotification(
+                userId,
+                'Falha na Geração de Vídeo',
+                'Não foi possível armazenar seu vídeo. Você não foi cobrado por esta tentativa.',
+                'error'
+              )
+            } catch (broadcastError) {
+              console.error('⚠️ Failed to broadcast storage failure:', broadcastError)
+            }
+            
+            // Return error response
+            return NextResponse.json({
+              success: false,
+              videoId: updatedVideo.id,
+              status: 'FAILED',
+              error: `Storage failed: ${storageError instanceof Error ? storageError.message : String(storageError)}`,
+              message: 'Video generation completed but storage failed'
+            })
+            
           } catch (updateError) {
             console.error(`❌ Failed to update video status after storage error:`, updateError)
-            // CRITICAL: Don't return 500 - return 200 to prevent infinite retries
-            // The video URL is already saved in the first update, so we can acknowledge
-            console.error(`⚠️ Could not update video status but video URL is already saved`)
+            // CRITICAL: Return 200 OK to prevent infinite retries
+            return NextResponse.json({
+              success: false,
+              error: 'Storage failed and could not update status',
+              message: 'Error logged but webhook acknowledged to prevent retries'
+            })
           }
         }
         
