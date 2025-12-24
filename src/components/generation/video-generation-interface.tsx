@@ -528,54 +528,83 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
     if (!previewMedia?.url) return
 
     try {
+      // Generate filename
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-      const cleanUrl = previewMedia.url.split('?')[0]
-      let extension = 'mp4'
+      const filename = `vibephoto-video-${timestamp}.mp4`
 
+      // Try different download methods (same as modal de galeria)
+      let downloadSuccess = false
+
+      // Method 1: Direct download from CloudFront (fastest)
       try {
-        const urlObj = new URL(previewMedia.url)
-        const urlExt = urlObj.pathname.split('.').pop()
-        if (urlExt && urlExt.length <= 5) {
-          extension = urlExt
-        }
-      } catch {
-        const urlExt = cleanUrl.split('.').pop()
-        if (urlExt && urlExt.length <= 5) {
-          extension = urlExt
+        const link = document.createElement('a')
+        link.href = previewMedia.url
+        link.download = filename
+        link.setAttribute('download', filename)
+        link.setAttribute('target', '_blank')
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        downloadSuccess = true
+        console.log('✅ [VIDEO_GENERATION] Direct download initiated')
+      } catch (directError) {
+        console.log('⚠️ [VIDEO_GENERATION] Direct download failed, trying fetch:', directError)
+      }
+
+      // Method 2: Fetch with CORS (fallback)
+      if (!downloadSuccess) {
+        try {
+          const response = await fetch(previewMedia.url, {
+            mode: 'cors',
+            headers: {
+              'Accept': 'video/mp4, video/*'
+            }
+          })
+
+          if (!response.ok) throw new Error(`HTTP ${response.status}`)
+
+          const blob = await response.blob()
+          const url = URL.createObjectURL(blob)
+
+          const link = document.createElement('a')
+          link.href = url
+          link.download = filename
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(url)
+
+          downloadSuccess = true
+          console.log('✅ [VIDEO_GENERATION] Fetch download completed')
+        } catch (fetchError) {
+          console.log('⚠️ [VIDEO_GENERATION] Fetch download failed:', fetchError)
         }
       }
 
-      const proxyResponse = await fetch('/api/download-image', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          videoUrl: previewMedia.url, // Use videoUrl instead of imageUrl for videos
-          filename: `vibephoto-video-${timestamp}.${extension}`
+      // Method 3: Open in new tab (ultimate fallback)
+      if (!downloadSuccess) {
+        console.log('⚠️ [VIDEO_GENERATION] All methods failed, opening in new tab')
+        window.open(previewMedia.url, '_blank')
+      }
+
+      // Show success feedback
+      if (downloadSuccess) {
+        addToast({
+          type: 'success',
+          title: 'Download iniciado',
+          description: 'O vídeo está sendo baixado.'
         })
-      })
-
-      if (!proxyResponse.ok) {
-        throw new Error(`Failed to download preview: ${proxyResponse.status}`)
       }
 
-      const blob = await proxyResponse.blob()
-      const downloadUrl = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = downloadUrl
-      link.download = `vibephoto-video-${timestamp}.${extension}`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(downloadUrl)
     } catch (error) {
-      console.error('❌ [VIDEO_GENERATION] Failed to download preview:', error)
+      console.error('❌ [VIDEO_GENERATION] All download methods failed:', error)
       addToast({
         type: 'error',
         title: 'Falha no download',
-        description: 'Não foi possível baixar o vídeo gerado. Tente novamente.'
+        description: 'Não foi possível baixar o vídeo. Tente novamente.'
       })
+      // Ultimate fallback: open URL directly
+      window.open(previewMedia.url, '_blank')
     }
   }, [previewMedia, addToast])
 

@@ -237,53 +237,73 @@ export function VideoModal({ video, onClose, onDelete }: VideoModalProps) {
   }
 
   const handleDownload = async () => {
-    if (video.videoUrl) {
+    if (!video.videoUrl) return
+
+    try {
+      // Generate filename
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '')
+      const promptSlug = video.prompt?.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_') || 'video'
+      const filename = `vibephoto_video_${promptSlug}_${timestamp}.mp4`
+
+      // Try different download methods (same approach as image modal)
+      let downloadSuccess = false
+
+      // Method 1: Try direct download from CloudFront (fastest)
       try {
-        // Mostrar indicador de download - vídeo completo só baixa quando solicitado
-        const downloadButton = document.querySelector('[aria-label="Baixar vídeo"], [title="Baixar vídeo"]')
-        if (downloadButton) {
-          (downloadButton as HTMLElement).style.opacity = '0.5'
-          ;(downloadButton as HTMLElement).style.pointerEvents = 'none'
+        const link = document.createElement('a')
+        link.href = video.videoUrl
+        link.download = filename
+        link.setAttribute('download', filename)
+        link.setAttribute('target', '_blank')
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        downloadSuccess = true
+        console.log('✅ [VIDEO_MODAL] Direct download initiated')
+      } catch (directError) {
+        console.log('⚠️ [VIDEO_MODAL] Direct download failed, trying fetch:', directError)
+      }
+
+      // Method 2: Fetch with CORS (fallback)
+      if (!downloadSuccess) {
+        try {
+          const response = await fetch(video.videoUrl, {
+            mode: 'cors',
+            headers: {
+              'Accept': 'video/mp4, video/*'
+            }
+          })
+
+          if (!response.ok) throw new Error(`HTTP ${response.status}`)
+
+          const blob = await response.blob()
+          const url = window.URL.createObjectURL(blob)
+
+          const link = document.createElement('a')
+          link.href = url
+          link.download = filename
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(url)
+
+          downloadSuccess = true
+          console.log('✅ [VIDEO_MODAL] Fetch download completed')
+        } catch (fetchError) {
+          console.log('⚠️ [VIDEO_MODAL] Fetch download failed:', fetchError)
         }
+      }
 
-        // Usar proxy se estiver disponível, senão usar URL direta
-        const downloadUrl = isUsingProxy ? `/api/videos/${video.id}/stream` : video.videoUrl
-
-        // Baixar o vídeo completo apenas quando usuário solicitar
-        const response = await fetch(downloadUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'video/mp4',
-          },
-        })
-        
-        if (!response.ok) {
-          throw new Error('Erro ao baixar vídeo')
-        }
-
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        // Generate filename
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '')
-        const promptSlug = video.prompt?.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_') || 'video'
-        a.download = `vibephoto_video_${promptSlug}_${timestamp}.mp4`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-
-        // Restaurar botão
-        if (downloadButton) {
-          (downloadButton as HTMLElement).style.opacity = '1'
-          ;(downloadButton as HTMLElement).style.pointerEvents = 'auto'
-        }
-      } catch (error) {
-        console.error('Download failed:', error)
-        // Fallback to opening in new tab
+      // Method 3: Open in new tab (ultimate fallback)
+      if (!downloadSuccess) {
+        console.log('⚠️ [VIDEO_MODAL] All methods failed, opening in new tab')
         window.open(video.videoUrl, '_blank')
       }
+
+    } catch (error) {
+      console.error('❌ [VIDEO_MODAL] All download methods failed:', error)
+      // Ultimate fallback: open URL directly
+      window.open(video.videoUrl, '_blank')
     }
   }
 
