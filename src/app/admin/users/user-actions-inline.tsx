@@ -15,6 +15,11 @@ export default function UserActionsInline({ userId, email }: { userId: string; e
   const [userData, setUserData] = useState<any>(null)
   const [editLoading, setEditLoading] = useState(false)
   const [walletId, setWalletId] = useState('')
+  const [isInfluencer, setIsInfluencer] = useState(false)
+  const [couponCode, setCouponCode] = useState('')
+  const [commissionMode, setCommissionMode] = useState<'percentage' | 'fixed'>('percentage')
+  const [commissionPercentage, setCommissionPercentage] = useState('20')
+  const [commissionFixedValue, setCommissionFixedValue] = useState('')
 
   async function adjustCredits() {
     setLoading(true)
@@ -86,7 +91,17 @@ export default function UserActionsInline({ userId, email }: { userId: string; e
       if (!res.ok) throw new Error('Falha ao carregar dados do usuário')
       const data = await res.json()
       setUserData(data)
+      setIsInfluencer(!!data.influencer)
       setWalletId(data.influencer?.asaasWalletId || '')
+      setCouponCode(data.influencer?.couponCode || '')
+
+      if (data.influencer?.commissionPercentage) {
+        setCommissionMode('percentage')
+        setCommissionPercentage(String(data.influencer.commissionPercentage))
+      } else if (data.influencer?.commissionFixedValue) {
+        setCommissionMode('fixed')
+        setCommissionFixedValue(String(data.influencer.commissionFixedValue))
+      }
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -100,13 +115,52 @@ export default function UserActionsInline({ userId, email }: { userId: string; e
     try {
       const body: any = {}
 
-      // Se o usuário tem influencer e o walletId foi alterado
-      if (userData?.influencer && walletId && walletId !== userData.influencer.asaasWalletId) {
+      // Se está habilitando influencer
+      if (isInfluencer && !userData?.influencer) {
+        // Criar novo influencer - validações
         const walletRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        if (!walletId || !walletId.trim()) {
+          throw new Error('Wallet ID é obrigatório para criar influencer')
+        }
         if (!walletRegex.test(walletId)) {
           throw new Error('Informe um Wallet ID válido (formato UUID).')
         }
+        if (!couponCode || !couponCode.trim()) {
+          throw new Error('Código do cupom é obrigatório')
+        }
+
+        body.createInfluencer = true
         body.walletId = walletId.trim().toLowerCase()
+        body.couponCode = couponCode.trim().toUpperCase()
+
+        if (commissionMode === 'percentage') {
+          const percentage = parseFloat(commissionPercentage)
+          if (isNaN(percentage) || percentage <= 0 || percentage > 100) {
+            throw new Error('Percentual de comissão inválido (deve ser entre 0 e 100)')
+          }
+          body.commissionPercentage = percentage
+        } else {
+          const fixed = parseFloat(commissionFixedValue)
+          if (isNaN(fixed) || fixed <= 0) {
+            throw new Error('Valor fixo de comissão inválido')
+          }
+          body.commissionFixedValue = fixed
+        }
+      }
+      // Se já é influencer e está editando
+      else if (isInfluencer && userData?.influencer) {
+        const walletRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        if (!walletId || !walletId.trim()) {
+          throw new Error('Wallet ID é obrigatório')
+        }
+        if (!walletRegex.test(walletId)) {
+          throw new Error('Informe um Wallet ID válido (formato UUID).')
+        }
+
+        // Atualizar apenas se mudou
+        if (walletId !== userData.influencer.asaasWalletId) {
+          body.walletId = walletId.trim().toLowerCase()
+        }
       }
 
       if (Object.keys(body).length === 0) {
@@ -197,30 +251,63 @@ export default function UserActionsInline({ userId, email }: { userId: string; e
       )}
       {open === 'edit' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded p-4 w-full max-w-lg">
+          <div className="bg-white rounded p-4 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="font-semibold mb-3">Editar Usuário</div>
             {error && <div className="text-sm text-red-600 mb-2">{error}</div>}
             {editLoading && !userData && <div className="text-sm text-gray-500">Carregando…</div>}
             {userData && (
               <div className="space-y-4">
-                <div>
-                  <div className="text-sm text-gray-700 mb-1">Email</div>
-                  <div className="text-sm text-gray-900">{userData.email}</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-sm text-gray-700 mb-1">Email</div>
+                    <div className="text-sm text-gray-900">{userData.email}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-700 mb-1">Nome</div>
+                    <div className="text-sm text-gray-900">{userData.name || '—'}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm text-gray-700 mb-1">Nome</div>
-                  <div className="text-sm text-gray-900">{userData.name || '—'}</div>
-                </div>
-                {userData.influencer && (
-                  <>
-                    <div className="border-t pt-3">
-                      <div className="text-sm font-semibold text-gray-900 mb-3">Dados do Influencer</div>
-                      <div className="mb-3">
-                        <div className="text-sm text-gray-700 mb-1">Código do Cupom</div>
-                        <div className="text-sm text-gray-900">{userData.influencer.couponCode}</div>
+
+                <div className="border-t pt-3">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 mb-3">
+                    <input
+                      type="checkbox"
+                      checked={isInfluencer}
+                      onChange={(e) => setIsInfluencer(e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    <span className="font-semibold">Este usuário é influenciador/parceiro</span>
+                  </label>
+
+                  {isInfluencer && (
+                    <div className="space-y-3 pl-6">
+                      {!userData.influencer && (
+                        <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs text-blue-800 mb-3">
+                          ℹ️ Você está criando um novo perfil de influencer para este usuário
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-sm text-gray-700 mb-1">
+                          Código do Cupom {!userData.influencer && <span className="text-red-600">*</span>}
+                        </label>
+                        {userData.influencer ? (
+                          <div className="text-sm text-gray-900 font-mono">{userData.influencer.couponCode}</div>
+                        ) : (
+                          <input
+                            type="text"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                            placeholder="Ex: MARIA10"
+                            className="w-full border rounded-md px-3 py-2 text-sm uppercase"
+                          />
+                        )}
                       </div>
-                      <div className="mb-3">
-                        <label className="block text-sm text-gray-700 mb-1">Wallet ID do Asaas</label>
+
+                      <div>
+                        <label className="block text-sm text-gray-700 mb-1">
+                          Wallet ID do Asaas <span className="text-red-600">*</span>
+                        </label>
                         <input
                           type="text"
                           value={walletId}
@@ -234,30 +321,88 @@ export default function UserActionsInline({ userId, email }: { userId: string; e
                           Formato UUID válido necessário
                         </p>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <div className="text-sm text-gray-700 mb-1">Comissão (%)</div>
-                          <div className="text-sm text-gray-900">{userData.influencer.commissionPercentage || '—'}</div>
+
+                      {!userData.influencer && (
+                        <>
+                          <div>
+                            <label className="block text-sm text-gray-700 mb-2">Tipo de comissão</label>
+                            <div className="flex gap-4">
+                              <label className="flex items-center gap-2 text-sm text-gray-700">
+                                <input
+                                  type="radio"
+                                  value="percentage"
+                                  checked={commissionMode === 'percentage'}
+                                  onChange={() => setCommissionMode('percentage')}
+                                />
+                                Percentual (%)
+                              </label>
+                              <label className="flex items-center gap-2 text-sm text-gray-700">
+                                <input
+                                  type="radio"
+                                  value="fixed"
+                                  checked={commissionMode === 'fixed'}
+                                  onChange={() => setCommissionMode('fixed')}
+                                />
+                                Valor fixo (R$)
+                              </label>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-sm text-gray-700 mb-1">
+                                Percentual de comissão (%)
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="100"
+                                value={commissionPercentage}
+                                onChange={(e) => setCommissionPercentage(e.target.value)}
+                                className="w-full border rounded-md px-3 py-2 text-sm"
+                                disabled={commissionMode !== 'percentage'}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm text-gray-700 mb-1">
+                                Valor fixo (R$)
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={commissionFixedValue}
+                                onChange={(e) => setCommissionFixedValue(e.target.value)}
+                                className="w-full border rounded-md px-3 py-2 text-sm"
+                                disabled={commissionMode !== 'fixed'}
+                              />
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {userData.influencer && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <div className="text-sm text-gray-700 mb-1">Comissão (%)</div>
+                            <div className="text-sm text-gray-900">{userData.influencer.commissionPercentage || '—'}</div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-gray-700 mb-1">Comissão Fixa (R$)</div>
+                            <div className="text-sm text-gray-900">{userData.influencer.commissionFixedValue || '—'}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-sm text-gray-700 mb-1">Comissão Fixa (R$)</div>
-                          <div className="text-sm text-gray-900">{userData.influencer.commissionFixedValue || '—'}</div>
-                        </div>
-                      </div>
+                      )}
                     </div>
-                  </>
-                )}
-                {!userData.influencer && (
-                  <div className="text-sm text-gray-500 italic">
-                    Este usuário não é um influencer
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
             <div className="mt-4 flex items-center gap-2">
               <button
                 onClick={saveUser}
-                disabled={editLoading || !userData?.influencer}
+                disabled={editLoading}
                 className="rounded bg-blue-600 text-white px-4 py-2 text-sm hover:bg-blue-700 disabled:opacity-60"
               >
                 {editLoading ? 'Salvando…' : 'Salvar'}

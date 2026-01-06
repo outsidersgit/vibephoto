@@ -14,7 +14,11 @@ async function ensureAdmin() {
 const walletIdRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const UpdateInfluencerSchema = z.object({
-  walletId: z.string().regex(walletIdRegex, 'Wallet ID inválido (formato UUID esperado)').optional()
+  createInfluencer: z.boolean().optional(),
+  walletId: z.string().regex(walletIdRegex, 'Wallet ID inválido (formato UUID esperado)').optional(),
+  couponCode: z.string().optional(),
+  commissionPercentage: z.number().min(0).max(100).optional(),
+  commissionFixedValue: z.number().min(0).optional()
 })
 
 export async function PUT(
@@ -35,7 +39,7 @@ export async function PUT(
       )
     }
 
-    // Verificar se o usuário existe e tem perfil de influencer
+    // Verificar se o usuário existe
     const user = await prisma.user.findUnique({
       where: { id: params.id },
       include: { influencerProfile: true }
@@ -45,14 +49,87 @@ export async function PUT(
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
     }
 
+    const data = parsed.data
+
+    // CRIAR NOVO INFLUENCER
+    if (data.createInfluencer && !user.influencerProfile) {
+      if (!data.walletId || !data.couponCode) {
+        return NextResponse.json(
+          { error: 'Wallet ID e Código do Cupom são obrigatórios para criar influencer' },
+          { status: 400 }
+        )
+      }
+
+      const normalizedWallet = data.walletId.trim().toLowerCase()
+      const normalizedCoupon = data.couponCode.trim().toUpperCase()
+
+      // Verificar duplicação
+      const [existingWallet, existingCoupon] = await Promise.all([
+        prisma.influencer.findUnique({ where: { asaasWalletId: normalizedWallet } }),
+        prisma.influencer.findUnique({ where: { couponCode: normalizedCoupon } })
+      ])
+
+      if (existingWallet) {
+        return NextResponse.json(
+          { error: 'Este Wallet ID já está vinculado a outro influenciador' },
+          { status: 409 }
+        )
+      }
+
+      if (existingCoupon) {
+        return NextResponse.json(
+          { error: 'Este código de cupom já está em uso' },
+          { status: 409 }
+        )
+      }
+
+      // Validar comissão
+      if (data.commissionPercentage && data.commissionFixedValue) {
+        return NextResponse.json(
+          { error: 'Escolha apenas um tipo de comissão (percentual ou valor fixo)' },
+          { status: 400 }
+        )
+      }
+
+      if (!data.commissionPercentage && !data.commissionFixedValue) {
+        return NextResponse.json(
+          { error: 'Informe a comissão (percentual ou valor fixo)' },
+          { status: 400 }
+        )
+      }
+
+      // Criar influencer
+      const newInfluencer = await prisma.influencer.create({
+        data: {
+          userId: user.id,
+          couponCode: normalizedCoupon,
+          asaasWalletId: normalizedWallet,
+          commissionPercentage: data.commissionPercentage || 0,
+          commissionFixedValue: data.commissionFixedValue || null
+        }
+      })
+
+      console.log(`✅ [Admin] Novo influencer criado: ${normalizedCoupon} para usuário ${user.email}`)
+
+      return NextResponse.json({
+        success: true,
+        influencer: {
+          id: newInfluencer.id,
+          couponCode: newInfluencer.couponCode,
+          asaasWalletId: newInfluencer.asaasWalletId,
+          commissionPercentage: newInfluencer.commissionPercentage,
+          commissionFixedValue: newInfluencer.commissionFixedValue
+        }
+      })
+    }
+
+    // ATUALIZAR INFLUENCER EXISTENTE
     if (!user.influencerProfile) {
       return NextResponse.json(
         { error: 'Este usuário não é um influencer' },
         { status: 400 }
       )
     }
-
-    const data = parsed.data
 
     // Se está atualizando o walletId, verificar se já não está em uso
     if (data.walletId) {

@@ -49,6 +49,12 @@ export default async function AdminUsersPage({ searchParams }: SearchParams) {
         creditsBalance: true,
         createdAt: true,
         role: true,
+        influencerProfile: {
+          select: {
+            id: true,
+            couponCode: true
+          }
+        }
       }
     })
   ])
@@ -102,7 +108,16 @@ export default async function AdminUsersPage({ searchParams }: SearchParams) {
           <tbody>
             {usersList.map((u) => (
               <tr key={u.id} className="border-t">
-                <td className="px-3 py-2">{u.name || '-'}</td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span>{u.name || '-'}</span>
+                    {u.influencerProfile && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                        Influencer
+                      </span>
+                    )}
+                  </div>
+                </td>
                 <td className="px-3 py-2">{u.email}</td>
                 <td className="px-3 py-2">{u.plan || '-'}</td>
                 <td className="px-3 py-2">{u.subscriptionStatus || '-'}</td>
