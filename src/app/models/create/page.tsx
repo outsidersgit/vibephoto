@@ -434,6 +434,9 @@ export default function CreateModelPage() {
             <ModelCreationStep2HalfBody
               modelData={modelData}
               setModelData={setModelData}
+              onNextStep={handleNextStep}
+              onPrevStep={handlePrevStep}
+              canProceed={canProceedToNext()}
             />
           )}
 
@@ -441,6 +444,9 @@ export default function CreateModelPage() {
             <ModelCreationStep3FullBody
               modelData={modelData}
               setModelData={setModelData}
+              onNextStep={handleNextStep}
+              onPrevStep={handlePrevStep}
+              canProceed={canProceedToNext()}
             />
           )}
 
@@ -461,8 +467,8 @@ export default function CreateModelPage() {
           )}
         </div>
 
-        {/* Navigation */}
-        {currentStep < 4 && (
+        {/* Navigation - Only show for Step 1 (Steps 2 and 3 have their own navigation) */}
+        {currentStep === 1 && (
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">

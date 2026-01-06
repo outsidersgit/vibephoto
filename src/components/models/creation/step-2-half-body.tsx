@@ -4,16 +4,19 @@ import { useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Upload, X, AlertCircle, CheckCircle } from 'lucide-react'
+import { Upload, X, AlertCircle, CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react'
 
 interface ModelCreationStep2Props {
   modelData: {
     halfBodyPhotos: File[]
   }
   setModelData: (data: any) => void
+  onNextStep?: () => void
+  onPrevStep?: () => void
+  canProceed?: boolean
 }
 
-export function ModelCreationStep2HalfBody({ modelData, setModelData }: ModelCreationStep2Props) {
+export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep, onPrevStep, canProceed = true }: ModelCreationStep2Props) {
   const [dragActive, setDragActive] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
 
@@ -237,6 +240,37 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData }: ModelCre
 
         </CardContent>
       </Card>
+
+      {/* Navigation */}
+      {(onNextStep || onPrevStep) && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                {onPrevStep && (
+                  <Button variant="outline" onClick={onPrevStep}>
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Anterior
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-3">
+                {onNextStep && (
+                  <Button
+                    onClick={onNextStep}
+                    disabled={!canProceed}
+                    className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 text-white border-0"
+                  >
+                    Próximo
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Good and Bad Examples */}
       <Card className="bg-white border-gray-200">
