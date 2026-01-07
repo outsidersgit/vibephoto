@@ -17,6 +17,9 @@ import { useToast } from '@/hooks/use-toast'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
+import { useCreditBalance, useInvalidateCredits } from '@/hooks/useCredits'
+import { InsufficientCreditsBanner } from '@/components/ui/insufficient-credits-banner'
+import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
 
 export default function CreateModelPage() {
   const { data: session, status } = useSession()
@@ -25,6 +28,8 @@ export default function CreateModelPage() {
   
   // Hooks DEVEM vir antes de qualquer early return para não violar regras do React
   const isAuthorized = useAuthGuard()
+  const { data: creditBalance } = useCreditBalance()
+  const { invalidateBalance } = useInvalidateCredits()
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [modelCostInfo, setModelCostInfo] = useState<any>(null)
@@ -33,6 +38,7 @@ export default function CreateModelPage() {
   const [pendingModelProgress, setPendingModelProgress] = useState<number>(0)
   const [pendingModelMessage, setPendingModelMessage] = useState<string | null>(null)
   const [pendingModelError, setPendingModelError] = useState<string | null>(null)
+  const [showCreditPurchase, setShowCreditPurchase] = useState(false)
   const hasRedirectedRef = useRef(false)
 
   const [modelData, setModelData] = useState({
@@ -418,7 +424,18 @@ export default function CreateModelPage() {
         </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
+        {/* Banner de Créditos Insuficientes */}
+        {modelCostInfo && !modelCostInfo.canCreate && modelCostInfo.needsPayment && (
+          <div className="mb-6">
+            <InsufficientCreditsBanner
+              creditsNeeded={modelCostInfo.creditsRequired || 500}
+              currentCredits={creditBalance?.totalCredits || 0}
+              feature="generation"
+              variant="inline"
+              onBuyCredits={() => setShowCreditPurchase(true)}
+            />
+          </div>
+        )}
 
         {/* Step Content */}
         <div className="mb-8">
@@ -496,6 +513,16 @@ export default function CreateModelPage() {
           </Card>
         )}
       </div>
+
+      {/* PackageSelectorModal */}
+      <PackageSelectorModal
+        isOpen={showCreditPurchase}
+        onClose={() => setShowCreditPurchase(false)}
+        onSuccess={() => {
+          setShowCreditPurchase(false)
+          invalidateBalance()
+        }}
+      />
     </div>
     </SubscriptionGate>
     </>
