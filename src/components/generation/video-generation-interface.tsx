@@ -69,7 +69,11 @@ export function VideoGenerationInterface({
   
   // CRITICAL: Use hook to fetch credit balance (handles expired credits correctly)
   const { data: creditBalance } = useCreditBalance()
-  
+
+  // Calculate current credits from API or fallback
+  const actualCurrentCredits = creditBalance?.totalCredits ?? currentCredits ??
+    ((user.creditsLimit || 0) - (user.creditsUsed || 0) + (user.creditsBalance || 0))
+
   const previewContainerRef = useRef<HTMLDivElement | null>(null)
   
   // Auto-scroll to preview when it appears (same as image generation)
@@ -779,6 +783,18 @@ export function VideoGenerationInterface({
                   fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
                 }}
               />
+
+              {/* Banner de Créditos Insuficientes */}
+              {(!canUseCredits || insufficientCredits) && (
+                <div className="mt-3">
+                  <InsufficientCreditsBanner
+                    creditsNeeded={insufficientCredits?.needed || creditsNeeded}
+                    currentCredits={insufficientCredits?.current || actualCurrentCredits}
+                    feature="video"
+                    variant="inline"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Upload and Process Buttons - Side by side, smaller */}
@@ -881,14 +897,6 @@ export function VideoGenerationInterface({
             </div>
 
             {/* Error Display */}
-            {(!canUseCredits || insufficientCredits) && (
-              <InsufficientCreditsBanner
-                creditsNeeded={insufficientCredits?.needed || creditsNeeded}
-                currentCredits={insufficientCredits?.current || currentCredits}
-                feature="video"
-                variant="inline"
-              />
-            )}
             {errors.length > 0 && (
               <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
                 <div className="space-y-2">
@@ -1061,6 +1069,18 @@ export function VideoGenerationInterface({
                   fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
                 }}
               />
+
+              {/* Banner de Créditos Insuficientes */}
+              {(!canUseCredits || insufficientCredits) && (
+                <div className="mt-3">
+                  <InsufficientCreditsBanner
+                    creditsNeeded={insufficientCredits?.needed || creditsNeeded}
+                    currentCredits={insufficientCredits?.current || actualCurrentCredits}
+                    feature="video"
+                    variant="inline"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Upload and Process Buttons - Side by side */}
@@ -1163,14 +1183,6 @@ export function VideoGenerationInterface({
             </div>
 
             {/* Error Display */}
-          {(!canUseCredits || insufficientCredits) && (
-            <InsufficientCreditsBanner
-              creditsNeeded={insufficientCredits?.needed || creditsNeeded}
-              currentCredits={insufficientCredits?.current || currentCredits}
-              feature="video"
-              variant="inline"
-            />
-          )}
           {errors.length > 0 && (
               <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
                 <div className="space-y-2">

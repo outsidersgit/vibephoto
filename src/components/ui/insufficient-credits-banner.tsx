@@ -33,33 +33,21 @@ export function InsufficientCreditsBanner({
   // Variante Inline (para exibir dentro da página de geração)
   if (variant === 'inline') {
     return (
-      <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg p-4 shadow-sm">
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0">
-            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-            </div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-base font-semibold text-red-900 mb-1">
-              Créditos Insuficientes
-            </h3>
-            <p className="text-sm text-red-700 mb-3">
-              Você precisa de <strong>{creditsNeeded} créditos</strong> para {featureName}, mas tem apenas <strong>{currentCredits} créditos</strong> disponíveis.
-            </p>
-            <p className="text-sm text-red-600 mb-4">
-              💳 Compre pacotes de créditos para continuar gerando sem limites!
-            </p>
-            <Link href="/billing?tab=credits">
-              <Button
-                size="sm"
-                className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white font-medium shadow-md"
-              >
-                Comprar Créditos
-              </Button>
-            </Link>
-          </div>
+      <div className="bg-red-50 border border-red-300 rounded-lg p-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+          <p className="text-sm text-red-800">
+            <strong>Créditos insuficientes:</strong> Você tem {currentCredits} créditos, mas precisa de {creditsNeeded} para {featureName}.
+          </p>
         </div>
+        <Link href="/billing?tab=credits">
+          <Button
+            size="sm"
+            className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 whitespace-nowrap flex-shrink-0"
+          >
+            Comprar Créditos
+          </Button>
+        </Link>
       </div>
     )
   }
