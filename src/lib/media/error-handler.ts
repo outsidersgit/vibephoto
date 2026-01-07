@@ -72,103 +72,103 @@ const ERROR_PATTERNS = {
 const USER_FRIENDLY_MESSAGES: Record<MediaType, Record<MediaFailureReason, string>> = {
   [MediaType.IMAGE_GENERATION]: {
     [MediaFailureReason.SAFETY_BLOCKED]: 
-      '⚠️ Não foi possível gerar a imagem porque o conteúdo do prompt foi bloqueado pela política de segurança. Por favor, revise o texto, remova termos sensíveis e tente novamente. Seus créditos foram devolvidos automaticamente.',
+      '🚫 Conteúdo Bloqueado por Segurança\n\nSeu prompt contém termos que violam as políticas de conteúdo sensível do serviço de IA. Revise sua descrição, remova palavras ou conceitos inadequados/explícitos, e tente novamente com um prompt mais apropriado.\n\n✅ Seus créditos foram devolvidos automaticamente.',
     [MediaFailureReason.PROVIDER_ERROR]: 
-      'Houve um erro no serviço de geração de imagens. Seus créditos foram devolvidos. Por favor, tente novamente em alguns minutos.',
+      '⚠️ Erro no Serviço de IA\n\nO servidor de geração de imagens está temporariamente instável. Aguarde 1-2 minutos e tente novamente. Se o erro persistir, tente usar outro modelo ou entre em contato com o suporte.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.INTERNAL_ERROR]: 
-      'Ocorreu um erro interno ao processar sua imagem. Seus créditos foram devolvidos automaticamente. Por favor, tente novamente.',
+      '❌ Erro Interno do Sistema\n\nOcorreu uma falha no processamento interno (não relacionada ao seu prompt). Tente novamente. Se o problema continuar, reporte ao suporte técnico.\n\n✅ Seus créditos foram devolvidos automaticamente.',
     [MediaFailureReason.STORAGE_ERROR]: 
-      'A imagem foi gerada mas houve erro ao salvá-la. Seus créditos foram devolvidos. Por favor, tente novamente.',
+      '💾 Erro ao Salvar a Imagem\n\nA imagem foi gerada com sucesso, mas falhou ao ser salva no servidor. Tente gerar novamente - dessa vez será salva corretamente.\n\n✅ Seus créditos foram devolvidos (você não foi cobrado).',
     [MediaFailureReason.TIMEOUT_ERROR]: 
-      'O processamento da imagem excedeu o tempo limite. Seus créditos foram devolvidos. Por favor, tente novamente.',
+      '⏱️ Tempo Limite Excedido\n\nA geração demorou mais que o esperado e foi cancelada. Isso pode acontecer com prompts muito complexos. Simplifique sua descrição ou reduza o número de imagens.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.QUOTA_ERROR]: 
-      'O serviço de imagens atingiu o limite temporário. Seus créditos foram devolvidos. Por favor, aguarde alguns minutos.',
+      '📊 Limite Temporário Atingido\n\nO serviço atingiu o máximo de processamentos simultâneos. Aguarde 5-10 minutos e tente novamente quando houver capacidade disponível.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.NETWORK_ERROR]: 
-      'Erro de conexão com o serviço de imagens. Seus créditos foram devolvidos. Por favor, tente novamente.',
+      '🌐 Erro de Conexão\n\nFalha na comunicação com o servidor de IA. Verifique sua conexão e tente novamente. Se sua conexão estiver estável, o problema é temporário no serviço.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.INVALID_INPUT]: 
-      'Os parâmetros fornecidos são inválidos. Seus créditos foram devolvidos. Por favor, verifique suas configurações.',
+      '❓ Parâmetros Inválidos\n\nAs configurações escolhidas (resolução, quantidade, modelo) estão incompatíveis ou o prompt está vazio. Verifique todos os campos e tente novamente.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.UNKNOWN_ERROR]: 
-      'Ocorreu um erro inesperado. Seus créditos foram devolvidos automaticamente. Por favor, tente novamente.'
+      '❌ Erro Desconhecido\n\nOcorreu um erro inesperado que não identificamos. Tente novamente. Se repetir com o mesmo prompt, altere levemente o texto ou entre em contato com o suporte.\n\n✅ Seus créditos foram devolvidos automaticamente.'
   },
   [MediaType.IMAGE_EDIT]: {
     [MediaFailureReason.SAFETY_BLOCKED]: 
-      '⚠️ Não foi possível editar a imagem porque o conteúdo foi bloqueado pela política de segurança. Por favor, revise o prompt de edição e tente novamente. Seus créditos foram devolvidos.',
+      '🚫 Edição Bloqueada por Segurança\n\nO prompt de edição ou a imagem original contém conteúdo inadequado. Revise sua instrução de edição, use termos mais apropriados, ou escolha outra imagem para editar.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.PROVIDER_ERROR]: 
-      'Houve um erro no serviço de edição de imagens. Seus créditos foram devolvidos. Por favor, tente novamente.',
+      '⚠️ Erro no Serviço de Edição\n\nO servidor de edição de imagens está com problemas. Aguarde alguns minutos e tente novamente. Se persistir, use outra imagem ou ferramenta.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.INTERNAL_ERROR]: 
-      'Ocorreu um erro interno ao editar sua imagem. Seus créditos foram devolvidos automaticamente.',
+      '❌ Erro Interno ao Editar\n\nFalha no processamento da edição (não relacionada ao conteúdo). Tente novamente. Se continuar, tente com outra imagem ou reporte ao suporte.\n\n✅ Seus créditos foram devolvidos automaticamente.',
     [MediaFailureReason.STORAGE_ERROR]: 
-      'A imagem foi editada mas houve erro ao salvá-la. Seus créditos foram devolvidos.',
+      '💾 Erro ao Salvar Edição\n\nA edição foi concluída, mas não conseguimos salvar o resultado. Tente editar novamente - dessa vez será salva corretamente.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.TIMEOUT_ERROR]: 
-      'A edição da imagem excedeu o tempo limite. Seus créditos foram devolvidos.',
+      '⏱️ Edição Demorou Demais\n\nA edição foi cancelada por exceder o tempo limite. Use uma imagem menor ou uma instrução de edição mais simples.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.QUOTA_ERROR]: 
-      'O serviço de edição atingiu o limite temporário. Seus créditos foram devolvidos.',
+      '📊 Limite de Edições Atingido\n\nMuitas edições estão sendo processadas simultaneamente. Aguarde alguns minutos e tente novamente.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.NETWORK_ERROR]: 
-      'Erro de conexão com o serviço de edição. Seus créditos foram devolvidos.',
+      '🌐 Erro de Conexão na Edição\n\nProblema de comunicação com o servidor. Verifique sua internet e tente novamente em instantes.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.INVALID_INPUT]: 
-      'A imagem ou parâmetros fornecidos são inválidos. Seus créditos foram devolvidos.',
+      '❓ Imagem ou Prompt Inválido\n\nA imagem está corrompida, muito grande, ou o prompt de edição está vazio/inválido. Verifique a imagem e suas instruções.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.UNKNOWN_ERROR]: 
-      'Ocorreu um erro inesperado na edição. Seus créditos foram devolvidos automaticamente.'
+      '❌ Erro Desconhecido na Edição\n\nErro inesperado durante a edição. Tente com outra imagem ou prompt. Se repetir, entre em contato com o suporte.\n\n✅ Seus créditos foram devolvidos automaticamente.'
   },
   [MediaType.VIDEO_GENERATION]: {
     [MediaFailureReason.SAFETY_BLOCKED]: 
-      '⚠️ Não foi possível gerar o vídeo porque o conteúdo do prompt foi bloqueado pela política de segurança. Por favor, revise o texto, remova termos sensíveis e tente novamente. Seus créditos foram devolvidos automaticamente.',
+      '🚫 Conteúdo Bloqueado por Segurança\n\nSeu prompt contém termos que violam as políticas de conteúdo sensível do serviço de IA. Revise sua descrição, remova palavras ou conceitos inadequados/explícitos, e tente novamente com um prompt mais apropriado.\n\n✅ Seus créditos foram devolvidos automaticamente.',
     [MediaFailureReason.PROVIDER_ERROR]: 
-      'Houve um erro no serviço de geração de vídeo. Seus créditos foram devolvidos. Por favor, tente novamente em alguns minutos.',
+      '⚠️ Erro no Serviço de IA\n\nO servidor de geração de vídeos está temporariamente instável ou sobrecarregado. Aguarde 2-3 minutos e tente novamente. Se o erro persistir, entre em contato com o suporte.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.INTERNAL_ERROR]: 
-      'Ocorreu um erro interno ao processar seu vídeo. Seus créditos foram devolvidos automaticamente.',
+      '❌ Erro Interno do Sistema\n\nOcorreu uma falha no processamento interno da sua solicitação (não relacionada ao conteúdo do seu prompt). Tente novamente. Se o problema continuar, reporte ao suporte técnico.\n\n✅ Seus créditos foram devolvidos automaticamente.',
     [MediaFailureReason.STORAGE_ERROR]: 
-      'O vídeo foi gerado mas houve erro ao salvá-lo. Seus créditos foram devolvidos.',
+      '💾 Erro ao Salvar o Vídeo\n\nO vídeo foi gerado com sucesso pela IA, mas falhou ao ser salvo no nosso servidor de armazenamento. Tente gerar novamente - dessa vez o vídeo será salvo corretamente.\n\n✅ Seus créditos foram devolvidos (você não foi cobrado).',
     [MediaFailureReason.TIMEOUT_ERROR]: 
-      'O processamento do vídeo excedeu o tempo limite. Seus créditos foram devolvidos.',
+      '⏱️ Tempo Limite Excedido\n\nA geração do vídeo demorou mais que o esperado e foi cancelada automaticamente. Isso pode acontecer com prompts muito complexos ou imagens muito pesadas. Simplifique sua descrição ou use uma imagem menor.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.QUOTA_ERROR]: 
-      'O serviço de vídeo atingiu o limite temporário. Seus créditos foram devolvidos.',
+      '📊 Limite Temporário Atingido\n\nO serviço de vídeos atingiu o limite máximo de processamentos simultâneos. Aguarde 5-10 minutos e tente novamente quando houver capacidade disponível.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.NETWORK_ERROR]: 
-      'Erro de conexão com o serviço de vídeo. Seus créditos foram devolvidos.',
+      '🌐 Erro de Conexão\n\nHouve uma falha na comunicação com o servidor de geração de vídeos. Verifique sua conexão com a internet e tente novamente. Se sua conexão estiver estável, o problema é temporário no serviço.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.INVALID_INPUT]: 
-      'Os parâmetros fornecidos são inválidos. Seus créditos foram devolvidos.',
+      '❓ Parâmetros Inválidos\n\nAs configurações escolhidas (duração, proporção, qualidade) ou a imagem enviada estão em formato/resolução incompatível. Verifique se a imagem não está corrompida e se os parâmetros estão dentro dos limites permitidos.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.UNKNOWN_ERROR]: 
-      'Ocorreu um erro inesperado. Seus créditos foram devolvidos automaticamente.'
+      '❌ Erro Desconhecido\n\nOcorreu um erro inesperado que não pudemos identificar. Tente novamente. Se o erro se repetir com o mesmo prompt/imagem, tente alterar levemente o conteúdo ou entre em contato com o suporte.\n\n✅ Seus créditos foram devolvidos automaticamente.'
   },
   [MediaType.UPSCALE]: {
     [MediaFailureReason.SAFETY_BLOCKED]: 
-      '⚠️ Não foi possível fazer upscale porque o conteúdo foi bloqueado pela política de segurança. Seus créditos foram devolvidos.',
+      '🚫 Upscale Bloqueado\n\nA imagem contém conteúdo inadequado que viola as políticas de segurança. Escolha outra imagem para aumentar a resolução.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.PROVIDER_ERROR]: 
-      'Houve um erro no serviço de upscale. Seus créditos foram devolvidos.',
+      '⚠️ Erro no Serviço de Upscale\n\nO servidor de upscale está com problemas técnicos. Aguarde alguns minutos e tente novamente.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.INTERNAL_ERROR]: 
-      'Ocorreu um erro interno ao processar o upscale. Seus créditos foram devolvidos.',
+      '❌ Erro Interno no Upscale\n\nFalha no processamento (não relacionada à imagem). Tente novamente ou escolha outra imagem.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.STORAGE_ERROR]: 
-      'O upscale foi concluído mas houve erro ao salvar. Seus créditos foram devolvidos.',
+      '💾 Erro ao Salvar Upscale\n\nO upscale foi feito, mas não conseguimos salvar o resultado. Tente novamente - será salvo corretamente.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.TIMEOUT_ERROR]: 
-      'O upscale excedeu o tempo limite. Seus créditos foram devolvidos.',
+      '⏱️ Upscale Demorou Demais\n\nO processamento foi cancelado. Use uma imagem menor ou com menos detalhes, ou tente um upscale menor (ex: 2x ao invés de 4x).\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.QUOTA_ERROR]: 
-      'O serviço de upscale atingiu o limite temporário. Seus créditos foram devolvidos.',
+      '📊 Limite de Upscales Atingido\n\nMuitos upscales simultâneos. Aguarde 5-10 minutos e tente novamente.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.NETWORK_ERROR]: 
-      'Erro de conexão com o serviço de upscale. Seus créditos foram devolvidos.',
+      '🌐 Erro de Conexão\n\nProblema de comunicação com o servidor. Verifique sua internet e tente em instantes.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.INVALID_INPUT]: 
-      'A imagem fornecida é inválida para upscale. Seus créditos foram devolvidos.',
+      '❓ Imagem Inválida para Upscale\n\nA imagem está corrompida, já é muito grande, ou está em formato incompatível. Use uma imagem válida em JPG/PNG.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.UNKNOWN_ERROR]: 
-      'Ocorreu um erro inesperado no upscale. Seus créditos foram devolvidos.'
+      '❌ Erro Desconhecido no Upscale\n\nErro inesperado. Tente com outra imagem. Se repetir, entre em contato com o suporte.\n\n✅ Seus créditos foram devolvidos.'
   },
   [MediaType.MODEL_TRAINING]: {
     [MediaFailureReason.SAFETY_BLOCKED]: 
-      '⚠️ O treinamento foi bloqueado por conter conteúdo sensível. Seus créditos foram devolvidos.',
+      '🚫 Treinamento Bloqueado\n\nUma ou mais fotos contêm conteúdo inadequado. Revise as imagens, remova as problemáticas, e envie apenas fotos apropriadas para treinar seu modelo.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.PROVIDER_ERROR]: 
-      'Houve um erro no serviço de treinamento. Seus créditos foram devolvidos.',
+      '⚠️ Erro no Serviço de Treinamento\n\nO servidor de IA está com problemas. Aguarde alguns minutos e inicie o treinamento novamente.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.INTERNAL_ERROR]: 
-      'Ocorreu um erro interno durante o treinamento. Seus créditos foram devolvidos.',
+      '❌ Erro Interno no Treinamento\n\nFalha no processamento do seu modelo (não relacionada às fotos). Tente novamente. Se persistir, reporte ao suporte.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.STORAGE_ERROR]: 
-      'O modelo foi treinado mas houve erro ao salvar. Seus créditos foram devolvidos.',
+      '💾 Erro ao Salvar o Modelo\n\nO modelo foi treinado, mas não conseguimos salvá-lo. Inicie o treinamento novamente - dessa vez será salvo.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.TIMEOUT_ERROR]: 
-      'O treinamento excedeu o tempo limite. Seus créditos foram devolvidos.',
+      '⏱️ Treinamento Cancelado (Tempo Limite)\n\nO treinamento demorou demais. Use fotos menores (máx 1MB cada) ou reduza a quantidade de imagens. Qualidade importa mais que quantidade.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.QUOTA_ERROR]: 
-      'O serviço de treinamento atingiu o limite temporário. Seus créditos foram devolvidos.',
+      '📊 Limite de Treinamentos Atingido\n\nMuitos modelos sendo treinados agora. Aguarde 10-15 minutos e tente novamente.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.NETWORK_ERROR]: 
-      'Erro de conexão com o serviço de treinamento. Seus créditos foram devolvidos.',
+      '🌐 Erro de Conexão no Treinamento\n\nProblema ao enviar as fotos ou comunicar com o servidor. Verifique sua internet e tente novamente.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.INVALID_INPUT]: 
-      'As fotos fornecidas são inválidas para treinamento. Seus créditos foram devolvidos.',
+      '❓ Fotos Inválidas para Treinamento\n\nAs fotos estão corrompidas, muito pequenas (mín 512x512), em formato incompatível, ou são insuficientes (mín 10 fotos). Verifique os requisitos.\n\n✅ Seus créditos foram devolvidos.',
     [MediaFailureReason.UNKNOWN_ERROR]: 
-      'Ocorreu um erro inesperado no treinamento. Seus créditos foram devolvidos.'
+      '❌ Erro Desconhecido no Treinamento\n\nErro inesperado. Tente com outras fotos. Se repetir, entre em contato com o suporte técnico.\n\n✅ Seus créditos foram devolvidos.'
   }
 }
 
