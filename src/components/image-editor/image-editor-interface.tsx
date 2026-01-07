@@ -26,6 +26,7 @@ import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 import { useInvalidateCredits } from '@/hooks/useCredits'
 import { CREDIT_COSTS, getImageEditCost, EditorResolution } from '@/lib/credits/pricing'
 import { ProcessingMessage } from '@/components/ui/processing-message'
+import { notifyError } from '@/lib/errors'
 
 // Custos dinâmicos baseados na resolução
 const getEditorCost = (resolution: EditorResolution) => getImageEditCost(1, resolution)
@@ -481,7 +482,34 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   }, [addToast, openModalWithValidation, clearEditProcessingState])
   
   useRealtimeUpdates({
-    onGenerationStatusChange: handleGenerationStatusChange
+    onGenerationStatusChange: handleGenerationStatusChange,
+    onEditStatusChange: (editId, status, data) => {
+      console.log(`🔄 [IMAGE_EDITOR] SSE Edit update: ${editId} -> ${status}`, {
+        hasEditedUrl: !!data.editedImageUrl,
+        error: data.error,
+        currentEditId: currentEditIdRef.current
+      })
+
+      // Só processar se for a edição atual
+      if (currentEditIdRef.current !== editId) {
+        console.log('⚠️ [IMAGE_EDITOR] SSE update for different edit, ignoring')
+        return
+      }
+
+      if (status === 'COMPLETED' && data.editedImageUrl) {
+        console.log('✅ [IMAGE_EDITOR] SSE Edit completed, opening preview')
+        openModalWithValidation(data.editedImageUrl, data.editedImageUrl).catch((error) => {
+          console.error('❌ [IMAGE_EDITOR] Failed to handle edit preview via SSE:', error)
+        })
+      } else if (status === 'FAILED') {
+        console.error('❌ [IMAGE_EDITOR] SSE Edit failed:', data.error)
+        clearEditProcessingState()
+
+        // Usar notifyError para traduzir mensagem
+        const errorData = data.error ? { message: data.error, code: 'GENERATION_FAILED' } : new Error('Erro na edição')
+        notifyError(errorData, 'IMAGE_EDIT_SSE')
+      }
+    }
   })
 
   // Detect mobile on mount and resize

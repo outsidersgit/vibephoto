@@ -39,7 +39,7 @@ export function translateError(error: unknown): TranslatedError {
     return {
       userMessage: 'Algum dado foi preenchido em formato inválido. Revise e tente novamente.',
       severity: 'low',
-      toastDurationMs: 5000,
+      toastDurationMs: 8000,
       shouldPersist: false,
       debugMeta: {
         originalMessage: errorString,
@@ -54,7 +54,7 @@ export function translateError(error: unknown): TranslatedError {
     return {
       userMessage: 'Não foi possível gerar por causa das diretrizes de conteúdo. Ajuste o prompt e tente novamente.',
       severity: 'high',
-      toastDurationMs: 8000,
+      toastDurationMs: 10000,
       shouldPersist: false,
       cta: {
         label: 'Ver diretrizes',
@@ -73,7 +73,7 @@ export function translateError(error: unknown): TranslatedError {
     return {
       userMessage: 'Você não tem créditos suficientes para esta ação.',
       severity: 'critical',
-      toastDurationMs: 8000,
+      toastDurationMs: 10000,
       shouldPersist: true, // Modal de compra de créditos
       cta: {
         label: 'Comprar créditos',
@@ -92,7 +92,7 @@ export function translateError(error: unknown): TranslatedError {
     return {
       userMessage: 'Falha de conexão. Verifique sua internet e tente novamente.',
       severity: 'high',
-      toastDurationMs: 6000,
+      toastDurationMs: 8000,
       shouldPersist: false,
       debugMeta: {
         originalMessage: errorString,
@@ -107,7 +107,7 @@ export function translateError(error: unknown): TranslatedError {
     return {
       userMessage: 'Sua sessão expirou. Por favor, faça login novamente.',
       severity: 'critical',
-      toastDurationMs: 8000,
+      toastDurationMs: 10000,
       shouldPersist: true,
       cta: {
         label: 'Fazer login',
@@ -126,7 +126,7 @@ export function translateError(error: unknown): TranslatedError {
     return {
       userMessage: 'Você precisa de uma assinatura ativa para usar este recurso.',
       severity: 'critical',
-      toastDurationMs: 8000,
+      toastDurationMs: 10000,
       shouldPersist: true,
       cta: {
         label: 'Ver planos',
@@ -145,7 +145,7 @@ export function translateError(error: unknown): TranslatedError {
     return {
       userMessage: 'Erro ao processar seu modelo. Tente novamente ou entre em contato com o suporte.',
       severity: 'high',
-      toastDurationMs: 8000,
+      toastDurationMs: 10000,
       shouldPersist: false,
       cta: {
         label: 'Suporte',
@@ -164,7 +164,7 @@ export function translateError(error: unknown): TranslatedError {
     return {
       userMessage: 'A geração falhou e seus créditos não foram cobrados. Tente novamente.',
       severity: 'high',
-      toastDurationMs: 8000,
+      toastDurationMs: 10000,
       shouldPersist: false,
       debugMeta: {
         originalMessage: errorString,
@@ -178,7 +178,7 @@ export function translateError(error: unknown): TranslatedError {
   return {
     userMessage: 'Algo deu errado. Tente novamente em instantes ou entre em contato com o suporte.',
     severity: 'high',
-    toastDurationMs: 6000,
+    toastDurationMs: 8000,
     shouldPersist: false,
     cta: {
       label: 'Suporte',
