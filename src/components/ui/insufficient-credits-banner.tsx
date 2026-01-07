@@ -40,7 +40,7 @@ export function InsufficientCreditsBanner({
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
           <p className="text-sm text-red-800">
-            <strong>Créditos insuficientes:</strong> Você tem {currentCredits} créditos, mas precisa de {creditsNeeded} para {featureName}.
+            <strong>Créditos insuficientes</strong>
           </p>
         </div>
         {onBuyCredits ? (
@@ -75,15 +75,9 @@ export function InsufficientCreditsBanner({
           </div>
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-semibold text-red-900 mb-2">
+          <h3 className="text-lg font-semibold text-red-900 mb-4">
             Créditos Insuficientes
           </h3>
-          <p className="text-sm text-red-700 mb-1">
-            Você precisa de <strong>{creditsNeeded} créditos</strong> para {featureName}, mas tem apenas <strong>{currentCredits} créditos</strong> disponíveis.
-          </p>
-          <p className="text-sm text-red-600 mb-4">
-            💳 Compre pacotes de créditos para continuar gerando sem limites!
-          </p>
 
           <div className="flex gap-3">
             {onBuyCredits ? (
