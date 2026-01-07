@@ -26,6 +26,8 @@ interface VideoStatusData {
   videoUrl?: string
   thumbnailUrl?: string
   errorMessage?: string
+  failureReason?: string  // Categorized error reason for better UX
+  creditsRefunded?: boolean  // Whether credits were refunded
   estimatedTimeRemaining?: number
   duration: number
   aspectRatio: string
@@ -382,11 +384,38 @@ export function VideoProgress({
             </p>
           )}
 
-          {/* Erro */}
+          {/* Erro com mensagem específica e indicação de estorno */}
           {status?.errorMessage && (
-            <p className="text-sm text-red-600 bg-red-50 p-2 rounded">
-              ❌ {status.errorMessage}
-            </p>
+            <div className="space-y-2">
+              <div className="text-sm bg-red-50 border border-red-200 p-3 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-red-900 font-medium mb-1">
+                      {status.failureReason === 'SAFETY_BLOCKED' && '🚫 Conteúdo Bloqueado'}
+                      {status.failureReason === 'STORAGE_ERROR' && '💾 Erro de Armazenamento'}
+                      {status.failureReason === 'PROVIDER_ERROR' && '⚙️ Erro do Serviço'}
+                      {status.failureReason === 'TIMEOUT_ERROR' && '⏱️ Tempo Esgotado'}
+                      {status.failureReason === 'QUOTA_ERROR' && '📊 Limite Temporário'}
+                      {!status.failureReason && '❌ Erro na Geração'}
+                    </p>
+                    <p className="text-red-700 text-xs leading-relaxed">
+                      {status.errorMessage}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Indicação de estorno de créditos */}
+              {status.creditsRefunded && (
+                <div className="text-sm bg-green-50 border border-green-200 p-2 rounded flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <span className="text-green-800 text-xs">
+                    Seus créditos foram automaticamente devolvidos
+                  </span>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Botão de reprodução/download */}

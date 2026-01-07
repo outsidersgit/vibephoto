@@ -170,7 +170,9 @@ export async function POST(request: NextRequest) {
           where: { id: videoGeneration.id },
           data: {
             status: 'FAILED',
-            errorMessage: chargeResult.error || 'Falha ao debitar créditos'
+            errorMessage: chargeResult.error || 'Falha ao debitar créditos',
+            failureReason: 'INTERNAL_ERROR',
+            creditsUsed: 0 // No credits charged if debit failed
           }
         })
 
@@ -178,6 +180,15 @@ export async function POST(request: NextRequest) {
           error: chargeResult.error || 'Créditos insuficientes'
         }, { status: 402 })
       }
+
+      // 🔒 CRITICAL: Save creditsUsed to VideoGeneration for refund tracking
+      await prisma.videoGeneration.update({
+        where: { id: videoGeneration.id },
+        data: {
+          creditsUsed: creditsNeeded
+        }
+      })
+      console.log(`💳 [VIDEO-API] Credits debited and saved for video ${videoGeneration.id}: ${creditsNeeded}`)
 
       await prisma.usageLog.create({
         data: {

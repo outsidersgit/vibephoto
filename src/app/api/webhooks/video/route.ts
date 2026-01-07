@@ -7,6 +7,7 @@ import { generateVideoThumbnail } from '@/lib/video/thumbnail-generator'
 import { prisma } from '@/lib/db'
 import crypto from 'crypto'
 import { broadcastVideoStatusChange, broadcastNotification } from '@/lib/services/realtime-service'
+import { handleVideoFailure, categorizeVideoError, getUserFriendlyMessage } from '@/lib/video/error-handler'
 
 // Sistema de logging estruturado para debug
 interface FlowLog {
@@ -605,13 +606,49 @@ export async function POST(request: NextRequest) {
               }
             })
             
+            // 🔒 CRITICAL: Process storage error and refund credits
+            try {
+              const errorHandlingResult = await handleVideoFailure(
+                updatedVideo.id,
+                `Storage failed: ${errorMsg}`,
+                { userId }
+              )
+              
+              console.log(`✅ Storage error handled, credits refunded: ${errorHandlingResult.refunded}`)
+              
+              // Broadcast notification about storage failure and refund
+              try {
+                await broadcastVideoStatusChange(
+                  updatedVideo.id,
+                  userId,
+                  'FAILED',
+                  {
+                    errorMessage: errorHandlingResult.userMessage,
+                    failureReason: errorHandlingResult.failureReason,
+                    creditsRefunded: errorHandlingResult.refunded
+                  }
+                )
+                
+                await broadcastNotification(
+                  userId,
+                  '❌ Falha ao Armazenar Vídeo - Créditos Devolvidos',
+                  `${errorHandlingResult.userMessage}\n\nSeus créditos foram automaticamente devolvidos.`,
+                  'error'
+                )
+              } catch (broadcastError) {
+                console.error('⚠️ Failed to broadcast storage failure:', broadcastError)
+              }
+            } catch (errorHandlingError) {
+              console.error('❌ Error handling storage failure:', errorHandlingError)
+            }
+            
             // Return error response - video generation failed
             return NextResponse.json({
               success: false,
               videoId: updatedVideo.id,
               status: 'FAILED',
               error: `Storage failed: ${errorMsg}`,
-              message: 'Video generation completed but storage failed'
+              message: 'Video generation completed but storage failed - credits refunded'
             })
           }
 
@@ -843,11 +880,14 @@ export async function POST(request: NextRequest) {
           // 🔒 CRITICAL: Mark video as FAILED if storage fails
           // DO NOT save temporary Replicate URLs
           try {
+            const userId = updatedVideo.user?.id || updatedVideo.userId
+            const storageErrorMessage = `Storage failed: ${storageError instanceof Error ? storageError.message : String(storageError)}`
+            
             await prisma.videoGeneration.update({
               where: { id: updatedVideo.id },
               data: {
                 status: 'FAILED',
-                errorMessage: `Storage failed: ${storageError instanceof Error ? storageError.message : String(storageError)}`,
+                errorMessage: storageErrorMessage,
                 metadata: {
                   ...((updatedVideo.metadata as any) || {}),
                   storageError: true,
@@ -860,36 +900,65 @@ export async function POST(request: NextRequest) {
             
             console.error(`⚠️ [WEBHOOK_VIDEO] Video marked as FAILED due to storage error`)
             
-            // Broadcast failure notification
-            const userId = updatedVideo.user?.id || updatedVideo.userId
+            // 🔒 CRITICAL: Process storage error and refund credits
             try {
-              await broadcastVideoStatusChange(
+              const errorHandlingResult = await handleVideoFailure(
                 updatedVideo.id,
-                userId,
-                'FAILED',
-                {
-                  errorMessage: 'Falha ao armazenar vídeo'
-                }
+                storageErrorMessage,
+                { userId }
               )
               
-              await broadcastNotification(
-                userId,
-                'Falha na Geração de Vídeo',
-                'Não foi possível armazenar seu vídeo. Você não foi cobrado por esta tentativa.',
-                'error'
-              )
-            } catch (broadcastError) {
-              console.error('⚠️ Failed to broadcast storage failure:', broadcastError)
+              console.log(`✅ Storage error handled, credits refunded: ${errorHandlingResult.refunded}`)
+              
+              // Broadcast failure notification with refund info
+              try {
+                await broadcastVideoStatusChange(
+                  updatedVideo.id,
+                  userId,
+                  'FAILED',
+                  {
+                    errorMessage: errorHandlingResult.userMessage,
+                    failureReason: errorHandlingResult.failureReason,
+                    creditsRefunded: errorHandlingResult.refunded
+                  }
+                )
+                
+                const notificationMessage = errorHandlingResult.refunded
+                  ? `${errorHandlingResult.userMessage}\n\nSeus créditos foram automaticamente devolvidos.`
+                  : errorHandlingResult.userMessage
+                
+                await broadcastNotification(
+                  userId,
+                  '❌ Falha ao Armazenar Vídeo - Créditos Devolvidos',
+                  notificationMessage,
+                  'error'
+                )
+              } catch (broadcastError) {
+                console.error('⚠️ Failed to broadcast storage failure:', broadcastError)
+              }
+              
+              // Return error response
+              return NextResponse.json({
+                success: false,
+                videoId: updatedVideo.id,
+                status: 'FAILED',
+                error: storageErrorMessage,
+                message: 'Video generation completed but storage failed - credits refunded',
+                creditsRefunded: errorHandlingResult.refunded
+              })
+              
+            } catch (errorHandlingError) {
+              console.error('❌ Error handling storage failure:', errorHandlingError)
+              
+              // Fallback: still return error
+              return NextResponse.json({
+                success: false,
+                videoId: updatedVideo.id,
+                status: 'FAILED',
+                error: storageErrorMessage,
+                message: 'Video generation completed but storage failed'
+              })
             }
-            
-            // Return error response
-            return NextResponse.json({
-              success: false,
-              videoId: updatedVideo.id,
-              status: 'FAILED',
-              error: `Storage failed: ${storageError instanceof Error ? storageError.message : String(storageError)}`,
-              message: 'Video generation completed but storage failed'
-            })
             
           } catch (updateError) {
             console.error(`❌ Failed to update video status after storage error:`, updateError)
@@ -909,27 +978,83 @@ export async function POST(request: NextRequest) {
       } else if (internalStatus === VideoStatus.FAILED) {
         const userId = updatedVideo.user?.id || updatedVideo.userId
         console.log(`💥 Video generation failed for user ${userId}: ${updatedVideo.id}`)
+        console.log(`💥 Error message from Replicate: ${errorMessage}`)
         
-        // Broadcast failure notification via SSE
+        // 🔒 CRITICAL: Process error and refund credits automatically
         try {
-          await broadcastVideoStatusChange(
+          console.log(`🔧 Processing video failure with automatic refund...`)
+          
+          const errorHandlingResult = await handleVideoFailure(
             updatedVideo.id,
-            userId,
-            'FAILED',
-            {
-              errorMessage: updatedVideo.errorMessage || 'Unknown error'
-            }
+            errorMessage,
+            { userId }
           )
           
-          await broadcastNotification(
-            userId,
-            'Falha na Geração de Vídeo',
-            'Não foi possível gerar seu vídeo. Você não foi cobrado por esta tentativa.',
-            'error'
-          )
-        } catch (broadcastError) {
-          console.error('⚠️ Failed to broadcast video failure:', broadcastError)
-          // Don't fail the webhook - just log the broadcast error
+          console.log(`✅ Error handling completed:`, {
+            success: errorHandlingResult.success,
+            refunded: errorHandlingResult.refunded,
+            failureReason: errorHandlingResult.failureReason,
+            userMessage: errorHandlingResult.userMessage.substring(0, 100)
+          })
+          
+          // Broadcast failure notification via SSE with specific error message
+          try {
+            await broadcastVideoStatusChange(
+              updatedVideo.id,
+              userId,
+              'FAILED',
+              {
+                errorMessage: errorHandlingResult.userMessage,
+                failureReason: errorHandlingResult.failureReason,
+                creditsRefunded: errorHandlingResult.refunded
+              }
+            )
+            
+            // Notification title and message based on error type
+            const notificationTitle = errorHandlingResult.refunded 
+              ? '❌ Falha na Geração de Vídeo - Créditos Devolvidos'
+              : '❌ Falha na Geração de Vídeo'
+            
+            const notificationMessage = errorHandlingResult.refunded
+              ? `${errorHandlingResult.userMessage}\n\nSeus créditos foram automaticamente devolvidos.`
+              : errorHandlingResult.userMessage
+            
+            await broadcastNotification(
+              userId,
+              notificationTitle,
+              notificationMessage,
+              'error'
+            )
+            
+            console.log(`✅ Broadcasted detailed failure notification to user ${userId}`)
+          } catch (broadcastError) {
+            console.error('⚠️ Failed to broadcast video failure:', broadcastError)
+            // Don't fail the webhook - just log the broadcast error
+          }
+          
+        } catch (errorHandlingError) {
+          console.error('❌ Error handling video failure:', errorHandlingError)
+          
+          // Fallback: broadcast generic error
+          try {
+            await broadcastVideoStatusChange(
+              updatedVideo.id,
+              userId,
+              'FAILED',
+              {
+                errorMessage: 'Erro ao processar falha do vídeo'
+              }
+            )
+            
+            await broadcastNotification(
+              userId,
+              'Falha na Geração de Vídeo',
+              'Não foi possível gerar seu vídeo. Nossa equipe foi notificada.',
+              'error'
+            )
+          } catch (broadcastError) {
+            console.error('⚠️ Failed to broadcast video failure:', broadcastError)
+          }
         }
       }
 

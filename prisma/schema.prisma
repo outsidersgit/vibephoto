@@ -261,6 +261,11 @@ model AIModel {
   progress      Int  @default(0) // 0-100
   estimatedTime Int? // Estimated time remaining in minutes
 
+  // Cost and refund tracking
+  creditsUsed     Int     @default(0) @map("credits_used") // Credits consumed
+  creditsRefunded Boolean @default(false) @map("credits_refunded") // Refund idempotency
+  failureReason   String? @map("failure_reason") // Categorized training failure reason
+
   // Metadata
   totalPhotos  Int    @default(0)
   qualityScore Float? // 0-1 quality assessment
@@ -340,7 +345,12 @@ model Generation {
   metadata        Json?   @default("{}") // Additional metadata for context
 
   errorMessage            String?
+  failureReason           String? // Categorized error: SAFETY_BLOCKED, PROVIDER_ERROR, etc.
   estimatedCompletionTime DateTime?
+
+  // Cost and refund tracking
+  creditsUsed     Int     @default(0) // Credits consumed (for refund tracking)
+  creditsRefunded Boolean @default(false) // Whether credits were refunded (idempotency)
 
   // Metadata
   processingTime Int? // Time in milliseconds
@@ -394,12 +404,23 @@ model EditHistory {
   prompt           String
   metadata         Json    @default("{}")
 
+  // Processing status
+  status        String? @default("COMPLETED") // PENDING, PROCESSING, COMPLETED, FAILED
+  jobId         String? @map("job_id") // External job ID from AI provider
+  errorMessage  String? @map("error_message")
+  failureReason String? @map("failure_reason") // Categorized error: SAFETY_BLOCKED, etc.
+
+  // Cost and refund tracking
+  creditsUsed     Int     @default(0) @map("credits_used") // Credits consumed
+  creditsRefunded Boolean @default(false) @map("credits_refunded") // Refund idempotency
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([jobId])
   @@map("edit_history")
 }
 
@@ -884,9 +905,10 @@ model VideoGeneration {
   template       String? // Template used (optional)
 
   // Processing
-  status       VideoStatus @default(STARTING)
-  jobId        String?     @unique // Replicate job ID
-  errorMessage String?     @db.Text
+  status        VideoStatus @default(STARTING)
+  jobId         String?     @unique // Replicate job ID
+  errorMessage  String?     @db.Text
+  failureReason String? // Categorized error reason: SAFETY_BLOCKED, PROVIDER_ERROR, INTERNAL_ERROR, STORAGE_ERROR, etc.
 
   // Results
   videoUrl     String? @db.Text // Final video URL
@@ -903,9 +925,10 @@ model VideoGeneration {
   durationSec     Int? // Duration in seconds
 
   // Cost and usage
-  creditsUsed            Int  @default(0) // Credits consumed
-  estimatedTimeRemaining Int? @default(0) // Estimated time remaining
-  progress               Int? @default(0) // Processing progress (0-100%)
+  creditsUsed            Int     @default(0) // Credits consumed
+  creditsRefunded        Boolean @default(false) // Whether credits were refunded (for idempotency)
+  estimatedTimeRemaining Int?    @default(0) // Estimated time remaining
+  progress               Int?    @default(0) // Processing progress (0-100%)
 
   // Processing timestamps  
   processingStartedAt   DateTime? // When processing started
@@ -1041,3 +1064,4 @@ model CouponUsage {
   @@unique([couponId, userId, paymentId]) // Prevent duplicate usage
   @@map("coupon_usage")
 }
+

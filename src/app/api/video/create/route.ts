@@ -197,6 +197,7 @@ export async function POST(request: NextRequest) {
 
       console.log(`✅ Video generation ${videoGeneration.id} submitted with job ${providerResponse.jobId}`)
 
+      // 💰 CRITICAL: Debit credits and save amount to VideoGeneration for potential refund
       const chargeResult = await CreditManager.deductCredits(
         userId,
         creditsNeeded,
@@ -212,10 +213,29 @@ export async function POST(request: NextRequest) {
 
       if (!chargeResult.success) {
         console.error('❌ Failed to debit credits:', chargeResult.error)
+        
+        // Mark video as failed and don't charge
+        await prisma.videoGeneration.update({
+          where: { id: videoGeneration.id },
+          data: {
+            status: 'FAILED',
+            errorMessage: chargeResult.error || 'Failed to debit credits',
+            failureReason: 'INTERNAL_ERROR'
+          }
+        })
+        
         throw new Error(chargeResult.error || 'Failed to debit credits for video generation')
       }
 
-      console.log(`💳 Credits debited for video ${videoGeneration.id}: ${creditsNeeded}`)
+      // 🔒 CRITICAL: Save creditsUsed to VideoGeneration for refund tracking
+      await prisma.videoGeneration.update({
+        where: { id: videoGeneration.id },
+        data: {
+          creditsUsed: creditsNeeded
+        }
+      })
+
+      console.log(`💳 Credits debited and saved for video ${videoGeneration.id}: ${creditsNeeded}`)
 
       // Return success response with video info
       return NextResponse.json({

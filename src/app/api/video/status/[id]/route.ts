@@ -60,6 +60,8 @@ export async function GET(
         temporaryVideoUrl: temporaryVideoUrl, // Temporary URL from Replicate (for quick preview)
         thumbnailUrl: videoGeneration.thumbnailUrl,
         errorMessage: videoGeneration.errorMessage,
+        failureReason: videoGeneration.failureReason,  // Categorized error type
+        creditsRefunded: videoGeneration.creditsRefunded,  // Whether credits were refunded
         duration: videoGeneration.duration,
         aspectRatio: videoGeneration.aspectRatio,
         quality: videoGeneration.quality,
@@ -123,6 +125,8 @@ export async function GET(
           videoUrl: videoGeneration.videoUrl,
           thumbnailUrl: videoGeneration.thumbnailUrl,
           errorMessage: videoGeneration.errorMessage,
+          failureReason: videoGeneration.failureReason,  // Categorized error type
+          creditsRefunded: videoGeneration.creditsRefunded,  // Whether credits were refunded
           duration: videoGeneration.duration,
           aspectRatio: videoGeneration.aspectRatio,
           quality: videoGeneration.quality,
@@ -145,6 +149,8 @@ export async function GET(
       videoUrl: videoGeneration.videoUrl,
       thumbnailUrl: videoGeneration.thumbnailUrl,
       errorMessage: videoGeneration.errorMessage,
+      failureReason: videoGeneration.failureReason,  // Categorized error type
+      creditsRefunded: videoGeneration.creditsRefunded,  // Whether credits were refunded
       duration: videoGeneration.duration,
       aspectRatio: videoGeneration.aspectRatio,
       quality: videoGeneration.quality,
