@@ -351,13 +351,16 @@ export async function POST(request: NextRequest) {
     }
 
     // 🔒 CRITICAL: Always return 200 to prevent retries, but log if processing failed
-    return NextResponse.json({ 
+    const response = NextResponse.json({
       success: processingResult.success,
-      message: processingResult.success 
-        ? 'Webhook processed successfully' 
+      message: processingResult.success
+        ? 'Webhook processed successfully'
         : `Webhook acknowledged but processing failed: ${processingResult.error}`,
       timestamp: new Date().toISOString()
     })
+
+    console.log(`✅ [WEBHOOK_ASTRIA] Returning HTTP 200 OK - success: ${processingResult.success}`)
+    return response
   } catch (error) {
     console.error('❌ CRITICAL: Astria webhook error:', error)
     console.error('❌ Error details:', {
