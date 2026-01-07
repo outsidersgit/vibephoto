@@ -341,14 +341,14 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
                   {isActivating ? (
                     <>
                       <div className="w-3 h-3 mr-1.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Comprando...
+                      Gerando...
                     </>
                   ) : activationStatus === 'success' ? (
                     <>
-                      ✅ Comprado!
+                      ✅ Gerado!
                     </>
                   ) : userCredits >= pkg.price ? (
-                    'Comprar Agora'
+                    'Gerar Agora'
                   ) : (
                     'Créditos Insuficientes'
                   )}
