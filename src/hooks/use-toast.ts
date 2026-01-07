@@ -44,7 +44,8 @@ export function useToast(): ToastContextValue {
     const newToast: Toast = {
       ...toast,
       id,
-      duration: toast.duration || 5000
+      // Duração padrão: 10s para erros, 5s para outros tipos
+      duration: toast.duration || (toast.type === 'error' ? 10000 : 5000)
     }
 
     globalToasts = [...globalToasts, newToast]
@@ -117,7 +118,7 @@ export function showErrorToast(title: string, description?: string) {
     type: 'error',
     title,
     description,
-    duration: 6000
+    duration: 10000 // 10 segundos para dar tempo de ler mensagens de erro
   }
 
   globalToasts = [...globalToasts, newToast]

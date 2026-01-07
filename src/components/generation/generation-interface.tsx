@@ -10,6 +10,7 @@ import { useImageGeneration, useManualSync, useGenerationPolling } from '@/hooks
 import { notifyError, notifySuccess, notifyInfo } from '@/lib/errors'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { InsufficientCreditsBanner } from '@/components/ui/insufficient-credits-banner'
 import {
   Loader2,
   ChevronDown,
@@ -870,12 +871,12 @@ export function GenerationInterface({
               {/* Generate Button */}
               <div className="space-y-3">
                 {!canUseCredits && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-red-800 font-medium text-sm">Limite de Créditos Atingido</p>
-                    <p className="text-red-600 text-xs mt-1">
-                      Você usou todos os seus créditos este mês. Faça upgrade do seu plano para continuar gerando.
-                    </p>
-                  </div>
+                  <InsufficientCreditsBanner
+                    creditsNeeded={creditsNeeded}
+                    currentCredits={creditsRemaining}
+                    feature="generation"
+                    variant="inline"
+                  />
                 )}
 
                 <Button

@@ -3,6 +3,7 @@ import { ImageEditorInterface } from '@/components/image-editor/image-editor-int
 import { CreditManager } from '@/lib/credits/manager'
 import { getImageEditCost } from '@/lib/credits/pricing'
 import { Plan } from '@prisma/client'
+import { InsufficientCreditsBanner } from '@/components/ui/insufficient-credits-banner'
 
 interface ImageEditorPageProps {
   searchParams?: {
@@ -21,15 +22,32 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
   const affordability = await CreditManager.canUserAfford(userId, creditsNeeded, userPlan)
   const canUseCredits = affordability.canAfford
 
+  // Get current credits for display
+  const userCredits = await CreditManager.getUserCredits(userId, userPlan)
+  const currentCredits = userCredits.totalCredits
+
   // DEBUG: Log credit check for troubleshooting
   console.log('📊 [EDITOR PAGE] Credit check:', {
     userId,
     userEmail: session.user.email,
     userPlan,
     creditsNeeded,
+    currentCredits,
     canUseCredits,
     reason: affordability.reason
   })
+
+  // Se não tem créditos, exibir página de bloqueio
+  if (!canUseCredits) {
+    return (
+      <InsufficientCreditsBanner
+        creditsNeeded={creditsNeeded}
+        currentCredits={currentCredits}
+        feature="edit"
+        variant="fullpage"
+      />
+    )
+  }
 
   return (
     <>
@@ -47,32 +65,8 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
 
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {!canUseCredits ? (
-            <div className="bg-white rounded-lg border border-red-200 p-8 text-center">
-              <div className="mb-4">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">⚠️</span>
-                </div>
-                <h2 className="text-xl font-semibold text-red-800 mb-2">
-                  Créditos Insuficientes
-                </h2>
-                <p className="text-red-600 mb-4">
-                  Você precisa de pelo menos {creditsNeeded} créditos para usar o Studio IA.
-                </p>
-                <a
-                  href="/credits"
-                  className="inline-flex items-center px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  Comprar Créditos
-                </a>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Image Editor Interface */}
-              <ImageEditorInterface preloadedImageUrl={preloadedImageUrl} />
-            </>
-          )}
+          {/* Image Editor Interface */}
+          <ImageEditorInterface preloadedImageUrl={preloadedImageUrl} />
         </div>
       </div>
     </>

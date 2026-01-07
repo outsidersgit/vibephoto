@@ -182,7 +182,7 @@ export function VideoGallery({
               <Button onClick={clearFilters}>Limpar Filtros</Button>
             ) : (
               <Button asChild>
-                <a href="/generate">Gerar Primeira Foto</a>
+                <a href="/generate?tab=video">Gerar Primeiro Vídeo</a>
               </Button>
             )}
           </CardContent>

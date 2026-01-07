@@ -12,6 +12,8 @@ import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useInvalidateCredits, useCreditBalance } from '@/hooks/useCredits'
 import { ProcessingMessage } from '@/components/ui/processing-message'
+import { InsufficientCreditsBanner } from '@/components/ui/insufficient-credits-banner'
+import { notifyError } from '@/lib/errors'
 
 interface VideoGenerationInterfaceProps {
   user: {
@@ -51,6 +53,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [uploadedLastFrame, setUploadedLastFrame] = useState<string | null>(null)
   const [errors, setErrors] = useState<string[]>([])
+  const [insufficientCredits, setInsufficientCredits] = useState<{ needed: number; current: number } | null>(null)
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'video' } | null>(null)
   const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
   const [monitoringVideoId, setMonitoringVideoId] = useState<string | null>(null)
@@ -82,6 +85,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
     setUploadedImage(null)
     setUploadedLastFrame(null)
     setErrors([])
+    setInsufficientCredits(null)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -380,6 +384,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
     setLoading(true)
     loadingRef.current = true
     setErrors([])
+    setInsufficientCredits(null)
 
     try {
       // Validate prompt
@@ -404,12 +409,7 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
         ((user.creditsLimit || 0) - (user.creditsUsed || 0) + ((user as any).creditsBalance || 0))
 
       if (requiredCredits > remainingCredits) {
-        addToast({
-          type: 'error',
-          title: "Créditos insuficientes",
-          description: `Você precisa de ${requiredCredits} créditos, mas tem apenas ${remainingCredits}`,
-        })
-        setErrors([`Você precisa de ${requiredCredits} créditos, mas tem apenas ${remainingCredits}`])
+        setInsufficientCredits({ needed: requiredCredits, current: remainingCredits })
         setLoading(false)
         loadingRef.current = false
         return
@@ -873,6 +873,14 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
             </div>
 
             {/* Error Display */}
+            {insufficientCredits && (
+              <InsufficientCreditsBanner
+                creditsNeeded={insufficientCredits.needed}
+                currentCredits={insufficientCredits.current}
+                feature="video"
+                variant="inline"
+              />
+            )}
             {errors.length > 0 && (
               <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
                 <div className="space-y-2">
@@ -1147,6 +1155,14 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
             </div>
 
             {/* Error Display */}
+          {insufficientCredits && (
+            <InsufficientCreditsBanner
+              creditsNeeded={insufficientCredits.needed}
+              currentCredits={insufficientCredits.current}
+              feature="video"
+              variant="inline"
+            />
+          )}
           {errors.length > 0 && (
               <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
                 <div className="space-y-2">
