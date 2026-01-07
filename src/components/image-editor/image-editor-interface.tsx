@@ -34,11 +34,20 @@ const getEditorCost = (resolution: EditorResolution) => getImageEditCost(1, reso
 interface ImageEditorInterfaceProps {
   preloadedImageUrl?: string
   className?: string
+  canUseCredits?: boolean
+  creditsNeeded?: number
+  currentCredits?: number
 }
 
 type Operation = 'edit' | 'add' | 'remove' | 'style' | 'blend'
 
-export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEditorInterfaceProps) {
+export function ImageEditorInterface({
+  preloadedImageUrl,
+  className,
+  canUseCredits = true,
+  creditsNeeded = 0,
+  currentCredits = 0
+}: ImageEditorInterfaceProps) {
   // CRITICAL: Todos os hooks DEVEM ser chamados ANTES de qualquer early return
   // Violar esta regra causa erro React #310 (can't set state on unmounted component)
   const { data: session, status } = useSession()
@@ -610,6 +619,16 @@ export function ImageEditorInterface({ preloadedImageUrl, className }: ImageEdit
   }
 
   const handleSubmit = async () => {
+    // Check if user has enough credits
+    if (!canUseCredits) {
+      addToast({
+        title: "Créditos Insuficientes",
+        description: `Você precisa de ${creditsNeeded} créditos, mas tem apenas ${currentCredits}`,
+        type: "error"
+      })
+      return
+    }
+
     if (!images.length && !prompt.trim()) {
       addToast({
         title: "Erro",

@@ -37,18 +37,6 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
     reason: affordability.reason
   })
 
-  // Se não tem créditos, exibir página de bloqueio
-  if (!canUseCredits) {
-    return (
-      <InsufficientCreditsBanner
-        creditsNeeded={creditsNeeded}
-        currentCredits={currentCredits}
-        feature="edit"
-        variant="fullpage"
-      />
-    )
-  }
-
   return (
     <>
       <div className="min-h-screen bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
@@ -65,8 +53,23 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
 
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Banner de Créditos Insuficientes */}
+          {!canUseCredits && (
+            <InsufficientCreditsBanner
+              creditsNeeded={creditsNeeded}
+              currentCredits={currentCredits}
+              feature="edit"
+              variant="inline"
+            />
+          )}
+
           {/* Image Editor Interface */}
-          <ImageEditorInterface preloadedImageUrl={preloadedImageUrl} />
+          <ImageEditorInterface
+            preloadedImageUrl={preloadedImageUrl}
+            canUseCredits={canUseCredits}
+            creditsNeeded={creditsNeeded}
+            currentCredits={currentCredits}
+          />
         </div>
       </div>
     </>
