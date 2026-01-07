@@ -552,10 +552,6 @@ function BillingPageContent() {
                       </div>
                       <div className="flex items-start">
                         <span className="text-white mr-2">•</span>
-                        <span>Uso atual: {(session.user as any)?.creditsUsed ?? 0} / {(session.user as any)?.creditsLimit ?? 0} créditos</span>
-                      </div>
-                      <div className="flex items-start">
-                        <span className="text-white mr-2">•</span>
                         <span>Ciclo: {(session.user as any)?.billingCycle === 'YEARLY' ? 'Anual' : 'Mensal'}</span>
                       </div>
                       <div className="flex items-start">

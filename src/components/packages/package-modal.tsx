@@ -16,6 +16,7 @@ import { PackageConfigModal } from './package-config-modal'
 import { PackageProgressModal } from './package-progress-modal'
 import { useCreditBalance, useCreditPackages, useInvalidateCredits } from '@/hooks/useCredits'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
+import { notifyError, notifySuccess } from '@/lib/errors'
 
 interface Package {
   id: string
@@ -153,7 +154,8 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
     } catch (error) {
       console.error('Package generation error:', error)
       setActivationStatus('error')
-      setErrorMessage(error instanceof Error ? error.message : 'Erro ao gerar pacote')
+      notifyError(error, 'PACKAGE_GENERATION')
+      setErrorMessage('Erro ao gerar pacote')
       setIsActivating(false)
     }
   }

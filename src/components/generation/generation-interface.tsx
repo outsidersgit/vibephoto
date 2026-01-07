@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 import { useToast } from '@/hooks/use-toast'
 import { useImageGeneration, useManualSync, useGenerationPolling } from '@/hooks/useImageGeneration'
+import { notifyError, notifySuccess, notifyInfo } from '@/lib/errors'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -370,12 +371,7 @@ export function GenerationInterface({
     }
 
     if (showToast) {
-      addToast({
-        type: 'success',
-        title: 'Sucesso!',
-        description: 'Imagem processada e salva com sucesso',
-        duration: 4000
-      })
+      notifySuccess('Sucesso!', 'Imagem processada e salva com sucesso', 4000)
     }
 
     return true
@@ -419,13 +415,8 @@ export function GenerationInterface({
 
         // Show error message if failed
         if (status === 'FAILED') {
-          const errorMessage = data.errorMessage || 'Erro desconhecido na geração'
-          addToast({
-            type: 'error',
-            title: 'Falha na geração de imagem',
-            description: errorMessage,
-            duration: 6000
-          })
+          const errorData = data.errorMessage ? { message: data.errorMessage, code: 'GENERATION_FAILED' } : new Error('Erro desconhecido na geração')
+          notifyError(errorData, 'IMAGE_GENERATION_SSE')
           clearGenerationLock()
         }
       }
@@ -511,13 +502,8 @@ export function GenerationInterface({
     }
 
     if (payload.status === 'FAILED') {
-      const errorMessage = payload.errorMessage || 'Erro desconhecido na geração'
-      addToast({
-        type: 'error',
-        title: 'Falha na geração de imagem',
-        description: errorMessage,
-        duration: 6000
-      })
+      const errorData = payload.errorMessage ? { message: payload.errorMessage, code: 'GENERATION_FAILED' } : new Error('Erro desconhecido na geração')
+      notifyError(errorData, 'IMAGE_GENERATION_POLLING')
       clearGenerationLock()
     }
   }, [generationPolling.data, currentGeneration, handleGenerationPreview, addToast, clearGenerationLock])
@@ -555,11 +541,7 @@ export function GenerationInterface({
 
     setIsButtonLocked(true)
 
-    addToast({
-      type: 'info',
-      title: 'Processando...',
-      description: 'Sua imagem está sendo gerada'
-    })
+    notifyInfo('Processando...', 'Sua imagem está sendo gerada')
 
     // Log do prompt que será enviado
     console.log('🚀 [GENERATION] Starting generation with prompt:', {
@@ -652,13 +634,13 @@ export function GenerationInterface({
         userFriendlyTitle = 'Erro no serviço'
       }
       
-      // Usar toast em vez de alert para melhor UX
-      addToast({
-        type: 'error',
-        title: userFriendlyTitle,
-        description: userFriendlyMessage,
-        duration: 8000 // 8 segundos para ler mensagem completa
-      })
+      // Usar notifyError com informações do erro original para melhor tradução
+      const errorWithContext = {
+        message: userFriendlyMessage,
+        code: error?.code || 'GENERATION_ERROR',
+        statusCode: error?.status
+      }
+      notifyError(errorWithContext, 'IMAGE_GENERATION')
       clearGenerationLock()
     }
   }
@@ -767,13 +749,9 @@ export function GenerationInterface({
       URL.revokeObjectURL(downloadUrl)
     } catch (error) {
       console.error('❌ [GENERATION] Failed to download preview:', error)
-      addToast({
-        type: 'error',
-        title: 'Falha no download',
-        description: 'Não foi possível baixar a imagem gerada. Tente novamente.'
-      })
+      notifyError(error, 'IMAGE_DOWNLOAD')
     }
-  }, [previewMedia, addToast])
+  }, [previewMedia])
 
   useEffect(() => {
     return () => {

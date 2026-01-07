@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { configureErrorNotifications } from '@/lib/errors/notify'
 
 export interface Toast {
   id: string
@@ -24,6 +25,7 @@ interface ToastContextValue {
 // Global toast state
 let globalToasts: Toast[] = []
 const globalListeners: Set<() => void> = new Set()
+let isNotificationConfigured = false
 
 export function useToast(): ToastContextValue {
   const [, forceUpdate] = useState({})
@@ -46,7 +48,7 @@ export function useToast(): ToastContextValue {
     }
 
     globalToasts = [...globalToasts, newToast]
-    
+
     // Notify all listeners
     globalListeners.forEach(listener => listener())
 
@@ -69,6 +71,14 @@ export function useToast(): ToastContextValue {
     globalToasts = []
     globalListeners.forEach(listener => listener())
   }, [])
+
+  // CRITICAL: Configure error notification system once
+  useEffect(() => {
+    if (!isNotificationConfigured) {
+      configureErrorNotifications(addToast)
+      isNotificationConfigured = true
+    }
+  }, [addToast])
 
   return {
     toasts: globalToasts,
