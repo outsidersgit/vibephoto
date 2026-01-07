@@ -305,13 +305,24 @@ export async function handleMediaFailure(
     console.log(`💰 [handleMediaFailure] Refunding ${media.creditsUsed} credits to user ${media.userId}`)
 
     // a) Fazer estorno via CreditManager (ele já usa transação internamente)
+    // Mapear MediaType para CreditTransactionSource
+    const sourceMapping: Record<string, string> = {
+      'IMAGE_GENERATION': 'GENERATION',
+      'IMAGE_EDIT': 'EDIT',
+      'VIDEO_GENERATION': 'VIDEO',
+      'UPSCALE': 'UPSCALE',
+      'MODEL_TRAINING': 'TRAINING'
+    }
+    
+    const transactionSource = sourceMapping[mediaType] || 'REFUND'
+    
     const refundResult = await CreditManager.addCredits(
       media.userId,
       media.creditsUsed,
       `Estorno por falha em ${mediaType}: ${failureReason}`,
       {
         referenceId: mediaId,
-        refundSource: mediaType
+        refundSource: transactionSource
       }
     )
 
