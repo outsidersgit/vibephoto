@@ -86,17 +86,18 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
     // Production: Check subscriptionStatus AND subscriptionEndsAt
     // ALL plans (STARTER, PREMIUM, GOLD) are PAID
     // Access is controlled by subscriptionStatus === 'ACTIVE' OR (CANCELLED + subscriptionEndsAt in future)
+    // SPECIAL CASE: Influencers/users with credits but no subscription (manual access)
     let hasActiveSubscription = false
-    
+
     if (user.subscriptionStatus === 'ACTIVE') {
       hasActiveSubscription = true
     } else if (user.subscriptionStatus === 'CANCELLED' && user.subscriptionEndsAt) {
       // Verificar se subscriptionEndsAt está no futuro
-      const endsAtDate = user.subscriptionEndsAt instanceof Date 
-        ? user.subscriptionEndsAt 
+      const endsAtDate = user.subscriptionEndsAt instanceof Date
+        ? user.subscriptionEndsAt
         : new Date(user.subscriptionEndsAt)
       const now = new Date()
-      
+
       if (endsAtDate > now) {
         // Usuário cancelou mas ainda tem acesso até subscriptionEndsAt
         hasActiveSubscription = true
@@ -106,6 +107,12 @@ export async function getSubscriptionInfo(userId: string): Promise<SubscriptionI
         hasActiveSubscription = false
         console.log('[Subscription] User with CANCELLED subscription - access expired:', endsAtDate.toISOString())
       }
+    } else if (user.plan && user.plan !== 'STARTER') {
+      // SPECIAL CASE: User has a premium plan assigned (PREMIUM/GOLD) but no subscription
+      // This can happen for influencers, manual access, or promotional access
+      // Grant access based on plan assignment alone
+      hasActiveSubscription = true
+      console.log('[Subscription] User with premium plan but no active subscription - granting access:', user.plan)
     } else {
       // OVERDUE, EXPIRED, null, etc. - sem acesso
       hasActiveSubscription = false

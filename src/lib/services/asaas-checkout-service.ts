@@ -574,6 +574,17 @@ export async function createSubscriptionCheckout(
       paymentData.needsSplitRemoval = true
       console.log('🔄 [CHECKOUT] HYBRID coupon with FIRST_CYCLE split detected - will remove split after first payment')
     }
+
+    // CRITICAL: Se cupom DISCOUNT tem influencer associado, registrar no Payment
+    // Isso permite que o webhook saiba que precisa incrementar totalReferrals
+    if (validatedCoupon.type === 'DISCOUNT' && validatedCoupon.influencer) {
+      paymentData.influencerId = validatedCoupon.influencer.id
+      paymentData.referralCodeUsed = validatedCoupon.code
+      console.log('🎟️ [CHECKOUT] DISCOUNT coupon with influencer detected - saving influencer reference:', {
+        influencerId: validatedCoupon.influencer.id,
+        couponCode: validatedCoupon.code
+      })
+    }
   }
 
   const payment = await prisma.payment.create({
@@ -588,8 +599,20 @@ export async function createSubscriptionCheckout(
   }
 
   if (influencer) {
-    userUpdateData.referralCodeUsed = referralCode
+    userUpdateData.referralCodeUsed = referralCode || validatedCoupon?.code
     userUpdateData.referredByInfluencerId = influencer.id
+  }
+
+  // CRITICAL: Se cupom DISCOUNT tem influencer mas variável influencer não foi setada,
+  // registrar mesmo assim (isso acontece quando cupom DISCOUNT é usado sem referralCode)
+  if (validatedCoupon?.type === 'DISCOUNT' && validatedCoupon.influencer && !influencer) {
+    userUpdateData.referralCodeUsed = validatedCoupon.code
+    userUpdateData.referredByInfluencerId = validatedCoupon.influencer.id
+    console.log('🎟️ [CHECKOUT] Saving DISCOUNT coupon influencer reference in users table:', {
+      userId: user.id,
+      influencerId: validatedCoupon.influencer.id,
+      couponCode: validatedCoupon.code
+    })
   }
 
   await prisma.user.update({

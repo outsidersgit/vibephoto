@@ -21,6 +21,16 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
   const affordability = await CreditManager.canUserAfford(userId, creditsNeeded, userPlan)
   const canUseCredits = affordability.canAfford
 
+  // DEBUG: Log credit check for troubleshooting
+  console.log('📊 [EDITOR PAGE] Credit check:', {
+    userId,
+    userEmail: session.user.email,
+    userPlan,
+    creditsNeeded,
+    canUseCredits,
+    reason: affordability.reason
+  })
+
   return (
     <>
       <div className="min-h-screen bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>

@@ -408,6 +408,113 @@ async function handlePaymentSuccess(payment: any) {
       await handleFirstCycleCouponPriceUpdate(payment, user.id)
     }
 
+    // CRITICAL: Register coupon usage and increment influencer totalReferrals
+    // Find Payment record to check for coupon/influencer data
+    // NOTE: Only SUBSCRIPTION payments have Payment records, CREDIT_PURCHASE doesn't
+    const paymentRecord = await prisma.payment.findFirst({
+      where: {
+        OR: [
+          { asaasPaymentId: payment.id },
+          { asaasCheckoutId: payment.externalReference },
+          { asaasCheckoutId: payment.checkoutSession }
+        ]
+      },
+      select: {
+        id: true,
+        couponCodeUsed: true,
+        discountApplied: true,
+        influencerId: true,
+        referralCodeUsed: true,
+        type: true
+      }
+    })
+
+    if (paymentRecord) {
+      // CRITICAL: Update Payment status to CONFIRMED and set confirmedDate
+      await prisma.payment.update({
+        where: { id: paymentRecord.id },
+        data: {
+          status: 'CONFIRMED',
+          confirmedDate: new Date(),
+          asaasPaymentId: payment.id
+        }
+      })
+
+      console.log('✅ Updated payment status to CONFIRMED:', {
+        paymentId: paymentRecord.id,
+        asaasPaymentId: payment.id
+      })
+
+      // Register coupon usage if coupon was used
+      if (paymentRecord.couponCodeUsed) {
+        const coupon = await prisma.discountCoupon.findUnique({
+          where: { code: paymentRecord.couponCodeUsed }
+        })
+
+        if (coupon) {
+          // Check if usage already registered (prevent duplicates)
+          const existingUsage = await prisma.couponUsage.findFirst({
+            where: {
+              couponId: coupon.id,
+              userId: user.id,
+              paymentId: paymentRecord.id
+            }
+          })
+
+          if (!existingUsage) {
+            // Register coupon usage
+            await prisma.couponUsage.create({
+              data: {
+                couponId: coupon.id,
+                userId: user.id,
+                paymentId: paymentRecord.id,
+                discountApplied: paymentRecord.discountApplied || 0,
+                usedAt: new Date()
+              }
+            })
+
+            // Increment totalUses on coupon
+            await prisma.discountCoupon.update({
+              where: { id: coupon.id },
+              data: { totalUses: { increment: 1 } }
+            })
+
+            console.log('✅ Registered coupon usage:', {
+              couponCode: paymentRecord.couponCodeUsed,
+              userId: user.id,
+              discount: paymentRecord.discountApplied
+            })
+          }
+        }
+      }
+
+      // Increment influencer totalReferrals if influencer is associated
+      if (paymentRecord.influencerId && paymentRecord.type === 'SUBSCRIPTION') {
+        // Only count first subscription payment as referral (not renewals)
+        // Check if this is the first payment for this subscription
+        const isFirstPayment = await prisma.payment.count({
+          where: {
+            userId: user.id,
+            type: 'SUBSCRIPTION',
+            status: 'CONFIRMED'
+          }
+        }) === 1
+
+        if (isFirstPayment) {
+          await prisma.influencer.update({
+            where: { id: paymentRecord.influencerId },
+            data: { totalReferrals: { increment: 1 } }
+          })
+
+          console.log('✅ Incremented influencer totalReferrals:', {
+            influencerId: paymentRecord.influencerId,
+            userId: user.id,
+            couponCode: paymentRecord.referralCodeUsed
+          })
+        }
+      }
+    }
+
     // Log the payment
     await logUsage({
       userId: user.id,
