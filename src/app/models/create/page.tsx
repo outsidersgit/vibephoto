@@ -56,6 +56,7 @@ export default function CreateModelPage() {
         const response = await fetch('/api/models/cost-info')
         if (response.ok) {
           const data = await response.json()
+          console.log('📊 [Models/Create] Model cost info:', data)
           setModelCostInfo(data)
         }
       } catch (error) {
@@ -425,17 +426,27 @@ export default function CreateModelPage() {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Banner de Créditos Insuficientes */}
-        {modelCostInfo && !modelCostInfo.canCreate && modelCostInfo.needsPayment && (
-          <div className="mb-6">
-            <InsufficientCreditsBanner
-              creditsNeeded={modelCostInfo.creditsRequired || 500}
-              currentCredits={creditBalance?.totalCredits || 0}
-              feature="generation"
-              variant="inline"
-              onBuyCredits={() => setShowCreditPurchase(true)}
-            />
-          </div>
-        )}
+        {(() => {
+          const showBanner = modelCostInfo && !modelCostInfo.canCreate && modelCostInfo.needsPayment
+          console.log('🎨 [Models/Create] Banner visibility:', {
+            modelCostInfo,
+            canCreate: modelCostInfo?.canCreate,
+            needsPayment: modelCostInfo?.needsPayment,
+            showBanner,
+            currentCredits: creditBalance?.totalCredits
+          })
+          return showBanner ? (
+            <div className="mb-6">
+              <InsufficientCreditsBanner
+                creditsNeeded={modelCostInfo.creditsRequired || 500}
+                currentCredits={creditBalance?.totalCredits || 0}
+                feature="generation"
+                variant="inline"
+                onBuyCredits={() => setShowCreditPurchase(true)}
+              />
+            </div>
+          ) : null
+        })()}
 
         {/* Step Content */}
         <div className="mb-8">
