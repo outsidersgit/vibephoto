@@ -304,38 +304,58 @@ export async function handleMediaFailure(
     // 5. Fazer estorno de créditos COM idempotência
     console.log(`💰 [handleMediaFailure] Refunding ${media.creditsUsed} credits to user ${media.userId}`)
 
-    await prisma.$transaction(async (tx) => {
-      // a) Fazer estorno via CreditManager
-      const refundResult = await CreditManager.addCredits(
-        media.userId,
-        media.creditsUsed,
-        `Estorno por falha em ${mediaType}: ${failureReason}`,
-        {
-          referenceId: mediaId,
-          refundSource: mediaType
-        }
-      )
-
-      if (!refundResult.success) {
-        throw new Error(`Failed to refund credits: ${refundResult.error}`)
+    // a) Fazer estorno via CreditManager (ele já usa transação internamente)
+    const refundResult = await CreditManager.addCredits(
+      media.userId,
+      media.creditsUsed,
+      `Estorno por falha em ${mediaType}: ${failureReason}`,
+      {
+        referenceId: mediaId,
+        refundSource: mediaType
       }
+    )
 
-      // b) Marcar mídia como refunded
-      await updateMediaRecordInTransaction(tx, mediaType, mediaId, {
-        creditsRefunded: true,
+    if (!refundResult.success) {
+      console.error(`❌ [handleMediaFailure] Failed to refund credits: ${refundResult.error}`)
+      
+      // Atualizar status mesmo se refund falhar (para não travar)
+      await updateMediaRecord(mediaType, mediaId, {
         failureReason,
-        errorMessage: errorMessage || userMessage,
+        errorMessage: `Refund failed: ${refundResult.error}. Original error: ${errorMessage || userMessage}`,
         status: 'FAILED',
         metadata: {
           errorHandledAt: new Date().toISOString(),
           errorCategory: failureReason,
-          creditsRefundedAt: new Date().toISOString(),
-          creditsRefundedAmount: media.creditsUsed
+          refundAttempted: true,
+          refundFailed: true,
+          refundError: refundResult.error
         }
       })
+      
+      return {
+        success: false,
+        refunded: false,
+        failureReason,
+        userMessage,
+        error: `Failed to refund credits: ${refundResult.error}`
+      }
+    }
 
-      console.log(`✅ [handleMediaFailure] Credits refunded successfully for ${mediaType} ${mediaId}`)
+    // b) Marcar mídia como refunded (separado, não em transação aninhada)
+    await updateMediaRecord(mediaType, mediaId, {
+      creditsRefunded: true,
+      failureReason,
+      errorMessage: errorMessage || userMessage,
+      status: 'FAILED',
+      metadata: {
+        errorHandledAt: new Date().toISOString(),
+        errorCategory: failureReason,
+        creditsRefundedAt: new Date().toISOString(),
+        creditsRefundedAmount: media.creditsUsed
+      }
     })
+
+    console.log(`✅ [handleMediaFailure] Credits refunded successfully for ${mediaType} ${mediaId}`)
 
     return {
       success: true,

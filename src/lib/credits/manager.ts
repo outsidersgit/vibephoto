@@ -511,6 +511,8 @@ export class CreditManager {
 
       await prisma.$transaction(async (tx) => {
         await execute(tx)
+      }, {
+        timeout: 30000 // 30 segundos (aumentado de 10s padrão)
       })
 
       if (updatedUser) {
