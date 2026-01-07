@@ -175,8 +175,7 @@ export function VideoGallery({
             <p className="text-gray-600 mb-6">
               {hasActiveFilters
                 ? 'Tente ajustar seus filtros para encontrar vídeos'
-                : 'Comece criando vídeos a partir de suas fotos geradas ou através de um prompt.
-              }
+                : 'Comece criando vídeos a partir de suas fotos geradas'}
             </p>
             {hasActiveFilters ? (
               <Button onClick={clearFilters}>Limpar Filtros</Button>
