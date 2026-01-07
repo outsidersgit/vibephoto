@@ -14,13 +14,16 @@ interface InsufficientCreditsBannerProps {
   feature: 'generation' | 'video' | 'edit'
   /** Se true, exibe como banner inline. Se false, exibe como página completa */
   variant?: 'inline' | 'fullpage'
+  /** Callback opcional ao clicar em comprar créditos */
+  onBuyCredits?: () => void
 }
 
 export function InsufficientCreditsBanner({
   creditsNeeded,
   currentCredits,
   feature,
-  variant = 'inline'
+  variant = 'inline',
+  onBuyCredits
 }: InsufficientCreditsBannerProps) {
   const featureNames = {
     generation: 'gerar imagens',
@@ -40,14 +43,24 @@ export function InsufficientCreditsBanner({
             <strong>Créditos insuficientes:</strong> Você tem {currentCredits} créditos, mas precisa de {creditsNeeded} para {featureName}.
           </p>
         </div>
-        <Link href="/billing?tab=credits">
+        {onBuyCredits ? (
           <Button
             size="sm"
+            onClick={onBuyCredits}
             className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 whitespace-nowrap flex-shrink-0"
           >
             Comprar Créditos
           </Button>
-        </Link>
+        ) : (
+          <Link href="/billing?tab=credits">
+            <Button
+              size="sm"
+              className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 whitespace-nowrap flex-shrink-0"
+            >
+              Comprar Créditos
+            </Button>
+          </Link>
+        )}
       </div>
     )
   }
@@ -73,13 +86,22 @@ export function InsufficientCreditsBanner({
           </p>
 
           <div className="flex gap-3">
-            <Link href="/billing?tab=credits">
+            {onBuyCredits ? (
               <Button
+                onClick={onBuyCredits}
                 className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white font-medium shadow-md"
               >
                 Comprar Créditos
               </Button>
-            </Link>
+            ) : (
+              <Link href="/billing?tab=credits">
+                <Button
+                  className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white font-medium shadow-md"
+                >
+                  Comprar Créditos
+                </Button>
+              </Link>
+            )}
             <Link href="/">
               <Button
                 variant="outline"

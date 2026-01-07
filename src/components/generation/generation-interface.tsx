@@ -11,6 +11,7 @@ import { notifyError, notifySuccess, notifyInfo } from '@/lib/errors'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { InsufficientCreditsBanner } from '@/components/ui/insufficient-credits-banner'
+import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
 import {
   Loader2,
   ChevronDown,
@@ -68,6 +69,7 @@ export function GenerationInterface({
   const [showExamples, setShowExamples] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isButtonLocked, setIsButtonLocked] = useState(false)
+  const [showCreditPurchase, setShowCreditPurchase] = useState(false)
   const buttonFallbackTimerRef = useRef<NodeJS.Timeout | null>(null)
   const pendingGenerationIdRef = useRef<string | null>(null)
 
@@ -876,6 +878,7 @@ export function GenerationInterface({
                     currentCredits={creditsRemaining}
                     feature="generation"
                     variant="inline"
+                    onBuyCredits={() => setShowCreditPurchase(true)}
                   />
                 )}
 
@@ -1025,6 +1028,16 @@ export function GenerationInterface({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Compra de Créditos */}
+      <PackageSelectorModal
+        isOpen={showCreditPurchase}
+        onClose={() => setShowCreditPurchase(false)}
+        onSuccess={() => {
+          setShowCreditPurchase(false)
+          invalidateBalance()
+        }}
+      />
     </div>
   )
 }

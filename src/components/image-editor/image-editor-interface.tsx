@@ -28,6 +28,7 @@ import { CREDIT_COSTS, getImageEditCost, EditorResolution } from '@/lib/credits/
 import { ProcessingMessage } from '@/components/ui/processing-message'
 import { notifyError } from '@/lib/errors'
 import { InsufficientCreditsBanner } from '@/components/ui/insufficient-credits-banner'
+import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
 
 // Custos dinâmicos baseados na resolução
 const getEditorCost = (resolution: EditorResolution) => getImageEditCost(1, resolution)
@@ -70,6 +71,7 @@ export function ImageEditorInterface({
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' } | null>(null)
   const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
   const [currentEditId, setCurrentEditId] = useState<string | null>(null)
+  const [showCreditPurchase, setShowCreditPurchase] = useState(false)
   const router = useRouter()
   const fileInputId = useId()
 
@@ -879,6 +881,7 @@ export function ImageEditorInterface({
                     currentCredits={currentCredits}
                     feature="edit"
                     variant="inline"
+                    onBuyCredits={() => setShowCreditPurchase(true)}
                   />
                 </div>
               )}
@@ -1132,6 +1135,7 @@ export function ImageEditorInterface({
                   currentCredits={currentCredits}
                   feature="edit"
                   variant="inline"
+                  onBuyCredits={() => setShowCreditPurchase(true)}
                 />
               </div>
             )}
@@ -1296,6 +1300,16 @@ export function ImageEditorInterface({
 
         </div>
       </div>
+
+      {/* PackageSelectorModal */}
+      <PackageSelectorModal
+        isOpen={showCreditPurchase}
+        onClose={() => setShowCreditPurchase(false)}
+        onSuccess={() => {
+          setShowCreditPurchase(false)
+          invalidateBalance()
+        }}
+      />
     </div>
   )
 }

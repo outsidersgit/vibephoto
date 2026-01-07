@@ -14,6 +14,7 @@ import { useInvalidateCredits, useCreditBalance } from '@/hooks/useCredits'
 import { ProcessingMessage } from '@/components/ui/processing-message'
 import { InsufficientCreditsBanner } from '@/components/ui/insufficient-credits-banner'
 import { notifyError } from '@/lib/errors'
+import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
 
 interface VideoGenerationInterfaceProps {
   user: {
@@ -65,6 +66,7 @@ export function VideoGenerationInterface({
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'video' } | null>(null)
   const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
   const [monitoringVideoId, setMonitoringVideoId] = useState<string | null>(null)
+  const [showCreditPurchase, setShowCreditPurchase] = useState(false)
   const { invalidateBalance } = useInvalidateCredits()
   
   // CRITICAL: Use hook to fetch credit balance (handles expired credits correctly)
@@ -792,6 +794,7 @@ export function VideoGenerationInterface({
                     currentCredits={insufficientCredits?.current || actualCurrentCredits}
                     feature="video"
                     variant="inline"
+                    onBuyCredits={() => setShowCreditPurchase(true)}
                   />
                 </div>
               )}
@@ -1078,6 +1081,7 @@ export function VideoGenerationInterface({
                     currentCredits={insufficientCredits?.current || actualCurrentCredits}
                     feature="video"
                     variant="inline"
+                    onBuyCredits={() => setShowCreditPurchase(true)}
                   />
                 </div>
               )}
@@ -1241,6 +1245,16 @@ export function VideoGenerationInterface({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Compra de Créditos */}
+      <PackageSelectorModal
+        isOpen={showCreditPurchase}
+        onClose={() => setShowCreditPurchase(false)}
+        onSuccess={() => {
+          setShowCreditPurchase(false)
+          invalidateBalance()
+        }}
+      />
     </div>
   )
 }

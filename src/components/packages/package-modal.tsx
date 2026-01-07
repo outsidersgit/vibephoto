@@ -14,11 +14,10 @@ import {
 } from 'lucide-react'
 import { PackageConfigModal } from './package-config-modal'
 import { PackageProgressModal } from './package-progress-modal'
-import { useCreditBalance, useCreditPackages, useInvalidateCredits } from '@/hooks/useCredits'
+import { useCreditBalance, useInvalidateCredits } from '@/hooks/useCredits'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
 import { notifyError, notifySuccess } from '@/lib/errors'
-import { PaymentMethodModal } from '@/components/credits/payment-method-modal'
-import { CheckoutModal } from '@/components/checkout/checkout-modal'
+import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
 
 interface Package {
   id: string
@@ -55,10 +54,6 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
   const [activeUserPackageId, setActiveUserPackageId] = useState<string | null>(null)
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
   const [previewGender, setPreviewGender] = useState<'MALE' | 'FEMALE'>('MALE')
-  const [selectedCreditPackageId, setSelectedCreditPackageId] = useState<string | null>(null)
-  const [showPaymentMethod, setShowPaymentMethod] = useState(false)
-  const [checkoutUrl, setCheckoutUrl] = useState<string>('')
-  const [checkoutLoading, setCheckoutLoading] = useState(false)
 
   const router = useRouter()
 
@@ -76,8 +71,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
   // Performance: Usar React Query para cache instantâneo (Sprint 1)
   const queryClient = useQueryClient()
   const { update: updateSession } = useSession()
-  const { data: balance, isLoading: loadingCredits } = useCreditBalance()
-  const { data: creditPackages = [] } = useCreditPackages()
+  const { data: balance } = useCreditBalance()
   const { invalidateBalance } = useInvalidateCredits()
   
   // CRITICAL: Listener SSE para invalidar queries quando créditos são atualizados via admin
@@ -183,75 +177,10 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
     window.location.href = '/gallery?tab=packages'
   }
 
-  const handleSelectCreditPackage = (packageId: string) => {
-    console.log('💳 [PackageModal] Pacote de crédito selecionado:', packageId)
-    setSelectedCreditPackageId(packageId)
-    setShowCreditsPurchase(false)
-    setShowPaymentMethod(true)
-  }
-
-  const handlePaymentMethodSelect = async (method: 'PIX' | 'CREDIT_CARD') => {
-    if (!selectedCreditPackageId) {
-      console.error('❌ [PackageModal] Nenhum pacote selecionado!')
-      notifyError('Selecione um pacote de créditos', 'CHECKOUT')
-      return
-    }
-
-    console.log('💳 [PackageModal] Criando checkout:', {
-      packageId: selectedCreditPackageId,
-      billingType: method
-    })
-
-    setCheckoutLoading(true)
-
-    try {
-      const response = await fetch('/api/checkout/credits', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          packageId: selectedCreditPackageId,
-          billingType: method
-        })
-      })
-
-      const data = await response.json()
-
-      console.log('📦 [PackageModal] Resposta do checkout:', data)
-
-      if (!response.ok || !data.success) {
-        notifyError(data.error || 'Erro ao criar checkout', 'CHECKOUT')
-        setCheckoutLoading(false)
-        return
-      }
-
-      setCheckoutUrl(data.checkoutUrl)
-      setShowPaymentMethod(false)
-    } catch (err: any) {
-      console.error('❌ [PackageModal] Checkout error:', err)
-      notifyError(err.message || 'Erro ao processar pagamento', 'CHECKOUT')
-      setCheckoutLoading(false)
-    }
-  }
-
-  const handleCheckoutSuccess = () => {
+  const handleCreditPurchaseSuccess = () => {
     console.log('🔄 [PackageModal] Checkout concluído - invalidando queries')
-    queryClient.invalidateQueries({ queryKey: ['credits'] })
-    queryClient.invalidateQueries({ queryKey: ['user'] })
-    updateSession()
-
-    // Fechar modais
-    setCheckoutUrl('')
-    setSelectedCreditPackageId(null)
-    setCheckoutLoading(false)
-
-    notifySuccess('Créditos adicionados!', 'Seus créditos já estão disponíveis', 4000)
-  }
-
-  const handleCheckoutClose = () => {
-    setCheckoutUrl('')
-    setShowPaymentMethod(false)
-    setSelectedCreditPackageId(null)
-    setCheckoutLoading(false)
+    setShowCreditsPurchase(false)
+    invalidateBalance()
   }
 
 
@@ -533,62 +462,12 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
         )
       })()}
 
-      {/* Modal de Compra Rápida de Créditos */}
-      {showCreditsPurchase && (
-        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700">
-            <h3 className="text-xl font-bold text-white mb-4">Créditos Insuficientes</h3>
-            <p className="text-gray-300 mb-4">
-              Você precisa de <span className="font-bold text-white">{pkg.price} créditos</span> para este pacote.
-              <br />
-              Você tem apenas <span className="font-bold text-blue-300">{userCredits} créditos</span>.
-            </p>
-
-            <div className="space-y-3 mb-6">
-              <h4 className="font-medium text-white">Pacotes de Créditos Disponíveis:</h4>
-
-              <div className="space-y-2">
-                {loadingCredits ? (
-                  <div className="text-center py-4">
-                    <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mx-auto" />
-                    <p className="text-gray-400 text-sm mt-2">Carregando pacotes...</p>
-                  </div>
-                ) : creditPackages.length > 0 ? (
-                  creditPackages.map((creditPkg) => (
-                    <div key={creditPkg.id} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg border border-gray-600">
-                      <div>
-                        <div className="font-medium text-white">{creditPkg.creditAmount} Créditos</div>
-                        <div className="text-xs text-gray-400">{creditPkg.name}</div>
-                      </div>
-                      <Button
-                        size="sm"
-                        className="bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5A6FD8] to-[#6A4190] text-white"
-                        onClick={() => handleSelectCreditPackage(creditPkg.id)}
-                      >
-                        R$ {creditPkg.price.toFixed(2).replace('.', ',')}
-                      </Button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-gray-400 text-sm">Nenhum pacote disponível no momento</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
-                onClick={() => setShowCreditsPurchase(false)}
-              >
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* PackageSelectorModal */}
+      <PackageSelectorModal
+        isOpen={showCreditsPurchase}
+        onClose={() => setShowCreditsPurchase(false)}
+        onSuccess={handleCreditPurchaseSuccess}
+      />
 
       {/* Modal de Configuração do Pacote */}
       {showConfigModal && (
@@ -681,25 +560,6 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
         )
       })()}
 
-      {/* Modal de Seleção de Método de Pagamento */}
-      {showPaymentMethod && selectedCreditPackageId && (
-        <PaymentMethodModal
-          isOpen={showPaymentMethod}
-          onClose={handleCheckoutClose}
-          onSelectMethod={handlePaymentMethodSelect}
-          loading={checkoutLoading}
-        />
-      )}
-
-      {/* Modal de Checkout Asaas */}
-      {checkoutUrl && (
-        <CheckoutModal
-          isOpen={!!checkoutUrl}
-          checkoutUrl={checkoutUrl}
-          onClose={handleCheckoutClose}
-          onSuccess={handleCheckoutSuccess}
-        />
-      )}
     </div>
   )
 }
