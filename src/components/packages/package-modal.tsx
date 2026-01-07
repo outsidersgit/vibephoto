@@ -380,6 +380,15 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
 
               <div className="h-4"></div>
 
+              {/* Aviso de Créditos Insuficientes */}
+              {userCredits < pkg.price && (
+                <div className="bg-red-900/20 border border-red-600/30 rounded-lg p-3 mb-3">
+                  <p className="text-sm text-red-300">
+                    ⚠️ Créditos Insuficientes: Você precisa de <strong>{pkg.price} créditos</strong>, mas tem apenas <strong>{userCredits} créditos</strong>.
+                  </p>
+                </div>
+              )}
+
               {/* Package Info and Purchase */}
               <div className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg border border-gray-600">
                 <div className="flex-1">

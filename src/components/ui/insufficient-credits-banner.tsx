@@ -64,57 +64,38 @@ export function InsufficientCreditsBanner({
     )
   }
 
-  // Variante Fullpage (para bloquear completamente a página)
+  // Variante Fullpage (para exibir inline com banner compacto, similar ao /generate)
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-2xl border-2 border-red-200 p-8 text-center">
-          {/* Icon */}
-          <div className="mb-6">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-red-100 to-orange-100 flex items-center justify-center mx-auto">
-              <AlertCircle className="w-10 h-10 text-red-600" />
-            </div>
+    <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg p-6 shadow-sm max-w-2xl mx-auto mt-8">
+      <div className="flex items-start gap-4">
+        <div className="flex-shrink-0">
+          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+            <AlertCircle className="w-6 h-6 text-red-600" />
           </div>
-
-          {/* Title */}
-          <h2 className="text-2xl font-bold text-red-900 mb-3">
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg font-semibold text-red-900 mb-2">
             Créditos Insuficientes
-          </h2>
-
-          {/* Message */}
-          <p className="text-red-700 mb-2">
-            Você precisa de pelo menos <strong>{creditsNeeded} créditos</strong> para {featureName}.
+          </h3>
+          <p className="text-sm text-red-700 mb-1">
+            Você precisa de <strong>{creditsNeeded} créditos</strong> para {featureName}, mas tem apenas <strong>{currentCredits} créditos</strong> disponíveis.
           </p>
-          <p className="text-red-600 text-sm mb-6">
-            Saldo atual: <strong>{currentCredits} créditos</strong>
+          <p className="text-sm text-red-600 mb-4">
+            💳 Compre pacotes de créditos para continuar gerando sem limites!
           </p>
 
-          {/* Info Box */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
-            <p className="text-sm text-blue-900 mb-2">
-              <strong>💡 Dica:</strong> Compre pacotes de créditos avulsos e use quando quiser, sem mensalidade!
-            </p>
-            <ul className="text-xs text-blue-800 space-y-1 ml-4">
-              <li>✓ Créditos nunca expiram</li>
-              <li>✓ Use em qualquer funcionalidade</li>
-              <li>✓ Sem compromisso de assinatura</li>
-            </ul>
-          </div>
-
-          {/* Actions */}
-          <div className="space-y-3">
-            <Link href="/billing?tab=credits" className="block">
+          <div className="flex gap-3">
+            <Link href="/billing?tab=credits">
               <Button
-                className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white font-semibold text-base py-6 shadow-lg"
+                className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white font-medium shadow-md"
               >
-                💳 Comprar Créditos
+                Comprar Créditos
               </Button>
             </Link>
-
-            <Link href="/" className="block">
+            <Link href="/">
               <Button
-                variant="ghost"
-                className="w-full text-gray-600 hover:text-gray-900"
+                variant="outline"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 Voltar ao Início
               </Button>
