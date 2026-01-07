@@ -427,19 +427,25 @@ export default function CreateModelPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Banner de Créditos Insuficientes */}
         {(() => {
-          const showBanner = modelCostInfo && !modelCostInfo.canCreate && modelCostInfo.needsPayment
+          // Verificar se precisa de créditos: se não é mais gratuito E não tem créditos suficientes
+          const needsCredits = modelCostInfo &&
+                               modelCostInfo.freeModelsAvailable === 0 &&
+                               (modelCostInfo.currentCredits || 0) < (modelCostInfo.nextModelCost || 500)
+
           console.log('🎨 [Models/Create] Banner visibility:', {
             modelCostInfo,
-            canCreate: modelCostInfo?.canCreate,
-            needsPayment: modelCostInfo?.needsPayment,
-            showBanner,
-            currentCredits: creditBalance?.totalCredits
+            freeModelsAvailable: modelCostInfo?.freeModelsAvailable,
+            currentCredits: modelCostInfo?.currentCredits,
+            nextModelCost: modelCostInfo?.nextModelCost,
+            needsCredits,
+            creditBalance: creditBalance?.totalCredits
           })
-          return showBanner ? (
+
+          return needsCredits ? (
             <div className="mb-6">
               <InsufficientCreditsBanner
-                creditsNeeded={modelCostInfo.creditsRequired || 500}
-                currentCredits={creditBalance?.totalCredits || 0}
+                creditsNeeded={modelCostInfo.nextModelCost || 500}
+                currentCredits={modelCostInfo.currentCredits || creditBalance?.totalCredits || 0}
                 feature="generation"
                 variant="inline"
                 onBuyCredits={() => setShowCreditPurchase(true)}
