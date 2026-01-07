@@ -332,14 +332,16 @@ export async function handleMediaFailure(
       // Atualizar status mesmo se refund falhar (para não travar)
       await updateMediaRecord(mediaType, mediaId, {
         failureReason,
-        errorMessage: `Refund failed: ${refundResult.error}. Original error: ${errorMessage || userMessage}`,
+        errorMessage: userMessage, // ✅ SEMPRE usar mensagem amigável
         status: 'FAILED',
         metadata: {
           errorHandledAt: new Date().toISOString(),
           errorCategory: failureReason,
           refundAttempted: true,
           refundFailed: true,
-          refundError: refundResult.error
+          refundError: refundResult.error,
+          originalErrorMessage: errorMessage || '', // 🔒 Guardar mensagem original aqui
+          refundErrorDetails: `Refund failed: ${refundResult.error}`
         }
       })
       
@@ -356,13 +358,14 @@ export async function handleMediaFailure(
     await updateMediaRecord(mediaType, mediaId, {
       creditsRefunded: true,
       failureReason,
-      errorMessage: errorMessage || userMessage,
+      errorMessage: userMessage, // ✅ SEMPRE usar mensagem amigável para exibir ao usuário
       status: 'FAILED',
       metadata: {
         errorHandledAt: new Date().toISOString(),
         errorCategory: failureReason,
         creditsRefundedAt: new Date().toISOString(),
-        creditsRefundedAmount: media.creditsUsed
+        creditsRefundedAmount: media.creditsUsed,
+        originalErrorMessage: errorMessage || '' // 🔒 Guardar mensagem original do provider aqui
       }
     })
 

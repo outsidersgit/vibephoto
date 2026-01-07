@@ -415,24 +415,34 @@ export async function POST(request: NextRequest) {
         
         // 🔒 CRITICAL: Do NOT save videoUrl yet - only after storage succeeds
         // Save only status and metadata first, videoUrl will be saved after download/storage
+        // 🔒 CRITICAL: Do NOT save error message yet - handleVideoFailure will save user-friendly message
         if (jobId) {
           updatedVideo = await updateVideoGenerationByJobId(
             jobId,
             internalStatus,
             undefined, // ❌ Don't save temporary URL yet
-            errorMessage,
+            internalStatus === VideoStatus.FAILED ? undefined : errorMessage, // ✅ Don't save raw error for FAILED status
             undefined, // thumbnailUrl
-            mergedMetadata // Include Replicate metadata
+            {
+              ...mergedMetadata,
+              // 🔒 Save raw error in metadata for debugging
+              rawErrorMessage: errorMessage || undefined
+            }
           )
         } else {
           // Fallback: Update by id directly if jobId lookup failed
+          // 🔒 CRITICAL: Do NOT save error message yet - handleVideoFailure will save user-friendly message
           updatedVideo = await prisma.videoGeneration.update({
             where: { id: currentVideo.id },
             data: {
               status: internalStatus,
               // videoUrl: videoUrl || undefined, // ❌ Don't save temporary URL yet
-              errorMessage: errorMessage || undefined,
-              metadata: mergedMetadata,
+              errorMessage: internalStatus === VideoStatus.FAILED ? undefined : (errorMessage || undefined), // ✅ Don't save raw error for FAILED status
+              metadata: {
+                ...mergedMetadata,
+                // 🔒 Save raw error in metadata for debugging
+                rawErrorMessage: errorMessage || undefined
+              },
               updatedAt: new Date()
             },
             include: {
