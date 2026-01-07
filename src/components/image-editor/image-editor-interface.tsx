@@ -27,6 +27,7 @@ import { useInvalidateCredits } from '@/hooks/useCredits'
 import { CREDIT_COSTS, getImageEditCost, EditorResolution } from '@/lib/credits/pricing'
 import { ProcessingMessage } from '@/components/ui/processing-message'
 import { notifyError } from '@/lib/errors'
+import { InsufficientCreditsBanner } from '@/components/ui/insufficient-credits-banner'
 
 // Custos dinâmicos baseados na resolução
 const getEditorCost = (resolution: EditorResolution) => getImageEditCost(1, resolution)
@@ -869,6 +870,18 @@ export function ImageEditorInterface({
                   fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
                 }}
               />
+
+              {/* Banner de Créditos Insuficientes */}
+              {!canUseCredits && (
+                <div className="mt-3">
+                  <InsufficientCreditsBanner
+                    creditsNeeded={creditsNeeded}
+                    currentCredits={currentCredits}
+                    feature="edit"
+                    variant="inline"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Format Selection */}
@@ -921,7 +934,7 @@ export function ImageEditorInterface({
               <Button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!canProcess || loading}
+                disabled={!canProcess || loading || !canUseCredits}
                 className="flex-1 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 text-xs font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
               >
                 {loading ? (
@@ -1110,6 +1123,18 @@ export function ImageEditorInterface({
                 fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
               }}
             />
+
+            {/* Banner de Créditos Insuficientes */}
+            {!canUseCredits && (
+              <div className="mt-3">
+                <InsufficientCreditsBanner
+                  creditsNeeded={creditsNeeded}
+                  currentCredits={currentCredits}
+                  feature="edit"
+                  variant="inline"
+                />
+              </div>
+            )}
           </div>
 
           {/* Format Selection */}
@@ -1162,7 +1187,7 @@ export function ImageEditorInterface({
             <Button
               type="button"
               onClick={handleSubmit}
-              disabled={!canProcess || loading}
+              disabled={!canProcess || loading || !canUseCredits}
               className="flex-1 sm:flex-none sm:w-auto bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white px-6 py-3 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 rounded-lg font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
             >
               {loading ? (

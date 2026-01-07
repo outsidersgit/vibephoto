@@ -184,13 +184,23 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
   }
 
   const handleSelectCreditPackage = (packageId: string) => {
+    console.log('💳 [PackageModal] Pacote de crédito selecionado:', packageId)
     setSelectedCreditPackageId(packageId)
     setShowCreditsPurchase(false)
     setShowPaymentMethod(true)
   }
 
   const handlePaymentMethodSelect = async (method: 'PIX' | 'CREDIT_CARD') => {
-    if (!selectedCreditPackageId) return
+    if (!selectedCreditPackageId) {
+      console.error('❌ [PackageModal] Nenhum pacote selecionado!')
+      notifyError('Selecione um pacote de créditos', 'CHECKOUT')
+      return
+    }
+
+    console.log('💳 [PackageModal] Criando checkout:', {
+      packageId: selectedCreditPackageId,
+      billingType: method
+    })
 
     setCheckoutLoading(true)
 
@@ -206,6 +216,8 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
 
       const data = await response.json()
 
+      console.log('📦 [PackageModal] Resposta do checkout:', data)
+
       if (!response.ok || !data.success) {
         notifyError(data.error || 'Erro ao criar checkout', 'CHECKOUT')
         setCheckoutLoading(false)
@@ -215,7 +227,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
       setCheckoutUrl(data.checkoutUrl)
       setShowPaymentMethod(false)
     } catch (err: any) {
-      console.error('Checkout error:', err)
+      console.error('❌ [PackageModal] Checkout error:', err)
       notifyError(err.message || 'Erro ao processar pagamento', 'CHECKOUT')
       setCheckoutLoading(false)
     }

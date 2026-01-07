@@ -53,16 +53,6 @@ export default async function ImageEditorPage({ searchParams }: ImageEditorPageP
 
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Banner de Créditos Insuficientes */}
-          {!canUseCredits && (
-            <InsufficientCreditsBanner
-              creditsNeeded={creditsNeeded}
-              currentCredits={currentCredits}
-              feature="edit"
-              variant="inline"
-            />
-          )}
-
           {/* Image Editor Interface */}
           <ImageEditorInterface
             preloadedImageUrl={preloadedImageUrl}

@@ -25,9 +25,17 @@ interface VideoGenerationInterfaceProps {
   }
   canUseCredits: boolean
   sourceImageUrl?: string
+  creditsNeeded?: number
+  currentCredits?: number
 }
 
-export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }: VideoGenerationInterfaceProps) {
+export function VideoGenerationInterface({
+  user,
+  canUseCredits,
+  sourceImageUrl,
+  creditsNeeded = 0,
+  currentCredits = 0
+}: VideoGenerationInterfaceProps) {
   console.log('🧭 [VIDEO_GENERATION_INTERFACE] render start')
   // CRITICAL: Todos os hooks DEVEM ser chamados ANTES de qualquer early return
   // Violar esta regra causa erro React #310 (can't set state on unmounted component)
@@ -873,10 +881,10 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
             </div>
 
             {/* Error Display */}
-            {insufficientCredits && (
+            {(!canUseCredits || insufficientCredits) && (
               <InsufficientCreditsBanner
-                creditsNeeded={insufficientCredits.needed}
-                currentCredits={insufficientCredits.current}
+                creditsNeeded={insufficientCredits?.needed || creditsNeeded}
+                currentCredits={insufficientCredits?.current || currentCredits}
                 feature="video"
                 variant="inline"
               />
@@ -1155,10 +1163,10 @@ export function VideoGenerationInterface({ user, canUseCredits, sourceImageUrl }
             </div>
 
             {/* Error Display */}
-          {insufficientCredits && (
+          {(!canUseCredits || insufficientCredits) && (
             <InsufficientCreditsBanner
-              creditsNeeded={insufficientCredits.needed}
-              currentCredits={insufficientCredits.current}
+              creditsNeeded={insufficientCredits?.needed || creditsNeeded}
+              currentCredits={insufficientCredits?.current || currentCredits}
               feature="video"
               variant="inline"
             />

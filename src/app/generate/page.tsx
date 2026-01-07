@@ -41,13 +41,15 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
   const imageCreditsNeeded = getImageGenerationCost(1)
   const videoCreditsNeeded = getVideoGenerationCost(5)
 
-  const [imageAffordability, videoAffordability] = await Promise.all([
+  const [imageAffordability, videoAffordability, userCredits] = await Promise.all([
     CreditManager.canUserAfford(userId, imageCreditsNeeded, userPlan),
-    CreditManager.canUserAfford(userId, videoCreditsNeeded, userPlan)
+    CreditManager.canUserAfford(userId, videoCreditsNeeded, userPlan),
+    CreditManager.getUserCredits(userId, userPlan)
   ])
 
   const canUseImageCredits = imageAffordability.canAfford
   const canUseVideoCredits = videoAffordability.canAfford
+  const currentCredits = userCredits.totalCredits
 
   // Select model (from URL param or first available)
   const selectedModelId = models.length > 0 && params.model && models.find(m => m.id === params.model)
@@ -145,6 +147,8 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
             user={session.user}
             canUseCredits={canUseVideoCredits}
             sourceImageUrl={sourceImage}
+            creditsNeeded={videoCreditsNeeded}
+            currentCredits={currentCredits}
           />
         )}
       </div>
