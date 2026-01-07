@@ -105,16 +105,19 @@ export async function POST(request: NextRequest) {
     
     // Configure webhook URL for async processing (production only)
     // Pass the prediction ID as 'id' parameter - webhook will use jobId to find the edit_history
-    const webhookUrl = process.env.NEXTAUTH_URL?.startsWith('https://')
-      ? `${process.env.NEXTAUTH_URL}/api/webhooks/replicate?type=edit&userId=${session.user.id}`
+    const baseUrl = process.env.NEXTAUTH_URL?.trim()
+    const webhookUrl = baseUrl && baseUrl.startsWith('https://')
+      ? `${baseUrl}/api/webhooks/replicate?type=edit&userId=${encodeURIComponent(session.user.id)}`
       : undefined
 
     console.log('🔧 [IMAGE_EDITOR_API] Webhook configuration:', {
       NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-      isHttps: process.env.NEXTAUTH_URL?.startsWith('https://'),
+      baseUrlTrimmed: baseUrl,
+      isHttps: baseUrl?.startsWith('https://'),
       webhookUrl: webhookUrl,
       webhookEnabled: !!webhookUrl,
-      userId: session.user.id
+      userId: session.user.id,
+      userIdEncoded: encodeURIComponent(session.user.id)
     })
     
     // Convert resolution to Nano Banana format ('2K' or '4K')

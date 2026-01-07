@@ -103,11 +103,25 @@ export class NanoBananaProvider {
       }
 
       // Add webhook if provided (for async processing)
-      const hasValidWebhook = request.webhookUrl && request.webhookUrl.startsWith('https://')
-      if (hasValidWebhook) {
-        predictionOptions.webhook = request.webhookUrl
-        predictionOptions.webhook_events_filter = ['start', 'output', 'logs', 'completed']
-        console.log('📡 Nano Banana webhook configured:', request.webhookUrl)
+      // CRITICAL: Validate webhook URL format to prevent Replicate SDK errors
+      let hasValidWebhook = false
+      if (request.webhookUrl) {
+        try {
+          const webhookUrl = request.webhookUrl.trim()
+          // Validate URL format
+          const url = new URL(webhookUrl)
+          if (url.protocol === 'https:' && url.hostname && url.pathname) {
+            predictionOptions.webhook = webhookUrl
+            predictionOptions.webhook_events_filter = ['start', 'output', 'logs', 'completed']
+            hasValidWebhook = true
+            console.log('📡 Nano Banana webhook configured:', webhookUrl)
+          } else {
+            console.warn('⚠️ Invalid webhook URL protocol or format:', webhookUrl)
+          }
+        } catch (urlError) {
+          console.error('❌ Invalid webhook URL format:', request.webhookUrl, urlError)
+          // Don't throw - continue without webhook (sync mode)
+        }
       }
 
       // Create prediction using the correct version ID
