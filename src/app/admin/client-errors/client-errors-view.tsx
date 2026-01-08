@@ -218,12 +218,12 @@ export function ClientErrorsView() {
 
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Navegador</label>
-              <Select value={browserFilter} onValueChange={setBrowserFilter}>
+              <Select value={browserFilter || "all"} onValueChange={(val) => setBrowserFilter(val === "all" ? "" : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="Safari">Safari</SelectItem>
                   <SelectItem value="Chrome">Chrome</SelectItem>
                   <SelectItem value="Firefox">Firefox</SelectItem>
@@ -234,12 +234,12 @@ export function ClientErrorsView() {
 
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Device</label>
-              <Select value={deviceFilter} onValueChange={setDeviceFilter}>
+              <Select value={deviceFilter || "all"} onValueChange={(val) => setDeviceFilter(val === "all" ? "" : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="iPhone">iPhone</SelectItem>
                   <SelectItem value="iPad">iPad</SelectItem>
                   <SelectItem value="Android">Android</SelectItem>
@@ -250,12 +250,12 @@ export function ClientErrorsView() {
 
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Tipo de Erro</label>
-              <Select value={errorTypeFilter} onValueChange={setErrorTypeFilter}>
+              <Select value={errorTypeFilter || "all"} onValueChange={(val) => setErrorTypeFilter(val === "all" ? "" : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="PATTERN_VALIDATION_ERROR">Pattern Validation</SelectItem>
                   <SelectItem value="Error">Error</SelectItem>
                   <SelectItem value="TypeError">TypeError</SelectItem>
