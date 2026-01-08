@@ -63,6 +63,7 @@ export function ImageEditorInterface({
   const [operation] = useState<Operation>('edit')
   const [prompt, setPrompt] = useState('')
   const [images, setImages] = useState<string[]>(preloadedImageUrl ? [preloadedImageUrl] : [])
+  const [imageFiles, setImageFiles] = useState<File[]>([]) // Store actual File objects
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -89,6 +90,7 @@ export function ImageEditorInterface({
   const clearForm = () => {
     setPrompt('')
     setImages([])
+    setImageFiles([])
     setError(null)
     setCurrentEditId(null) // Clear edit monitoring
     // Reset file input
@@ -681,6 +683,13 @@ export function ImageEditorInterface({
           }
           return [...prev, base64Image]
         })
+        // CRITICAL: Also store the File object for FormData submission
+        setImageFiles(prev => {
+          if (prev.length >= 14) {
+            return prev
+          }
+          return [...prev, file]
+        })
       }
       reader.onerror = () => {
         addToast({
@@ -808,6 +817,7 @@ export function ImageEditorInterface({
 
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index))
+    setImageFiles(prev => prev.filter((_, i) => i !== index))
   }
 
   const copyPrompt = () => {
@@ -849,16 +859,24 @@ export function ImageEditorInterface({
     await new Promise(resolve => setTimeout(resolve, 0))
 
     try {
+      // CRITICAL: Use FormData to avoid Vercel's 4.5MB limit for JSON payloads
+      // FormData can handle larger files because it streams them
+      const formData = new FormData()
+      formData.append('operation', operation)
+      formData.append('prompt', prompt)
+      formData.append('aspectRatio', aspectRatio)
+      formData.append('resolution', resolution) // 'standard' ou '4k'
+
+      // Add File objects directly (not base64)
+      imageFiles.forEach((file, index) => {
+        formData.append(`image_${index}`, file)
+      })
+      formData.append('imageCount', imageFiles.length.toString())
+
       const response = await fetch('/api/ai/image-editor', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operation,
-          prompt,
-          images,
-          aspectRatio,
-          resolution, // 'standard' ou '4k'
-        })
+        // DON'T set Content-Type - browser will set it automatically with boundary
+        body: formData
       })
 
       if (!response.ok) {

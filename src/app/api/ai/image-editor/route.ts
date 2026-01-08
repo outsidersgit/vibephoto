@@ -77,20 +77,19 @@ export async function POST(request: NextRequest) {
     const session = await requireAuthAPI()
     const userId = session.user.id
 
-    const { operation, prompt, images, aspectRatio, resolution } = await request.json()
+    // CRITICAL: Parse FormData instead of JSON to avoid Vercel's 4.5MB limit
+    const formData = await request.formData()
+
+    const operation = formData.get('operation') as string
+    const prompt = formData.get('prompt') as string
+    const aspectRatio = formData.get('aspectRatio') as string
+    const resolution = formData.get('resolution') as string
+    const imageCount = parseInt(formData.get('imageCount') as string || '0', 10)
 
     // Validate input - prompt is required, images can be empty for generation from scratch
     if (!operation || !prompt || !prompt.trim()) {
       return NextResponse.json(
         { error: 'Operação e prompt são obrigatórios' },
-        { status: 400 }
-      )
-    }
-
-    // Validate images array exists (can be empty)
-    if (!Array.isArray(images)) {
-      return NextResponse.json(
-        { error: 'Imagens deve ser um array' },
         { status: 400 }
       )
     }
@@ -106,7 +105,7 @@ export async function POST(request: NextRequest) {
 
     // Validate images based on operation
     // For blend, we need at least 2 images
-    if (operation === 'blend' && images.length < 2) {
+    if (operation === 'blend' && imageCount < 2) {
       return NextResponse.json(
         { error: 'Operação blend requer pelo menos 2 imagens' },
         { status: 400 }
@@ -114,43 +113,40 @@ export async function POST(request: NextRequest) {
     }
 
     // For other operations, images can be empty (generation from scratch) or have up to 14 images (edit)
-    if (['edit', 'add', 'remove', 'style'].includes(operation) && images.length > 14) {
+    if (['edit', 'add', 'remove', 'style'].includes(operation) && imageCount > 14) {
       return NextResponse.json(
         { error: 'Operação requer no máximo 14 imagens' },
         { status: 400 }
       )
     }
 
-    // Convert base64 images to FormData
-    const formData = new FormData()
-    formData.append('prompt', prompt)
+    // Create new FormData for forwarding to operation handler
+    const forwardFormData = new FormData()
+    forwardFormData.append('prompt', prompt)
     if (aspectRatio) {
-      formData.append('aspectRatio', aspectRatio)
+      forwardFormData.append('aspectRatio', aspectRatio)
     }
     if (resolution) {
-      formData.append('resolution', resolution) // 'standard' ou '4k'
+      forwardFormData.append('resolution', resolution) // 'standard' ou '4k'
     }
 
-    // For operations with images (send all images if multiple are provided)
-    if (['edit', 'add', 'remove', 'style'].includes(operation) && images.length > 0) {
-      // If multiple images, send them as an array (Nano Banana Pro supports up to 14)
-      if (images.length > 1) {
-        for (let index = 0; index < images.length; index++) {
-          const imageFile = await urlToFile(images[index], `image_${index}.jpg`)
-          formData.append(`image${index}`, imageFile)
+    // Forward image files from request FormData
+    if (imageCount > 0) {
+      if (imageCount > 1) {
+        // Multiple images
+        for (let index = 0; index < imageCount; index++) {
+          const file = formData.get(`image_${index}`) as File
+          if (file) {
+            forwardFormData.append(`image${index}`, file)
+          }
         }
-        formData.append('multipleImages', 'true') // Flag to indicate multiple images
+        forwardFormData.append('multipleImages', 'true')
       } else {
-        // Single image - use traditional 'image' field
-        const imageFile = await urlToFile(images[0], 'image.jpg')
-        formData.append('image', imageFile)
-      }
-    }
-    // For blend operation (multiple images)
-    else if (operation === 'blend') {
-      for (let index = 0; index < images.length; index++) {
-        const imageFile = await urlToFile(images[index], `image_${index}.jpg`)
-        formData.append(`image${index}`, imageFile)
+        // Single image
+        const file = formData.get('image_0') as File
+        if (file) {
+          forwardFormData.append('image', file)
+        }
       }
     }
     // For generation from scratch (no images), no image file is appended

@@ -1,5 +1,11 @@
 {
   "buildCommand": "npm run build",
   "framework": "nextjs",
-  "public": true
+  "public": true,
+  "functions": {
+    "app/api/ai/image-editor/route.ts": {
+      "maxDuration": 300,
+      "memory": 3008
+    }
+  }
 }
