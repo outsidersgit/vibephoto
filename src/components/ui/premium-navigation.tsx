@@ -374,9 +374,9 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="lg:hidden bg-white/95 backdrop-blur-lg border-t border-white/20"
+            className="lg:hidden bg-white/95 backdrop-blur-lg border-t border-white/20 max-h-[calc(100vh-80px)] overflow-y-auto"
           >
-            <div className="px-4 py-6 space-y-4">
+            <div className="px-4 py-4 space-y-3">
               {/* Navigation Items */}
               {navigationItems.map((item, index) => {
                 const isActive = isActivePath(item.href)
@@ -390,7 +390,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                     <Link
                       href={item.href}
                       className={cn(
-                        "flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors relative",
+                        "flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors relative text-sm",
                         isActive
                           ? "bg-gradient-to-r from-purple-50 to-blue-50 text-slate-900 border border-purple-200"
                           : "hover:bg-slate-100 text-slate-700"
@@ -400,7 +400,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                       {item.icon}
                       <span className="font-medium">{item.name}</span>
                       {isActive && (
-                        <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#667EEA] to-[#764BA2]" />
+                        <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#667EEA] to-[#764BA2]" />
                       )}
                     </Link>
                   </motion.div>
@@ -408,16 +408,16 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
               })}
 
                 {/* Mobile Actions */}
-                <div className="pt-4 border-t border-slate-200 space-y-3">
+                <div className="pt-3 border-t border-slate-200 space-y-2">
                   {displaySession && displayStatus === 'authenticated' ? (
                   <>
-                    <div className="px-4 py-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-                      <p className="font-semibold text-slate-900">{displaySession.user?.name}</p>
+                    <div className="px-3 py-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                      <p className="text-sm font-semibold text-slate-900">{displaySession.user?.name}</p>
                       {hasActiveAccess() && (
                         <div className="flex items-center justify-between mt-1">
-                          <p className="text-sm text-purple-600">{displaySession.user?.plan || 'STARTER'} Plan</p>
+                          <p className="text-xs text-purple-600">{displaySession.user?.plan || 'STARTER'} Plan</p>
                           {creditsBalance !== null && (
-                            <div className="flex items-center space-x-1 px-2 py-0.5 rounded bg-gray-50 border border-transparent"
+                            <div className="flex items-center space-x-1 px-1.5 py-0.5 rounded bg-gray-50 border border-transparent"
                                  style={{
                                    background: 'linear-gradient(white, white) padding-box, linear-gradient(135deg, #667EEA, #764BA2) border-box',
                                    border: '1px solid transparent'
@@ -434,34 +434,34 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
 
                     {hasActiveAccess() ? (
                       <>
-                        <Link href="/billing" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                          <CreditCard className="w-5 h-5 text-slate-500" />
+                        <Link href="/billing" className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-sm" onClick={() => setIsMobileMenuOpen(false)}>
+                          <CreditCard className="w-4 h-4 text-slate-500" />
                           <span className="font-medium text-slate-700">Minha Assinatura</span>
                         </Link>
-                        <Link href="/account/history" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                          <History className="w-5 h-5 text-slate-500" />
+                        <Link href="/account/history" className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-sm" onClick={() => setIsMobileMenuOpen(false)}>
+                          <History className="w-4 h-4 text-slate-500" />
                           <span className="font-medium text-slate-700">Histórico de Pagamentos</span>
                         </Link>
-                        <Link href="/account/orders" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                          <List className="w-5 h-5 text-slate-500" />
+                        <Link href="/account/orders" className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-sm" onClick={() => setIsMobileMenuOpen(false)}>
+                          <List className="w-4 h-4 text-slate-500" />
                           <span className="font-medium text-slate-700">Ordens</span>
                         </Link>
-                        <Link href="/profile" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                          <UserCircle className="w-5 h-5 text-slate-500" />
+                        <Link href="/profile" className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-sm" onClick={() => setIsMobileMenuOpen(false)}>
+                          <UserCircle className="w-4 h-4 text-slate-500" />
                           <span className="font-medium text-slate-700">Perfil</span>
                         </Link>
-                        <Link href="/support" className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                          <MessageSquare className="w-5 h-5 text-slate-500" />
+                        <Link href="/support" className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors text-sm" onClick={() => setIsMobileMenuOpen(false)}>
+                          <MessageSquare className="w-4 h-4 text-slate-500" />
                           <span className="font-medium text-slate-700">Fale Conosco</span>
                         </Link>
                       </>
                     ) : (
-                      <div className="px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
-                        <p className="text-sm text-slate-700 mb-2 font-medium">
+                      <div className="px-3 py-2 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+                        <p className="text-xs text-slate-700 mb-2 font-medium">
                           Assine para acessar todas as funcionalidades
                         </p>
                         <Link href="/pricing" className="block w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                          <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-2">
+                          <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-1.5 text-sm">
                             Ver Planos
                           </Button>
                         </Link>
@@ -472,9 +472,9 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                         setIsMobileMenuOpen(false)
                         logout()
                       }}
-                      className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-red-50 transition-colors text-left mt-3"
+                      className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-red-50 transition-colors text-left text-sm"
                     >
-                      <LogOut className="w-5 h-5 text-red-500" />
+                      <LogOut className="w-4 h-4 text-red-500" />
                       <span className="font-medium text-red-600">Sair</span>
                     </button>
                   </>
