@@ -74,6 +74,7 @@ export function ImageEditorInterface({
   const [showCreditPurchase, setShowCreditPurchase] = useState(false)
   const router = useRouter()
   const fileInputId = useId()
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Sync refs with state
   useEffect(() => {
@@ -197,6 +198,10 @@ export function ImageEditorInterface({
     if (editFallbackTimerRef.current) {
       clearTimeout(editFallbackTimerRef.current)
       editFallbackTimerRef.current = null
+    }
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current)
+      pollingIntervalRef.current = null
     }
     setLoading(false)
     loadingRef.current = false
@@ -494,34 +499,7 @@ export function ImageEditorInterface({
   }, [addToast, openModalWithValidation, clearEditProcessingState])
   
   useRealtimeUpdates({
-    onGenerationStatusChange: handleGenerationStatusChange,
-    onEditStatusChange: (editId, status, data) => {
-      console.log(`🔄 [IMAGE_EDITOR] SSE Edit update: ${editId} -> ${status}`, {
-        hasEditedUrl: !!data.editedImageUrl,
-        error: data.error,
-        currentEditId: currentEditIdRef.current
-      })
-
-      // Só processar se for a edição atual
-      if (currentEditIdRef.current !== editId) {
-        console.log('⚠️ [IMAGE_EDITOR] SSE update for different edit, ignoring')
-        return
-      }
-
-      if (status === 'COMPLETED' && data.editedImageUrl) {
-        console.log('✅ [IMAGE_EDITOR] SSE Edit completed, opening preview')
-        openModalWithValidation(data.editedImageUrl, data.editedImageUrl).catch((error) => {
-          console.error('❌ [IMAGE_EDITOR] Failed to handle edit preview via SSE:', error)
-        })
-      } else if (status === 'FAILED') {
-        console.error('❌ [IMAGE_EDITOR] SSE Edit failed:', data.error)
-        clearEditProcessingState()
-
-        // Usar notifyError para traduzir mensagem
-        const errorData = data.error ? { message: data.error, code: 'GENERATION_FAILED' } : new Error('Erro na edição')
-        notifyError(errorData, 'IMAGE_EDIT_SSE')
-      }
-    }
+    onGenerationStatusChange: handleGenerationStatusChange
   })
 
   // Detect mobile on mount and resize
@@ -534,49 +512,269 @@ export function ImageEditorInterface({
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Cleanup fallback timer on unmount
+  // Cleanup fallback timer and polling on unmount
   useEffect(() => {
     return () => {
       if (editFallbackTimerRef.current) {
         clearTimeout(editFallbackTimerRef.current)
         editFallbackTimerRef.current = null
       }
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
+      }
     }
   }, [])
+
+  // CRITICAL: Polling de fallback para garantir atualização mesmo se SSE falhar
+  // Monitora o status do edit atual a cada 5 segundos enquanto está processando
+  useEffect(() => {
+    if (!currentEditId || !loading) {
+      // Não está processando, limpar polling se existir
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
+      }
+      return
+    }
+
+    console.log('🔄 [IMAGE_EDITOR] Starting status polling for edit:', currentEditId)
+
+    // Verificar status imediatamente
+    checkEditStatus(currentEditId)
+
+    // Iniciar polling a cada 5 segundos
+    pollingIntervalRef.current = setInterval(() => {
+      if (currentEditIdRef.current && loadingRef.current) {
+        checkEditStatus(currentEditIdRef.current)
+      } else {
+        // Estado mudou, limpar polling
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current)
+          pollingIntervalRef.current = null
+        }
+      }
+    }, 5000) // Polling a cada 5 segundos
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
+      }
+    }
+  }, [currentEditId, loading])
+
+  // Função para verificar status do edit via API
+  const checkEditStatus = useCallback(async (editId: string) => {
+    try {
+      console.log('🔍 [IMAGE_EDITOR] Polling edit status for:', editId)
+
+      const response = await fetch(`/api/edit-history/${editId}`)
+      if (!response.ok) {
+        console.warn('⚠️ [IMAGE_EDITOR] Failed to fetch edit status:', response.status)
+        return
+      }
+
+      const data = await response.json()
+      const editHistory = data.editHistory
+
+      if (!editHistory) {
+        console.warn('⚠️ [IMAGE_EDITOR] No edit history in response')
+        return
+      }
+
+      console.log('📊 [IMAGE_EDITOR] Edit status poll result:', {
+        editId,
+        status: editHistory.metadata?.status || editHistory.status,
+        hasEditedUrl: !!editHistory.editedImageUrl,
+        editedUrl: editHistory.editedImageUrl?.substring(0, 100)
+      })
+
+      // Verificar se completou
+      const status = editHistory.metadata?.status || editHistory.status
+      if (status === 'COMPLETED' && editHistory.editedImageUrl) {
+        console.log('✅ [IMAGE_EDITOR] Polling detected completion! Opening modal...')
+
+        // Limpar polling e fallback timer
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current)
+          pollingIntervalRef.current = null
+        }
+        if (editFallbackTimerRef.current) {
+          clearTimeout(editFallbackTimerRef.current)
+          editFallbackTimerRef.current = null
+        }
+
+        // Abrir modal com a imagem
+        await openModalWithValidation(editHistory.editedImageUrl, editHistory.editedImageUrl)
+        invalidateBalance()
+      } else if (status === 'FAILED') {
+        console.error('❌ [IMAGE_EDITOR] Polling detected failure')
+        clearEditProcessingState()
+
+        addToast({
+          title: "Erro na geração",
+          description: editHistory.metadata?.errorMessage || "Ocorreu um erro ao processar a imagem",
+          type: "error"
+        })
+      }
+    } catch (error) {
+      console.error('❌ [IMAGE_EDITOR] Error polling edit status:', error)
+      // Não fazer nada - próximo polling tentará novamente
+    }
+  }, [openModalWithValidation, invalidateBalance, clearEditProcessingState, addToast])
 
   // CRITICAL: useCallback DEVE vir ANTES de qualquer early return
   const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (!files) return
 
-    Array.from(files).forEach(file => {
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+    Array.from(files).forEach(async (file) => {
+      // Verificar limite total de imagens (Nano Banana Pro: max 14)
+      if (images.length >= 14) {
         addToast({
-          title: "Arquivo muito grande",
-          description: "O tamanho máximo é 10MB",
+          title: "Limite atingido",
+          description: "Máximo 14 imagens por vez",
           type: "error"
         })
         return
       }
 
+      // Verificar tamanho do arquivo (limite 10MB por imagem)
+      const maxFileSize = 10 * 1024 * 1024 // 10MB
+      if (file.size > maxFileSize) {
+        console.warn(`⚠️ Arquivo muito grande (${Math.round(file.size / 1024 / 1024)}MB), tentando comprimir...`)
+
+        // Tentar comprimir a imagem automaticamente
+        try {
+          const compressedFile = await compressImage(file, maxFileSize)
+          processImageFile(compressedFile)
+
+          addToast({
+            title: "Imagem comprimida",
+            description: `Imagem original muito grande (${Math.round(file.size / 1024 / 1024)}MB), foi comprimida para ${Math.round(compressedFile.size / 1024 / 1024)}MB`,
+            type: "info"
+          })
+        } catch (compressionError) {
+          console.error('❌ Falha na compressão:', compressionError)
+          addToast({
+            title: "Arquivo muito grande",
+            description: `Tamanho: ${Math.round(file.size / 1024 / 1024)}MB. Limite: 10MB por imagem. Tente reduzir a resolução ou usar um editor de imagens.`,
+            type: "error"
+          })
+        }
+        return
+      }
+
+      // Arquivo dentro do limite, processar normalmente
+      processImageFile(file)
+    })
+
+    // Função auxiliar para processar arquivo de imagem
+    function processImageFile(file: File) {
       const reader = new FileReader()
       reader.onload = (e) => {
         const base64Image = e.target?.result as string
         setImages(prev => {
           if (prev.length >= 14) {
-            addToast({
-              title: "Limite atingido",
-              description: "Máximo 14 imagens",
-              type: "error"
-            })
             return prev
           }
-
           return [...prev, base64Image]
         })
       }
+      reader.onerror = () => {
+        addToast({
+          title: "Erro ao carregar imagem",
+          description: "Não foi possível ler o arquivo. Tente novamente.",
+          type: "error"
+        })
+      }
       reader.readAsDataURL(file)
-    })
+    }
+
+    // Função para comprimir imagem
+    async function compressImage(file: File, maxSize: number): Promise<File> {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.readAsDataURL(file)
+        reader.onload = (e) => {
+          const img = new Image()
+          img.src = e.target?.result as string
+
+          img.onload = () => {
+            const canvas = document.createElement('canvas')
+            let width = img.width
+            let height = img.height
+
+            // Reduzir dimensões se necessário (manter aspect ratio)
+            const maxDimension = 4096 // Nano Banana Pro max: 4096x4096
+            if (width > maxDimension || height > maxDimension) {
+              if (width > height) {
+                height = (height / width) * maxDimension
+                width = maxDimension
+              } else {
+                width = (width / height) * maxDimension
+                height = maxDimension
+              }
+            }
+
+            canvas.width = width
+            canvas.height = height
+
+            const ctx = canvas.getContext('2d')
+            if (!ctx) {
+              reject(new Error('Failed to get canvas context'))
+              return
+            }
+
+            ctx.drawImage(img, 0, 0, width, height)
+
+            // Tentar diferentes qualidades até ficar abaixo do limite
+            let quality = 0.9
+            const tryCompress = () => {
+              canvas.toBlob(
+                (blob) => {
+                  if (!blob) {
+                    reject(new Error('Failed to compress image'))
+                    return
+                  }
+
+                  // Se ainda está muito grande e quality pode ser reduzida
+                  if (blob.size > maxSize && quality > 0.1) {
+                    quality -= 0.1
+                    tryCompress()
+                    return
+                  }
+
+                  // Se ficou dentro do limite ou já tentamos o suficiente
+                  if (blob.size <= maxSize || quality <= 0.1) {
+                    const compressedFile = new File([blob], file.name, {
+                      type: 'image/jpeg',
+                      lastModified: Date.now()
+                    })
+                    resolve(compressedFile)
+                  } else {
+                    reject(new Error('Could not compress image enough'))
+                  }
+                },
+                'image/jpeg',
+                quality
+              )
+            }
+
+            tryCompress()
+          }
+
+          img.onerror = () => {
+            reject(new Error('Failed to load image for compression'))
+          }
+        }
+
+        reader.onerror = () => {
+          reject(new Error('Failed to read file for compression'))
+        }
+      })
+    }
   }, [images.length, addToast])
   
   // CRITICAL: AGORA sim podemos fazer early returns após TODOS os hooks

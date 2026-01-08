@@ -62,7 +62,9 @@ export async function GET(request: NextRequest) {
           })}\n\n`
         )
         
-        // Optimized heartbeat - less frequent since we're event-driven
+        // Optimized heartbeat for faster dead connection detection
+        // Mobile browsers (especially Safari/iOS) tend to drop connections silently
+        // Using 15s heartbeat to detect and clean up dead connections quickly
         const heartbeat = setInterval(() => {
           try {
             const connection = connections.get(connectionId)
@@ -70,10 +72,10 @@ export async function GET(request: NextRequest) {
               clearInterval(heartbeat)
               return
             }
-            
+
             // Update last activity
             connection.lastActivity = new Date()
-            
+
             controller.enqueue(
               `data: ${JSON.stringify({
                 type: 'heartbeat',
@@ -86,7 +88,7 @@ export async function GET(request: NextRequest) {
             clearInterval(heartbeat)
             connections.delete(connectionId)
           }
-        }, 45000) // Increased to 45 seconds since we don't need aggressive polling
+        }, 15000) // 15 seconds - faster detection for mobile/unstable connections
 
         // Store heartbeat reference for cleanup
         connection.heartbeat = heartbeat
