@@ -124,6 +124,15 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
 
       const data = await response.json()
 
+      console.log('📦 [PackageModal] Activation response:', {
+        ok: response.ok,
+        status: response.status,
+        success: data.success,
+        hasUserPackage: !!data.userPackage,
+        userPackageId: data.userPackage?.id,
+        fullData: data
+      })
+
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao gerar pacote')
       }
@@ -139,6 +148,8 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
         // Marcar no localStorage para exibir painel de progresso na página /packages
         localStorage.setItem(`package_progress_${data.userPackage.id}`, 'true')
 
+        console.log('✅ [PackageModal] Closing modal and redirecting to gallery...')
+
         // Fechar o modal de seleção
         onClose()
 
@@ -146,16 +157,22 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
 
         // Redirecionar para galeria após fechar o modal
         setTimeout(() => {
+          console.log('🔄 [PackageModal] Redirecting now...')
           router.push('/gallery')
         }, 300)
       } else {
+        console.error('❌ [PackageModal] Activation failed - data.success is false')
         throw new Error(data.error || 'Erro desconhecido')
       }
     } catch (error) {
-      console.error('Package generation error:', error)
+      console.error('❌ [PackageModal] Package generation error:', error)
+      console.error('❌ [PackageModal] Error details:', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      })
       setActivationStatus('error')
       notifyError(error, 'PACKAGE_GENERATION')
-      setErrorMessage('Erro ao gerar pacote')
+      setErrorMessage(error instanceof Error ? error.message : 'Erro ao gerar pacote')
       setIsActivating(false)
     }
   }
