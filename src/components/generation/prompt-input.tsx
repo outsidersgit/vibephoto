@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Copy } from 'lucide-react'
 import { PromptBuilder } from './prompt-builder'
+import { SafeTextarea } from '@/components/ui/safe-textarea'
+import { useToast } from '@/hooks/use-toast'
 
 interface PromptInputProps {
   prompt: string
@@ -26,7 +28,8 @@ export function PromptInput({
   onModeChange
 }: PromptInputProps) {
   const [isGuidedMode, setIsGuidedMode] = useState(false)
-  
+  const { addToast } = useToast()
+
   // Notify parent when mode changes
   useEffect(() => {
     onModeChange?.(isGuidedMode)
@@ -39,6 +42,17 @@ export function PromptInput({
     el.style.height = Math.min(el.scrollHeight, 600) + 'px'
   }
   useEffect(() => { adjustPromptHeight() }, [prompt])
+
+  // Handler para sanitização no Safari
+  const handleSanitizedChange = (value: string, wasSanitized: boolean) => {
+    if (wasSanitized) {
+      addToast({
+        title: "Texto ajustado",
+        description: "Alguns caracteres foram removidos para compatibilidade com seu navegador",
+        type: "info"
+      })
+    }
+  }
 
   const toggleMode = () => {
     const newMode = !isGuidedMode
@@ -151,11 +165,12 @@ export function PromptInput({
               </div>
             </div>
             
-            <textarea
+            <SafeTextarea
               id="prompt"
               value={prompt}
               ref={promptRef}
               onChange={(e) => { onPromptChange(e.target.value); adjustPromptHeight() }}
+              onSanitizedChange={handleSanitizedChange}
               disabled={isGenerating}
               className="w-full px-3 py-3 bg-gray-200 border border-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-[#667EEA] focus:border-[#667EEA] resize-none text-gray-900 placeholder:text-gray-500"
               rows={3}
