@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Cookie': request.headers.get('cookie') || ''
       },
-      body: formData
+      body: forwardFormData
     })
 
     if (!response.ok) {
