@@ -28,24 +28,52 @@ export async function POST(request: NextRequest) {
     // Parse form data first to get resolution
     const formData = await request.formData()
     const image = formData.get('image') as File | null
+    const imageUrl = formData.get('imageUrl') as string | null
     const multipleImages = formData.get('multipleImages') === 'true'
     const prompt = formData.get('prompt') as string
     const aspectRatio = formData.get('aspectRatio') as string | null
     const resolutionParam = formData.get('resolution') as string | null
     const resolution: EditorResolution = resolutionParam === '4k' ? '4k' : 'standard'
 
-    // If multiple images flag is set, collect all images
+    // Collect images from Files OR URLs
     const images: File[] = []
+
     if (multipleImages) {
-      let imageIndex = 0
-      while (true) {
-        const img = formData.get(`image${imageIndex}`) as File | null
-        if (!img) break
-        images.push(img)
-        imageIndex++
+      // Check if we have imageCount (URL mode)
+      const imageCount = parseInt(formData.get('imageCount') as string || '0', 10)
+
+      if (imageCount > 0) {
+        // URL mode: fetch images from R2
+        console.log(`📸 Multiple images mode (URLs): ${imageCount} images`)
+        for (let imageIndex = 0; imageIndex < imageCount; imageIndex++) {
+          const url = formData.get(`imageUrl${imageIndex}`) as string | null
+          if (url) {
+            // Fetch image from URL and convert to File
+            const response = await fetch(url)
+            const blob = await response.blob()
+            const file = new File([blob], `image${imageIndex}.${blob.type.split('/')[1]}`, { type: blob.type })
+            images.push(file)
+          }
+        }
+      } else {
+        // File mode: collect File objects
+        let imageIndex = 0
+        while (true) {
+          const img = formData.get(`image${imageIndex}`) as File | null
+          if (!img) break
+          images.push(img)
+          imageIndex++
+        }
+        console.log(`📸 Multiple images mode (Files): ${images.length} images received`)
       }
-      console.log(`📸 Multiple images mode: ${images.length} images received`)
+    } else if (imageUrl) {
+      // Single image from URL
+      const response = await fetch(imageUrl)
+      const blob = await response.blob()
+      const file = new File([blob], `image.${blob.type.split('/')[1]}`, { type: blob.type })
+      images.push(file)
     } else if (image) {
+      // Single image from File
       images.push(image)
     }
 

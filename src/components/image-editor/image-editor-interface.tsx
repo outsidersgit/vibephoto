@@ -859,24 +859,61 @@ export function ImageEditorInterface({
     await new Promise(resolve => setTimeout(resolve, 0))
 
     try {
-      // CRITICAL: Use FormData to avoid Vercel's 4.5MB limit for JSON payloads
-      // FormData can handle larger files because it streams them
-      const formData = new FormData()
-      formData.append('operation', operation)
-      formData.append('prompt', prompt)
-      formData.append('aspectRatio', aspectRatio)
-      formData.append('resolution', resolution) // 'standard' ou '4k'
+      // SOLUTION: Upload images directly to R2 using presigned URLs
+      // This bypasses Vercel's 4.5MB body limit
+      const imageUrls: string[] = []
 
-      // Add File objects directly (not base64)
-      imageFiles.forEach((file, index) => {
-        formData.append(`image_${index}`, file)
-      })
-      formData.append('imageCount', imageFiles.length.toString())
+      if (imageFiles.length > 0) {
+        console.log('☁️ [IMAGE_EDITOR] Uploading images directly to R2...')
 
-      // DEBUG: Log FormData contents
-      console.log('📤 [IMAGE_EDITOR] Sending FormData:', {
-        imageFilesCount: imageFiles.length,
-        imageFiles: imageFiles.map(f => ({ name: f.name, size: f.size, type: f.type })),
+        for (let i = 0; i < imageFiles.length; i++) {
+          const file = imageFiles[i]
+
+          // Step 1: Get presigned URL from API
+          const presignedResponse = await fetch('/api/upload/presigned-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              filename: file.name,
+              contentType: file.type,
+              category: 'edited'
+            })
+          })
+
+          if (!presignedResponse.ok) {
+            throw new Error('Failed to get presigned URL')
+          }
+
+          const { data } = await presignedResponse.json()
+
+          // Step 2: Upload directly to R2 using presigned URL
+          const uploadResponse = await fetch(data.presignedUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': file.type },
+            body: file
+          })
+
+          if (!uploadResponse.ok) {
+            throw new Error(`Failed to upload image ${i + 1}`)
+          }
+
+          // Step 3: Store public URL
+          imageUrls.push(data.publicUrl)
+          console.log(`✅ [IMAGE_EDITOR] Image ${i + 1} uploaded:`, data.publicUrl.substring(0, 50))
+        }
+      }
+
+      // Send only URLs to API (no files in body)
+      const requestBody = {
+        operation,
+        prompt,
+        aspectRatio,
+        resolution,
+        imageUrls // Array of R2 URLs
+      }
+
+      console.log('📤 [IMAGE_EDITOR] Sending request with image URLs:', {
+        imageCount: imageUrls.length,
         operation,
         prompt: prompt.substring(0, 50),
         aspectRatio,
@@ -885,8 +922,8 @@ export function ImageEditorInterface({
 
       const response = await fetch('/api/ai/image-editor', {
         method: 'POST',
-        // DON'T set Content-Type - browser will set it automatically with boundary
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
       })
 
       if (!response.ok) {

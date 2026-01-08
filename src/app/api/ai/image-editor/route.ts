@@ -77,14 +77,14 @@ export async function POST(request: NextRequest) {
     const session = await requireAuthAPI()
     const userId = session.user.id
 
-    // CRITICAL: Parse FormData instead of JSON to avoid Vercel's 4.5MB limit
-    const formData = await request.formData()
+    // Parse JSON body (images are now pre-uploaded to R2, only URLs sent)
+    const body = await request.json()
 
-    const operation = formData.get('operation') as string
-    const prompt = formData.get('prompt') as string
-    const aspectRatio = formData.get('aspectRatio') as string
-    const resolution = formData.get('resolution') as string
-    const imageCount = parseInt(formData.get('imageCount') as string || '0', 10)
+    const operation = body.operation as string
+    const prompt = body.prompt as string
+    const aspectRatio = body.aspectRatio as string
+    const resolution = body.resolution as string
+    const imageUrls = (body.imageUrls || []) as string[]
 
     // Validate input - prompt is required, images can be empty for generation from scratch
     if (!operation || !prompt || !prompt.trim()) {
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
 
     // Validate images based on operation
     // For blend, we need at least 2 images
-    if (operation === 'blend' && imageCount < 2) {
+    if (operation === 'blend' && imageUrls.length < 2) {
       return NextResponse.json(
         { error: 'Operação blend requer pelo menos 2 imagens' },
         { status: 400 }
@@ -113,14 +113,14 @@ export async function POST(request: NextRequest) {
     }
 
     // For other operations, images can be empty (generation from scratch) or have up to 14 images (edit)
-    if (['edit', 'add', 'remove', 'style'].includes(operation) && imageCount > 14) {
+    if (['edit', 'add', 'remove', 'style'].includes(operation) && imageUrls.length > 14) {
       return NextResponse.json(
         { error: 'Operação requer no máximo 14 imagens' },
         { status: 400 }
       )
     }
 
-    // Create new FormData for forwarding to operation handler
+    // Create FormData with image URLs for forwarding to operation handler
     const forwardFormData = new FormData()
     forwardFormData.append('prompt', prompt)
     if (aspectRatio) {
@@ -130,26 +130,21 @@ export async function POST(request: NextRequest) {
       forwardFormData.append('resolution', resolution) // 'standard' ou '4k'
     }
 
-    // Forward image files from request FormData
-    if (imageCount > 0) {
-      if (imageCount > 1) {
+    // Add image URLs to FormData
+    if (imageUrls.length > 0) {
+      if (imageUrls.length > 1) {
         // Multiple images
-        for (let index = 0; index < imageCount; index++) {
-          const file = formData.get(`image_${index}`) as File
-          if (file) {
-            forwardFormData.append(`image${index}`, file)
-          }
-        }
+        imageUrls.forEach((url, index) => {
+          forwardFormData.append(`imageUrl${index}`, url)
+        })
         forwardFormData.append('multipleImages', 'true')
+        forwardFormData.append('imageCount', imageUrls.length.toString())
       } else {
         // Single image
-        const file = formData.get('image_0') as File
-        if (file) {
-          forwardFormData.append('image', file)
-        }
+        forwardFormData.append('imageUrl', imageUrls[0])
       }
     }
-    // For generation from scratch (no images), no image file is appended
+    // For generation from scratch (no images), no image URL is appended
 
     // Route to specific operation handler
     const baseUrl = new URL(request.url).origin
