@@ -28,6 +28,16 @@ export function PackageProgressBarMinimal({ className }: PackageProgressBarMinim
     return localStorage.getItem(`package_modal_open_${packageId}`) === 'true'
   }
 
+  // Verificar se o banner de conclusão já foi exibido para este pacote
+  const wasCompletionShown = (packageId: string) => {
+    return localStorage.getItem(`package_completion_shown_${packageId}`) === 'true'
+  }
+
+  // Marcar que o banner de conclusão foi exibido
+  const markCompletionShown = (packageId: string) => {
+    localStorage.setItem(`package_completion_shown_${packageId}`, 'true')
+  }
+
   // Carregar pacote em andamento do servidor
   useEffect(() => {
     const loadActivePackage = async () => {
@@ -44,31 +54,40 @@ export function PackageProgressBarMinimal({ className }: PackageProgressBarMinim
         )
         
         if (generatingPackage) {
-          // Só mostrar se o modal não estiver aberto
-          if (!isModalOpen(generatingPackage.id)) {
-            // CRITICAL: Always show 100% progress when status is COMPLETED
-            const isCompleted = generatingPackage.status === 'COMPLETED'
-            const calculatedProgress = Math.min(100, Math.round(
-              ((generatingPackage.generatedImages || 0) / (generatingPackage.totalImages || 1)) * 100
-            ))
+          const isCompleted = generatingPackage.status === 'COMPLETED'
 
-            setActivePackage({
-              userPackageId: generatingPackage.id,
-              packageName: generatingPackage.packageName || 'Pacote',
-              status: generatingPackage.status,
-              generatedImages: isCompleted ? generatingPackage.totalImages : (generatingPackage.generatedImages || 0),
-              totalImages: generatingPackage.totalImages || 20,
-              progress: isCompleted ? 100 : calculatedProgress
-            })
-            setIsVisible(true)
+          // Não mostrar se modal estiver aberto OU se já foi exibido o banner de conclusão
+          if (isModalOpen(generatingPackage.id)) {
+            return
+          }
 
-            // Auto-hide after 5 seconds if completed
-            if (isCompleted) {
-              setTimeout(() => {
-                setActivePackage(null)
-                setIsVisible(false)
-              }, 5000)
-            }
+          if (isCompleted && wasCompletionShown(generatingPackage.id)) {
+            console.log('📦 [PackageProgressBarMinimal] Completion banner already shown for package:', generatingPackage.id)
+            return
+          }
+
+          // CRITICAL: Always show 100% progress when status is COMPLETED
+          const calculatedProgress = Math.min(100, Math.round(
+            ((generatingPackage.generatedImages || 0) / (generatingPackage.totalImages || 1)) * 100
+          ))
+
+          setActivePackage({
+            userPackageId: generatingPackage.id,
+            packageName: generatingPackage.packageName || 'Pacote',
+            status: generatingPackage.status,
+            generatedImages: isCompleted ? generatingPackage.totalImages : (generatingPackage.generatedImages || 0),
+            totalImages: generatingPackage.totalImages || 20,
+            progress: isCompleted ? 100 : calculatedProgress
+          })
+          setIsVisible(true)
+
+          // Auto-hide after 5 seconds if completed + mark as shown
+          if (isCompleted) {
+            markCompletionShown(generatingPackage.id)
+            setTimeout(() => {
+              setActivePackage(null)
+              setIsVisible(false)
+            }, 5000)
           }
         }
       } catch (error) {
@@ -107,6 +126,12 @@ export function PackageProgressBarMinimal({ className }: PackageProgressBarMinim
         })
         setIsVisible(true)
       } else if (data.status === 'COMPLETED') {
+        // Verificar se já foi exibido antes de mostrar
+        if (wasCompletionShown(packageId)) {
+          console.log('📦 [PackageProgressBarMinimal] SSE: Completion banner already shown for package:', packageId)
+          return
+        }
+
         // Atualizar para mostrar estado de sucesso
         setActivePackage({
           userPackageId: packageId,
@@ -117,7 +142,9 @@ export function PackageProgressBarMinimal({ className }: PackageProgressBarMinim
           progress: 100
         })
         setIsVisible(true)
-        // Remover após 5 segundos
+
+        // Marcar como exibido e remover após 5 segundos
+        markCompletionShown(packageId)
         setTimeout(() => {
           setActivePackage(null)
           setIsVisible(false)
