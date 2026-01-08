@@ -873,6 +873,16 @@ export function ImageEditorInterface({
       })
       formData.append('imageCount', imageFiles.length.toString())
 
+      // DEBUG: Log FormData contents
+      console.log('📤 [IMAGE_EDITOR] Sending FormData:', {
+        imageFilesCount: imageFiles.length,
+        imageFiles: imageFiles.map(f => ({ name: f.name, size: f.size, type: f.type })),
+        operation,
+        prompt: prompt.substring(0, 50),
+        aspectRatio,
+        resolution
+      })
+
       const response = await fetch('/api/ai/image-editor', {
         method: 'POST',
         // DON'T set Content-Type - browser will set it automatically with boundary
