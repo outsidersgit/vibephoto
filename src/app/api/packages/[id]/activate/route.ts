@@ -198,7 +198,7 @@ export async function POST(
       }, { status: 402 })
     }
 
-    // Trigger batch generation
+    // Trigger batch generation (fire-and-forget for instant response)
     let baseUrl = process.env.NEXTAUTH_URL
     if (!baseUrl) {
       if (process.env.VERCEL_URL) {
@@ -208,8 +208,8 @@ export async function POST(
       }
     }
     const batchGenerationUrl = `${baseUrl}/api/packages/generate-batch`
-    
-    console.log('🚀 Triggering batch generation...', {
+
+    console.log('🚀 Triggering batch generation (async)...', {
       userPackageId: userPackage.id,
       userId,
       packageId,
@@ -219,23 +219,31 @@ export async function POST(
       url: batchGenerationUrl
     })
 
-    try {
-      const batchResponse = await fetch(batchGenerationUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Internal-Request': 'true'
-        },
-        body: JSON.stringify({
-          userPackageId: userPackage.id,
-          userId,
-          packageId,
-          modelId,
-          aspectRatio,
-          gender
-        })
-      })
+    // Update status to GENERATING immediately
+    await prisma.userPackage.update({
+      where: { id: userPackage.id },
+      data: {
+        status: 'GENERATING'
+      }
+    })
 
+    // Fire-and-forget: trigger batch generation without waiting
+    // This allows immediate response to user while generation happens in background
+    fetch(batchGenerationUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Request': 'true'
+      },
+      body: JSON.stringify({
+        userPackageId: userPackage.id,
+        userId,
+        packageId,
+        modelId,
+        aspectRatio,
+        gender
+      })
+    }).then(async (batchResponse) => {
       if (!batchResponse.ok) {
         const errorText = await batchResponse.text()
         console.error('❌ Failed to trigger batch generation:', {
@@ -250,11 +258,7 @@ export async function POST(
             errorMessage: `Failed to start image generation: ${errorText.substring(0, 200)}`
           }
         })
-        return NextResponse.json({
-          success: false,
-          error: 'Falha ao iniciar geração de imagens. Verifique os logs para mais detalhes.',
-          details: errorText.substring(0, 200)
-        }, { status: 500 })
+        return
       }
 
       const batchResult = await batchResponse.json()
@@ -263,15 +267,7 @@ export async function POST(
         generationsCreated: batchResult.generationsCreated,
         totalImagesExpected: batchResult.totalImagesExpected
       })
-      
-      // Update package status to GENERATING
-      await prisma.userPackage.update({
-        where: { id: userPackage.id },
-        data: {
-          status: 'GENERATING'
-        }
-      })
-    } catch (error) {
+    }).catch(async (error) => {
       console.error('💥 Error triggering batch generation:', {
         error: error instanceof Error ? error.message : String(error)
       })
@@ -282,12 +278,7 @@ export async function POST(
           errorMessage: error instanceof Error ? error.message : 'Failed to start image generation'
         }
       })
-      return NextResponse.json({
-        success: false,
-        error: 'Erro ao iniciar geração de imagens. Tente novamente.',
-        details: error instanceof Error ? error.message : String(error)
-      }, { status: 500 })
-    }
+    })
 
     return NextResponse.json({
       success: true,

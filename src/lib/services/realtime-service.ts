@@ -193,11 +193,16 @@ export async function broadcastPackageGenerationUpdate(
     return
   }
 
+  // CRITICAL: Always show 100% progress when status is COMPLETED
+  const progress = status === 'COMPLETED'
+    ? 100
+    : Math.min(100, Math.round((generatedImages / totalImages) * 100))
+
   console.log('📦 [realtime-service] Broadcasting package generation update:', {
     userPackageId,
     userId,
     status,
-    progress: `${generatedImages}/${totalImages}`,
+    progress: `${generatedImages}/${totalImages} (${progress}%)`,
     packageName
   })
 
@@ -210,7 +215,7 @@ export async function broadcastPackageGenerationUpdate(
       generatedImages,
       totalImages,
       packageName,
-      progress: Math.min(100, Math.round((generatedImages / totalImages) * 100)),
+      progress,
       timestamp: new Date().toISOString(),
       ...additionalData
     }

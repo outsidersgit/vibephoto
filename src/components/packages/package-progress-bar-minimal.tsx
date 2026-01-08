@@ -38,25 +38,37 @@ export function PackageProgressBarMinimal({ className }: PackageProgressBarMinim
         const data = await response.json()
         const packages = data.userPackages || []
         
-        // Pegar o primeiro pacote em andamento
-        const generatingPackage = packages.find((pkg: any) => 
-          pkg.status === 'GENERATING' || pkg.status === 'ACTIVE'
+        // Pegar o primeiro pacote em andamento ou recém-completado
+        const generatingPackage = packages.find((pkg: any) =>
+          pkg.status === 'GENERATING' || pkg.status === 'ACTIVE' || pkg.status === 'COMPLETED'
         )
         
         if (generatingPackage) {
           // Só mostrar se o modal não estiver aberto
           if (!isModalOpen(generatingPackage.id)) {
+            // CRITICAL: Always show 100% progress when status is COMPLETED
+            const isCompleted = generatingPackage.status === 'COMPLETED'
+            const calculatedProgress = Math.min(100, Math.round(
+              ((generatingPackage.generatedImages || 0) / (generatingPackage.totalImages || 1)) * 100
+            ))
+
             setActivePackage({
               userPackageId: generatingPackage.id,
               packageName: generatingPackage.packageName || 'Pacote',
               status: generatingPackage.status,
-              generatedImages: generatingPackage.generatedImages || 0,
+              generatedImages: isCompleted ? generatingPackage.totalImages : (generatingPackage.generatedImages || 0),
               totalImages: generatingPackage.totalImages || 20,
-              progress: Math.min(100, Math.round(
-                ((generatingPackage.generatedImages || 0) / (generatingPackage.totalImages || 1)) * 100
-              ))
+              progress: isCompleted ? 100 : calculatedProgress
             })
             setIsVisible(true)
+
+            // Auto-hide after 5 seconds if completed
+            if (isCompleted) {
+              setTimeout(() => {
+                setActivePackage(null)
+                setIsVisible(false)
+              }, 5000)
+            }
           }
         }
       } catch (error) {
