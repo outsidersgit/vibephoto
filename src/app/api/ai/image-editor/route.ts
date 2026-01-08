@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuthAPI } from '@/lib/auth'
 
+// CRITICAL: Configurações para suportar múltiplas imagens em base64
+// Nano Banana Pro suporta até 14 imagens, cada uma com até 10MB
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+// Aumentar limite de body para 100MB (App Router)
+export const maxDuration = 300 // 5 minutos timeout
+
 async function urlToFile(imageInput: string, filename: string): Promise<File> {
   try {
     // Validate input

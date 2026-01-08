@@ -82,6 +82,10 @@ const nextConfig = {
   experimental: {
     // 👇 desativa o sistema de rotas tipadas (origem do bug no Next 15)
     typedRoutes: false,
+    // Aumentar limite de body para App Router (suporta múltiplas imagens em base64)
+    serverActions: {
+      bodySizeLimit: '100mb',
+    },
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
