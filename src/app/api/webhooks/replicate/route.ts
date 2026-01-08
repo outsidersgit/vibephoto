@@ -218,11 +218,32 @@ export async function POST(request: NextRequest) {
     }
     
     if (!jobType) {
-      console.log(`❓ Job ${payload.id} not found in any table - might be external or test job`)
-      return NextResponse.json({ 
-        success: true, 
+      // CRITICAL: Log detalhado quando registro não é encontrado
+      // Isso ajuda a diagnosticar problemas de timeout
+      console.error(`❌ WEBHOOK JOB NOT FOUND - CRITICAL ISSUE`)
+      console.error(`❌ Job ID: ${payload.id}`)
+      console.error(`❌ Status: ${payload.status}`)
+      console.error(`❌ Has Output: ${!!payload.output}`)
+      console.error(`❌ Query Params:`, { type: webhookType, recordId, userId })
+      console.error(`❌ This means:`)
+      console.error(`   - No generation found with jobId=${payload.id}`)
+      console.error(`   - No editHistory found in last 30 min with metadata.replicateId=${payload.id}`)
+      console.error(`   - No editHistory found in last 100 records with metadata.replicateId=${payload.id}`)
+      console.error(`   - No training found with jobId=${payload.id}`)
+      console.error(`   - No video found with jobId=${payload.id}`)
+      console.error(`❌ Possible causes:`)
+      console.error(`   1. Record creation failed`)
+      console.error(`   2. Record took >30 min AND is not in last 100 records`)
+      console.error(`   3. Wrong replicateId stored in metadata`)
+      console.error(`   4. External/test job not tracked in our system`)
+      console.error(`❌ USER IMPACT: Credits debited but image not delivered!`)
+
+      return NextResponse.json({
+        success: true,
         message: 'Job not found - might be external job',
-        jobId: payload.id 
+        jobId: payload.id,
+        searchParams: { type: webhookType, recordId, userId },
+        warning: 'This might indicate a timeout issue if status is succeeded'
       })
     }
     
@@ -438,7 +459,7 @@ async function detectJobType(jobId: string) {
       createdAt: true
     }
   })
-  
+
   if (generation) {
     // Verificar se é upscale baseado no prompt
     const isUpscale = generation.prompt?.startsWith('[UPSCALED]')
@@ -447,13 +468,14 @@ async function detectJobType(jobId: string) {
       record: generation
     }
   }
-  
+
   // Verificar se é uma edição (edit_history com replicateId no metadata)
-  // Prisma não suporta query direta em JSON, então buscamos recentes e filtramos
+  // CRITICAL FIX: Aumentar janela de busca de 10 para 30 minutos
+  // Modelos complexos (Nano Banana 4K) podem demorar 15+ minutos
   const recentEdits = await prisma.editHistory.findMany({
     where: {
       createdAt: {
-        gte: new Date(Date.now() - 10 * 60 * 1000) // Últimos 10 minutos
+        gte: new Date(Date.now() - 30 * 60 * 1000) // ✅ Últimos 30 minutos (era 10)
       }
     },
     select: {
@@ -466,15 +488,50 @@ async function detectJobType(jobId: string) {
     orderBy: {
       createdAt: 'desc'
     },
-    take: 10 // Limitar busca
+    take: 50 // ✅ Aumentar limite de 10 para 50 registros
   })
-  
+
   // Filtrar por replicateId no metadata
-  const editHistory = recentEdits.find((edit: any) => {
+  let editHistory = recentEdits.find((edit: any) => {
     const metadata = edit.metadata as any
     return metadata?.replicateId === jobId
   })
-  
+
+  // CRITICAL FIX: Se não encontrou nos últimos 30 minutos, fazer busca sem limite de tempo
+  // Isso evita perda de gerações que demoraram muito (>30 min)
+  if (!editHistory) {
+    console.warn(`⚠️ Edit not found in last 30 minutes, searching without time limit for jobId: ${jobId}`)
+
+    // Buscar últimos 100 registros sem limite de tempo
+    const allRecentEdits = await prisma.editHistory.findMany({
+      select: {
+        id: true,
+        userId: true,
+        prompt: true,
+        createdAt: true,
+        metadata: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: 100 // Buscar últimos 100 registros
+    })
+
+    editHistory = allRecentEdits.find((edit: any) => {
+      const metadata = edit.metadata as any
+      return metadata?.replicateId === jobId
+    })
+
+    if (editHistory) {
+      const minutesSinceCreation = Math.floor((Date.now() - new Date(editHistory.createdAt).getTime()) / 1000 / 60)
+      console.log(`✅ Edit found via fallback search (age: ${minutesSinceCreation} minutes):`, {
+        editId: editHistory.id,
+        createdAt: editHistory.createdAt,
+        jobId
+      })
+    }
+  }
+
   if (editHistory) {
     return {
       type: 'edit',

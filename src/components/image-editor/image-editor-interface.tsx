@@ -709,10 +709,12 @@ export function ImageEditorInterface({
           if (editFallbackTimerRef.current) {
             clearTimeout(editFallbackTimerRef.current)
           }
+          // CRITICAL FIX: Aumentar timeout de 2 min para 15 min (900 segundos)
+          // Modelos complexos (Nano Banana 4K) podem demorar 10-15 minutos
           editFallbackTimerRef.current = setTimeout(() => {
             if (!currentEditIdRef.current) return
             triggerEditFallback(currentEditIdRef.current)
-          }, 120000) // 120 segundos - modelo nano banana pode demorar
+          }, 900000) // 900 segundos = 15 minutos (era 120s = 2 min)
           console.log('✅ [IMAGE_EDITOR] ===== MONITORING EDIT VIA SSE =====')
           console.log('✅ [IMAGE_EDITOR] Edit History ID:', editId)
           console.log('✅ [IMAGE_EDITOR] ID Length:', editId.length)
