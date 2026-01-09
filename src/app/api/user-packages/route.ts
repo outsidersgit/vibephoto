@@ -38,6 +38,7 @@ export async function GET() {
         totalImages: pkg.totalImages,
         generatedImages: pkg.generatedImages,
         failedImages: pkg.failedImages,
+        successSeen: pkg.successSeen, // Whether user has seen the success banner
         previewUrls: pkg.package?.previewUrls || [],
         createdAt: pkg.createdAt,
         updatedAt: pkg.updatedAt

@@ -48,19 +48,25 @@ export function PackageProgressBarMinimal({ className }: PackageProgressBarMinim
         const data = await response.json()
         const packages = data.userPackages || []
 
-        // CRITICAL: Filtrar pacotes COMPLETED que já foram exibidos ANTES de selecionar
-        // Garante que se Pacote A está COMPLETED (já exibido) e Pacote B está GENERATING,
-        // o banner mostrará Pacote B ao invés de dar return e não mostrar nada
+        // CRITICAL: Filtrar pacotes já vistos ANTES de selecionar
+        // Garante que se Pacote A está COMPLETED (já visto) e Pacote B está GENERATING,
+        // o banner mostrará Pacote B ao invés de ignorar tudo
         const validPackages = packages.filter((pkg: any) => {
           // Excluir pacotes com modal aberto
           if (isModalOpen(pkg.id)) {
             return false
           }
-          // Excluir pacotes COMPLETED que já foram exibidos
-          if (pkg.status === 'COMPLETED' && wasCompletionShown(pkg.id)) {
+          // CRITICAL: Excluir pacotes COMPLETED que já foram vistos (persistente no banco)
+          if (pkg.status === 'COMPLETED' && pkg.successSeen === true) {
+            console.log('📦 [PackageProgressBarMinimal] Package already seen (DB):', pkg.id)
             return false
           }
-          // Incluir apenas pacotes GENERATING, ACTIVE ou COMPLETED (ainda não exibidos)
+          // Fallback: Excluir pacotes COMPLETED com flag localStorage (legado)
+          if (pkg.status === 'COMPLETED' && wasCompletionShown(pkg.id)) {
+            console.log('📦 [PackageProgressBarMinimal] Package already shown (localStorage):', pkg.id)
+            return false
+          }
+          // Incluir apenas pacotes GENERATING, ACTIVE ou COMPLETED (ainda não vistos)
           return pkg.status === 'GENERATING' || pkg.status === 'ACTIVE' || pkg.status === 'COMPLETED'
         })
 
@@ -87,7 +93,22 @@ export function PackageProgressBarMinimal({ className }: PackageProgressBarMinim
 
           // Auto-hide after 5 seconds if completed + mark as shown
           if (isCompleted) {
+            // Mark in localStorage (immediate, for this session)
             markCompletionShown(generatingPackage.id)
+
+            // CRITICAL: Mark in database (persistent across sessions)
+            fetch(`/api/user-packages/${generatingPackage.id}/mark-seen`, {
+              method: 'POST'
+            }).then(res => {
+              if (res.ok) {
+                console.log('✅ [PackageProgressBarMinimal] Marked package as seen in DB:', generatingPackage.id)
+              } else {
+                console.error('❌ [PackageProgressBarMinimal] Failed to mark package as seen:', res.status)
+              }
+            }).catch(err => {
+              console.error('❌ [PackageProgressBarMinimal] Error marking package as seen:', err)
+            })
+
             setTimeout(() => {
               setActivePackage(null)
               setIsVisible(false)
@@ -130,7 +151,7 @@ export function PackageProgressBarMinimal({ className }: PackageProgressBarMinim
         })
         setIsVisible(true)
       } else if (data.status === 'COMPLETED') {
-        // Verificar se já foi exibido antes de mostrar
+        // Verificar se já foi exibido antes de mostrar (localStorage check)
         if (wasCompletionShown(packageId)) {
           console.log('📦 [PackageProgressBarMinimal] SSE: Completion banner already shown for package:', packageId)
           return
@@ -147,8 +168,22 @@ export function PackageProgressBarMinimal({ className }: PackageProgressBarMinim
         })
         setIsVisible(true)
 
-        // Marcar como exibido e remover após 5 segundos
+        // Marcar como exibido (localStorage immediate + DB persistent)
         markCompletionShown(packageId)
+
+        // CRITICAL: Mark in database (persistent across sessions)
+        fetch(`/api/user-packages/${packageId}/mark-seen`, {
+          method: 'POST'
+        }).then(res => {
+          if (res.ok) {
+            console.log('✅ [PackageProgressBarMinimal] SSE: Marked package as seen in DB:', packageId)
+          } else {
+            console.error('❌ [PackageProgressBarMinimal] SSE: Failed to mark package as seen:', res.status)
+          }
+        }).catch(err => {
+          console.error('❌ [PackageProgressBarMinimal] SSE: Error marking package as seen:', err)
+        })
+
         setTimeout(() => {
           setActivePackage(null)
           setIsVisible(false)

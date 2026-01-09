@@ -499,6 +499,7 @@ model UserPackage {
   activatedAt DateTime  @default(now()) // When user activated the package
   completedAt DateTime? // When all images were generated
   errorMessage String?  // Error details if status is FAILED
+  successSeen Boolean   @default(false) // Whether user has seen the success modal/banner
 
   // Timestamps
   createdAt DateTime @default(now())
