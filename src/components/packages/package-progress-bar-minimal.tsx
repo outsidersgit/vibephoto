@@ -47,24 +47,28 @@ export function PackageProgressBarMinimal({ className }: PackageProgressBarMinim
         
         const data = await response.json()
         const packages = data.userPackages || []
-        
-        // Pegar o primeiro pacote em andamento ou recém-completado
-        const generatingPackage = packages.find((pkg: any) =>
-          pkg.status === 'GENERATING' || pkg.status === 'ACTIVE' || pkg.status === 'COMPLETED'
-        )
-        
+
+        // CRITICAL: Filtrar pacotes COMPLETED que já foram exibidos ANTES de selecionar
+        // Garante que se Pacote A está COMPLETED (já exibido) e Pacote B está GENERATING,
+        // o banner mostrará Pacote B ao invés de dar return e não mostrar nada
+        const validPackages = packages.filter((pkg: any) => {
+          // Excluir pacotes com modal aberto
+          if (isModalOpen(pkg.id)) {
+            return false
+          }
+          // Excluir pacotes COMPLETED que já foram exibidos
+          if (pkg.status === 'COMPLETED' && wasCompletionShown(pkg.id)) {
+            return false
+          }
+          // Incluir apenas pacotes GENERATING, ACTIVE ou COMPLETED (ainda não exibidos)
+          return pkg.status === 'GENERATING' || pkg.status === 'ACTIVE' || pkg.status === 'COMPLETED'
+        })
+
+        // Pegar o primeiro pacote válido após filtros
+        const generatingPackage = validPackages[0]
+
         if (generatingPackage) {
           const isCompleted = generatingPackage.status === 'COMPLETED'
-
-          // Não mostrar se modal estiver aberto OU se já foi exibido o banner de conclusão
-          if (isModalOpen(generatingPackage.id)) {
-            return
-          }
-
-          if (isCompleted && wasCompletionShown(generatingPackage.id)) {
-            console.log('📦 [PackageProgressBarMinimal] Completion banner already shown for package:', generatingPackage.id)
-            return
-          }
 
           // CRITICAL: Always show 100% progress when status is COMPLETED
           const calculatedProgress = Math.min(100, Math.round(
