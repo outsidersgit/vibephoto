@@ -191,7 +191,8 @@ export async function POST(request: NextRequest) {
       }
     } else {
       console.warn('⚠️ Replicate webhook: No REPLICATE_WEBHOOK_SECRET configured - webhook not secured')
-      payload = await request.json()
+      const body = await request.text()
+      payload = JSON.parse(body)
     }
 
     console.log('📥 Replicate webhook payload:', {
@@ -541,7 +542,7 @@ async function detectJobType(jobId: string) {
   
   // Verificar se é treinamento de modelo
   const model = await prisma.aIModel.findFirst({
-    where: { jobId },
+    where: { trainingJobId: jobId },
     select: {
       id: true,
       userId: true,
