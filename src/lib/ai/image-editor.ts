@@ -162,6 +162,68 @@ export class ImageEditor {
   }
 
   /**
+   * Edit with multiple image URLs directly (bypasses base64 conversion for better performance)
+   * OPTIMIZED: Use this when images are already uploaded to R2/S3
+   * @param imageUrls - Array of HTTP(S) URLs to images
+   * @param promptText - Text description of the desired edit/composition
+   * @param aspectRatio - Aspect ratio for the output image
+   * @param webhookUrl - Optional webhook URL for async processing
+   * @param resolution - Output resolution ('2K' or '4K')
+   * @returns Promise<ImageEditResponse>
+   */
+  async editWithMultipleImageUrls(imageUrls: string[], promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string, resolution?: string): Promise<ImageEditResponse> {
+    this.checkConfiguration()
+
+    try {
+      console.log('🍌 Starting Nano Banana multi-image edit via URLs (OPTIMIZED):', {
+        imageCount: imageUrls.length,
+        prompt: promptText,
+        resolution
+      })
+
+      // Validate input
+      if (!imageUrls || imageUrls.length === 0) {
+        throw new AIError('At least one image URL is required', 'INVALID_INPUT')
+      }
+
+      if (imageUrls.length > 14) {
+        throw new AIError('Maximum 14 images can be processed at once', 'TOO_MANY_IMAGES')
+      }
+
+      if (!promptText || promptText.trim().length === 0) {
+        throw new AIError('Prompt text is required', 'INVALID_INPUT')
+      }
+
+      // Validate all URLs
+      for (const url of imageUrls) {
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          throw new AIError('All image URLs must be valid HTTP(S) URLs', 'INVALID_URL')
+        }
+      }
+
+      // Call Nano Banana provider with URLs directly (no conversion needed)
+      const result = await this.provider!.editImage({
+        prompt: promptText,
+        imageInput: imageUrls,
+        outputFormat: 'jpg',
+        aspectRatio,
+        resolution,
+        webhookUrl
+      })
+
+      console.log('✅ Nano Banana multi-image edit completed (URL mode):', result.id)
+      return result
+
+    } catch (error) {
+      console.error('❌ Nano Banana multi-image edit failed (URL mode):', error)
+      throw error instanceof AIError ? error : new AIError(
+        `Nano Banana multi-image editing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'NANO_BANANA_MULTI_IMAGE_URL_ERROR'
+      )
+    }
+  }
+
+  /**
    * Generate an image from text prompt only (no input image)
    * @param promptText - Text description of the desired image
    * @param aspectRatio - Aspect ratio for the output image
