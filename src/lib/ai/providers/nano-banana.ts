@@ -71,17 +71,32 @@ export class NanoBananaProvider {
       input.safety_filter_level = request.safetyFilterLevel || 'block_only_high'
 
       // Add image input if provided - Nano Banana supports array of image URIs
+      // CRITICAL: Replicate schema requires format: "uri" (HTTP/HTTPS only, NO data URLs!)
       const hasImages = request.imageInput && (
         (Array.isArray(request.imageInput) && request.imageInput.length > 0) ||
         (!Array.isArray(request.imageInput) && request.imageInput)
       )
 
       if (hasImages) {
-        if (Array.isArray(request.imageInput)) {
-          input.image_input = request.imageInput
-        } else {
-          input.image_input = [request.imageInput]
+        const imageInputArray = Array.isArray(request.imageInput)
+          ? request.imageInput
+          : [request.imageInput]
+
+        // CRITICAL VALIDATION: Reject data URLs - Replicate only accepts HTTP(S) URIs
+        const invalidUrls = imageInputArray.filter(url => !url.startsWith('http://') && !url.startsWith('https://'))
+        if (invalidUrls.length > 0) {
+          console.error('❌ Invalid image_input URLs detected (must be HTTP/HTTPS, not data URLs):', {
+            count: invalidUrls.length,
+            examples: invalidUrls.slice(0, 3).map(url => url.substring(0, 50) + '...')
+          })
+          throw new AIError(
+            `Invalid image URLs: Replicate requires HTTP(S) URLs, not data URLs. Found ${invalidUrls.length} invalid URL(s).`,
+            'INVALID_IMAGE_URL_FORMAT'
+          )
         }
+
+        input.image_input = imageInputArray
+        console.log('✅ All image_input URLs validated as HTTP(S) URIs')
       } else {
         input.image_input = []
       }

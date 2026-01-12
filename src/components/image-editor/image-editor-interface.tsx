@@ -924,12 +924,22 @@ export function ImageEditorInterface({
         imageUrls // Array of R2 URLs
       }
 
+      // CRITICAL VALIDATION: Ensure no data URLs are being sent
+      const hasDataUrls = imageUrls.some(url => url.startsWith('data:'))
+      if (hasDataUrls) {
+        console.error('❌ [IMAGE_EDITOR] CRITICAL: Data URLs detected in imageUrls!')
+        console.error('❌ [IMAGE_EDITOR] This will cause E006 error on Replicate')
+        console.error('❌ [IMAGE_EDITOR] URLs:', imageUrls.map(u => u.substring(0, 60)))
+        throw new Error('Invalid URLs: data URLs are not supported. Images must be uploaded to R2 first.')
+      }
+
       console.log('📤 [IMAGE_EDITOR] Sending request with image URLs:', {
         imageCount: imageUrls.length,
         operation,
         prompt: prompt.substring(0, 50),
         aspectRatio,
-        resolution
+        resolution,
+        urlPreviews: imageUrls.map(url => url.substring(0, 60) + '...')
       })
 
       const response = await fetch('/api/ai/image-editor', {
