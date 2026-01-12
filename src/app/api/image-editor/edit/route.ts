@@ -193,26 +193,9 @@ export async function POST(request: NextRequest) {
     // OPTIMIZED: Use URL-based methods when we have URLs (avoids base64 conversion)
     if (imageUrls.length > 0) {
       // URL mode (OPTIMIZED - no download/conversion needed)
-      if (imageUrls.length > 1) {
-        // Multiple URLs - use optimized URL method
-        console.log('🚀 Using optimized multi-URL method')
-        result = await imageEditor.editWithMultipleImageUrls(imageUrls, prompt, aspectRatioValue, webhookUrl, nanoBananaResolution)
-      } else {
-        // Single URL - use standard edit method with URL
-        console.log('🚀 Using optimized single-URL method')
-        result = await imageEditor.editImageWithPrompt(
-          // Convert URL to a minimal File object for compatibility
-          new File([], 'url-placeholder', { type: 'image/jpeg' }),
-          prompt,
-          aspectRatioValue,
-          webhookUrl,
-          nanoBananaResolution
-        )
-        // Override the image URL in the provider call - we'll handle this in the provider
-        // For now, we need to add a method that accepts URL directly
-        // Using editWithMultipleImageUrls with single URL as workaround
-        result = await imageEditor.editWithMultipleImageUrls([imageUrls[0]], prompt, aspectRatioValue, webhookUrl, nanoBananaResolution)
-      }
+      // Always use editWithMultipleImageUrls for consistency (works for single or multiple)
+      console.log('🚀 Using optimized URL method (single or multiple)')
+      result = await imageEditor.editWithMultipleImageUrls(imageUrls, prompt, aspectRatioValue, webhookUrl, nanoBananaResolution)
     } else if (images.length > 1) {
       // Multiple images - use edit with multiple images (Nano Banana Pro feature)
       result = await imageEditor.editWithMultipleImages(images, prompt, aspectRatioValue, webhookUrl, nanoBananaResolution)
