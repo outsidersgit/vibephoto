@@ -366,41 +366,42 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Save to edit history database
-    let editHistoryEntry = null
-    try {
-      // Get original image URL from form data or create a placeholder
-      const firstImage = images.length > 0 ? images[0] : null
-      const originalImageUrl = imageUrls.length > 0
-        ? imageUrls[0]
-        : firstImage
-        ? (formData.get('originalUrl') as string || `data:${firstImage.type};base64,original`)
-        : 'generated-from-scratch'
+    // Save to edit history database (only for synchronous mode without webhook)
+    if (!webhookUrl || !editHistoryEntry) {
+      try {
+        // Get original image URL from form data or create a placeholder
+        const firstImage = images.length > 0 ? images[0] : null
+        const originalImageUrl = imageUrls.length > 0
+          ? imageUrls[0]
+          : firstImage
+          ? (formData.get('originalUrl') as string || `data:${firstImage.type};base64,original`)
+          : 'generated-from-scratch'
 
-      editHistoryEntry = await createEditHistory({
-        userId: session.user.id,
-        originalImageUrl: originalImageUrl,
-        editedImageUrl: permanentImageUrl, // Use permanent S3 URL
-        thumbnailUrl: permanentThumbnailUrl, // Use permanent S3 URL
-        operation: firstImage ? 'nano_banana_edit' : 'nano_banana_generate',
-        prompt: prompt,
-        metadata: {
-          ...result.metadata,
-          originalFileName: firstImage?.name || 'generated',
-          fileSize: firstImage?.size || 0,
-          fileType: firstImage?.type || 'image/png',
-          processingTime: result.metadata?.processingTime,
-          replicateId: result.id,
-          generatedFromScratch: images.length === 0,
-          permanentUrl: permanentImageUrl,
-          temporaryUrl: result.resultImage // Keep original for reference
-        }
-      })
+        editHistoryEntry = await createEditHistory({
+          userId: session.user.id,
+          originalImageUrl: originalImageUrl,
+          editedImageUrl: permanentImageUrl, // Use permanent S3 URL
+          thumbnailUrl: permanentThumbnailUrl, // Use permanent S3 URL
+          operation: (images.length > 0 || imageUrls.length > 0) ? 'nano_banana_edit' : 'nano_banana_generate',
+          prompt: prompt,
+          metadata: {
+            ...result.metadata,
+            originalFileName: firstImage?.name || 'generated',
+            fileSize: firstImage?.size || 0,
+            fileType: firstImage?.type || 'image/png',
+            processingTime: result.metadata?.processingTime,
+            replicateId: result.id,
+            generatedFromScratch: images.length === 0 && imageUrls.length === 0,
+            permanentUrl: permanentImageUrl,
+            temporaryUrl: result.resultImage // Keep original for reference
+          }
+        })
 
-      console.log('✅ Edit history saved:', editHistoryEntry.id)
-    } catch (dbError) {
-      console.error('❌ Failed to save edit history:', dbError)
-      // Don't fail the whole request if DB save fails
+        console.log('✅ Edit history saved:', editHistoryEntry.id)
+      } catch (dbError) {
+        console.error('❌ Failed to save edit history:', dbError)
+        // Don't fail the whole request if DB save fails
+      }
     }
 
     const charge = await CreditManager.deductCredits(
