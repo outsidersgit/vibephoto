@@ -160,6 +160,35 @@ export async function POST(request: NextRequest) {
     // Convert resolution to Nano Banana format ('2K' or '4K')
     const nanoBananaResolution = resolution === '4k' ? '4K' : '2K'
 
+    // CRITICAL: Create edit_history BEFORE calling Replicate
+    // This ensures webhook can find the record even if prediction fails instantly
+    let editHistoryEntry: any = null
+    if (webhookUrl) {
+      const originalImageUrl = imageUrls.length > 0
+        ? imageUrls[0]
+        : images.length > 0
+        ? (formData.get('originalUrl') as string || `data:${images[0].type};base64,original`)
+        : 'generated-from-scratch'
+
+      editHistoryEntry = await createEditHistory({
+        userId: session.user.id,
+        originalImageUrl: originalImageUrl,
+        editedImageUrl: '', // Will be updated by webhook
+        thumbnailUrl: '', // Will be updated by webhook
+        operation: (images.length > 0 || imageUrls.length > 0) ? 'nano_banana_edit' : 'nano_banana_generate',
+        prompt: prompt,
+        metadata: {
+          replicateId: 'pending', // Will be updated after prediction starts
+          status: 'PENDING',
+          generatedFromScratch: images.length === 0 && imageUrls.length === 0,
+          webhookEnabled: true,
+          async: true
+        }
+      })
+
+      console.log('✅ Edit history pre-created for webhook:', editHistoryEntry.id)
+    }
+
     let result
     // OPTIMIZED: Use URL-based methods when we have URLs (avoids base64 conversion)
     if (imageUrls.length > 0) {
@@ -195,36 +224,27 @@ export async function POST(request: NextRequest) {
       result = await imageEditor.generateImageFromPrompt(prompt, aspectRatioValue, webhookUrl, nanoBananaResolution)
     }
 
-    // If webhook is enabled, result might not have resultImage yet (async processing)
-    // Create edit_history record with PROCESSING status so webhook can update it
-    if (webhookUrl && result.status === 'processing' && !result.resultImage) {
-      console.log('📡 Editor using async webhook processing, creating edit_history record:', result.id)
-      
-      // Get original image URL from form data or create a placeholder
-      const originalImageUrl = imageUrls.length > 0
-        ? imageUrls[0]
-        : images.length > 0
-        ? (formData.get('originalUrl') as string || `data:${images[0].type};base64,original`)
-        : 'generated-from-scratch'
-
-      // Create edit_history with PROCESSING status - webhook will update when complete
-      const editHistoryEntry = await createEditHistory({
-        userId: session.user.id,
-        originalImageUrl: originalImageUrl,
-        editedImageUrl: '', // Will be updated by webhook
-        thumbnailUrl: '', // Will be updated by webhook
-        operation: (images.length > 0 || imageUrls.length > 0) ? 'nano_banana_edit' : 'nano_banana_generate',
-        prompt: prompt,
-        metadata: {
-          replicateId: result.id,
-          status: 'PROCESSING',
-          generatedFromScratch: images.length === 0,
-          webhookEnabled: true,
-          async: true
+    // Update edit_history with replicateId after prediction is created
+    if (webhookUrl && editHistoryEntry) {
+      // Update the metadata with the actual replicateId
+      await prisma.editHistory.update({
+        where: { id: editHistoryEntry.id },
+        data: {
+          metadata: {
+            ...(editHistoryEntry.metadata as any),
+            replicateId: result.id,
+            status: result.status === 'processing' || result.status === 'starting' ? 'PROCESSING' : 'FAILED',
+            predictionCreatedAt: new Date().toISOString()
+          }
         }
       })
-      
-      console.log('✅ Edit history created for async processing:', editHistoryEntry.id)
+
+      console.log('✅ Edit history updated with replicateId:', result.id)
+    }
+
+    // If webhook is enabled and processing async
+    if (webhookUrl && (result.status === 'processing' || result.status === 'starting') && !result.resultImage) {
+      console.log('📡 Editor using async webhook processing:', result.id)
 
       // Also create a placeholder generation for gallery preview
       const placeholderGeneration = await prisma.generation.create({
@@ -275,7 +295,7 @@ export async function POST(request: NextRequest) {
           action: 'image_edit',
           details: {
             editId: editHistoryEntry.id,
-            operation: image ? 'nano_banana_edit' : 'nano_banana_generate',
+            operation: (images.length > 0 || imageUrls.length > 0) ? 'nano_banana_edit' : 'nano_banana_generate',
             prompt: prompt.substring(0, 200)
           },
           creditsUsed: creditsNeeded
@@ -411,7 +431,7 @@ export async function POST(request: NextRequest) {
         action: 'image_edit',
         details: {
           editId: editHistoryEntry?.id || result.id || 'unknown',
-          operation: image ? 'nano_banana_edit' : 'nano_banana_generate',
+          operation: (images.length > 0 || imageUrls.length > 0) ? 'nano_banana_edit' : 'nano_banana_generate',
           prompt: prompt.substring(0, 200)
         },
         creditsUsed: creditsNeeded
