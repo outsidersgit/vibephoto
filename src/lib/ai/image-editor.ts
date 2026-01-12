@@ -178,7 +178,9 @@ export class ImageEditor {
       console.log('🍌 Starting Nano Banana multi-image edit via URLs (OPTIMIZED):', {
         imageCount: imageUrls.length,
         prompt: promptText,
-        resolution
+        resolution,
+        firstUrlPreview: imageUrls[0]?.substring(0, 100),
+        isBase64: imageUrls[0]?.startsWith('data:')
       })
 
       // Validate input

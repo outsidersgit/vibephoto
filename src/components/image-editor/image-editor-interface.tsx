@@ -863,6 +863,7 @@ export function ImageEditorInterface({
       // This bypasses Vercel's 4.5MB body limit
       const imageUrls: string[] = []
 
+      // IMPORTANT: Handle both Files (new uploads) and URLs (from gallery)
       if (imageFiles.length > 0) {
         console.log('☁️ [IMAGE_EDITOR] Uploading images directly to R2...')
 
@@ -900,6 +901,17 @@ export function ImageEditorInterface({
           // Step 3: Store public URL
           imageUrls.push(data.publicUrl)
           console.log(`✅ [IMAGE_EDITOR] Image ${i + 1} uploaded:`, data.publicUrl.substring(0, 50))
+        }
+      } else if (images.length > 0) {
+        // User loaded image from gallery or URL - use existing URLs
+        console.log('🔗 [IMAGE_EDITOR] Using existing image URLs from gallery')
+        for (const imageUrl of images) {
+          if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+            imageUrls.push(imageUrl)
+            console.log(`✅ [IMAGE_EDITOR] Using existing URL:`, imageUrl.substring(0, 50))
+          } else {
+            console.warn('⚠️ [IMAGE_EDITOR] Skipping non-HTTP URL (probably data URL):', imageUrl.substring(0, 50))
+          }
         }
       }
 
