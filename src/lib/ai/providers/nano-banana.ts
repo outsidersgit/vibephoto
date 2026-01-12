@@ -63,20 +63,20 @@ export class NanoBananaProvider {
         output_format: request.outputFormat || 'jpg'
       }
 
-      // Add aspect ratio if provided
-      if (request.aspectRatio) {
-        input.aspect_ratio = request.aspectRatio
-      }
-
       // 🔥 NEW: Nano Banana Pro parameters
       // Add resolution (default: "2K")
       input.resolution = request.resolution || '2K'
-      
+
       // Add safety filter level (default: "block_only_high")
       input.safety_filter_level = request.safetyFilterLevel || 'block_only_high'
 
       // Add image input if provided - Nano Banana supports array of image URIs
-      if (request.imageInput) {
+      const hasImages = request.imageInput && (
+        (Array.isArray(request.imageInput) && request.imageInput.length > 0) ||
+        (!Array.isArray(request.imageInput) && request.imageInput)
+      )
+
+      if (hasImages) {
         if (Array.isArray(request.imageInput)) {
           input.image_input = request.imageInput
         } else {
@@ -86,10 +86,28 @@ export class NanoBananaProvider {
         input.image_input = []
       }
 
+      // CRITICAL: aspect_ratio validation based on image_input
+      // - With images: can be "match_input_image" (default) or specific ratio
+      // - Without images (generation): MUST be a specific ratio, NOT "match_input_image"
+      if (request.aspectRatio) {
+        if (!hasImages && request.aspectRatio === 'match_input_image') {
+          // Cannot use match_input_image without images - use default 1:1
+          console.warn('⚠️ Cannot use match_input_image without images, defaulting to 1:1')
+          input.aspect_ratio = '1:1'
+        } else {
+          input.aspect_ratio = request.aspectRatio
+        }
+      } else {
+        // Set sensible default based on whether we have images
+        input.aspect_ratio = hasImages ? 'match_input_image' : '1:1'
+      }
+
       console.log('🍌 Nano Banana Pro input:', {
         prompt: input.prompt.substring(0, 50) + '...',
         imageCount: input.image_input.length,
+        imageUrls: input.image_input.map((url: string) => url.substring(0, 80) + '...'),
         outputFormat: input.output_format,
+        aspectRatio: input.aspect_ratio,
         resolution: input.resolution,
         safetyLevel: input.safety_filter_level
       })
@@ -200,13 +218,31 @@ export class NanoBananaProvider {
 
     } catch (error) {
       console.error('❌ Nano Banana via Replicate failed:', error)
-      
+
+      // Extract detailed error info from Replicate error
+      if (error && typeof error === 'object') {
+        const err = error as any
+        console.error('📋 Detailed error info:', {
+          message: err.message,
+          detail: err.detail,
+          status: err.status,
+          code: err.code,
+          prediction: err.prediction,
+          input: err.input,
+          fullError: JSON.stringify(error, null, 2)
+        })
+      }
+
       if (error instanceof AIError) {
         throw error
       }
-      
+
+      // Enhanced error message with more context
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const errorDetail = (error as any)?.detail || ''
+
       throw new AIError(
-        `Nano Banana editing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Nano Banana editing failed: ${errorMessage}${errorDetail ? ` - ${errorDetail}` : ''}`,
         'NANO_BANANA_EDIT_ERROR'
       )
     }
