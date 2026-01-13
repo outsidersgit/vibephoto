@@ -10,7 +10,7 @@ interface PromptOptimizerProps {
   onOptimizedPrompt: (optimizedPrompt: string) => void
   type?: 'image' | 'video'
   className?: string
-  variant?: 'default' | 'outline' | 'ghost'
+  variant?: 'default' | 'outline' | 'ghost' | 'inline'
   size?: 'default' | 'sm' | 'lg' | 'icon'
 }
 
@@ -91,6 +91,30 @@ export function PromptOptimizer({
     }
   }
 
+  // Inline variant for inside textarea
+  if (variant === 'inline') {
+    return (
+      <button
+        onClick={handleOptimize}
+        disabled={isOptimizing || !currentPrompt}
+        type="button"
+        className={`absolute bottom-3 right-3 p-2 rounded-md transition-all ${
+          isOptimizing || !currentPrompt
+            ? 'text-gray-400 cursor-not-allowed opacity-50'
+            : 'text-gray-600 hover:text-purple-600 hover:bg-gray-100'
+        } ${className || ''}`}
+        title={isOptimizing ? 'Otimizando...' : 'Otimizar prompt com IA'}
+      >
+        {isOptimizing ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <Sparkles className="h-5 w-5" />
+        )}
+      </button>
+    )
+  }
+
+  // Default button variant
   return (
     <Button
       onClick={handleOptimize}

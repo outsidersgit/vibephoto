@@ -141,14 +141,6 @@ export function PromptInput({
                 </div>
                 {prompt && (
                   <>
-                    <PromptOptimizer
-                      currentPrompt={prompt}
-                      onOptimizedPrompt={onPromptChange}
-                      type="image"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-3 text-xs"
-                    />
                     <Button
                       type="button"
                       variant="ghost"
@@ -173,22 +165,30 @@ export function PromptInput({
                 )}
               </div>
             </div>
-            
-            <SafeTextarea
-              id="prompt"
-              value={prompt}
-              ref={promptRef}
-              onChange={(e) => { onPromptChange(e.target.value); adjustPromptHeight() }}
-              onSanitizedChange={handleSanitizedChange}
-              disabled={isGenerating}
-              className="w-full px-3 py-3 bg-gray-200 border border-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-[#667EEA] focus:border-[#667EEA] resize-none text-gray-900 placeholder:text-gray-500"
-              rows={3}
-              maxLength={4000}
-              placeholder="Descreva a foto que deseja criar... ex: 'foto profissional com roupa social, sorrindo, iluminação natural, alta qualidade'"
-              style={{
-                fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
-              }}
-            />
+
+            <div className="relative">
+              <SafeTextarea
+                id="prompt"
+                value={prompt}
+                ref={promptRef}
+                onChange={(e) => { onPromptChange(e.target.value); adjustPromptHeight() }}
+                onSanitizedChange={handleSanitizedChange}
+                disabled={isGenerating}
+                className="w-full px-3 py-3 pr-12 bg-gray-200 border border-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-[#667EEA] focus:border-[#667EEA] resize-none text-gray-900 placeholder:text-gray-500"
+                rows={3}
+                maxLength={4000}
+                placeholder="Descreva a foto que deseja criar... ex: 'foto profissional com roupa social, sorrindo, iluminação natural, alta qualidade'"
+                style={{
+                  fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
+                }}
+              />
+              <PromptOptimizer
+                currentPrompt={prompt}
+                onOptimizedPrompt={onPromptChange}
+                type="image"
+                variant="inline"
+              />
+            </div>
             <div className="mt-2 text-xs text-gray-500">Seja específico para melhores resultados. Exemplos: iluminação, ambiente, lente, estilo.</div>
           </div>
         </>
