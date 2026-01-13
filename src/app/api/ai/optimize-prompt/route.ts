@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuthAPI } from '@/lib/auth/server-utils'
+import { requireAuthAPI } from '@/lib/auth'
 import { GeminiProvider } from '@/lib/ai/providers/gemini'
 
 /**
