@@ -16,23 +16,29 @@ import { AI_CONFIG } from './config'
  */
 
 interface AstriaInspectionResponse {
-  name?: string
-  age?: string
+  name?: 'man' | 'woman' | 'boy' | 'girl' | 'baby' | 'cat' | 'dog' | 'NONE'
+  body_type?: 'slim body' | 'average body' | 'muscular body' | 'plussize body' | 'NONE'
   ethnicity?: string
+  age?: '20 yo' | '30 yo' | '40 yo' | '50 yo' | '60 yo' | '70 yo'
+  glasses?: 'glasses' | 'NONE'
   eye_color?: string
-  facial_hair?: string
-  gender?: string
-  glasses?: string
   hair_color?: string
   hair_length?: string
-  body_type?: string
-  soft_prompts?: string[]
-  wearing_sunglasses?: boolean  // ✅ Correct field name
+  hair_style?: string
+  facial_hair?: 'mustache' | 'beard' | 'goatee' | 'NONE'
+  is_bald?: 'bald' | 'NONE'
+  headcover?: 'with head cover' | 'NONE'
+
+  // Boolean detection fields
+  funny_face?: boolean
+  wearing_sunglasses?: boolean
+  wearing_hat?: boolean
   blurry?: boolean
-  long_shot?: boolean
-  multiple_people?: boolean
+  includes_multiple_people?: boolean
+  full_body_image_or_longshot?: boolean
   selfie?: boolean
-  headwear?: string
+  low_resolution?: boolean
+  low_quality?: boolean
 }
 
 export class ImageQualityAnalyzer {
@@ -192,14 +198,14 @@ export class ImageQualityAnalyzer {
       recommendations.push('Remova fotos com óculos escuros - impedem o modelo de aprender características faciais')
     }
 
-    if (data.headwear && data.headwear !== 'NONE') {
+    if (data.wearing_hat === true || data.headcover === 'with head cover') {
       criticalIssues.push('hat_or_cap')
       finetuningReadiness -= 20
       score -= 30
       recommendations.push('Remova fotos com chapéus, bonés ou gorros - cobrem características importantes')
     }
 
-    if (data.multiple_people === true) {
+    if (data.includes_multiple_people === true) {
       criticalIssues.push('multiple_people')
       finetuningReadiness -= 25
       score -= 40
@@ -213,8 +219,22 @@ export class ImageQualityAnalyzer {
       recommendations.push('Foto embaçada - use imagens nítidas e focadas')
     }
 
+    if (data.funny_face === true) {
+      criticalIssues.push('making_faces')
+      finetuningReadiness -= 15
+      score -= 25
+      recommendations.push('Evite caretas ou expressões exageradas - use expressões naturais')
+    }
+
+    if (data.low_quality === true) {
+      criticalIssues.push('hand_covering_face') // Using as proxy for low quality
+      technicalQuality -= 10
+      score -= 20
+      recommendations.push('Qualidade de imagem baixa - use fotos de melhor qualidade')
+    }
+
     // MINOR ISSUES
-    if (data.glasses && data.glasses !== 'NONE' && !data.wearing_sunglasses) {
+    if (data.glasses === 'glasses' && !data.wearing_sunglasses) {
       minorIssues.push('slight_blur') // Using as proxy for glasses
       score -= 10
       recommendations.push('Óculos de grau: OK se você sempre usa, caso contrário prefira fotos sem')
@@ -227,11 +247,18 @@ export class ImageQualityAnalyzer {
       recommendations.push('Selfies podem ter ângulos não ideais - prefira fotos tiradas por outra pessoa')
     }
 
-    if (data.long_shot === true && options.photoType === 'face') {
+    if (data.full_body_image_or_longshot === true && options.photoType === 'face') {
       minorIssues.push('poor_framing')
       composition -= 10
       score -= 15
       recommendations.push('Foto muito distante para close de rosto - aproxime mais da câmera')
+    }
+
+    if (data.low_resolution === true) {
+      minorIssues.push('low_resolution')
+      technicalQuality -= 8
+      score -= 12
+      recommendations.push('Resolução baixa - prefira fotos com maior resolução para melhor qualidade')
     }
 
     // Ensure no negative scores
