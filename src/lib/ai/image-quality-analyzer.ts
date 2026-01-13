@@ -16,6 +16,7 @@ import { AI_CONFIG } from './config'
  */
 
 interface AstriaInspectionResponse {
+  name?: string
   age?: string
   ethnicity?: string
   eye_color?: string
@@ -26,7 +27,7 @@ interface AstriaInspectionResponse {
   hair_length?: string
   body_type?: string
   soft_prompts?: string[]
-  sunglasses?: boolean
+  wearing_sunglasses?: boolean  // ✅ Correct field name
   blurry?: boolean
   long_shot?: boolean
   multiple_people?: boolean
@@ -184,7 +185,7 @@ export class ImageQualityAnalyzer {
     const recommendations: string[] = []
 
     // CRITICAL ISSUES
-    if (data.sunglasses === true) {
+    if (data.wearing_sunglasses === true) {
       criticalIssues.push('sunglasses')
       finetuningReadiness -= 20
       score -= 30
@@ -213,7 +214,7 @@ export class ImageQualityAnalyzer {
     }
 
     // MINOR ISSUES
-    if (data.glasses && data.glasses !== 'NONE' && !data.sunglasses) {
+    if (data.glasses && data.glasses !== 'NONE' && !data.wearing_sunglasses) {
       minorIssues.push('slight_blur') // Using as proxy for glasses
       score -= 10
       recommendations.push('Óculos de grau: OK se você sempre usa, caso contrário prefira fotos sem')
