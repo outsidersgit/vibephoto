@@ -61,8 +61,8 @@ export class ImageQualityAnalyzer {
       }
 
       // Call Gemini Vision API
-      const result = await this.model.generateContent([prompt, imagePart])
-      const response = await result.response
+      const geminiResult = await this.model.generateContent([prompt, imagePart])
+      const response = await geminiResult.response
       const text = response.text()
 
       console.log(`📊 Raw Gemini response for ${filename}:`, text.substring(0, 200))
