@@ -265,40 +265,6 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
         </Card>
       )}
 
-      {/* Quality Analysis Warning */}
-      {qualityStats.analyzed > 0 && qualityStats.averageScore < 70 && (
-        <Card className="border-yellow-200 bg-yellow-50">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <h4 className="text-sm font-semibold mb-1 text-yellow-900">
-                  ⚠️ Atenção: Qualidade das Fotos
-                </h4>
-                <p className="text-xs text-yellow-700 mb-2">
-                  Algumas fotos estão com qualidade abaixo do recomendado (score médio: {qualityStats.averageScore.toFixed(1)}/100).
-                  Substituir as fotos marcadas melhorará significativamente os resultados do treinamento.
-                </p>
-                <div className="flex gap-3 text-xs">
-                  {qualityStats.poor > 0 && (
-                    <span className="text-red-600">❌ {qualityStats.poor} ruim</span>
-                  )}
-                  {qualityStats.acceptable > 0 && (
-                    <span className="text-yellow-600">⚠️ {qualityStats.acceptable} aceitável</span>
-                  )}
-                  {qualityStats.excellent > 0 && (
-                    <span className="text-green-600">✅ {qualityStats.excellent} excelente</span>
-                  )}
-                  {qualityStats.perfect > 0 && (
-                    <span className="text-green-700">⭐ {qualityStats.perfect} perfeita</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Tips for Better Results */}
       <Card className="bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border border-slate-600/30 shadow-2xl">
         <CardContent className="pt-3 pb-3">
@@ -541,6 +507,40 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
 
         </CardContent>
       </Card>
+
+      {/* Quality Analysis Warning */}
+      {qualityStats.analyzed > 0 && qualityStats.averageScore < 70 && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h4 className="text-sm font-semibold mb-1 text-yellow-900">
+                  ⚠️ Atenção: Qualidade das Fotos
+                </h4>
+                <p className="text-xs text-yellow-700 mb-2">
+                  Algumas fotos estão com qualidade abaixo do recomendado (score médio: {qualityStats.averageScore.toFixed(1)}/100).
+                  Substituir as fotos marcadas melhorará significativamente os resultados do treinamento.
+                </p>
+                <div className="flex gap-3 text-xs">
+                  {qualityStats.poor > 0 && (
+                    <span className="text-red-600">❌ {qualityStats.poor} ruim</span>
+                  )}
+                  {qualityStats.acceptable > 0 && (
+                    <span className="text-yellow-600">⚠️ {qualityStats.acceptable} aceitável</span>
+                  )}
+                  {qualityStats.excellent > 0 && (
+                    <span className="text-green-600">✅ {qualityStats.excellent} excelente</span>
+                  )}
+                  {qualityStats.perfect > 0 && (
+                    <span className="text-green-700">⭐ {qualityStats.perfect} perfeita</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
     </div>
   )

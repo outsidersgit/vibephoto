@@ -224,75 +224,6 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
 
   return (
     <div className="space-y-6">
-      {/* Credit Cost Warning */}
-      {modelCostInfo && modelCostInfo.nextModelCost > 0 && (
-        <Card className="border-purple-200 bg-purple-50">
-          <CardContent className="p-4">
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold mb-1 text-purple-900">
-                ⚠️ Atenção - Modelo Adicional
-              </h4>
-              <p className="text-xs text-purple-700">
-                Este modelo custará <strong>500 créditos</strong> para treinar. Certifique-se de ter créditos suficientes antes de continuar.
-              </p>
-              <p className="text-xs text-purple-600 mt-2">
-                Você possui <strong>{modelCostInfo.creditsAvailable} créditos</strong> disponíveis.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Free Model Message */}
-      {modelCostInfo && modelCostInfo.nextModelCost === 0 && (
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="p-4">
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold mb-1 text-green-900">
-                ✅ Primeiro Modelo Gratuito
-              </h4>
-              <p className="text-xs text-green-700">
-                Este é seu primeiro modelo e está <strong>incluso na sua assinatura</strong>. Nenhum crédito será cobrado!
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Quality Analysis Warning */}
-      {qualityStats.analyzed > 0 && qualityStats.averageScore < 70 && (
-        <Card className="border-yellow-200 bg-yellow-50">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <h4 className="text-sm font-semibold mb-1 text-yellow-900">
-                  ⚠️ Atenção: Qualidade das Fotos
-                </h4>
-                <p className="text-xs text-yellow-700 mb-2">
-                  Algumas fotos estão com qualidade abaixo do recomendado (score médio: {qualityStats.averageScore.toFixed(1)}/100).
-                  Substituir as fotos marcadas melhorará significativamente os resultados do treinamento.
-                </p>
-                <div className="flex gap-3 text-xs">
-                  {qualityStats.poor > 0 && (
-                    <span className="text-red-600">❌ {qualityStats.poor} ruim</span>
-                  )}
-                  {qualityStats.acceptable > 0 && (
-                    <span className="text-yellow-600">⚠️ {qualityStats.acceptable} aceitável</span>
-                  )}
-                  {qualityStats.excellent > 0 && (
-                    <span className="text-green-600">✅ {qualityStats.excellent} excelente</span>
-                  )}
-                  {qualityStats.perfect > 0 && (
-                    <span className="text-green-700">⭐ {qualityStats.perfect} perfeita</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Tips for Better Results */}
       <Card className="bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border border-slate-600/30 shadow-2xl">
         <CardContent className="pt-3 pb-3">
@@ -486,6 +417,40 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
 
         </CardContent>
       </Card>
+
+      {/* Quality Analysis Warning */}
+      {qualityStats.analyzed > 0 && qualityStats.averageScore < 70 && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h4 className="text-sm font-semibold mb-1 text-yellow-900">
+                  ⚠️ Atenção: Qualidade das Fotos
+                </h4>
+                <p className="text-xs text-yellow-700 mb-2">
+                  Algumas fotos estão com qualidade abaixo do recomendado (score médio: {qualityStats.averageScore.toFixed(1)}/100).
+                  Substituir as fotos marcadas melhorará significativamente os resultados do treinamento.
+                </p>
+                <div className="flex gap-3 text-xs">
+                  {qualityStats.poor > 0 && (
+                    <span className="text-red-600">❌ {qualityStats.poor} ruim</span>
+                  )}
+                  {qualityStats.acceptable > 0 && (
+                    <span className="text-yellow-600">⚠️ {qualityStats.acceptable} aceitável</span>
+                  )}
+                  {qualityStats.excellent > 0 && (
+                    <span className="text-green-600">✅ {qualityStats.excellent} excelente</span>
+                  )}
+                  {qualityStats.perfect > 0 && (
+                    <span className="text-green-700">⭐ {qualityStats.perfect} perfeita</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Navigation Buttons */}
       <div className="flex justify-between">
