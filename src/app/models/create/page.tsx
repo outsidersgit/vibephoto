@@ -430,12 +430,12 @@ export default function CreateModelPage() {
           // Verificar se precisa de créditos: se não é mais gratuito E não tem créditos suficientes
           const needsCredits = modelCostInfo &&
                                modelCostInfo.freeModelsAvailable === 0 &&
-                               (modelCostInfo.currentCredits || 0) < (modelCostInfo.nextModelCost || 500)
+                               (modelCostInfo.creditsAvailable || 0) < (modelCostInfo.nextModelCost || 500)
 
           console.log('🎨 [Models/Create] Banner visibility:', {
             modelCostInfo,
             freeModelsAvailable: modelCostInfo?.freeModelsAvailable,
-            currentCredits: modelCostInfo?.currentCredits,
+            creditsAvailable: modelCostInfo?.creditsAvailable,
             nextModelCost: modelCostInfo?.nextModelCost,
             needsCredits,
             creditBalance: creditBalance?.totalCredits
@@ -445,7 +445,7 @@ export default function CreateModelPage() {
             <div className="mb-6">
               <InsufficientCreditsBanner
                 creditsNeeded={modelCostInfo.nextModelCost || 500}
-                currentCredits={modelCostInfo.currentCredits || creditBalance?.totalCredits || 0}
+                currentCredits={modelCostInfo.creditsAvailable || creditBalance?.totalCredits || 0}
                 feature="generation"
                 variant="inline"
                 onBuyCredits={() => setShowCreditPurchase(true)}
