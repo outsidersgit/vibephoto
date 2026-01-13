@@ -4,8 +4,9 @@ import { useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Upload, X, User, Users, Heart, AlertCircle, CheckCircle, Shield, ExternalLink, Coins } from 'lucide-react'
+import { Upload, X, User, Users, Heart, AlertCircle, CheckCircle, Shield, ExternalLink, Coins, Loader2, RefreshCw, Info } from 'lucide-react'
 import Link from 'next/link'
+import { ImageQualityAnalysisResult, getStatusColor, getStatusIcon, getStatusLabel, CRITICAL_ISSUE_LABELS, MINOR_ISSUE_LABELS } from '@/types/image-quality'
 
 interface ModelCreationStep1Props {
   modelData: {
@@ -20,6 +21,8 @@ interface ModelCreationStep1Props {
 export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: ModelCreationStep1Props) {
   const [dragActive, setDragActive] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
+  const [qualityResults, setQualityResults] = useState<Map<number, ImageQualityAnalysisResult>>(new Map())
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   const classOptions = [
     { value: 'MAN', label: 'Homem', icon: User, description: 'Pessoa adulta do sexo masculino' },
@@ -31,17 +34,15 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
 
   const validateFile = (file: File): string[] => {
     const errors: string[] = []
-    
-    // Check file type
+
     if (!file.type.startsWith('image/')) {
       errors.push('File must be an image')
     }
-    
-    // Check file size (max 10MB)
+
     if (file.size > 10 * 1024 * 1024) {
       errors.push('File size must be less than 10MB')
     }
-    
+
     return errors
   }
 
@@ -49,32 +50,70 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
     return new Promise((resolve) => {
       const img = new Image()
       const url = URL.createObjectURL(file)
-      
+
       img.onload = () => {
         const errors: string[] = []
-        
-        // Check minimum resolution
+
         if (img.width < 256 || img.height < 256) {
           errors.push('Image must be at least 256x256 pixels')
         }
-        
-        // Check aspect ratio (should be roughly square for face photos)
+
         const aspectRatio = img.width / img.height
         if (aspectRatio < 0.5 || aspectRatio > 2) {
           errors.push('Image aspect ratio should be closer to square')
         }
-        
+
         URL.revokeObjectURL(url)
         resolve(errors)
       }
-      
+
       img.onerror = () => {
         URL.revokeObjectURL(url)
         resolve(['Invalid image file'])
       }
-      
+
       img.src = url
     })
+  }
+
+  // Analyze photo quality using AI
+  const analyzePhotoQuality = async (files: File[], startIndex: number) => {
+    setIsAnalyzing(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('photoType', 'face')
+      formData.append('modelClass', modelData.class)
+
+      files.forEach((file, index) => {
+        formData.append(`photo_${index}`, file)
+      })
+
+      const response = await fetch('/api/models/validate-photos', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to analyze photos')
+      }
+
+      const result = await response.json()
+
+      if (result.success && result.data) {
+        const newQualityResults = new Map(qualityResults)
+
+        result.data.results.forEach((analysisResult: ImageQualityAnalysisResult, index: number) => {
+          newQualityResults.set(startIndex + index, analysisResult)
+        })
+
+        setQualityResults(newQualityResults)
+      }
+    } catch (error) {
+      console.error('Error analyzing photos:', error)
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   const handleFileSelect = async (files: FileList) => {
@@ -83,25 +122,22 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
-      
-      // Basic validation
+
       const fileErrors = validateFile(file)
       if (fileErrors.length > 0) {
         errors.push(`${file.name}: ${fileErrors.join(', ')}`)
         continue
       }
-      
-      // Image validation
+
       const imageErrors = await validateImage(file)
       if (imageErrors.length > 0) {
         errors.push(`${file.name}: ${imageErrors.join(', ')}`)
         continue
       }
-      
+
       newFiles.push(file)
     }
 
-    // Check total count
     const totalFiles = modelData.facePhotos.length + newFiles.length
     if (totalFiles > 10) {
       errors.push(`Máximo de 10 fotos do rosto permitidas (você selecionou ${totalFiles})`)
@@ -110,12 +146,17 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
     }
 
     setValidationErrors(errors)
-    
+
     if (newFiles.length > 0) {
+      const startIndex = modelData.facePhotos.length
+
       setModelData({
         ...modelData,
         facePhotos: [...modelData.facePhotos, ...newFiles]
       })
+
+      // Analyze new photos
+      await analyzePhotoQuality(newFiles, startIndex)
     }
   }
 
@@ -123,7 +164,7 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFileSelect(e.dataTransfer.files)
     }
@@ -143,19 +184,53 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
 
   const removePhoto = (index: number) => {
     const newPhotos = modelData.facePhotos.filter((_, i) => i !== index)
+    const newQualityResults = new Map(qualityResults)
+    newQualityResults.delete(index)
+
+    // Reindex remaining quality results
+    const reindexedResults = new Map()
+    newQualityResults.forEach((value, key) => {
+      if (key > index) {
+        reindexedResults.set(key - 1, value)
+      } else {
+        reindexedResults.set(key, value)
+      }
+    })
+
+    setQualityResults(reindexedResults)
     setModelData({
       ...modelData,
       facePhotos: newPhotos
     })
   }
 
+  const reanalyzePhoto = async (index: number) => {
+    const file = modelData.facePhotos[index]
+    if (file) {
+      await analyzePhotoQuality([file], index)
+    }
+  }
+
   const getImagePreview = (file: File) => {
     return URL.createObjectURL(file)
   }
 
+  // Calculate overall quality statistics
+  const qualityStats = {
+    analyzed: qualityResults.size,
+    total: modelData.facePhotos.length,
+    averageScore: qualityResults.size > 0
+      ? Array.from(qualityResults.values()).reduce((sum, r) => sum + r.quality.score, 0) / qualityResults.size
+      : 0,
+    poor: Array.from(qualityResults.values()).filter(r => r.quality.score < 50).length,
+    acceptable: Array.from(qualityResults.values()).filter(r => r.quality.score >= 50 && r.quality.score < 70).length,
+    excellent: Array.from(qualityResults.values()).filter(r => r.quality.score >= 70 && r.quality.score < 90).length,
+    perfect: Array.from(qualityResults.values()).filter(r => r.quality.score >= 90).length
+  }
+
   return (
     <div className="space-y-6">
-      {/* Credit Cost Warning - Only show if NOT first free model */}
+      {/* Credit Cost Warning */}
       {modelCostInfo && modelCostInfo.nextModelCost > 0 && (
         <Card className="border-purple-200 bg-purple-50">
           <CardContent className="p-4">
@@ -174,7 +249,7 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
         </Card>
       )}
 
-      {/* Free Model Message - Show if first free model */}
+      {/* Free Model Message */}
       {modelCostInfo && modelCostInfo.nextModelCost === 0 && (
         <Card className="border-green-200 bg-green-50">
           <CardContent className="p-4">
@@ -190,21 +265,56 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
         </Card>
       )}
 
+      {/* Quality Analysis Warning */}
+      {qualityStats.analyzed > 0 && qualityStats.averageScore < 70 && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h4 className="text-sm font-semibold mb-1 text-yellow-900">
+                  ⚠️ Atenção: Qualidade das Fotos
+                </h4>
+                <p className="text-xs text-yellow-700 mb-2">
+                  Algumas fotos estão com qualidade abaixo do recomendado (score médio: {qualityStats.averageScore.toFixed(1)}/100).
+                  Substituir as fotos marcadas melhorará significativamente os resultados do treinamento.
+                </p>
+                <div className="flex gap-3 text-xs">
+                  {qualityStats.poor > 0 && (
+                    <span className="text-red-600">❌ {qualityStats.poor} ruim</span>
+                  )}
+                  {qualityStats.acceptable > 0 && (
+                    <span className="text-yellow-600">⚠️ {qualityStats.acceptable} aceitável</span>
+                  )}
+                  {qualityStats.excellent > 0 && (
+                    <span className="text-green-600">✅ {qualityStats.excellent} excelente</span>
+                  )}
+                  {qualityStats.perfect > 0 && (
+                    <span className="text-green-700">⭐ {qualityStats.perfect} perfeita</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tips for Better Results */}
       <Card className="bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border border-slate-600/30 shadow-2xl">
         <CardContent className="pt-3 pb-3">
           <div className="space-y-0.5 text-slate-300" style={{fontSize: '8px'}}>
             <p>• Use fotos de alta qualidade (pelo menos 512x512 pixels)</p>
             <p>• Garanta boa iluminação e traços faciais claros</p>
+            <p>• <strong>SEM bonés, chapéus ou óculos escuros</strong></p>
+            <p>• <strong>Apenas UMA pessoa por foto</strong></p>
             <p>• Inclua variedade em expressões, ângulos e fundos</p>
-            <p>• Evite fotos com muito filtro ou editadas</p>
-            <p>• Sem nudez</p>
+            <p>• Evite fotos com filtro, caretas ou olhos fechados</p>
             <p>• O treinamento geralmente leva 15-30 minutos</p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Model Name */}
+      {/* Model Name and Class - Same as original */}
       <Card>
         <CardContent className="space-y-3 pt-4">
           <div>
@@ -253,188 +363,20 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
         </CardContent>
       </Card>
 
-      {/* Good and Bad Examples */}
-      <Card className="bg-white border-gray-200">
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-2 gap-4">
-            {/* Good Examples */}
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2 mb-3">
-                <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </div>
-                <h3 className="font-semibold text-sm text-gray-900">Bons Exemplos</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
-                  <img
-                    src="/images/examples/good-1.jpg"
-                    alt="Bom exemplo 1"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%2310b981" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✓%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
-                  <img
-                    src="/images/examples/good-2.jpg"
-                    alt="Bom exemplo 2"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%2310b981" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✓%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
-                  <img
-                    src="/images/examples/good-3.jpg"
-                    alt="Bom exemplo 3"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%2310b981" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✓%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
-                  <img
-                    src="/images/examples/good-4.jpg"
-                    alt="Bom exemplo 4"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%2310b981" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✓%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Good Examples Guidelines */}
-              <div className="mt-3 space-y-1.5">
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Use imagens de ombros para cima</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Imagens da cintura para cima e do corpo todo</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Olhando para a câmera</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Fotos de dias diferentes</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Mudança de fundos, iluminação e roupas</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Bad Examples */}
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2 mb-3">
-                <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
-                  <AlertCircle className="w-4 h-4 text-red-600" />
-                </div>
-                <h3 className="font-semibold text-sm text-gray-900">Maus Exemplos</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
-                  <img
-                    src="/images/examples/bad-1.jpg"
-                    alt="Mau exemplo 1"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ef4444" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✕%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
-                  <img
-                    src="/images/examples/bad-2.jpg"
-                    alt="Mau exemplo 2"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ef4444" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✕%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
-                  <img
-                    src="/images/examples/bad-3.jpg"
-                    alt="Mau exemplo 3"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ef4444" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✕%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
-                  <img
-                    src="/images/examples/bad-4.jpg"
-                    alt="Mau exemplo 4"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ef4444" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✕%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Bad Examples Guidelines */}
-              <div className="mt-3 space-y-1.5">
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Imagens geradas por IA</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Pessoas extras</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Caretas</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Filtros, Preto e Branco</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Iluminação ruim, baixa qualidade, desfocada</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Chapéu, óculos escuros</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Ângulos ruins</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Rosto cortado</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Face Photos Upload */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            Fotos do Rosto
+            <span className="flex items-center gap-2">
+              Fotos do Rosto
+              {isAnalyzing && <Loader2 className="w-4 h-4 animate-spin text-purple-600" />}
+            </span>
             <Badge variant={modelData.facePhotos.length >= 5 ? 'default' : 'secondary'}>
               {modelData.facePhotos.length}/10 fotos
             </Badge>
           </CardTitle>
           <CardDescription>
-            Envie de 5 a 10 fotos claras do rosto. Elas devem focar no rosto com boa iluminação.
+            Envie de 5 a 10 fotos claras do rosto. Elas serão analisadas automaticamente para garantir qualidade ideal.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -500,31 +442,100 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
             </div>
           )}
 
-          {/* Photo Preview Grid */}
+          {/* Photo Preview Grid with Quality Badges */}
           {modelData.facePhotos.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-              {modelData.facePhotos.map((file, index) => (
-                <div key={index} className="relative group">
-                  <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                    <img
-                      src={getImagePreview(file)}
-                      alt={`Face photo ${index + 1}`}
-                      className="w-full h-full object-contain"
-                    />
+              {modelData.facePhotos.map((file, index) => {
+                const qualityResult = qualityResults.get(index)
+                const quality = qualityResult?.quality
+
+                return (
+                  <div key={index} className="relative group">
+                    <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative">
+                      <img
+                        src={getImagePreview(file)}
+                        alt={`Face photo ${index + 1}`}
+                        className="w-full h-full object-contain"
+                      />
+
+                      {/* Quality Badge */}
+                      {quality && (
+                        <div className={`absolute top-2 left-2 px-2 py-1 rounded-md text-xs font-medium border ${getStatusColor(quality.status)}`}>
+                          <span className="mr-1">{getStatusIcon(quality.status)}</span>
+                          {quality.score}
+                        </div>
+                      )}
+
+                      {/* Analyzing Overlay */}
+                      {!quality && isAnalyzing && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <Loader2 className="w-6 h-6 text-white animate-spin" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Remove Button */}
+                    <button
+                      onClick={() => removePhoto(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+
+                    {/* Reanalyze Button */}
+                    {quality && (
+                      <button
+                        onClick={() => reanalyzePhoto(index)}
+                        className="absolute -bottom-2 -right-2 bg-purple-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        title="Reanalisar qualidade"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                      </button>
+                    )}
+
+                    {/* File Size Badge */}
+                    <div className="absolute bottom-2 left-2">
+                      <Badge variant="secondary" className="text-xs">
+                        {Math.round(file.size / 1024)}KB
+                      </Badge>
+                    </div>
+
+                    {/* Quality Details Tooltip */}
+                    {quality && quality.score < 70 && (
+                      <div className="absolute inset-x-0 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+                        <div className="bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl max-w-xs">
+                          <div className="font-semibold mb-1">
+                            {getStatusLabel(quality.status)} ({quality.score}/100)
+                          </div>
+                          <p className="text-gray-300 mb-2">{quality.feedback}</p>
+
+                          {quality.criticalIssues.length > 0 && (
+                            <div className="space-y-1">
+                              <div className="text-red-400 font-medium">Problemas críticos:</div>
+                              {quality.criticalIssues.map((issue, i) => (
+                                <div key={i} className="text-xs text-red-300">
+                                  • {CRITICAL_ISSUE_LABELS[issue]}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {quality.recommendations.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              <div className="text-blue-400 font-medium">Recomendações:</div>
+                              {quality.recommendations.map((rec, i) => (
+                                <div key={i} className="text-xs text-blue-300">
+                                  • {rec}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <button
-                    onClick={() => removePhoto(index)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  <div className="absolute bottom-2 left-2">
-                    <Badge variant="secondary" className="text-xs">
-                      {Math.round(file.size / 1024)}KB
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
 
