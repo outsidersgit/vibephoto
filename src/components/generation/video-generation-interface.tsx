@@ -782,7 +782,7 @@ export function VideoGenerationInterface({
                   onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
                   rows={4}
                   maxLength={VIDEO_CONFIG.options.maxPromptLength}
-                  className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#667EEA] focus:border-[#667EEA] rounded-lg px-4 py-4 pr-12 transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                  className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#667EEA] focus:border-[#667EEA] rounded-lg px-4 py-4 pr-40 transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
                   style={{
                     fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
                   }}
@@ -1067,20 +1067,28 @@ export function VideoGenerationInterface({
                   )}
                 </div>
               </div>
-              <Textarea
-                placeholder={uploadedImage 
-                  ? "Descreva o movimento desejado para o vídeo..."
-                  : "Descreva o vídeo que você quer criar..."
-                }
-                value={formData.prompt}
-                onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
-                rows={5}
-                maxLength={VIDEO_CONFIG.options.maxPromptLength}
-                className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#667EEA] focus:border-[#667EEA] rounded-lg px-4 py-4 transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-                style={{
-                  fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
-                }}
-              />
+              <div className="relative">
+                <Textarea
+                  placeholder={uploadedImage
+                    ? "Descreva o movimento desejado para o vídeo..."
+                    : "Descreva o vídeo que você quer criar..."
+                  }
+                  value={formData.prompt}
+                  onChange={(e) => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
+                  rows={5}
+                  maxLength={VIDEO_CONFIG.options.maxPromptLength}
+                  className="resize-none text-sm bg-gray-200 border border-gray-900 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#667EEA] focus:border-[#667EEA] rounded-lg px-4 py-4 pr-40 transition-all font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                  style={{
+                    fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'
+                  }}
+                />
+                <PromptOptimizer
+                  currentPrompt={formData.prompt}
+                  onOptimizedPrompt={(optimized) => setFormData(prev => ({ ...prev, prompt: optimized }))}
+                  type="video"
+                  variant="inline"
+                />
+              </div>
 
               {/* Banner de Créditos Insuficientes */}
               {(!canUseCredits || insufficientCredits) && (

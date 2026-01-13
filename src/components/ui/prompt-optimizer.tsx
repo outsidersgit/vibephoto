@@ -98,7 +98,7 @@ export function PromptOptimizer({
         onClick={handleOptimize}
         disabled={isOptimizing || !currentPrompt}
         type="button"
-        className={`absolute bottom-3 right-3 p-2 rounded-md transition-all ${
+        className={`absolute bottom-3 right-3 px-3 py-2 rounded-md transition-all flex items-center gap-2 text-sm ${
           isOptimizing || !currentPrompt
             ? 'text-gray-400 cursor-not-allowed opacity-50'
             : 'text-gray-600 hover:text-purple-600 hover:bg-gray-100'
@@ -106,9 +106,15 @@ export function PromptOptimizer({
         title={isOptimizing ? 'Otimizando...' : 'Otimizar prompt com IA'}
       >
         {isOptimizing ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Otimizando...</span>
+          </>
         ) : (
-          <Sparkles className="h-5 w-5" />
+          <>
+            <Sparkles className="h-4 w-4" />
+            <span>Otimizar prompt</span>
+          </>
         )}
       </button>
     )
