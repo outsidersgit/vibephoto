@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import {
   ImageQualityScore,
   ImageQualityAnalysisResult,
@@ -12,29 +11,37 @@ import { AI_CONFIG } from './config'
 
 /**
  * Image Quality Analyzer for Fine-Tuning Photos
- * Uses Gemini 2.5 Flash Lite to analyze photos for AI model training
- * Checks for: technical quality, composition, and fine-tuning best practices
+ * Uses Astria Image Inspection API to analyze photos for AI model training
+ * Checks for: glasses, sunglasses, blur, multiple people, headwear, etc.
  */
+
+interface AstriaInspectionResponse {
+  age?: string
+  ethnicity?: string
+  eye_color?: string
+  facial_hair?: string
+  gender?: string
+  glasses?: string
+  hair_color?: string
+  hair_length?: string
+  body_type?: string
+  soft_prompts?: string[]
+  sunglasses?: boolean
+  blurry?: boolean
+  long_shot?: boolean
+  multiple_people?: boolean
+  selfie?: boolean
+  headwear?: string
+}
+
 export class ImageQualityAnalyzer {
-  private client: GoogleGenerativeAI
-  private model: any
+  private apiKey: string
 
   constructor() {
-    if (!AI_CONFIG.gemini.apiKey) {
-      throw new Error('GEMINI_API_KEY not configured')
+    if (!AI_CONFIG.astria.apiKey) {
+      throw new Error('ASTRIA_API_KEY not configured')
     }
-
-    this.client = new GoogleGenerativeAI(AI_CONFIG.gemini.apiKey)
-
-    // Use Gemini 2.5 Flash Lite - fast and free tier
-    this.model = this.client.getGenerativeModel({
-      model: 'gemini-2.5-flash-lite',
-      generationConfig: {
-        temperature: 0.3, // Low temperature for consistent analysis
-        maxOutputTokens: 1000,
-        responseMimeType: 'application/json'
-      }
-    })
+    this.apiKey = AI_CONFIG.astria.apiKey
   }
 
   /**
@@ -48,47 +55,41 @@ export class ImageQualityAnalyzer {
     const startTime = Date.now()
 
     try {
-      console.log(`🔍 Analyzing image quality: ${filename} (${options.photoType})`)
+      console.log(`🔍 Analyzing with Astria: ${filename} (${options.photoType})`)
 
-      const prompt = this.buildAnalysisPrompt(options)
+      // Convert base64 to blob
+      const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '')
+      const binaryData = atob(base64Data)
+      const bytes = new Uint8Array(binaryData.length)
+      for (let i = 0; i < binaryData.length; i++) {
+        bytes[i] = binaryData.charCodeAt(i)
+      }
+      const blob = new Blob([bytes], { type: this.getMimeType(imageData) })
 
-      // Prepare image for Gemini
-      const imagePart = {
-        inlineData: {
-          data: imageData.replace(/^data:image\/\w+;base64,/, ''),
-          mimeType: this.getMimeType(imageData)
-        }
+      // Prepare form data
+      const formData = new FormData()
+      formData.append('file', blob, filename)
+      const className = this.mapClassToAstriaName(options.modelClass)
+      formData.append('name', className)
+
+      // Call Astria inspection API
+      const response = await fetch('https://api.astria.ai/images/inspect', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${this.apiKey}` },
+        body: formData
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ Astria API error:', errorText)
+        throw new Error(`Astria API error: ${response.status}`)
       }
 
-      // Call Gemini Vision API
-      const geminiResult = await this.model.generateContent([prompt, imagePart])
-      const response = await geminiResult.response
-      const text = response.text()
+      const astriaData: AstriaInspectionResponse = await response.json()
+      console.log(`📊 Astria response for ${filename}:`, astriaData)
 
-      console.log(`📊 Raw Gemini response for ${filename}:`, text.substring(0, 200))
-
-      // Parse JSON response
-      let analysisData: any
-      try {
-        analysisData = JSON.parse(text)
-      } catch (parseError) {
-        console.error('❌ Failed to parse Gemini response:', text)
-        throw new Error('Invalid JSON response from Gemini')
-      }
-
-      // Build quality score
-      const qualityScore: ImageQualityScore = {
-        score: analysisData.score || 0,
-        technicalQuality: analysisData.technicalQuality || 0,
-        composition: analysisData.composition || 0,
-        finetuningReadiness: analysisData.finetuningReadiness || 0,
-        criticalIssues: analysisData.criticalIssues || [],
-        minorIssues: analysisData.minorIssues || [],
-        feedback: analysisData.feedback || 'Análise não disponível',
-        recommendations: analysisData.recommendations || [],
-        status: getQualityStatus(analysisData.score || 0)
-      }
-
+      // Build quality score based on Astria's detection
+      const qualityScore = this.calculateQualityScore(astriaData, options)
       const processingTime = Date.now() - startTime
 
       const result: ImageQualityAnalysisResult = {
@@ -99,14 +100,12 @@ export class ImageQualityAnalyzer {
         processingTime
       }
 
-      console.log(`✅ Analysis complete: ${filename} - Score: ${qualityScore.score} (${qualityScore.status})`)
+      console.log(`✅ Analysis complete: ${filename} - Score: ${qualityScore.score}`)
 
       return result
 
     } catch (error) {
       console.error(`❌ Error analyzing ${filename}:`, error)
-
-      // Return a default poor quality result on error
       const processingTime = Date.now() - startTime
 
       return {
@@ -118,8 +117,8 @@ export class ImageQualityAnalyzer {
           finetuningReadiness: 0,
           criticalIssues: [],
           minorIssues: [],
-          feedback: 'Erro ao analisar a imagem. Por favor, tente novamente.',
-          recommendations: ['Verifique se a imagem não está corrompida e tente fazer upload novamente.'],
+          feedback: 'Erro ao analisar a imagem.',
+          recommendations: ['Verifique se a imagem não está corrompida.'],
           status: 'poor'
         },
         isAcceptable: false,
@@ -136,126 +135,151 @@ export class ImageQualityAnalyzer {
     images: Array<{ data: string; filename: string }>,
     options: ImageQualityAnalysisOptions
   ): Promise<BatchQualityAnalysisResult> {
-    console.log(`📸 Starting batch analysis of ${images.length} images`)
+    const startTime = Date.now()
+    console.log(`📦 Analyzing ${images.length} images with Astria...`)
 
     const results: ImageQualityAnalysisResult[] = []
 
-    // Analyze images sequentially to avoid rate limits
     for (const image of images) {
       const result = await this.analyzeImage(image.data, image.filename, options)
       results.push(result)
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500))
     }
 
-    // Calculate summary
-    const summary = {
-      total: results.length,
-      perfect: results.filter(r => r.quality.score >= 90).length,
-      excellent: results.filter(r => r.quality.score >= 70 && r.quality.score < 90).length,
-      acceptable: results.filter(r => r.quality.score >= 50 && r.quality.score < 70).length,
-      poor: results.filter(r => r.quality.score < 50).length,
-      averageScore: results.reduce((sum, r) => sum + r.quality.score, 0) / results.length,
-      recommendedCount: results.filter(r => r.isRecommended).length,
-      acceptableCount: results.filter(r => r.isAcceptable).length
-    }
+    const totalProcessingTime = Date.now() - startTime
+    const averageScore = results.reduce((sum, r) => sum + r.quality.score, 0) / results.length
+    const acceptableCount = results.filter(r => r.isAcceptable).length
+    const recommendedCount = results.filter(r => r.isRecommended).length
 
-    // Generate overall recommendation
-    let overallRecommendation = ''
-    if (summary.averageScore >= 80) {
-      overallRecommendation = '✅ Excelente! Suas fotos têm alta qualidade e são ideais para treinamento.'
-    } else if (summary.averageScore >= 70) {
-      overallRecommendation = '✅ Bom! A maioria das suas fotos é adequada para treinamento.'
-    } else if (summary.averageScore >= 50) {
-      overallRecommendation = '⚠️ Atenção: Algumas fotos precisam ser substituídas para melhores resultados. Veja as recomendações abaixo.'
-    } else {
-      overallRecommendation = '❌ Aviso: A maioria das fotos está abaixo do recomendado. Substitua as fotos marcadas para garantir um bom treinamento.'
-    }
-
-    console.log(`📊 Batch analysis complete - Average score: ${summary.averageScore.toFixed(1)}`)
+    console.log(`✅ Batch complete: ${results.length} images in ${totalProcessingTime}ms`)
+    console.log(`📊 Average: ${averageScore.toFixed(1)}, Acceptable: ${acceptableCount}/${results.length}`)
 
     return {
       results,
-      summary,
-      overallRecommendation
+      summary: {
+        totalImages: images.length,
+        averageScore,
+        acceptableCount,
+        recommendedCount,
+        processingTime: totalProcessingTime
+      }
     }
   }
 
   /**
-   * Build the analysis prompt based on photo type
+   * Calculate quality score based on Astria inspection results
    */
-  private buildAnalysisPrompt(options: ImageQualityAnalysisOptions): string {
-    const { photoType, modelClass } = options
+  private calculateQualityScore(
+    data: AstriaInspectionResponse,
+    options: ImageQualityAnalysisOptions
+  ): ImageQualityScore {
+    let score = 100 // Start perfect
+    let technicalQuality = 25
+    let composition = 25
+    let finetuningReadiness = 50
 
-    const subjectType = modelClass === 'ANIMAL' ? 'animal' : 'pessoa'
-    const photoDescription = this.getPhotoTypeDescription(photoType)
+    const criticalIssues: CriticalIssue[] = []
+    const minorIssues: MinorIssue[] = []
+    const recommendations: string[] = []
 
-    return `Você é um especialista em análise de fotos para fine-tuning de modelos de IA (FLUX, Stable Diffusion).
+    // CRITICAL ISSUES
+    if (data.sunglasses === true) {
+      criticalIssues.push('sunglasses')
+      finetuningReadiness -= 20
+      score -= 30
+      recommendations.push('Remova fotos com óculos escuros - impedem o modelo de aprender características faciais')
+    }
 
-Analise esta foto de ${photoDescription} e avalie se ela é adequada para treinar um modelo de IA personalizado de ${subjectType}.
+    if (data.headwear && data.headwear !== 'NONE') {
+      criticalIssues.push('hat_or_cap')
+      finetuningReadiness -= 20
+      score -= 30
+      recommendations.push('Remova fotos com chapéus, bonés ou gorros - cobrem características importantes')
+    }
 
-CRITÉRIOS DE AVALIAÇÃO:
+    if (data.multiple_people === true) {
+      criticalIssues.push('multiple_people')
+      finetuningReadiness -= 25
+      score -= 40
+      recommendations.push('Use apenas fotos com UMA pessoa - modelo pode ficar confuso com múltiplas pessoas')
+    }
 
-1. QUALIDADE TÉCNICA (0-25 pontos):
-   - Nitidez e foco adequados
-   - Iluminação balanceada (sem sombras duras ou superexposição)
-   - Resolução suficiente (mínimo 512x512, ideal 1024x1024+)
-   - Sem artefatos de compressão ou ruído excessivo
+    if (data.blurry === true) {
+      criticalIssues.push('eyes_closed') // Using as proxy for blur
+      technicalQuality -= 15
+      score -= 25
+      recommendations.push('Foto embaçada - use imagens nítidas e focadas')
+    }
 
-2. COMPOSIÇÃO (0-25 pontos):
-   - ${subjectType === 'pessoa' ? 'Pessoa' : 'Animal'} centralizado(a) e bem enquadrado(a)
-   - Fundo não muito distrativo ou confuso
-   - Distância adequada da câmera (nem muito longe, nem muito perto)
-   - Pose não cortada (corpo completo visível para fotos de corpo inteiro)
+    // MINOR ISSUES
+    if (data.glasses && data.glasses !== 'NONE' && !data.sunglasses) {
+      minorIssues.push('slight_blur') // Using as proxy for glasses
+      score -= 10
+      recommendations.push('Óculos de grau: OK se você sempre usa, caso contrário prefira fotos sem')
+    }
 
-3. ADEQUAÇÃO PARA FINE-TUNING (0-50 pontos) - MAIS IMPORTANTE:
+    if (data.selfie === true) {
+      minorIssues.push('poor_framing')
+      composition -= 5
+      score -= 10
+      recommendations.push('Selfies podem ter ângulos não ideais - prefira fotos tiradas por outra pessoa')
+    }
 
-   PROBLEMAS CRÍTICOS que prejudicam MUITO o treinamento:
-   ${subjectType === 'pessoa' ? `
-   ❌ Boné, chapéu, gorro ou qualquer coisa cobrindo a cabeça/cabelo
-   ❌ Óculos escuros (óculos de grau transparente são OK se a pessoa usa sempre)
-   ❌ Máscaras faciais, cachecóis ou mãos cobrindo o rosto
-   ❌ Outras pessoas visíveis na foto (mesmo parcialmente ou ao fundo)
-   ❌ Caretas, língua para fora, olhos fechados ou piscando
-   ❌ Expressões muito extremas ou não naturais
-   ❌ Filtros pesados (Instagram, Snapchat, beautify)
-   ❌ Ângulos muito extremos (muito de cima, muito de baixo, perfil completo)
-   ` : `
-   ❌ Múltiplos animais na foto
-   ❌ Pessoas muito visíveis junto com o animal
-   ❌ Animal com acessórios exagerados (fantasias, roupas muito chamativas)
-   ❌ Animal dormindo ou com olhos fechados
-   `}
+    if (data.long_shot === true && options.photoType === 'face') {
+      minorIssues.push('poor_framing')
+      composition -= 10
+      score -= 15
+      recommendations.push('Foto muito distante para close de rosto - aproxime mais da câmera')
+    }
 
-   ✅ FOTO IDEAL: ${subjectType} sozinho(a), ${subjectType === 'pessoa' ? 'rosto descoberto, sem acessórios que cubram características faciais (cabelo, olhos, sobrancelhas)' : 'animal em destaque'}, expressão/pose natural, boa iluminação, sem filtros, fundo simples
+    // Ensure no negative scores
+    score = Math.max(0, score)
+    technicalQuality = Math.max(0, technicalQuality)
+    composition = Math.max(0, composition)
+    finetuningReadiness = Math.max(0, finetuningReadiness)
 
-IMPORTANTE: Seja RIGOROSO com acessórios que cobrem o rosto (bonés, chapéus, óculos escuros). Estes são os problemas MAIS GRAVES pois impedem o modelo de aprender características faciais corretamente.
-
-Responda APENAS em JSON válido (sem markdown, sem \`\`\`json):
-{
-  "score": <número 0-100>,
-  "technicalQuality": <número 0-25>,
-  "composition": <número 0-25>,
-  "finetuningReadiness": <número 0-50>,
-  "criticalIssues": [<array de strings: "hat_or_cap", "sunglasses", "face_covered", "multiple_people", "making_faces", "eyes_closed", "heavy_filters", "hand_covering_face", "extreme_angle", "mask">],
-  "minorIssues": [<array de strings: "slight_blur", "low_light", "busy_background", "low_resolution", "overexposed", "underexposed", "artifacts", "poor_framing">],
-  "feedback": "<texto curto em português (max 150 caracteres) explicando a avaliação geral>",
-  "recommendations": [<array com 1-3 recomendações específicas em português para melhorar a foto, se houver problemas>]
-}`
+    return {
+      score,
+      technicalQuality,
+      composition,
+      finetuningReadiness,
+      criticalIssues,
+      minorIssues,
+      feedback: this.buildFeedback(score, criticalIssues),
+      recommendations: recommendations.length > 0 ? recommendations.slice(0, 3) : ['Foto adequada para treinamento'],
+      status: getQualityStatus(score)
+    }
   }
 
   /**
-   * Get photo type description in Portuguese
+   * Build feedback message based on score and issues
    */
-  private getPhotoTypeDescription(photoType: string): string {
-    switch (photoType) {
-      case 'face':
-        return 'rosto (close-up do rosto)'
-      case 'half_body':
-        return 'meio corpo (da cintura para cima)'
-      case 'full_body':
-        return 'corpo inteiro'
-      default:
-        return 'rosto'
+  private buildFeedback(score: number, criticalIssues: CriticalIssue[]): string {
+    if (score >= 90) return 'Foto perfeita para treinamento!'
+    if (score >= 70) return 'Ótima foto para treinamento.'
+    if (score >= 50) {
+      return criticalIssues.length > 0
+        ? `Foto aceitável, mas com ${criticalIssues.length} problema(s) que podem afetar qualidade`
+        : 'Foto aceitável para treinamento'
     }
+    return criticalIssues.length > 0
+      ? `Foto inadequada - ${criticalIssues.length} problemas críticos detectados`
+      : 'Qualidade abaixo do recomendado para treinamento'
+  }
+
+  /**
+   * Map model class to Astria API name parameter
+   */
+  private mapClassToAstriaName(modelClass?: string): string {
+    const mapping: Record<string, string> = {
+      'MAN': 'man',
+      'WOMAN': 'woman',
+      'BOY': 'boy',
+      'GIRL': 'girl',
+      'ANIMAL': 'dog'
+    }
+    return mapping[modelClass || 'MAN'] || 'man'
   }
 
   /**
