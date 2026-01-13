@@ -15,6 +15,7 @@ import { ProcessingMessage } from '@/components/ui/processing-message'
 import { InsufficientCreditsBanner } from '@/components/ui/insufficient-credits-banner'
 import { notifyError } from '@/lib/errors'
 import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
+import { PromptOptimizer } from '@/components/ui/prompt-optimizer'
 
 interface VideoGenerationInterfaceProps {
   user: {
@@ -767,12 +768,20 @@ export function VideoGenerationInterface({
                       >
                         <Copy className="w-3 h-3" />
                       </Button>
+                      <PromptOptimizer
+                        currentPrompt={formData.prompt}
+                        onOptimizedPrompt={(optimized) => setFormData(prev => ({ ...prev, prompt: optimized }))}
+                        type="video"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-3 text-xs"
+                      />
                     </>
                   )}
                 </div>
               </div>
               <Textarea
-                placeholder={uploadedImage 
+                placeholder={uploadedImage
                   ? "Descreva o movimento desejado para o vídeo..."
                   : "Descreva o vídeo que você quer criar..."
                 }

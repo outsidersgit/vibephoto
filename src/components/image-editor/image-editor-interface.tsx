@@ -20,6 +20,7 @@ import {
   Image as ImageIcon,
   Copy
 } from 'lucide-react'
+import { PromptOptimizer } from '@/components/ui/prompt-optimizer'
 import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates'
@@ -1144,6 +1145,14 @@ export function ImageEditorInterface({
                       >
                         <Copy className="w-3 h-3" />
                       </Button>
+                      <PromptOptimizer
+                        currentPrompt={prompt}
+                        onOptimizedPrompt={setPrompt}
+                        type="image"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-3 text-xs"
+                      />
                     </>
                   )}
                 </div>
@@ -1398,6 +1407,14 @@ export function ImageEditorInterface({
                     >
                       <Copy className="w-3 h-3" />
                     </Button>
+                    <PromptOptimizer
+                      currentPrompt={prompt}
+                      onOptimizedPrompt={setPrompt}
+                      type="image"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-3 text-xs"
+                    />
                   </>
                 )}
               </div>

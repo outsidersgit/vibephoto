@@ -7,6 +7,7 @@ import { Copy } from 'lucide-react'
 import { PromptBuilder } from './prompt-builder'
 import { SafeTextarea } from '@/components/ui/safe-textarea'
 import { useToast } from '@/hooks/use-toast'
+import { PromptOptimizer } from '@/components/ui/prompt-optimizer'
 
 interface PromptInputProps {
   prompt: string
@@ -140,6 +141,14 @@ export function PromptInput({
                 </div>
                 {prompt && (
                   <>
+                    <PromptOptimizer
+                      currentPrompt={prompt}
+                      onOptimizedPrompt={onPromptChange}
+                      type="image"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-3 text-xs"
+                    />
                     <Button
                       type="button"
                       variant="ghost"
