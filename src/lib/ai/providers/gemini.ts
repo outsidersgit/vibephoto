@@ -461,4 +461,87 @@ export class GeminiProvider extends AIProvider {
     const blob = this.base64ToBlob(base64Data, mimeType)
     return URL.createObjectURL(blob)
   }
+
+  /**
+   * Optimize a user prompt for better generation results
+   * Uses Gemini 2.5 Flash Lite - fastest and most cost-effective model
+   * @param userPrompt The original user prompt to optimize
+   * @param type Whether optimizing for 'image' or 'video' generation
+   * @returns The optimized prompt
+   */
+  async optimizePrompt(userPrompt: string, type: 'image' | 'video' = 'image'): Promise<string> {
+    try {
+      // Use Gemini 2.5 Flash Lite for fast, efficient prompt optimization
+      const optimizerModel = this.client.getGenerativeModel({
+        model: 'gemini-2.5-flash-lite',
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 500
+        }
+      })
+
+      const systemPrompt = type === 'image'
+        ? `Você é um especialista em engenharia de prompts para modelos de geração de imagens como FLUX, Stable Diffusion e Midjourney.
+
+Tarefa: Transforme o prompt simples do usuário em um prompt detalhado e de alta qualidade.
+
+Diretrizes:
+- Adicione detalhes artísticos (estilo, iluminação, composição, ângulo da câmera)
+- Inclua termos de qualidade (8k, ultra detalhado, obra-prima, profissional)
+- Especifique aspectos técnicos (profundidade de campo, tipo de iluminação, paleta de cores)
+- Mantenha a ideia central intacta - não mude o que o usuário quer
+- Seja conciso mas descritivo (máximo 200 palavras)
+- Use o mesmo idioma da entrada (português ou inglês)
+- Retorne APENAS o prompt otimizado, sem explicações
+
+Exemplo:
+Entrada: "um gato em uma cadeira"
+Saída: "um majestoso gato malhado sentado elegantemente em uma cadeira de madeira vintage, iluminação de estúdio, profundidade de campo rasa, fotografia profissional de animais, resolução 8k, textura de pelagem ultra detalhada, paleta de cores quentes, fundo desfocado bokeh"
+
+Agora otimize este prompt:`
+        : `Você é um especialista em engenharia de prompts para modelos de geração de vídeo.
+
+Tarefa: Transforme o prompt simples do usuário em um prompt cinematográfico detalhado.
+
+Diretrizes:
+- Descreva a cena, ação e movimento claramente
+- Adicione detalhes cinematográficos (movimento de câmera, ângulos, transições)
+- Especifique humor, iluminação e atmosfera
+- Inclua sugestões de ritmo e timing
+- Mantenha focado e coerente (máximo 150 palavras)
+- Use o mesmo idioma da entrada (português ou inglês)
+- Retorne APENAS o prompt otimizado, sem explicações
+
+Exemplo:
+Entrada: "pessoa caminhando na praia"
+Saída: "plano cinematográfico de uma pessoa caminhando ao longo de uma praia pristina durante a hora dourada, ondas suaves lambendo seus pés, câmera acompanhando lentamente ao lado, iluminação quente do pôr do sol criando sombras longas na areia molhada, atmosfera serena e pacífica, movimento lento, qualidade 4k, gradação de cor profissional"
+
+Agora otimize este prompt de vídeo:`
+
+      const result = await optimizerModel.generateContent(`${systemPrompt}\n\nPrompt do usuário: "${userPrompt}"`)
+      const response = await result.response
+      const optimizedPrompt = response.text().trim()
+
+      // Remove any markdown formatting or quotes
+      const cleanedPrompt = optimizedPrompt
+        .replace(/^["']|["']$/g, '')
+        .replace(/^\*\*|\*\*$/g, '')
+        .replace(/^`|`$/g, '')
+        .trim()
+
+      console.log('✨ Prompt otimizado:', {
+        original: userPrompt.substring(0, 50) + '...',
+        optimized: cleanedPrompt.substring(0, 50) + '...',
+        type
+      })
+
+      return cleanedPrompt
+    } catch (error) {
+      console.error('❌ Falha ao otimizar prompt:', error)
+      throw new AIError(
+        `Falha ao otimizar prompt: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        'PROMPT_OPTIMIZATION_ERROR'
+      )
+    }
+  }
 }
