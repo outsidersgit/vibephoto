@@ -46,7 +46,12 @@ export default function CreateModelPage() {
     class: 'MAN' as 'MAN' | 'WOMAN' | 'BOY' | 'GIRL' | 'ANIMAL',
     facePhotos: [] as File[],
     halfBodyPhotos: [] as File[],
-    fullBodyPhotos: [] as File[]
+    fullBodyPhotos: [] as File[],
+    qualityResults: {
+      facePhotos: new Map(),
+      halfBodyPhotos: new Map(),
+      fullBodyPhotos: new Map()
+    }
   })
 
   // Fetch model cost info on mount

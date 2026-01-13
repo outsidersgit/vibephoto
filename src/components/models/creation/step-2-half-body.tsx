@@ -102,6 +102,10 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
         })
 
         setQualityResults(newQualityResults)
+
+        // Save to localStorage for step 4
+        const resultsArray = Array.from(newQualityResults.entries())
+        localStorage.setItem('halfBodyPhotosQuality', JSON.stringify(resultsArray))
       }
     } catch (error) {
       console.error('Error analyzing photos:', error)

@@ -102,6 +102,10 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
         })
 
         setQualityResults(newQualityResults)
+
+        // Save to localStorage for step 4
+        const resultsArray = Array.from(newQualityResults.entries())
+        localStorage.setItem('fullBodyPhotosQuality', JSON.stringify(resultsArray))
       }
     } catch (error) {
       console.error('Error analyzing photos:', error)

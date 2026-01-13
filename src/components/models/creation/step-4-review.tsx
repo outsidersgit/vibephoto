@@ -105,70 +105,99 @@ export function ModelCreationStep4({
     return { level: 'EXCELENTE', color: 'bg-green-500' }
   }
 
-  // Análise de qualidade das fotos baseada em múltiplos fatores
+  // Análise de qualidade das fotos baseada na análise Gemini real
   const analyzePhotoQuality = () => {
-    let qualityScore = 0
     const factors = []
+    let totalScore = 0
+    let analyzedCount = 0
 
-    // 1. Análise de resolução baseada no tamanho dos arquivos
+    // Load quality results from localStorage
+    try {
+      const faceResults = JSON.parse(localStorage.getItem('facePhotosQuality') || '[]')
+      const halfBodyResults = JSON.parse(localStorage.getItem('halfBodyPhotosQuality') || '[]')
+      const fullBodyResults = JSON.parse(localStorage.getItem('fullBodyPhotosQuality') || '[]')
+
+      const allResults = [...faceResults, ...halfBodyResults, ...fullBodyResults]
+
+      if (allResults.length > 0) {
+        // Calculate average score from Gemini analysis
+        allResults.forEach(([index, result]: any) => {
+          if (result?.quality?.score) {
+            totalScore += result.quality.score
+            analyzedCount++
+          }
+        })
+
+        const avgScore = analyzedCount > 0 ? totalScore / analyzedCount : 0
+
+        // Count critical issues
+        const criticalIssuesCount = allResults.reduce((count: number, [, result]: any) => {
+          return count + (result?.quality?.criticalIssues?.length || 0)
+        }, 0)
+
+        // Build factors based on Gemini analysis
+        if (avgScore >= 90) {
+          factors.push('Fotos de excelente qualidade ⭐')
+        } else if (avgScore >= 70) {
+          factors.push('Fotos de boa qualidade ✅')
+        } else if (avgScore >= 50) {
+          factors.push('Fotos de qualidade aceitável ⚠️')
+        } else {
+          factors.push('Fotos com qualidade abaixo do ideal ❌')
+        }
+
+        if (criticalIssuesCount === 0) {
+          factors.push('Nenhum problema crítico detectado')
+        } else if (criticalIssuesCount <= 3) {
+          factors.push(`${criticalIssuesCount} problema(s) crítico(s) detectado(s)`)
+        } else {
+          factors.push(`${criticalIssuesCount} problemas críticos detectados`)
+        }
+
+        // Add distribution info
+        const faceRatio = modelData.facePhotos.length / totalPhotos
+        const halfRatio = modelData.halfBodyPhotos.length / totalPhotos
+        const fullRatio = modelData.fullBodyPhotos.length / totalPhotos
+        const distributionScore = 1 - (Math.abs(faceRatio - 0.2) + Math.abs(halfRatio - 0.3) + Math.abs(fullRatio - 0.5)) / 2
+
+        if (distributionScore > 0.8) {
+          factors.push('Distribuição ideal de categorias')
+        } else if (distributionScore > 0.6) {
+          factors.push('Boa distribuição de categorias')
+        }
+
+        // Normalize Gemini score (0-100) to (0-1)
+        const normalizedScore = avgScore / 100
+
+        return {
+          score: normalizedScore,
+          avgScore: Math.round(avgScore),
+          factors,
+          level: avgScore < 50 ? 'RUIM' : avgScore < 70 ? 'RAZOÁVEL' : 'EXCELENTE',
+          color: avgScore < 50 ? 'bg-red-500' : avgScore < 70 ? 'bg-yellow-500' : 'bg-green-500',
+          analyzedCount
+        }
+      }
+    } catch (error) {
+      console.error('Error loading quality results:', error)
+    }
+
+    // Fallback to basic analysis if no Gemini results
     const avgFileSize = totalSizeMB / totalPhotos
-    if (avgFileSize < 0.5) {
-      factors.push('Fotos muito pequenas (baixa resolução)')
-      qualityScore += 0.2
-    } else if (avgFileSize < 1.5) {
-      factors.push('Resolução adequada')
-      qualityScore += 0.6
-    } else if (avgFileSize < 4) {
+    if (avgFileSize >= 1.5) {
       factors.push('Boa resolução')
-      qualityScore += 0.9
     } else {
-      factors.push('Alta resolução')
-      qualityScore += 1.0
+      factors.push('Resolução adequada')
     }
-
-    // 2. Análise de variedade de tamanhos (indica diferentes tipos de fotos)
-    const allFiles = [...modelData.facePhotos, ...modelData.halfBodyPhotos, ...modelData.fullBodyPhotos]
-    const fileSizes = allFiles.map(f => f.size / (1024 * 1024))
-    const sizeVariation = fileSizes.length > 0 ? (Math.max(...fileSizes) - Math.min(...fileSizes)) / Math.max(...fileSizes) : 0
-
-    if (sizeVariation > 0.5) {
-      factors.push('Boa variedade de tipos de foto')
-      qualityScore += 0.8
-    } else if (sizeVariation > 0.2) {
-      factors.push('Variedade moderada')
-      qualityScore += 0.5
-    } else {
-      factors.push('Fotos muito similares')
-      qualityScore += 0.2
-    }
-
-    // 3. Análise de distribuição por categoria
-    const faceRatio = modelData.facePhotos.length / totalPhotos
-    const halfRatio = modelData.halfBodyPhotos.length / totalPhotos
-    const fullRatio = modelData.fullBodyPhotos.length / totalPhotos
-
-    // Distribuição ideal: ~20% rosto, ~30% meio corpo, ~50% corpo inteiro
-    const distributionScore = 1 - (Math.abs(faceRatio - 0.2) + Math.abs(halfRatio - 0.3) + Math.abs(fullRatio - 0.5)) / 2
-
-    if (distributionScore > 0.8) {
-      factors.push('Distribuição ideal de categorias')
-      qualityScore += 1.0
-    } else if (distributionScore > 0.6) {
-      factors.push('Boa distribuição de categorias')
-      qualityScore += 0.7
-    } else {
-      factors.push('Distribuição irregular das categorias')
-      qualityScore += 0.3
-    }
-
-    // Normalizar score (máximo possível: 2.8, normalizar para 0-1)
-    const normalizedScore = Math.min(qualityScore / 2.8, 1)
+    factors.push('Análise AI não disponível')
 
     return {
-      score: normalizedScore,
+      score: 0.5,
+      avgScore: 50,
       factors,
-      level: normalizedScore < 0.4 ? 'RUIM' : normalizedScore < 0.7 ? 'RAZOÁVEL' : 'EXCELENTE',
-      color: normalizedScore < 0.4 ? 'bg-red-500' : normalizedScore < 0.7 ? 'bg-yellow-500' : 'bg-green-500'
+      level: 'RAZOÁVEL',
+      color: 'bg-yellow-500',
+      analyzedCount: 0
     }
   }
 

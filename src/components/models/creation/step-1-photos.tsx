@@ -108,6 +108,10 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
         })
 
         setQualityResults(newQualityResults)
+
+        // Save to localStorage for step 4
+        const resultsArray = Array.from(newQualityResults.entries())
+        localStorage.setItem('facePhotosQuality', JSON.stringify(resultsArray))
       }
     } catch (error) {
       console.error('Error analyzing photos:', error)
