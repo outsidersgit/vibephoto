@@ -376,8 +376,8 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                       </Badge>
                     </div>
 
-                    {/* Quality Details Tooltip */}
-                    {quality && quality.score < 70 && (
+                    {/* Quality Details Tooltip - Show for ALL photos */}
+                    {quality && (
                       <div className="absolute inset-x-0 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
                         <div className="bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl max-w-xs">
                           <div className="font-semibold mb-1">
@@ -404,6 +404,16 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                                   • {rec}
                                 </div>
                               ))}
+                            </div>
+                          )}
+
+                          {/* Show positive feedback for good photos */}
+                          {quality.score >= 70 && quality.criticalIssues.length === 0 && quality.recommendations.length === 0 && (
+                            <div className="mt-2 space-y-1">
+                              <div className="text-green-400 font-medium">✓ Foto excelente!</div>
+                              <div className="text-xs text-green-300">
+                                Esta foto atende todos os requisitos para treinamento de qualidade.
+                              </div>
                             </div>
                           )}
                         </div>
