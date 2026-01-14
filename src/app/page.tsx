@@ -11,6 +11,8 @@ import { useSession, signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 // Framer Motion imports
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion'
+// WhatsApp Contact Button
+import { WhatsAppFloatingButton } from '@/components/ui/whatsapp-button'
 
 interface CreditPackage {
   id: 'ESSENCIAL' | 'AVANÇADO' | 'PRO' | 'ENTERPRISE'
@@ -2605,6 +2607,9 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      {/* WhatsApp Floating Button - Always visible for lead conversion */}
+      <WhatsAppFloatingButton />
 
     </div>
   )
