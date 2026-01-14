@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Upload, X, User, Users, Heart, AlertCircle, CheckCircle, Shield, ExternalLink, Coins, Loader2, RefreshCw, Info } from 'lucide-react'
 import Link from 'next/link'
 import { ImageQualityAnalysisResult, CRITICAL_ISSUE_LABELS, MINOR_ISSUE_LABELS } from '@/types/image-quality'
-import { saveFilesToStorage, loadFilesFromStorage, loadQualityResults, saveQualityResults } from '@/lib/utils/file-persistence'
+import { saveFilesToIndexedDB, loadFilesFromIndexedDB, saveQualityToIndexedDB, loadQualityFromIndexedDB } from '@/lib/utils/indexed-db-persistence'
 
 interface ModelCreationStep1Props {
   modelData: {
@@ -28,13 +28,15 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
   // Load persisted data on mount
   useEffect(() => {
     const loadPersistedData = async () => {
-      const files = await loadFilesFromStorage('model_facePhotos')
-      const quality = loadQualityResults('facePhotosQuality')
+      const files = await loadFilesFromIndexedDB('model_facePhotos')
+      const quality = await loadQualityFromIndexedDB('facePhotosQuality')
 
       if (files.length > 0) {
+        console.log(`✅ [Step 1] Loaded ${files.length} persisted photos from IndexedDB`)
         setModelData((prev: any) => ({ ...prev, facePhotos: files }))
       }
       if (quality.size > 0) {
+        console.log(`✅ [Step 1] Loaded ${quality.size} quality results from IndexedDB`)
         setQualityResults(quality)
       }
     }
@@ -123,12 +125,14 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
 
         result.data.results.forEach((analysisResult: ImageQualityAnalysisResult, index: number) => {
           newQualityResults.set(startIndex + index, analysisResult)
+          console.log(`✅ [Step 1] Image ${startIndex + index} analyzed: ${analysisResult.quality.hasIssues ? '⚠️ Issues found' : '✓ OK'}`)
         })
 
         setQualityResults(newQualityResults)
 
-        // Save to localStorage for step 4
-        saveQualityResults('facePhotosQuality', newQualityResults)
+        // Save to IndexedDB for step 4
+        await saveQualityToIndexedDB('facePhotosQuality', newQualityResults)
+        console.log(`✅ [Step 1] Saved ${newQualityResults.size} quality results to IndexedDB`)
       }
     } catch (error) {
       console.error('Error analyzing photos:', error)
@@ -177,8 +181,9 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
         facePhotos: updatedPhotos
       })
 
-      // Save to localStorage
-      await saveFilesToStorage('model_facePhotos', updatedPhotos)
+      // Save to IndexedDB
+      await saveFilesToIndexedDB('model_facePhotos', updatedPhotos)
+      console.log(`✅ [Step 1] Saved ${updatedPhotos.length} photos to IndexedDB`)
 
       // Analyze new photos
       await analyzePhotoQuality(newFiles, startIndex)
@@ -228,9 +233,10 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
       facePhotos: newPhotos
     })
 
-    // Save to localStorage
-    await saveFilesToStorage('model_facePhotos', newPhotos)
-    saveQualityResults('facePhotosQuality', reindexedResults)
+    // Save to IndexedDB
+    await saveFilesToIndexedDB('model_facePhotos', newPhotos)
+    await saveQualityToIndexedDB('facePhotosQuality', reindexedResults)
+    console.log(`✅ [Step 1] Removed photo, saved ${newPhotos.length} photos to IndexedDB`)
   }
 
   const reanalyzePhoto = async (index: number) => {
