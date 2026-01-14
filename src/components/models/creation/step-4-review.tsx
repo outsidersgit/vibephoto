@@ -207,7 +207,7 @@ export function ModelCreationStep4({
     {
       check: 'Qualidade das Fotos',
       passed: photoQuality.score >= 0.4,
-      required: true,
+      required: false, // ← Quality is a warning, not a blocker
       description: photoQuality.factors.join(' • '),
       progress: photoQuality.level === 'RUIM' ? 25 : photoQuality.level === 'RAZOÁVEL' ? 60 : 100,
       quality: photoQuality
