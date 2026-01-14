@@ -451,6 +451,26 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
         </Card>
       )}
 
+      {/* Navigation Buttons */}
+      <div className="flex justify-between">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onPrevStep}
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Voltar
+        </Button>
+        <Button
+          type="button"
+          onClick={onNextStep}
+          disabled={!canProceed || modelData.fullBodyPhotos.length < 5}
+        >
+          Próximo
+          <ArrowRight className="w-4 h-4 ml-2" />
+        </Button>
+      </div>
+
       {/* Good and Bad Examples */}
       <Card className="bg-white border-gray-200">
         <CardContent className="pt-6">
@@ -621,26 +641,6 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
           </div>
         </CardContent>
       </Card>
-
-      {/* Navigation Buttons */}
-      <div className="flex justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onPrevStep}
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Voltar
-        </Button>
-        <Button
-          type="button"
-          onClick={onNextStep}
-          disabled={!canProceed || modelData.fullBodyPhotos.length < 5}
-        >
-          Próximo
-          <ArrowRight className="w-4 h-4 ml-2" />
-        </Button>
-      </div>
 
     </div>
   )
