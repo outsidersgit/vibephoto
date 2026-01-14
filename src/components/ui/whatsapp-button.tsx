@@ -86,9 +86,20 @@ export function WhatsAppButton({
 
       {/* Tooltip */}
       {showTooltip && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-sm rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap">
+        <div className={cn(
+          "absolute px-3 py-1.5 bg-gray-900 text-white text-sm rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap",
+          variant === 'floating'
+            ? "bottom-1/2 right-full translate-y-1/2 mr-3" // Left of button for floating
+            : "bottom-full left-1/2 -translate-x-1/2 mb-2" // Above button for inline
+        )}>
           {WHATSAPP_CONFIG.ui.tooltip}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900" />
+          {variant === 'floating' ? (
+            // Arrow pointing right (to button) for floating
+            <div className="absolute top-1/2 left-full -translate-y-1/2 -ml-1 border-4 border-transparent border-l-gray-900" />
+          ) : (
+            // Arrow pointing down (to button) for inline
+            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900" />
+          )}
         </div>
       )}
     </div>
