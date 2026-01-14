@@ -262,3 +262,6 @@ Responda APENAS em JSON válido (sem markdown, sem \`\`\`json):
     }
   }
 }
+
+// Singleton instance for use across the application
+export const imageQualityAnalyzer = new ImageQualityAnalyzer()
