@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { CheckCircle, Clock, Zap, Image, User, AlertTriangle, Sparkles, Brain, Star, Shield, ArrowLeft, Coins } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { ProcessingMessage } from '@/components/ui/processing-message'
+import { loadQualityFromIndexedDB } from '@/lib/utils/indexed-db-persistence'
 
 type ModelStatus = 'UPLOADING' | 'PROCESSING' | 'TRAINING' | 'READY' | 'ERROR' | null
 
@@ -51,6 +52,15 @@ export function ModelCreationStep4({
 
   const selectedProvider = 'astria' // Provedor fixo
   const [consentAccepted, setConsentAccepted] = useState(false)
+  const [photoQualityData, setPhotoQualityData] = useState<{
+    score: number
+    photosWithIssues: number
+    photosOk: number
+    factors: string[]
+    level: string
+    color: string
+    analyzedCount: number
+  } | null>(null)
   const [modelCostInfo, setModelCostInfo] = useState<{
     currentModels: number
     freeModelsAvailable: number
@@ -60,6 +70,15 @@ export function ModelCreationStep4({
     needsCredits: boolean
     message?: string
   } | null>(null)
+
+  // Load quality analysis from IndexedDB
+  useEffect(() => {
+    async function loadQualityAnalysis() {
+      const result = await analyzePhotoQuality()
+      setPhotoQualityData(result)
+    }
+    loadQualityAnalysis()
+  }, []) // Run once on mount
 
   useEffect(() => {
     // Fetch model cost info
@@ -106,19 +125,28 @@ export function ModelCreationStep4({
   }
 
   // Análise de qualidade das fotos baseada na análise AI (OpenAI GPT-4o)
-  const analyzePhotoQuality = () => {
+  const analyzePhotoQuality = async () => {
     const factors = []
     let photosWithIssues = 0
     let photosOk = 0
     let analyzedCount = 0
 
-    // Load quality results from localStorage
+    // Load quality results from IndexedDB
     try {
-      const faceResults = JSON.parse(localStorage.getItem('facePhotosQuality') || '[]')
-      const halfBodyResults = JSON.parse(localStorage.getItem('halfBodyPhotosQuality') || '[]')
-      const fullBodyResults = JSON.parse(localStorage.getItem('fullBodyPhotosQuality') || '[]')
+      const [faceQualityMap, halfBodyQualityMap, fullBodyQualityMap] = await Promise.all([
+        loadQualityFromIndexedDB('facePhotosQuality'),
+        loadQualityFromIndexedDB('halfBodyPhotosQuality'),
+        loadQualityFromIndexedDB('fullBodyPhotosQuality')
+      ])
+
+      // Convert Maps to arrays for processing
+      const faceResults = Array.from(faceQualityMap.entries())
+      const halfBodyResults = Array.from(halfBodyQualityMap.entries())
+      const fullBodyResults = Array.from(fullBodyQualityMap.entries())
 
       const allResults = [...faceResults, ...halfBodyResults, ...fullBodyResults]
+
+      console.log(`✅ [Step 4] Loaded quality results: Face=${faceResults.length}, HalfBody=${halfBodyResults.length}, FullBody=${fullBodyResults.length}`)
 
       if (allResults.length > 0) {
         // Count photos with/without issues
@@ -192,8 +220,18 @@ export function ModelCreationStep4({
     }
   }
 
-  const photoQuality = analyzePhotoQuality()
   const quantityQuality = getQuantityQuality()
+
+  // Use photoQualityData from state (loaded via useEffect) with fallback
+  const photoQuality = photoQualityData || {
+    score: 0.5,
+    photosWithIssues: 0,
+    photosOk: 0,
+    factors: ['Carregando análise...'],
+    level: 'RAZOÁVEL',
+    color: 'bg-yellow-500',
+    analyzedCount: 0
+  }
 
   const qualityChecks = [
     {
