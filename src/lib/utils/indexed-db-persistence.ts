@@ -115,6 +115,28 @@ export async function deleteFilesFromIndexedDB(key: string): Promise<void> {
 }
 
 /**
+ * Delete quality results from IndexedDB
+ */
+export async function deleteQualityFromIndexedDB(key: string): Promise<void> {
+  try {
+    const db = await initDB()
+    const transaction = db.transaction([STORES.QUALITY], 'readwrite')
+    const store = transaction.objectStore(STORES.QUALITY)
+
+    await new Promise<void>((resolve, reject) => {
+      const request = store.delete(key)
+      request.onsuccess = () => resolve()
+      request.onerror = () => reject(request.error)
+    })
+
+    db.close()
+    console.log(`✅ [IndexedDB] Deleted quality ${key}`)
+  } catch (error) {
+    console.error(`❌ [IndexedDB] Error deleting quality ${key}:`, error)
+  }
+}
+
+/**
  * Save quality results to IndexedDB
  */
 export async function saveQualityToIndexedDB(
@@ -340,12 +362,14 @@ export async function finalizeDraft(
 
       case 'model':
         await Promise.all([
+          // Delete files
           deleteFilesFromIndexedDB('model_facePhotos'),
           deleteFilesFromIndexedDB('model_halfBodyPhotos'),
           deleteFilesFromIndexedDB('model_fullBodyPhotos'),
-          deleteFilesFromIndexedDB('facePhotosQuality'),
-          deleteFilesFromIndexedDB('halfBodyPhotosQuality'),
-          deleteFilesFromIndexedDB('fullBodyPhotosQuality'),
+          // Delete quality results (different store!)
+          deleteQualityFromIndexedDB('facePhotosQuality'),
+          deleteQualityFromIndexedDB('halfBodyPhotosQuality'),
+          deleteQualityFromIndexedDB('fullBodyPhotosQuality'),
           deleteDraftMetadata('model')
         ])
         // Clean localStorage step marker
