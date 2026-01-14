@@ -46,17 +46,15 @@ export function ModelCreationStep4({
 }: ModelCreationStep4Props) {
   const { addToast } = useToast()
 
-  // State for actual photo counts from IndexedDB
+  // State for actual photo counts and size from IndexedDB
   const [photoCounts, setPhotoCounts] = useState({
     face: modelData.facePhotos.length,
     halfBody: modelData.halfBodyPhotos.length,
     fullBody: modelData.fullBodyPhotos.length
   })
+  const [totalSizeMB, setTotalSizeMB] = useState(0)
 
   const totalPhotos = photoCounts.face + photoCounts.halfBody + photoCounts.fullBody
-  const totalSizeMB = (modelData.facePhotos.reduce((acc, file) => acc + file.size, 0) +
-                      modelData.halfBodyPhotos.reduce((acc, file) => acc + file.size, 0) +
-                      modelData.fullBodyPhotos.reduce((acc, file) => acc + file.size, 0)) / (1024 * 1024)
 
   const selectedProvider = 'astria' // Provedor fixo
   const [consentAccepted, setConsentAccepted] = useState(false)
@@ -79,7 +77,7 @@ export function ModelCreationStep4({
     message?: string
   } | null>(null)
 
-  // Load photo counts from IndexedDB
+  // Load photo counts and total size from IndexedDB
   useEffect(() => {
     async function loadPhotoCounts() {
       const [faceFiles, halfBodyFiles, fullBodyFiles] = await Promise.all([
@@ -94,9 +92,18 @@ export function ModelCreationStep4({
         fullBody: fullBodyFiles.length
       }
 
-      console.log(`✅ [Step 4] Loaded photo counts from IndexedDB: Face=${counts.face}, HalfBody=${counts.halfBody}, FullBody=${counts.fullBody}, Total=${counts.face + counts.halfBody + counts.fullBody}`)
+      // Calculate total size
+      const totalBytes =
+        faceFiles.reduce((acc, file) => acc + file.size, 0) +
+        halfBodyFiles.reduce((acc, file) => acc + file.size, 0) +
+        fullBodyFiles.reduce((acc, file) => acc + file.size, 0)
+
+      const sizeMB = totalBytes / (1024 * 1024)
+
+      console.log(`✅ [Step 4] Loaded photo counts from IndexedDB: Face=${counts.face}, HalfBody=${counts.halfBody}, FullBody=${counts.fullBody}, Total=${counts.face + counts.halfBody + counts.fullBody}, Size=${sizeMB.toFixed(1)}MB`)
 
       setPhotoCounts(counts)
+      setTotalSizeMB(sizeMB)
     }
     loadPhotoCounts()
   }, []) // Run once on mount

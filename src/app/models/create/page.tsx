@@ -144,6 +144,11 @@ export default function CreateModelPage() {
       setIsSubmitting(false)
       // Clear step on successful completion
       localStorage.removeItem('model_currentStep')
+      // Clear all model creation data from IndexedDB
+      import('@/lib/utils/indexed-db-persistence').then(({ clearModelCreationFromIndexedDB }) => {
+        clearModelCreationFromIndexedDB()
+        console.log('✅ [Model Creation] Cleared all IndexedDB data after successful training')
+      })
       if (!hasRedirectedRef.current) {
         hasRedirectedRef.current = true
         addToast({
