@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Upload, X, User, Users, Heart, AlertCircle, CheckCircle, Shield, ExternalLink, Coins, Loader2, RefreshCw, Info } from 'lucide-react'
 import Link from 'next/link'
 import { ImageQualityAnalysisResult, CRITICAL_ISSUE_LABELS, MINOR_ISSUE_LABELS } from '@/types/image-quality'
+import { saveFilesToStorage, loadFilesFromStorage, loadQualityResults, saveQualityResults } from '@/lib/utils/file-persistence'
 
 interface ModelCreationStep1Props {
   modelData: {
@@ -23,6 +24,23 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [qualityResults, setQualityResults] = useState<Map<number, ImageQualityAnalysisResult>>(new Map())
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+
+  // Load persisted data on mount
+  useEffect(() => {
+    const loadPersistedData = async () => {
+      const files = await loadFilesFromStorage('model_facePhotos')
+      const quality = loadQualityResults('facePhotosQuality')
+
+      if (files.length > 0) {
+        setModelData((prev: any) => ({ ...prev, facePhotos: files }))
+      }
+      if (quality.size > 0) {
+        setQualityResults(quality)
+      }
+    }
+
+    loadPersistedData()
+  }, [])
 
   const classOptions = [
     { value: 'MAN', label: 'Homem', icon: User, description: 'Pessoa adulta do sexo masculino' },
@@ -110,8 +128,7 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
         setQualityResults(newQualityResults)
 
         // Save to localStorage for step 4
-        const resultsArray = Array.from(newQualityResults.entries())
-        localStorage.setItem('facePhotosQuality', JSON.stringify(resultsArray))
+        saveQualityResults('facePhotosQuality', newQualityResults)
       }
     } catch (error) {
       console.error('Error analyzing photos:', error)
@@ -153,11 +170,15 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
 
     if (newFiles.length > 0) {
       const startIndex = modelData.facePhotos.length
+      const updatedPhotos = [...modelData.facePhotos, ...newFiles]
 
       setModelData({
         ...modelData,
-        facePhotos: [...modelData.facePhotos, ...newFiles]
+        facePhotos: updatedPhotos
       })
+
+      // Save to localStorage
+      await saveFilesToStorage('model_facePhotos', updatedPhotos)
 
       // Analyze new photos
       await analyzePhotoQuality(newFiles, startIndex)
@@ -186,7 +207,7 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
     setDragActive(false)
   }, [])
 
-  const removePhoto = (index: number) => {
+  const removePhoto = async (index: number) => {
     const newPhotos = modelData.facePhotos.filter((_, i) => i !== index)
     const newQualityResults = new Map(qualityResults)
     newQualityResults.delete(index)
@@ -206,6 +227,10 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
       ...modelData,
       facePhotos: newPhotos
     })
+
+    // Save to localStorage
+    await saveFilesToStorage('model_facePhotos', newPhotos)
+    saveQualityResults('facePhotosQuality', reindexedResults)
   }
 
   const reanalyzePhoto = async (index: number) => {

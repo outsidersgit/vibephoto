@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Upload, X, AlertCircle, CheckCircle, Loader2, RefreshCw, ArrowLeft, ArrowRight, User, Users, Heart } from 'lucide-react'
 import Link from 'next/link'
 import { ImageQualityAnalysisResult, CRITICAL_ISSUE_LABELS, MINOR_ISSUE_LABELS } from '@/types/image-quality'
+import { saveFilesToStorage, loadFilesFromStorage, loadQualityResults, saveQualityResults } from '@/lib/utils/file-persistence'
 
 interface ModelCreationStep3FullBodyProps {
   modelData: {
@@ -25,6 +26,22 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
   const [qualityResults, setQualityResults] = useState<Map<number, ImageQualityAnalysisResult>>(new Map())
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
+  // Load persisted data on mount
+  useEffect(() => {
+    const loadPersistedData = async () => {
+      const files = await loadFilesFromStorage('model_fullBodyPhotos')
+      const quality = loadQualityResults('fullBodyPhotosQuality')
+
+      if (files.length > 0) {
+        setModelData((prev: any) => ({ ...prev, fullBodyPhotos: files }))
+      }
+      if (quality.size > 0) {
+        setQualityResults(quality)
+      }
+    }
+
+    loadPersistedData()
+  }, [])
 
   const validateFile = (file: File): string[] => {
     const errors: string[] = []
@@ -104,8 +121,7 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
         setQualityResults(newQualityResults)
 
         // Save to localStorage for step 4
-        const resultsArray = Array.from(newQualityResults.entries())
-        localStorage.setItem('fullBodyPhotosQuality', JSON.stringify(resultsArray))
+        saveQualityResults('fullBodyPhotosQuality', newQualityResults)
       }
     } catch (error) {
       console.error('Error analyzing photos:', error)
@@ -147,11 +163,15 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
 
     if (newFiles.length > 0) {
       const startIndex = modelData.fullBodyPhotos.length
+      const updatedPhotos = [...modelData.fullBodyPhotos, ...newFiles]
 
       setModelData({
         ...modelData,
-        fullBodyPhotos: [...modelData.fullBodyPhotos, ...newFiles]
+        fullBodyPhotos: updatedPhotos
       })
+
+      // Save to localStorage
+      await saveFilesToStorage('model_fullBodyPhotos', updatedPhotos)
 
       // Analyze new photos
       await analyzePhotoQuality(newFiles, startIndex)
@@ -180,7 +200,7 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
     setDragActive(false)
   }, [])
 
-  const removePhoto = (index: number) => {
+  const removePhoto = async (index: number) => {
     const newPhotos = modelData.fullBodyPhotos.filter((_, i) => i !== index)
     const newQualityResults = new Map(qualityResults)
     newQualityResults.delete(index)
@@ -200,6 +220,10 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
       ...modelData,
       fullBodyPhotos: newPhotos
     })
+
+    // Save to localStorage
+    await saveFilesToStorage('model_fullBodyPhotos', newPhotos)
+    saveQualityResults('fullBodyPhotosQuality', reindexedResults)
   }
 
   const reanalyzePhoto = async (index: number) => {

@@ -16,6 +16,7 @@ import { InsufficientCreditsBanner } from '@/components/ui/insufficient-credits-
 import { notifyError } from '@/lib/errors'
 import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
 import { PromptOptimizer } from '@/components/ui/prompt-optimizer'
+import { clearPersistedData } from '@/lib/utils/file-persistence'
 
 interface VideoGenerationInterfaceProps {
   user: {
@@ -107,6 +108,9 @@ export function VideoGenerationInterface({
     if (lastFrameInputRef.current) {
       lastFrameInputRef.current.value = ''
     }
+    // Clear persisted data
+    clearPersistedData('video_referenceImage')
+    clearPersistedData('video_lastFrame')
   }
   
   // Função para validar se uma URL de vídeo está acessível
@@ -315,6 +319,23 @@ export function VideoGenerationInterface({
     }
   }, [sourceImageUrl])
 
+  // Load persisted images on mount
+  useEffect(() => {
+    // Load persisted reference images
+    const savedImage = localStorage.getItem('video_referenceImage')
+    const savedLastFrame = localStorage.getItem('video_lastFrame')
+
+    if (savedImage) {
+      setUploadedImage(savedImage)
+      setFormData(prev => ({ ...prev, sourceImageUrl: savedImage }))
+    }
+
+    if (savedLastFrame) {
+      setUploadedLastFrame(savedLastFrame)
+      setFormData(prev => ({ ...prev, lastFrame: savedLastFrame }))
+    }
+  }, [])
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
@@ -325,6 +346,8 @@ export function VideoGenerationInterface({
         setFormData(prev => ({ ...prev, sourceImageUrl: result }))
         // Automatically switch to image-to-video mode when image is uploaded
         setActiveMode('image-to-video')
+        // Save to localStorage
+        localStorage.setItem('video_referenceImage', result)
       }
       reader.readAsDataURL(file)
     }
@@ -335,6 +358,8 @@ export function VideoGenerationInterface({
     setFormData(prev => ({ ...prev, sourceImageUrl: undefined, image: undefined }))
     // Automatically switch back to text-to-video mode when image is removed
     setActiveMode('text-to-video')
+    // Clear from localStorage
+    localStorage.removeItem('video_referenceImage')
   }
 
   const handleLastFrameUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -345,6 +370,8 @@ export function VideoGenerationInterface({
         const result = e.target?.result as string
         setUploadedLastFrame(result)
         setFormData(prev => ({ ...prev, lastFrame: result }))
+        // Save to localStorage
+        localStorage.setItem('video_lastFrame', result)
       }
       reader.readAsDataURL(file)
     }
@@ -356,6 +383,8 @@ export function VideoGenerationInterface({
     if (lastFrameInputRef.current) {
       lastFrameInputRef.current.value = ''
     }
+    // Clear from localStorage
+    localStorage.removeItem('video_lastFrame')
   }
 
   // Helper: Convert base64 to File

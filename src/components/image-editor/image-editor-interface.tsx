@@ -30,6 +30,7 @@ import { ProcessingMessage } from '@/components/ui/processing-message'
 import { notifyError } from '@/lib/errors'
 import { InsufficientCreditsBanner } from '@/components/ui/insufficient-credits-banner'
 import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
+import { saveFilesToStorage, loadFilesFromStorage, clearPersistedData } from '@/lib/utils/file-persistence'
 
 // Custos dinâmicos baseados na resolução
 const getEditorCost = (resolution: EditorResolution) => getImageEditCost(1, resolution)
@@ -82,11 +83,39 @@ export function ImageEditorInterface({
   useEffect(() => {
     currentEditIdRef.current = currentEditId
   }, [currentEditId])
-  
+
   useEffect(() => {
     loadingRef.current = loading
   }, [loading])
-  
+
+  // Load persisted images on mount
+  useEffect(() => {
+    const loadPersistedImages = async () => {
+      const files = await loadFilesFromStorage('editor_uploadedImages')
+
+      if (files.length > 0) {
+        // Convert Files to base64 for preview
+        const base64Images = await Promise.all(
+          files.map(file => {
+            return new Promise<string>((resolve) => {
+              const reader = new FileReader()
+              reader.onload = (e) => resolve(e.target?.result as string)
+              reader.readAsDataURL(file)
+            })
+          })
+        )
+
+        setImages(base64Images)
+        setImageFiles(files)
+      }
+    }
+
+    // Only load if not preloaded from URL
+    if (!preloadedImageUrl) {
+      loadPersistedImages()
+    }
+  }, [preloadedImageUrl])
+
   // Função para limpar todos os campos após geração bem-sucedida
   const clearForm = () => {
     setPrompt('')
@@ -98,6 +127,8 @@ export function ImageEditorInterface({
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+    // Clear persisted data
+    clearPersistedData('editor_uploadedImages')
   }
   
   
@@ -676,7 +707,7 @@ export function ImageEditorInterface({
     // Função auxiliar para processar arquivo de imagem
     function processImageFile(file: File) {
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const base64Image = e.target?.result as string
         setImages(prev => {
           if (prev.length >= 14) {
@@ -691,6 +722,12 @@ export function ImageEditorInterface({
           }
           return [...prev, file]
         })
+
+        // Save to localStorage after state updates
+        setTimeout(async () => {
+          const currentFiles = await loadFilesFromStorage('editor_uploadedImages')
+          await saveFilesToStorage('editor_uploadedImages', [...currentFiles, file])
+        }, 100)
       }
       reader.onerror = () => {
         addToast({
@@ -816,9 +853,14 @@ export function ImageEditorInterface({
     )
   }
 
-  const removeImage = (index: number) => {
+  const removeImage = async (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index))
-    setImageFiles(prev => prev.filter((_, i) => i !== index))
+    setImageFiles(prev => {
+      const updatedFiles = prev.filter((_, i) => i !== index)
+      // Save updated files to localStorage
+      saveFilesToStorage('editor_uploadedImages', updatedFiles)
+      return updatedFiles
+    })
   }
 
   const copyPrompt = () => {
