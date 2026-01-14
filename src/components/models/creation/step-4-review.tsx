@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { CheckCircle, Clock, Zap, Image, User, AlertTriangle, Sparkles, Brain, Star, Shield, ArrowLeft, Coins } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { ProcessingMessage } from '@/components/ui/processing-message'
-import { loadQualityFromIndexedDB } from '@/lib/utils/indexed-db-persistence'
+import { loadQualityFromIndexedDB, loadFilesFromIndexedDB } from '@/lib/utils/indexed-db-persistence'
 
 type ModelStatus = 'UPLOADING' | 'PROCESSING' | 'TRAINING' | 'READY' | 'ERROR' | null
 
@@ -45,7 +45,15 @@ export function ModelCreationStep4({
   trainingActive
 }: ModelCreationStep4Props) {
   const { addToast } = useToast()
-  const totalPhotos = modelData.facePhotos.length + modelData.halfBodyPhotos.length + modelData.fullBodyPhotos.length
+
+  // State for actual photo counts from IndexedDB
+  const [photoCounts, setPhotoCounts] = useState({
+    face: modelData.facePhotos.length,
+    halfBody: modelData.halfBodyPhotos.length,
+    fullBody: modelData.fullBodyPhotos.length
+  })
+
+  const totalPhotos = photoCounts.face + photoCounts.halfBody + photoCounts.fullBody
   const totalSizeMB = (modelData.facePhotos.reduce((acc, file) => acc + file.size, 0) +
                       modelData.halfBodyPhotos.reduce((acc, file) => acc + file.size, 0) +
                       modelData.fullBodyPhotos.reduce((acc, file) => acc + file.size, 0)) / (1024 * 1024)
@@ -70,6 +78,28 @@ export function ModelCreationStep4({
     needsCredits: boolean
     message?: string
   } | null>(null)
+
+  // Load photo counts from IndexedDB
+  useEffect(() => {
+    async function loadPhotoCounts() {
+      const [faceFiles, halfBodyFiles, fullBodyFiles] = await Promise.all([
+        loadFilesFromIndexedDB('model_facePhotos'),
+        loadFilesFromIndexedDB('model_halfBodyPhotos'),
+        loadFilesFromIndexedDB('model_fullBodyPhotos')
+      ])
+
+      const counts = {
+        face: faceFiles.length,
+        halfBody: halfBodyFiles.length,
+        fullBody: fullBodyFiles.length
+      }
+
+      console.log(`✅ [Step 4] Loaded photo counts from IndexedDB: Face=${counts.face}, HalfBody=${counts.halfBody}, FullBody=${counts.fullBody}, Total=${counts.face + counts.halfBody + counts.fullBody}`)
+
+      setPhotoCounts(counts)
+    }
+    loadPhotoCounts()
+  }, []) // Run once on mount
 
   // Load quality analysis from IndexedDB
   useEffect(() => {
