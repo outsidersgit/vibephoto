@@ -4,16 +4,18 @@
  */
 
 export type CriticalIssue =
-  | 'hat_or_cap'
-  | 'sunglasses'
-  | 'face_covered'
+  | 'ai_generated'
   | 'multiple_people'
   | 'making_faces'
-  | 'eyes_closed'
   | 'heavy_filters'
-  | 'hand_covering_face'
+  | 'low_light'
+  | 'blurry'
+  | 'hat_or_cap'
+  | 'sunglasses'
   | 'extreme_angle'
-  | 'mask'
+  | 'face_cut_off'
+  | 'low_quality'
+  | 'face_covered'
 
 export type MinorIssue =
   | 'slight_blur'
@@ -146,16 +148,18 @@ export function getStatusLabel(status: QualityStatus): string {
 
 /** Critical issue descriptions in Portuguese */
 export const CRITICAL_ISSUE_LABELS: Record<CriticalIssue, string> = {
-  hat_or_cap: 'Boné ou chapéu',
+  ai_generated: 'Imagem gerada por IA',
+  multiple_people: 'Pessoas extras na foto',
+  making_faces: 'Careta ou expressão exagerada',
+  heavy_filters: 'Filtro digital pesado',
+  low_light: 'Iluminação muito ruim',
+  blurry: 'Foto muito desfocada',
+  hat_or_cap: 'Chapéu/boné cobrindo cabeça',
   sunglasses: 'Óculos escuros',
-  face_covered: 'Rosto coberto',
-  multiple_people: 'Várias pessoas na foto',
-  making_faces: 'Fazendo careta',
-  eyes_closed: 'Olhos fechados',
-  heavy_filters: 'Filtros pesados',
-  hand_covering_face: 'Mão cobrindo o rosto',
   extreme_angle: 'Ângulo muito extremo',
-  mask: 'Máscara facial'
+  face_cut_off: 'Rosto cortado',
+  low_quality: 'Qualidade muito baixa',
+  face_covered: 'Rosto coberto (máscara, mão, etc)'
 }
 
 /** Minor issue descriptions in Portuguese */
