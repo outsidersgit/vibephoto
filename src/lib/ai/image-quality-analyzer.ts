@@ -218,27 +218,32 @@ export class ImageQualityAnalyzer {
 
 Analise esta foto de ${photoDescription} para treinar um modelo de IA de ${subjectType}.
 
+IMPORTANTE: Seja CONSISTENTE e OBJETIVO. A mesma foto deve SEMPRE receber a mesma avaliação, independente da etapa.
+
 ✅ CRITÉRIOS IDEAIS (se a foto tiver isso, está ótima):
 - Ombros para cima (close de rosto) OU cintura para cima OU corpo inteiro
-- Olhando para a câmera
+- Olhando para a câmera (ou levemente de lado)
 - Fotos de dias diferentes
 - Mudança de fundos, iluminação e roupas
 - Pessoa sozinha na foto
 
-❌ PROBLEMAS CRÍTICOS (marque se encontrar):
+❌ PROBLEMAS CRÍTICOS - APENAS marque se for MUITO ÓBVIO:
 ${subjectType === 'pessoa' ? `
-1. Imagens geradas por IA (rostos artificiais, arte digital)
-2. Pessoas extras na foto (visíveis e próximas - ignore reflexos ou pessoas muito distantes no fundo)
-3. Caretas ou expressões muito exageradas
-4. Filtros digitais pesados (preto e branco artístico, Snapchat, Instagram com distorção)
-5. Iluminação muito ruim (muito escura, muito clara, pessoa quase invisível)
-6. Desfocada demais (impossível ver detalhes do rosto)
-7. Chapéu ou boné cobrindo boa parte da cabeça/cabelo
-8. Óculos escuros cobrindo os olhos
-9. Ângulos muito extremos (de baixo para cima, de cima para baixo demais)
-10. Rosto cortado ou partes importantes fora do enquadramento
-11. Qualidade muito baixa ou pixelizada
-12. Mão cobrindo rosto, máscara, cachecol no rosto
+1. Imagens CLARAMENTE geradas por IA (rostos artificiais perfeitos demais, arte digital)
+2. Pessoas extras PRÓXIMAS e NÍTIDAS (ignore pessoas desfocadas ao fundo ou muito longe)
+3. Caretas EXTREMAS (língua pra fora, olhos arregalados, boca muito aberta)
+4. Filtros PESADOS tipo Snapchat (orelhas de gato, distorção facial, efeitos digitais)
+5. Iluminação EXTREMAMENTE ruim (pessoa quase invisível, totalmente escura)
+6. MUITO desfocada (impossível distinguir características faciais)
+7. Chapéu/boné cobrindo MAIS DE 50% da cabeça
+8. Óculos escuros GROSSOS e ESCUROS (não conte óculos claros ou de grau)
+9. Ângulos EXTREMOS - APENAS se:
+   - Câmera MUITO de baixo olhando pra cima (ângulo > 45°)
+   - Câmera MUITO de cima olhando pra baixo (ângulo > 45°)
+   - Fotos normais levemente de lado/cima/baixo são OK ✅
+10. Rosto cortado (falta testa, queixo, orelhas importantes)
+11. Qualidade MUITO baixa (pixelização grave, < 100px de rosto)
+12. Mão/máscara cobrindo MAIOR PARTE do rosto
 ` : `
 1. Múltiplos animais na mesma foto
 2. Pessoas muito visíveis junto com o animal
@@ -248,22 +253,29 @@ ${subjectType === 'pessoa' ? `
 6. Foto muito desfocada
 `}
 
-⚠️ ATENÇÃO - Estas NÃO são problemas:
-- Óculos de grau transparentes (OK ✅)
-- Pessoa pequena ao longe no fundo desfocado (OK ✅)
-- Iluminação natural não perfeita mas dá pra ver bem (OK ✅)
-- Leve desfoque ou granulação normal (OK ✅)
-- Expressões normais: sorriso, sério, pensativo (OK ✅)
-- Fundos urbanos, natureza, interiores comuns (OK ✅)
-- Filtro suave de cor que não distorce (OK ✅)
-- Boné/chapéu apenas na cabeça sem cobrir muito (OK ✅)
+✅ ATENÇÃO - Estas SÃO ACEITÁVEIS (NÃO marque como problema):
+- Óculos de grau transparentes ✅
+- Óculos escuros leves/claros onde dá pra ver os olhos ✅
+- Pessoa pequena/desfocada ao longe no fundo ✅
+- Iluminação natural mesmo que não perfeita ✅
+- Leve desfoque ou granulação ✅
+- Expressões normais: sorriso, sério, pensativo, rindo ✅
+- Selfies normais ✅
+- Fotos levemente de lado (perfil 3/4) ✅
+- Fotos levemente de cima ou de baixo (ângulo < 30°) ✅
+- Fundos urbanos, natureza, interiores ✅
+- Filtros suaves de cor (não distorcem) ✅
+- Boné/chapéu visível mas não cobrindo muito ✅
+- Fotos em eventos, festas, casamentos ✅
+
+REGRA DE OURO: Na DÚVIDA, aprove a foto. Só reprove se o problema for MUITO claro e GRAVE.
 
 Responda APENAS em JSON válido (sem markdown):
 {
-  "hasIssues": <true se encontrar algum problema da lista vermelha, false se estiver OK>,
-  "criticalIssues": [<array com códigos dos problemas encontrados: "ai_generated", "multiple_people", "making_faces", "heavy_filters", "low_light", "blurry", "hat_or_cap", "sunglasses", "extreme_angle", "face_cut_off", "low_quality", "face_covered">],
+  "hasIssues": <true APENAS se houver problema GRAVE E ÓBVIO, false se OK ou duvidoso>,
+  "criticalIssues": [<array com códigos: "ai_generated", "multiple_people", "making_faces", "heavy_filters", "low_light", "blurry", "hat_or_cap", "sunglasses", "extreme_angle", "face_cut_off", "low_quality", "face_covered">],
   "minorIssues": [],
-  "issuesSummary": "<se hasIssues=true, descreva os problemas encontrados em 1 frase. Ex: 'Óculos escuros e pessoa extra ao fundo'. Se false, omita>"
+  "issuesSummary": "<se hasIssues=true, descreva APENAS os problemas graves. Ex: 'Óculos escuros grossos'. Se false, omita>"
 }`
   }
 

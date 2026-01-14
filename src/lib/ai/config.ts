@@ -69,7 +69,7 @@ export const AI_CONFIG = {
     apiKey: process.env.OPENAI_API_KEY || '',
     model: 'gpt-4o', // Latest GPT-4o with vision capabilities
     maxTokens: 1000,
-    temperature: 0.3, // Lower for more consistent analysis
+    temperature: 0.1, // Very low for maximum consistency between analyses
     endpoint: 'https://api.openai.com/v1/chat/completions'
   },
 
