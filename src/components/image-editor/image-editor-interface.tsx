@@ -30,7 +30,7 @@ import { ProcessingMessage } from '@/components/ui/processing-message'
 import { notifyError } from '@/lib/errors'
 import { InsufficientCreditsBanner } from '@/components/ui/insufficient-credits-banner'
 import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
-import { saveFilesToStorage, loadFilesFromStorage, clearPersistedData } from '@/lib/utils/file-persistence'
+import { saveFilesToIndexedDB, loadFilesFromIndexedDB, deleteFilesFromIndexedDB, savePromptToIndexedDB, loadPromptFromIndexedDB } from '@/lib/utils/indexed-db-persistence'
 
 // Custos dinâmicos baseados na resolução
 const getEditorCost = (resolution: EditorResolution) => getImageEditCost(1, resolution)
@@ -92,7 +92,7 @@ export function ImageEditorInterface({
   // Load persisted images on mount
   useEffect(() => {
     const loadPersistedImages = async () => {
-      const files = await loadFilesFromStorage('editor_uploadedImages')
+      const files = await loadFilesFromIndexedDB('editor_uploadedImages')
 
       if (files.length > 0) {
         // Convert Files to base64 for preview
@@ -117,6 +117,28 @@ export function ImageEditorInterface({
     }
   }, [preloadedImageUrl])
 
+  // Load persisted prompt on mount
+  useEffect(() => {
+    const loadPersistedPrompt = async () => {
+      const saved = await loadPromptFromIndexedDB('editor_prompt')
+      if (saved) {
+        setPrompt(saved)
+      }
+    }
+    loadPersistedPrompt()
+  }, [])
+
+  // Save prompt on change (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (prompt) {
+        savePromptToIndexedDB('editor_prompt', prompt)
+      }
+    }, 1000) // Save 1 second after user stops typing
+
+    return () => clearTimeout(timer)
+  }, [prompt])
+
   // Função para limpar todos os campos após geração bem-sucedida
   const clearForm = () => {
     setPrompt('')
@@ -129,7 +151,7 @@ export function ImageEditorInterface({
       fileInputRef.current.value = ''
     }
     // Clear persisted data
-    clearPersistedData('editor_uploadedImages')
+    deleteFilesFromIndexedDB('editor_uploadedImages')
   }
   
   
@@ -276,6 +298,9 @@ export function ImageEditorInterface({
 
       clearForm()
       invalidateBalance()
+
+      // Clear prompt from IndexedDB after successful generation
+      savePromptToIndexedDB('editor_prompt', '')
 
       console.log('✅ [IMAGE_EDITOR] Preview updated successfully with URL:', urlToUse.substring(0, 100))
     } else {
@@ -730,10 +755,10 @@ export function ImageEditorInterface({
         // Debounced save after all files processed
         setTimeout(async () => {
           if (pendingSaveRef.current.length > 0) {
-            const currentImages = imageFiles.length > 0 ? imageFiles : await loadFilesFromStorage('editor_uploadedImages')
+            const currentImages = imageFiles.length > 0 ? imageFiles : await loadFilesFromIndexedDB('editor_uploadedImages')
             const allFiles = [...currentImages, ...pendingSaveRef.current]
-            await saveFilesToStorage('editor_uploadedImages', allFiles)
-            console.log(`✅ [Editor] Saved ${pendingSaveRef.current.length} files to storage. Total: ${allFiles.length}`)
+            await saveFilesToIndexedDB('editor_uploadedImages', allFiles)
+            console.log(`✅ [Editor] Saved ${pendingSaveRef.current.length} files to IndexedDB. Total: ${allFiles.length}`)
             pendingSaveRef.current = []
           }
         }, 500) // Give time for all files to be queued
@@ -866,8 +891,8 @@ export function ImageEditorInterface({
     setImages(prev => prev.filter((_, i) => i !== index))
     setImageFiles(prev => {
       const updatedFiles = prev.filter((_, i) => i !== index)
-      // Save updated files to localStorage
-      saveFilesToStorage('editor_uploadedImages', updatedFiles)
+      // Save updated files to IndexedDB
+      saveFilesToIndexedDB('editor_uploadedImages', updatedFiles)
       return updatedFiles
     })
   }

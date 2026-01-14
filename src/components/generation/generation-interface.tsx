@@ -27,6 +27,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useInvalidateCredits, useCreditBalance } from '@/hooks/useCredits'
 import { CREDIT_COSTS, getImageGenerationCost } from '@/lib/credits/pricing'
 import { ProcessingMessage } from '@/components/ui/processing-message'
+import { savePromptToIndexedDB, loadPromptFromIndexedDB } from '@/lib/utils/indexed-db-persistence'
 
 interface GenerationInterfaceProps {
   models: Array<{
@@ -107,6 +108,28 @@ export function GenerationInterface({
     window.addEventListener('resize', updateIsMobile)
     return () => window.removeEventListener('resize', updateIsMobile)
   }, [])
+
+  // Load persisted prompt on mount
+  useEffect(() => {
+    const loadPersistedPrompt = async () => {
+      const saved = await loadPromptFromIndexedDB('generation_prompt')
+      if (saved) {
+        setPrompt(saved)
+      }
+    }
+    loadPersistedPrompt()
+  }, [])
+
+  // Save prompt on change (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (prompt) {
+        savePromptToIndexedDB('generation_prompt', prompt)
+      }
+    }, 1000) // Save 1 second after user stops typing
+
+    return () => clearTimeout(timer)
+  }, [prompt])
 
   // Polling como fallback caso SSE falhe
   // CRITICAL: Habilitar polling se há uma geração em PROCESSING OU se SSE desconectou
@@ -228,6 +251,8 @@ export function GenerationInterface({
     setIsLastBlockSelected(false)
     setIsGuidedMode(false)
     setCurrentGeneration(null)
+    // Clear prompt from IndexedDB after successful generation
+    savePromptToIndexedDB('generation_prompt', '')
   }, [])
 
   // Função para abrir modal com validação de URL

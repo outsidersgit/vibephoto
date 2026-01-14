@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Upload, X, AlertCircle, CheckCircle, Loader2, RefreshCw, ArrowLeft, ArrowRight, User, Users, Heart } from 'lucide-react'
 import Link from 'next/link'
 import { ImageQualityAnalysisResult, CRITICAL_ISSUE_LABELS, MINOR_ISSUE_LABELS } from '@/types/image-quality'
-import { saveFilesToStorage, loadFilesFromStorage, loadQualityResults, saveQualityResults } from '@/lib/utils/file-persistence'
+import { saveFilesToIndexedDB, loadFilesFromIndexedDB, saveQualityToIndexedDB, loadQualityFromIndexedDB } from '@/lib/utils/indexed-db-persistence'
 
 interface ModelCreationStep3FullBodyProps {
   modelData: {
@@ -29,8 +29,8 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
   // Load persisted data on mount
   useEffect(() => {
     const loadPersistedData = async () => {
-      const files = await loadFilesFromStorage('model_fullBodyPhotos')
-      const quality = loadQualityResults('fullBodyPhotosQuality')
+      const files = await loadFilesFromIndexedDB('model_fullBodyPhotos')
+      const quality = await loadQualityFromIndexedDB('fullBodyPhotosQuality')
 
       if (files.length > 0) {
         console.log(`✅ [Step 3] Loaded ${files.length} persisted photos`)
@@ -117,13 +117,14 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
         const newQualityResults = new Map(qualityResults)
 
         result.data.results.forEach((analysisResult: ImageQualityAnalysisResult, index: number) => {
+          console.log(`✅ [Step 3] Image ${startIndex + index} analyzed:`, analysisResult.quality.hasIssues ? '⚠️ Issues' : '✓ OK')
           newQualityResults.set(startIndex + index, analysisResult)
         })
 
         setQualityResults(newQualityResults)
 
-        // Save to localStorage for step 4
-        saveQualityResults('fullBodyPhotosQuality', newQualityResults)
+        // Save to IndexedDB for step 4
+        await saveQualityToIndexedDB('fullBodyPhotosQuality', newQualityResults)
       }
     } catch (error) {
       console.error('Error analyzing photos:', error)
@@ -172,10 +173,10 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
         fullBodyPhotos: updatedPhotos
       })
 
-      // Save to localStorage
-      await saveFilesToStorage('model_fullBodyPhotos', updatedPhotos)
+      // Save to IndexedDB immediately so photos persist
+      await saveFilesToIndexedDB('model_fullBodyPhotos', updatedPhotos)
 
-      // Analyze new photos
+      // Analyze new photos (this handles saving quality results)
       await analyzePhotoQuality(newFiles, startIndex)
     }
   }
@@ -223,9 +224,9 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
       fullBodyPhotos: newPhotos
     })
 
-    // Save to localStorage
-    await saveFilesToStorage('model_fullBodyPhotos', newPhotos)
-    saveQualityResults('fullBodyPhotosQuality', reindexedResults)
+    // Save to IndexedDB
+    await saveFilesToIndexedDB('model_fullBodyPhotos', newPhotos)
+    await saveQualityToIndexedDB('fullBodyPhotosQuality', reindexedResults)
   }
 
   const reanalyzePhoto = async (index: number) => {

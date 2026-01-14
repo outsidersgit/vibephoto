@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Upload, X, AlertCircle, CheckCircle, Loader2, RefreshCw, ArrowLeft, ArrowRight, User, Users, Heart } from 'lucide-react'
 import Link from 'next/link'
 import { ImageQualityAnalysisResult, CRITICAL_ISSUE_LABELS, MINOR_ISSUE_LABELS } from '@/types/image-quality'
-import { saveFilesToStorage, loadFilesFromStorage, loadQualityResults, saveQualityResults } from '@/lib/utils/file-persistence'
+import { saveFilesToIndexedDB, loadFilesFromIndexedDB, saveQualityToIndexedDB, loadQualityFromIndexedDB } from '@/lib/utils/indexed-db-persistence'
 
 interface ModelCreationStep2HalfBodyProps {
   modelData: {
@@ -29,13 +29,15 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
   // Load persisted data on mount
   useEffect(() => {
     const loadPersistedData = async () => {
-      const files = await loadFilesFromStorage('model_halfBodyPhotos')
-      const quality = loadQualityResults('halfBodyPhotosQuality')
+      const files = await loadFilesFromIndexedDB('model_halfBodyPhotos')
+      const quality = await loadQualityFromIndexedDB('halfBodyPhotosQuality')
 
       if (files.length > 0) {
+        console.log(`✅ [Step 2] Loaded ${files.length} persisted photos`)
         setModelData((prev: any) => ({ ...prev, halfBodyPhotos: files }))
       }
       if (quality.size > 0) {
+        console.log(`✅ [Step 2] Loaded ${quality.size} quality results`)
         setQualityResults(quality)
       }
     }
@@ -120,8 +122,8 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
 
         setQualityResults(newQualityResults)
 
-        // Save to localStorage for step 4
-        saveQualityResults('halfBodyPhotosQuality', newQualityResults)
+        // Save to IndexedDB for step 4
+        await saveQualityToIndexedDB('halfBodyPhotosQuality', newQualityResults)
       }
     } catch (error) {
       console.error('Error analyzing photos:', error)
@@ -170,8 +172,8 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
         halfBodyPhotos: updatedPhotos
       })
 
-      // Save to localStorage
-      await saveFilesToStorage('model_halfBodyPhotos', updatedPhotos)
+      // Save to IndexedDB
+      await saveFilesToIndexedDB('model_halfBodyPhotos', updatedPhotos)
 
       // Analyze new photos
       await analyzePhotoQuality(newFiles, startIndex)
@@ -221,9 +223,9 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
       halfBodyPhotos: newPhotos
     })
 
-    // Save to localStorage
-    await saveFilesToStorage('model_halfBodyPhotos', newPhotos)
-    saveQualityResults('halfBodyPhotosQuality', reindexedResults)
+    // Save to IndexedDB
+    await saveFilesToIndexedDB('model_halfBodyPhotos', newPhotos)
+    await saveQualityToIndexedDB('halfBodyPhotosQuality', reindexedResults)
   }
 
   const reanalyzePhoto = async (index: number) => {

@@ -17,6 +17,7 @@ import { notifyError } from '@/lib/errors'
 import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
 import { PromptOptimizer } from '@/components/ui/prompt-optimizer'
 import { clearPersistedData } from '@/lib/utils/file-persistence'
+import { savePromptToIndexedDB, loadPromptFromIndexedDB } from '@/lib/utils/indexed-db-persistence'
 
 interface VideoGenerationInterfaceProps {
   user: {
@@ -226,6 +227,8 @@ export function VideoGenerationInterface({
       loadingRef.current = false
       setLoading(false)
       invalidateBalance()
+      // Clear prompt from IndexedDB after successful generation
+      savePromptToIndexedDB('video_prompt', '')
     } else {
       console.error('❌ [VIDEO_GENERATION] No valid URL')
       setMonitoringVideoId(null)
@@ -340,6 +343,28 @@ export function VideoGenerationInterface({
       setFormData(prev => ({ ...prev, lastFrame: savedLastFrame }))
     }
   }, []) // Empty deps - only run once on mount
+
+  // Load persisted prompt on mount
+  useEffect(() => {
+    const loadPersistedPrompt = async () => {
+      const saved = await loadPromptFromIndexedDB('video_prompt')
+      if (saved) {
+        setFormData(prev => ({ ...prev, prompt: saved }))
+      }
+    }
+    loadPersistedPrompt()
+  }, [])
+
+  // Save prompt on change (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.prompt) {
+        savePromptToIndexedDB('video_prompt', formData.prompt)
+      }
+    }, 1000) // Save 1 second after user stops typing
+
+    return () => clearTimeout(timer)
+  }, [formData.prompt])
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
