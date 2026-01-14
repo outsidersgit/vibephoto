@@ -105,10 +105,11 @@ export function ModelCreationStep4({
     return { level: 'EXCELENTE', color: 'bg-green-500' }
   }
 
-  // Análise de qualidade das fotos baseada na análise Gemini real
+  // Análise de qualidade das fotos baseada na análise AI (OpenAI GPT-4o)
   const analyzePhotoQuality = () => {
     const factors = []
-    let totalScore = 0
+    let photosWithIssues = 0
+    let photosOk = 0
     let analyzedCount = 0
 
     // Load quality results from localStorage
@@ -120,61 +121,55 @@ export function ModelCreationStep4({
       const allResults = [...faceResults, ...halfBodyResults, ...fullBodyResults]
 
       if (allResults.length > 0) {
-        // Calculate average score from Gemini analysis
+        // Count photos with/without issues
         allResults.forEach(([index, result]: any) => {
-          if (result?.quality?.score) {
-            totalScore += result.quality.score
+          if (result?.quality) {
             analyzedCount++
+            if (result.quality.hasIssues) {
+              photosWithIssues++
+            } else {
+              photosOk++
+            }
           }
         })
 
-        const avgScore = analyzedCount > 0 ? totalScore / analyzedCount : 0
+        // Build factors based on binary analysis
+        if (photosWithIssues === 0) {
+          factors.push('✅ Todas as fotos aprovadas')
+        } else {
+          const percentage = Math.round((photosWithIssues / analyzedCount) * 100)
+          if (percentage >= 50) {
+            factors.push(`❌ ${photosWithIssues} fotos com problemas (${percentage}%)`)
+          } else if (percentage >= 25) {
+            factors.push(`⚠️ ${photosWithIssues} fotos com problemas (${percentage}%)`)
+          } else {
+            factors.push(`⚠️ ${photosWithIssues} foto(s) com problemas`)
+          }
+        }
 
-        // Count critical issues
+        // Count critical issues across all photos
         const criticalIssuesCount = allResults.reduce((count: number, [, result]: any) => {
           return count + (result?.quality?.criticalIssues?.length || 0)
         }, 0)
 
-        // Build factors based on Gemini analysis
-        if (avgScore >= 90) {
-          factors.push('Fotos de excelente qualidade ⭐')
-        } else if (avgScore >= 70) {
-          factors.push('Fotos de boa qualidade ✅')
-        } else if (avgScore >= 50) {
-          factors.push('Fotos de qualidade aceitável ⚠️')
-        } else {
-          factors.push('Fotos com qualidade abaixo do ideal ❌')
-        }
-
         if (criticalIssuesCount === 0) {
-          factors.push('Nenhum problema crítico detectado')
-        } else if (criticalIssuesCount <= 3) {
-          factors.push(`${criticalIssuesCount} problema(s) crítico(s) detectado(s)`)
+          factors.push('Nenhum problema crítico')
         } else {
-          factors.push(`${criticalIssuesCount} problemas críticos detectados`)
+          factors.push(`${criticalIssuesCount} problema(s) crítico(s)`)
         }
 
-        // Add distribution info
-        const faceRatio = modelData.facePhotos.length / totalPhotos
-        const halfRatio = modelData.halfBodyPhotos.length / totalPhotos
-        const fullRatio = modelData.fullBodyPhotos.length / totalPhotos
-        const distributionScore = 1 - (Math.abs(faceRatio - 0.2) + Math.abs(halfRatio - 0.3) + Math.abs(fullRatio - 0.5)) / 2
-
-        if (distributionScore > 0.8) {
-          factors.push('Distribuição ideal de categorias')
-        } else if (distributionScore > 0.6) {
-          factors.push('Boa distribuição de categorias')
-        }
-
-        // Normalize Gemini score (0-100) to (0-1)
-        const normalizedScore = avgScore / 100
+        // Determine level based on photos with issues
+        const percentageWithIssues = analyzedCount > 0 ? photosWithIssues / analyzedCount : 0
+        const level = percentageWithIssues > 0.3 ? 'RUIM' : percentageWithIssues > 0 ? 'RAZOÁVEL' : 'EXCELENTE'
+        const color = percentageWithIssues > 0.3 ? 'bg-red-500' : percentageWithIssues > 0 ? 'bg-yellow-500' : 'bg-green-500'
 
         return {
-          score: normalizedScore,
-          avgScore: Math.round(avgScore),
+          score: 1 - percentageWithIssues,
+          photosWithIssues,
+          photosOk,
           factors,
-          level: avgScore < 50 ? 'RUIM' : avgScore < 70 ? 'RAZOÁVEL' : 'EXCELENTE',
-          color: avgScore < 50 ? 'bg-red-500' : avgScore < 70 ? 'bg-yellow-500' : 'bg-green-500',
+          level,
+          color,
           analyzedCount
         }
       }
@@ -182,18 +177,14 @@ export function ModelCreationStep4({
       console.error('Error loading quality results:', error)
     }
 
-    // Fallback to basic analysis if no Gemini results
-    const avgFileSize = totalSizeMB / totalPhotos
-    if (avgFileSize >= 1.5) {
-      factors.push('Boa resolução')
-    } else {
-      factors.push('Resolução adequada')
-    }
+    // Fallback if no AI analysis available
     factors.push('Análise AI não disponível')
+    factors.push('Por favor, aguarde a análise das fotos')
 
     return {
       score: 0.5,
-      avgScore: 50,
+      photosWithIssues: 0,
+      photosOk: 0,
       factors,
       level: 'RAZOÁVEL',
       color: 'bg-yellow-500',

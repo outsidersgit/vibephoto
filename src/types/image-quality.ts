@@ -28,17 +28,8 @@ export type MinorIssue =
 export type QualityStatus = 'perfect' | 'excellent' | 'acceptable' | 'poor'
 
 export interface ImageQualityScore {
-  /** Overall score 0-100 */
-  score: number
-
-  /** Technical quality score 0-25 (sharpness, lighting, resolution) */
-  technicalQuality: number
-
-  /** Composition score 0-25 (framing, background, distance) */
-  composition: number
-
-  /** Fine-tuning readiness score 0-50 (most important - no hats, glasses, other people, etc) */
-  finetuningReadiness: number
+  /** Whether the photo has any issues (simplified) */
+  hasIssues: boolean
 
   /** Critical issues that significantly harm fine-tuning */
   criticalIssues: CriticalIssue[]
@@ -46,13 +37,23 @@ export interface ImageQualityScore {
   /** Minor technical issues */
   minorIssues: MinorIssue[]
 
-  /** Overall feedback in Portuguese */
+  /** Brief explanation of issues found (if any) */
+  issuesSummary?: string
+
+  // Legacy fields for backward compatibility (will be removed)
+  /** @deprecated Use hasIssues instead */
+  score: number
+  /** @deprecated */
+  technicalQuality: number
+  /** @deprecated */
+  composition: number
+  /** @deprecated */
+  finetuningReadiness: number
+  /** @deprecated */
   feedback: string
-
-  /** Specific recommendations to improve the photo */
+  /** @deprecated */
   recommendations: string[]
-
-  /** Quality status based on score */
+  /** @deprecated */
   status: QualityStatus
 }
 
@@ -77,20 +78,21 @@ export interface BatchQualityAnalysisResult {
   /** Individual results for each image */
   results: ImageQualityAnalysisResult[]
 
-  /** Summary statistics */
+  /** Summary statistics (simplified) */
   summary: {
-    total: number
-    perfect: number      // 90-100
-    excellent: number    // 70-89
-    acceptable: number   // 50-69
-    poor: number         // 0-49
-    averageScore: number
-    recommendedCount: number  // score >= 70
-    acceptableCount: number   // score >= 50
-  }
+    totalImages: number
+    photosWithIssues: number
+    photosOk: number
+    processingTime?: number
 
-  /** Overall recommendation */
-  overallRecommendation: string
+    // Legacy for backward compatibility
+    /** @deprecated */
+    averageScore?: number
+    /** @deprecated */
+    acceptableCount?: number
+    /** @deprecated */
+    recommendedCount?: number
+  }
 }
 
 export interface ImageQualityAnalysisOptions {

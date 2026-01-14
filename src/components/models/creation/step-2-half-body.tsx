@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Upload, X, AlertCircle, CheckCircle, Loader2, RefreshCw, ArrowLeft, ArrowRight, User, Users, Heart } from 'lucide-react'
 import Link from 'next/link'
-import { ImageQualityAnalysisResult, getStatusColor, getStatusIcon, getStatusLabel, CRITICAL_ISSUE_LABELS, MINOR_ISSUE_LABELS } from '@/types/image-quality'
+import { ImageQualityAnalysisResult, CRITICAL_ISSUE_LABELS, MINOR_ISSUE_LABELS } from '@/types/image-quality'
 
 interface ModelCreationStep2HalfBodyProps {
   modelData: {
@@ -217,13 +217,8 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
   const qualityStats = {
     analyzed: qualityResults.size,
     total: modelData.halfBodyPhotos.length,
-    averageScore: qualityResults.size > 0
-      ? Array.from(qualityResults.values()).reduce((sum, r) => sum + r.quality.score, 0) / qualityResults.size
-      : 0,
-    poor: Array.from(qualityResults.values()).filter(r => r.quality.score < 50).length,
-    acceptable: Array.from(qualityResults.values()).filter(r => r.quality.score >= 50 && r.quality.score < 70).length,
-    excellent: Array.from(qualityResults.values()).filter(r => r.quality.score >= 70 && r.quality.score < 90).length,
-    perfect: Array.from(qualityResults.values()).filter(r => r.quality.score >= 90).length
+    photosWithIssues: Array.from(qualityResults.values()).filter(r => r.quality.hasIssues).length,
+    photosOk: Array.from(qualityResults.values()).filter(r => !r.quality.hasIssues).length
   }
 
   return (
@@ -324,10 +319,9 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                       />
 
                       {/* Quality Badge */}
-                      {quality && (
-                        <div className={`absolute top-2 left-2 px-2 py-1 rounded-md text-xs font-medium border ${getStatusColor(quality.status)}`}>
-                          <span className="mr-1">{getStatusIcon(quality.status)}</span>
-                          {quality.score}
+                      {quality && quality.hasIssues && (
+                        <div className="absolute top-2 right-2">
+                          <Badge className="bg-red-500 text-white">⚠️ Problema</Badge>
                         </div>
                       )}
 
@@ -368,41 +362,30 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                     {/* Quality Details Tooltip - Show for ALL photos */}
                     {quality && (
                       <div className="absolute inset-x-0 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
-                        <div className="bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl max-w-xs">
-                          <div className="font-semibold mb-1">
-                            {getStatusLabel(quality.status)} ({quality.score}/100)
-                          </div>
-                          <p className="text-gray-300 mb-2">{quality.feedback}</p>
-
-                          {quality.criticalIssues.length > 0 && (
-                            <div className="space-y-1">
-                              <div className="text-red-400 font-medium">Problemas críticos:</div>
-                              {quality.criticalIssues.map((issue, i) => (
-                                <div key={i} className="text-xs text-red-300">
-                                  • {CRITICAL_ISSUE_LABELS[issue]}
+                        <div className={`text-white text-xs rounded-lg p-3 shadow-xl max-w-xs ${quality.hasIssues ? 'bg-red-600' : 'bg-green-600'}`}>
+                          {!quality.hasIssues ? (
+                            <div className="font-semibold">✅ Foto aprovada</div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="font-semibold">⚠️ Problemas:</div>
+                              {quality.criticalIssues.length > 0 && (
+                                <div className="space-y-1">
+                                  {quality.criticalIssues.map((issue, i) => (
+                                    <div key={i} className="text-xs">
+                                      • {CRITICAL_ISSUE_LABELS[issue]}
+                                    </div>
+                                  ))}
                                 </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {quality.recommendations.length > 0 && (
-                            <div className="mt-2 space-y-1">
-                              <div className="text-blue-400 font-medium">Recomendações:</div>
-                              {quality.recommendations.map((rec, i) => (
-                                <div key={i} className="text-xs text-blue-300">
-                                  • {rec}
+                              )}
+                              {quality.minorIssues.length > 0 && (
+                                <div className="space-y-1">
+                                  {quality.minorIssues.map((issue, i) => (
+                                    <div key={i} className="text-xs">
+                                      • {MINOR_ISSUE_LABELS[issue]}
+                                    </div>
+                                  ))}
                                 </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Show positive feedback for good photos */}
-                          {quality.score >= 70 && quality.criticalIssues.length === 0 && quality.recommendations.length === 0 && (
-                            <div className="mt-2 space-y-1">
-                              <div className="text-green-400 font-medium">✓ Foto excelente!</div>
-                              <div className="text-xs text-green-300">
-                                Esta foto atende todos os requisitos para treinamento de qualidade.
-                              </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -418,7 +401,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
       </Card>
 
       {/* Quality Analysis Warning */}
-      {qualityStats.analyzed > 0 && qualityStats.averageScore < 70 && (
+      {qualityStats.analyzed > 0 && qualityStats.photosWithIssues > 0 && (
         <Card className="border-yellow-200 bg-yellow-50">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
@@ -428,22 +411,12 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                   ⚠️ Atenção: Qualidade das Fotos
                 </h4>
                 <p className="text-xs text-yellow-700 mb-2">
-                  Algumas fotos estão com qualidade abaixo do recomendado (score médio: {qualityStats.averageScore.toFixed(1)}/100).
+                  {qualityStats.photosWithIssues} {qualityStats.photosWithIssues === 1 ? 'foto apresenta' : 'fotos apresentam'} problemas.
                   Substituir as fotos marcadas melhorará significativamente os resultados do treinamento.
                 </p>
                 <div className="flex gap-3 text-xs">
-                  {qualityStats.poor > 0 && (
-                    <span className="text-red-600">❌ {qualityStats.poor} ruim</span>
-                  )}
-                  {qualityStats.acceptable > 0 && (
-                    <span className="text-yellow-600">⚠️ {qualityStats.acceptable} aceitável</span>
-                  )}
-                  {qualityStats.excellent > 0 && (
-                    <span className="text-green-600">✅ {qualityStats.excellent} excelente</span>
-                  )}
-                  {qualityStats.perfect > 0 && (
-                    <span className="text-green-700">⭐ {qualityStats.perfect} perfeita</span>
-                  )}
+                  <span className="text-red-600">⚠️ {qualityStats.photosWithIssues} com problemas</span>
+                  <span className="text-green-600">✅ {qualityStats.photosOk} aprovadas</span>
                 </div>
               </div>
             </div>
