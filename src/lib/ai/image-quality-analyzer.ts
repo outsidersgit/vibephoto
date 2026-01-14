@@ -216,17 +216,19 @@ export class ImageQualityAnalyzer {
 
     return `Você é um especialista em análise de fotos para fine-tuning de modelos de IA (FLUX, Stable Diffusion).
 
-Analise esta foto de ${photoDescription} e identifique APENAS se há problemas que impedem seu uso para treinar um modelo de IA de ${subjectType}.
+Analise esta foto de ${photoDescription} e identifique APENAS problemas ÓBVIOS e GRAVES que impedem seu uso para treinar um modelo de IA de ${subjectType}.
 
-PROBLEMAS CRÍTICOS (detecte se houver):
+SEJA CONSERVADOR: só marque como problema se tiver CERTEZA absoluta. Quando em dúvida, aprove a foto.
+
+PROBLEMAS CRÍTICOS (só marque se MUITO evidente):
 ${subjectType === 'pessoa' ? `
-❌ Boné, chapéu, gorro (cobrindo cabeça/cabelo)
-❌ Óculos escuros
-❌ Rosto coberto (máscaras, cachecóis, mãos)
-❌ Outras pessoas na foto (mesmo parcialmente)
-❌ Caretas, olhos fechados, expressões extremas
-❌ Filtros pesados (Instagram, Snapchat)
-❌ Ângulos extremos
+❌ Boné/chapéu cobrindo MAIOR PARTE da cabeça ou cabelo
+❌ Óculos escuros GROSSOS cobrindo os olhos
+❌ Rosto coberto por máscara, cachecol ou mão
+❌ MÚLTIPLAS pessoas claramente visíveis (não conte reflexos ou pessoas muito ao fundo)
+❌ Caretas EXTREMAS, língua para fora, olhos TOTALMENTE fechados
+❌ Filtros PESADOS tipo Snapchat (orelhas de gato, efeitos digitais óbvios)
+❌ Ângulos MUITO extremos (de baixo, de cima demais)
 ` : `
 ❌ Múltiplos animais
 ❌ Pessoas muito visíveis
@@ -234,19 +236,26 @@ ${subjectType === 'pessoa' ? `
 ❌ Animal dormindo ou olhos fechados
 `}
 
-PROBLEMAS MENORES (detecte se houver):
-⚠️ Foto desfocada ou embaçada
-⚠️ Iluminação ruim (muito escura ou muito clara)
-⚠️ Fundo muito confuso
-⚠️ Resolução muito baixa
-⚠️ Enquadramento ruim (cortado)
+PROBLEMAS MENORES (só marque se MUITO grave):
+⚠️ Foto MUITO desfocada (impossível ver detalhes)
+⚠️ Iluminação EXTREMAMENTE ruim (quase não dá pra ver a pessoa)
+⚠️ Resolução MUITO baixa (pixelizada)
+⚠️ Enquadramento cortando partes importantes (metade do rosto fora)
+
+IMPORTANTE:
+- Óculos de grau normais: OK ✅
+- Pessoa ao LONGE no fundo: OK ✅
+- Iluminação não perfeita mas dá pra ver: OK ✅
+- Pequeno desfoque ou granulação: OK ✅
+- Expressões normais (sorriso, sério): OK ✅
+- Fundos urbanos/naturais comuns: OK ✅
 
 Responda APENAS em JSON válido (sem markdown):
 {
-  "hasIssues": <true se houver qualquer problema, false se a foto estiver OK>,
+  "hasIssues": <true APENAS se houver problema GRAVE e ÓBVIO, false caso contrário>,
   "criticalIssues": [<array com códigos: "hat_or_cap", "sunglasses", "face_covered", "multiple_people", "making_faces", "eyes_closed", "heavy_filters", "hand_covering_face", "extreme_angle", "mask">],
-  "minorIssues": [<array com códigos: "slight_blur", "low_light", "busy_background", "low_resolution", "overexposed", "underexposed", "artifacts", "poor_framing">],
-  "issuesSummary": "<se hasIssues=true, liste os problemas em 1 frase curta. Ex: 'Óculos escuros e fundo confuso'. Se false, omita este campo>"
+  "minorIssues": [<array com códigos: "slight_blur", "low_light", "low_resolution", "poor_framing">],
+  "issuesSummary": "<se hasIssues=true, liste APENAS os problemas graves em 1 frase curta. Ex: 'Óculos escuros cobrindo os olhos'. Se false, omita este campo>"
 }`
   }
 
