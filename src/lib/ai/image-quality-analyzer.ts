@@ -234,16 +234,17 @@ ${subjectType === 'pessoa' ? `
 3. Caretas EXTREMAS (língua pra fora, olhos arregalados, boca muito aberta)
 4. Filtros PESADOS tipo Snapchat (orelhas de gato, distorção facial, efeitos digitais)
 5. Iluminação EXTREMAMENTE ruim (pessoa quase invisível, totalmente escura)
-6. MUITO desfocada (impossível distinguir características faciais)
-7. QUALQUER chapéu, boné, gorro, ou qualquer coisa na cabeça - mesmo que pequeno ou parcial
-8. QUALQUER óculos escuros - mesmo que leves, claros, ou parcialmente transparentes (óculos de GRAU transparentes são OK)
-9. Ângulos EXTREMOS - APENAS se:
-   - Câmera MUITO de baixo olhando pra cima (ângulo > 45°)
-   - Câmera MUITO de cima olhando pra baixo (ângulo > 45°)
-   - Fotos normais levemente de lado/cima/baixo são OK ✅
-10. Rosto cortado (falta testa, queixo, orelhas importantes)
-11. Qualidade MUITO baixa (pixelização grave, < 100px de rosto)
-12. Mão/máscara cobrindo MAIOR PARTE do rosto
+6. Sombras FORTES cobrindo parte significativa do rosto (metade escura, diagonal de luz/sombra marcante)
+7. MUITO desfocada (impossível distinguir características faciais)
+8. QUALQUER chapéu, boné, gorro, ou qualquer coisa na cabeça - mesmo que pequeno ou parcial
+9. QUALQUER óculos escuros - mesmo que leves, claros, ou parcialmente transparentes (óculos de GRAU transparentes são OK)
+10. Ângulos EXTREMOS - APENAS se:
+    - Câmera MUITO de baixo olhando pra cima (ângulo > 45°)
+    - Câmera MUITO de cima olhando pra baixo (ângulo > 45°)
+    - Fotos normais levemente de lado/cima/baixo são OK ✅
+11. Rosto cortado (falta testa, queixo, orelhas importantes)
+12. Qualidade MUITO baixa (pixelização grave, < 100px de rosto)
+13. Mão/máscara cobrindo MAIOR PARTE do rosto
 ` : `
 1. Múltiplos animais na mesma foto
 2. Pessoas muito visíveis junto com o animal
