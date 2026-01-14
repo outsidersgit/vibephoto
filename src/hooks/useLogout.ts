@@ -35,12 +35,27 @@ export function useLogout() {
       })
       console.log(`  ✅ localStorage: ${removedCount} chaves removidas, ${preserveKeys.length} preservadas`)
 
-      // 2. Limpar sessionStorage COMPLETAMENTE
+      // 2. Limpar IndexedDB COMPLETAMENTE (drafts + persisted data)
+      try {
+        const { finalizeDraft } = await import('@/lib/utils/indexed-db-persistence')
+        await Promise.all([
+          finalizeDraft('editor'),
+          finalizeDraft('video'),
+          finalizeDraft('generation'),
+          finalizeDraft('model')
+        ])
+        console.log(`  ✅ IndexedDB: Todos os drafts limpos (editor, video, generation, model)`)
+      } catch (idbError) {
+        console.error('  ⚠️ Erro ao limpar IndexedDB:', idbError)
+        // Continue logout mesmo se IndexedDB falhar
+      }
+
+      // 3. Limpar sessionStorage COMPLETAMENTE
       const sessionKeysCount = Object.keys(sessionStorage).length
       sessionStorage.clear()
       console.log(`  ✅ sessionStorage: ${sessionKeysCount} chaves removidas (limpo completamente)`)
 
-      // 3. Limpar TODOS os cookies (incluindo NextAuth, Vercel e personalizados)
+      // 4. Limpar TODOS os cookies (incluindo NextAuth, Vercel e personalizados)
       // MOBILE COMPATIBLE: document.cookie funciona em todos os mobile browsers
       // PERFORMANCE: Verificação otimizada para mobile e desktop
       // Lista completa de padrões de cookies que devem ser removidos
@@ -104,19 +119,19 @@ export function useLogout() {
 
       console.log(`  ✅ Cookies: ${cookiesRemovedCount} cookies removidos`)
 
-      // 4. Limpar React Query cache completamente
+      // 5. Limpar React Query cache completamente
       queryClient.clear()
       const queryCacheSize = queryClient.getQueryCache().getAll().length
       console.log(`  ✅ React Query cache limpo (${queryCacheSize} queries removidas)`)
 
-      // 5. Limpar history state para evitar botão voltar mostrar conteúdo protegido
+      // 6. Limpar history state para evitar botão voltar mostrar conteúdo protegido
       // Substituir o estado atual da página no history para evitar navegação de volta
       if (typeof window !== 'undefined' && window.history.replaceState) {
         window.history.replaceState(null, '', callbackUrl)
         console.log('  ✅ History state limpo')
       }
 
-      // 6. Fazer logout do NextAuth SEM redirect automático para garantir que os logs sejam visíveis
+      // 7. Fazer logout do NextAuth SEM redirect automático para garantir que os logs sejam visíveis
       console.log('  🔐 Fazendo logout do NextAuth...')
       await signOut({
         redirect: false // Não redirecionar automaticamente - vamos fazer manualmente
@@ -124,7 +139,7 @@ export function useLogout() {
 
       console.log('✅ NextAuth signOut concluído')
 
-      // 7. Forçar limpeza adicional de cache do navegador para rotas protegidas
+      // 8. Forçar limpeza adicional de cache do navegador para rotas protegidas
       // Adicionar timestamp para evitar cache
       const redirectUrl = `${callbackUrl}${callbackUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`
       
@@ -139,6 +154,7 @@ export function useLogout() {
       console.log('%c════════════════════════════════════════', 'color: #10b981; font-weight: bold;')
       console.log('%c✓ TODOS OS CACHES FORAM LIMPOS', 'color: #10b981; font-weight: bold; font-size: 14px')
       console.log('%c✓ localStorage limpo', 'color: #10b981')
+      console.log('%c✓ IndexedDB limpo (drafts removidos)', 'color: #10b981')
       console.log('%c✓ sessionStorage limpo', 'color: #10b981')
       console.log('%c✓ Cookies removidos', 'color: #10b981')
       console.log('%c✓ React Query cache limpo', 'color: #10b981')
