@@ -30,7 +30,7 @@ import { ProcessingMessage } from '@/components/ui/processing-message'
 import { notifyError } from '@/lib/errors'
 import { InsufficientCreditsBanner } from '@/components/ui/insufficient-credits-banner'
 import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
-import { saveFilesToIndexedDB, loadFilesFromIndexedDB, deleteFilesFromIndexedDB, savePromptToIndexedDB, loadPromptFromIndexedDB } from '@/lib/utils/indexed-db-persistence'
+import { saveFilesToIndexedDB, loadFilesFromIndexedDB, deleteFilesFromIndexedDB, savePromptToIndexedDB, loadPromptFromIndexedDB, finalizeDraft, touchDraft } from '@/lib/utils/indexed-db-persistence'
 
 // Custos dinâmicos baseados na resolução
 const getEditorCost = (resolution: EditorResolution) => getImageEditCost(1, resolution)
@@ -140,7 +140,7 @@ export function ImageEditorInterface({
   }, [prompt])
 
   // Função para limpar todos os campos após geração bem-sucedida
-  const clearForm = () => {
+  const clearForm = async () => {
     setPrompt('')
     setImages([])
     setImageFiles([])
@@ -150,8 +150,8 @@ export function ImageEditorInterface({
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
-    // Clear persisted data
-    deleteFilesFromIndexedDB('editor_uploadedImages')
+    // Clear persisted data (idempotent, includes images + prompt)
+    await finalizeDraft('editor')
   }
   
   
@@ -758,6 +758,7 @@ export function ImageEditorInterface({
             const currentImages = imageFiles.length > 0 ? imageFiles : await loadFilesFromIndexedDB('editor_uploadedImages')
             const allFiles = [...currentImages, ...pendingSaveRef.current]
             await saveFilesToIndexedDB('editor_uploadedImages', allFiles)
+            await touchDraft('editor') // Update timestamp for GC
             console.log(`✅ [Editor] Saved ${pendingSaveRef.current.length} files to IndexedDB. Total: ${allFiles.length}`)
             pendingSaveRef.current = []
           }
@@ -893,6 +894,7 @@ export function ImageEditorInterface({
       const updatedFiles = prev.filter((_, i) => i !== index)
       // Save updated files to IndexedDB
       saveFilesToIndexedDB('editor_uploadedImages', updatedFiles)
+      touchDraft('editor') // Update timestamp for GC
       return updatedFiles
     })
   }

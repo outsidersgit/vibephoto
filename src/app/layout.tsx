@@ -5,6 +5,7 @@ import { AuthProvider } from '@/components/providers/auth-provider'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { AutoStorageProvider } from '@/components/providers/auto-storage-provider'
 import { ErrorLoggerProvider } from '@/components/providers/error-logger-provider'
+import { DraftGCProvider } from '@/components/providers/draft-gc-provider'
 import { QueryProvider } from '@/providers/query-provider'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as CustomToaster } from '@/components/ui/toast'
@@ -49,15 +50,17 @@ export default function RootLayout({
             >
               <AuthProvider>
                 <AutoStorageProvider>
-                  <div className="min-h-screen flex flex-col">
-                    <PremiumNavigation />
-                    <main className="flex-1 pt-20">
-                      {children}
-                    </main>
-                    <Footer />
-                  </div>
-                  <Toaster />
-                  <CustomToaster />
+                  <DraftGCProvider>
+                    <div className="min-h-screen flex flex-col">
+                      <PremiumNavigation />
+                      <main className="flex-1 pt-20">
+                        {children}
+                      </main>
+                      <Footer />
+                    </div>
+                    <Toaster />
+                    <CustomToaster />
+                  </DraftGCProvider>
                 </AutoStorageProvider>
               </AuthProvider>
             </ThemeProvider>

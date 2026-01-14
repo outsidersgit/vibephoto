@@ -17,7 +17,7 @@ import { notifyError } from '@/lib/errors'
 import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
 import { PromptOptimizer } from '@/components/ui/prompt-optimizer'
 import { clearPersistedData } from '@/lib/utils/file-persistence'
-import { savePromptToIndexedDB, loadPromptFromIndexedDB } from '@/lib/utils/indexed-db-persistence'
+import { savePromptToIndexedDB, loadPromptFromIndexedDB, finalizeDraft, touchDraft } from '@/lib/utils/indexed-db-persistence'
 
 interface VideoGenerationInterfaceProps {
   user: {
@@ -578,6 +578,9 @@ export function VideoGenerationInterface({
       setUploadedLastFrame(null)
       setSelectedTemplate(null)
       setActiveMode('text-to-video')
+
+      // Clear persisted data (idempotent, includes prompt + images)
+      await finalizeDraft('video')
 
       // Monitor video status and open modal when completed
       monitorVideoGeneration(videoGenerationId)

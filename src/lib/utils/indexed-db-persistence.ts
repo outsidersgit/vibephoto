@@ -218,15 +218,216 @@ export async function loadPromptFromIndexedDB(key: string): Promise<string> {
 }
 
 /**
+ * Draft metadata structure
+ */
+interface DraftMetadata {
+  createdAt: number
+  updatedAt: number
+  draftId: string
+  finalizing: boolean
+}
+
+/**
+ * Save draft metadata
+ */
+async function saveDraftMetadata(key: string, metadata: DraftMetadata): Promise<void> {
+  try {
+    const db = await initDB()
+    const transaction = db.transaction([STORES.PROMPTS], 'readwrite')
+    const store = transaction.objectStore(STORES.PROMPTS)
+
+    await new Promise<void>((resolve, reject) => {
+      const request = store.put(metadata, `${key}_metadata`)
+      request.onsuccess = () => resolve()
+      request.onerror = () => reject(request.error)
+    })
+
+    db.close()
+  } catch (error) {
+    console.error(`❌ [IndexedDB] Error saving metadata for ${key}:`, error)
+  }
+}
+
+/**
+ * Load draft metadata
+ */
+async function loadDraftMetadata(key: string): Promise<DraftMetadata | null> {
+  try {
+    const db = await initDB()
+    const transaction = db.transaction([STORES.PROMPTS], 'readonly')
+    const store = transaction.objectStore(STORES.PROMPTS)
+
+    const metadata = await new Promise<DraftMetadata | null>((resolve, reject) => {
+      const request = store.get(`${key}_metadata`)
+      request.onsuccess = () => resolve(request.result || null)
+      request.onerror = () => reject(request.error)
+    })
+
+    db.close()
+    return metadata
+  } catch (error) {
+    console.error(`❌ [IndexedDB] Error loading metadata for ${key}:`, error)
+    return null
+  }
+}
+
+/**
+ * Delete draft metadata
+ */
+async function deleteDraftMetadata(key: string): Promise<void> {
+  try {
+    const db = await initDB()
+    const transaction = db.transaction([STORES.PROMPTS], 'readwrite')
+    const store = transaction.objectStore(STORES.PROMPTS)
+
+    await new Promise<void>((resolve, reject) => {
+      const request = store.delete(`${key}_metadata`)
+      request.onsuccess = () => resolve()
+      request.onerror = () => reject(request.error)
+    })
+
+    db.close()
+  } catch (error) {
+    console.error(`❌ [IndexedDB] Error deleting metadata for ${key}:`, error)
+  }
+}
+
+/**
+ * Finalize draft (idempotent cleanup)
+ * @param draftType - Type of draft to finalize
+ * @param debug - Enable debug logging
+ */
+export async function finalizeDraft(
+  draftType: 'editor' | 'video' | 'generation' | 'model',
+  debug: boolean = typeof window !== 'undefined' && localStorage.getItem('DEBUG_DRAFTS') === 'true'
+): Promise<void> {
+  const timestamp = new Date().toISOString()
+
+  if (debug) console.log(`🧹 [DRAFT] Finalizing ${draftType} draft at ${timestamp}`)
+
+  try {
+    switch (draftType) {
+      case 'editor':
+        await Promise.all([
+          deleteFilesFromIndexedDB('editor_uploadedImages'),
+          deleteFilesFromIndexedDB('editor_prompt'),
+          deleteDraftMetadata('editor')
+        ])
+        if (debug) console.log(`✅ [DRAFT] Editor draft finalized`)
+        break
+
+      case 'video':
+        // Clean IndexedDB
+        await Promise.all([
+          deleteFilesFromIndexedDB('video_prompt'),
+          deleteDraftMetadata('video')
+        ])
+        // Clean localStorage (legacy)
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('video_referenceImage')
+          localStorage.removeItem('video_lastFrame')
+        }
+        if (debug) console.log(`✅ [DRAFT] Video draft finalized`)
+        break
+
+      case 'generation':
+        await Promise.all([
+          deleteFilesFromIndexedDB('generation_prompt'),
+          deleteDraftMetadata('generation')
+        ])
+        if (debug) console.log(`✅ [DRAFT] Generation draft finalized`)
+        break
+
+      case 'model':
+        await Promise.all([
+          deleteFilesFromIndexedDB('model_facePhotos'),
+          deleteFilesFromIndexedDB('model_halfBodyPhotos'),
+          deleteFilesFromIndexedDB('model_fullBodyPhotos'),
+          deleteFilesFromIndexedDB('facePhotosQuality'),
+          deleteFilesFromIndexedDB('halfBodyPhotosQuality'),
+          deleteFilesFromIndexedDB('fullBodyPhotosQuality'),
+          deleteDraftMetadata('model')
+        ])
+        // Clean localStorage step marker
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('model_currentStep')
+        }
+        if (debug) console.log(`✅ [DRAFT] Model draft finalized`)
+        break
+    }
+  } catch (error) {
+    console.error(`❌ [DRAFT] Error finalizing ${draftType} draft:`, error)
+    // Don't throw - idempotent, best effort
+  }
+}
+
+/**
+ * Garbage collect expired drafts
+ * @param ttlHours - Time to live in hours (default 24h)
+ * @param debug - Enable debug logging
+ */
+export async function gcDrafts(
+  ttlHours: number = 24,
+  debug: boolean = typeof window !== 'undefined' && localStorage.getItem('DEBUG_DRAFTS') === 'true'
+): Promise<void> {
+  const now = Date.now()
+  const ttlMs = ttlHours * 60 * 60 * 1000
+
+  if (debug) console.log(`🗑️ [GC] Starting draft garbage collection (TTL: ${ttlHours}h)`)
+
+  try {
+    const draftTypes: Array<'editor' | 'video' | 'generation' | 'model'> = ['editor', 'video', 'generation', 'model']
+    let cleaned = 0
+
+    for (const draftType of draftTypes) {
+      const metadata = await loadDraftMetadata(draftType)
+
+      if (metadata) {
+        const age = now - metadata.updatedAt
+        const ageHours = age / (60 * 60 * 1000)
+
+        if (age > ttlMs) {
+          if (debug) console.log(`🗑️ [GC] Found expired ${draftType} draft (age: ${ageHours.toFixed(1)}h)`)
+          await finalizeDraft(draftType, debug)
+          cleaned++
+        } else {
+          if (debug) console.log(`✓ [GC] ${draftType} draft is fresh (age: ${ageHours.toFixed(1)}h)`)
+        }
+      }
+    }
+
+    if (debug) console.log(`✅ [GC] Garbage collection complete. Cleaned ${cleaned} expired drafts`)
+  } catch (error) {
+    console.error(`❌ [GC] Error during garbage collection:`, error)
+  }
+}
+
+/**
+ * Update draft timestamp (call when user modifies draft)
+ */
+export async function touchDraft(draftType: 'editor' | 'video' | 'generation' | 'model'): Promise<void> {
+  const metadata = await loadDraftMetadata(draftType)
+  const now = Date.now()
+
+  if (metadata) {
+    // Update existing
+    metadata.updatedAt = now
+    await saveDraftMetadata(draftType, metadata)
+  } else {
+    // Create new
+    await saveDraftMetadata(draftType, {
+      createdAt: now,
+      updatedAt: now,
+      draftId: `${draftType}_${now}`,
+      finalizing: false
+    })
+  }
+}
+
+/**
  * Clear all model creation data from IndexedDB
+ * @deprecated Use finalizeDraft('model') instead
  */
 export async function clearModelCreationFromIndexedDB(): Promise<void> {
-  await Promise.all([
-    deleteFilesFromIndexedDB('model_facePhotos'),
-    deleteFilesFromIndexedDB('model_halfBodyPhotos'),
-    deleteFilesFromIndexedDB('model_fullBodyPhotos'),
-    deleteFilesFromIndexedDB('facePhotosQuality'),
-    deleteFilesFromIndexedDB('halfBodyPhotosQuality'),
-    deleteFilesFromIndexedDB('fullBodyPhotosQuality')
-  ])
+  await finalizeDraft('model')
 }

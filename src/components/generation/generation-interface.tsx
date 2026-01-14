@@ -27,7 +27,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useInvalidateCredits, useCreditBalance } from '@/hooks/useCredits'
 import { CREDIT_COSTS, getImageGenerationCost } from '@/lib/credits/pricing'
 import { ProcessingMessage } from '@/components/ui/processing-message'
-import { savePromptToIndexedDB, loadPromptFromIndexedDB } from '@/lib/utils/indexed-db-persistence'
+import { savePromptToIndexedDB, loadPromptFromIndexedDB, finalizeDraft, touchDraft } from '@/lib/utils/indexed-db-persistence'
 
 interface GenerationInterfaceProps {
   models: Array<{
@@ -251,8 +251,8 @@ export function GenerationInterface({
     setIsLastBlockSelected(false)
     setIsGuidedMode(false)
     setCurrentGeneration(null)
-    // Clear prompt from IndexedDB after successful generation
-    savePromptToIndexedDB('generation_prompt', '')
+    // Clear persisted data (idempotent cleanup)
+    finalizeDraft('generation')
   }, [])
 
   // Função para abrir modal com validação de URL
