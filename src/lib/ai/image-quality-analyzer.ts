@@ -227,16 +227,16 @@ IMPORTANTE: Seja CONSISTENTE e OBJETIVO. A mesma foto deve SEMPRE receber a mesm
 - Mudança de fundos, iluminação e roupas
 - Pessoa sozinha na foto
 
-❌ PROBLEMAS CRÍTICOS - APENAS marque se for MUITO ÓBVIO:
+❌ PROBLEMAS CRÍTICOS - Marque se encontrar:
 ${subjectType === 'pessoa' ? `
 1. Imagens CLARAMENTE geradas por IA (rostos artificiais perfeitos demais, arte digital)
-2. Pessoas extras PRÓXIMAS e NÍTIDAS (ignore pessoas desfocadas ao fundo ou muito longe)
+2. QUALQUER pessoa extra visível na foto - mesmo que desfocada, ao fundo, ou parcial
 3. Caretas EXTREMAS (língua pra fora, olhos arregalados, boca muito aberta)
 4. Filtros PESADOS tipo Snapchat (orelhas de gato, distorção facial, efeitos digitais)
 5. Iluminação EXTREMAMENTE ruim (pessoa quase invisível, totalmente escura)
 6. MUITO desfocada (impossível distinguir características faciais)
-7. Chapéu/boné cobrindo MAIS DE 50% da cabeça
-8. Óculos escuros GROSSOS e ESCUROS (não conte óculos claros ou de grau)
+7. QUALQUER chapéu, boné, gorro, ou qualquer coisa na cabeça - mesmo que pequeno ou parcial
+8. QUALQUER óculos escuros - mesmo que leves, claros, ou parcialmente transparentes (óculos de GRAU transparentes são OK)
 9. Ângulos EXTREMOS - APENAS se:
    - Câmera MUITO de baixo olhando pra cima (ângulo > 45°)
    - Câmera MUITO de cima olhando pra baixo (ângulo > 45°)
@@ -254,9 +254,7 @@ ${subjectType === 'pessoa' ? `
 `}
 
 ✅ ATENÇÃO - Estas SÃO ACEITÁVEIS (NÃO marque como problema):
-- Óculos de grau transparentes ✅
-- Óculos escuros leves/claros onde dá pra ver os olhos ✅
-- Pessoa pequena/desfocada ao longe no fundo ✅
+- Óculos de GRAU transparentes (não escuros) ✅
 - Iluminação natural mesmo que não perfeita ✅
 - Leve desfoque ou granulação ✅
 - Expressões normais: sorriso, sério, pensativo, rindo ✅
@@ -265,8 +263,12 @@ ${subjectType === 'pessoa' ? `
 - Fotos levemente de cima ou de baixo (ângulo < 30°) ✅
 - Fundos urbanos, natureza, interiores ✅
 - Filtros suaves de cor (não distorcem) ✅
-- Boné/chapéu visível mas não cobrindo muito ✅
-- Fotos em eventos, festas, casamentos ✅
+
+❌ SEMPRE marque como problema (sem exceção):
+- Óculos escuros - QUALQUER tipo, mesmo leves
+- Boné/chapéu/gorro - QUALQUER tipo, mesmo pequeno
+- Pessoas extras - QUALQUER pessoa visível, mesmo ao fundo
+- Reflita bem antes de aprovar se houver dúvida sobre estes 3 itens
 
 REGRA DE OURO: Na DÚVIDA, aprove a foto. Só reprove se o problema for MUITO claro e GRAVE.
 
