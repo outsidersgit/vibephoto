@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { WhatsAppFloatingButton } from '@/components/ui/whatsapp-button'
 
 interface FAQItem {
   question: string
@@ -301,6 +302,9 @@ export default function FAQPage() {
           </Card>
         </div>
       </div>
+
+      {/* WhatsApp Floating Button - Quick contact for unanswered questions */}
+      <WhatsAppFloatingButton message="Olá! Não encontrei resposta para minha dúvida no FAQ." />
     </div>
   )
 }

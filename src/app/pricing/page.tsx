@@ -11,6 +11,8 @@ import Link from 'next/link'
 import { PLANS, type Plan } from '@/config/pricing'
 import { ProtectedPageScript } from '@/components/auth/protected-page-script'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
+import { WhatsAppFloatingButton } from '@/components/ui/whatsapp-button'
+import { WHATSAPP_CONFIG } from '@/lib/config/whatsapp'
 
 // Exemplos de uso da IA - Carrossel
 const aiExamples = [
@@ -694,6 +696,9 @@ function PricingPageContent() {
           </div>
         </div>
       )}
+
+      {/* WhatsApp Floating Button - Lead conversion for pricing questions */}
+      <WhatsAppFloatingButton message={WHATSAPP_CONFIG.messages.pricing} />
       </div>
     </>
   )

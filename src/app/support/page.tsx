@@ -9,6 +9,9 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CheckCircle, AlertCircle, Send, Loader2, Paperclip, X } from 'lucide-react'
+import { WhatsAppFloatingButton } from '@/components/ui/whatsapp-button'
+import { WHATSAPP_CONFIG } from '@/lib/config/whatsapp'
+
 export default function SupportPage() {
   const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
@@ -372,6 +375,9 @@ export default function SupportPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* WhatsApp Floating Button - Direct support contact */}
+      <WhatsAppFloatingButton message={WHATSAPP_CONFIG.messages.support} />
     </div>
     </>
   )
