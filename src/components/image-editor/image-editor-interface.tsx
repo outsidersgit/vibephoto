@@ -60,6 +60,7 @@ export function ImageEditorInterface({
   const currentEditIdRef = useRef<string | null>(null)
   const loadingRef = useRef<boolean>(false)
   const editFallbackTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const pendingSaveRef = useRef<File[]>([])
   const { invalidateBalance } = useInvalidateCredits()
 
   const [operation] = useState<Operation>('edit')
@@ -723,11 +724,19 @@ export function ImageEditorInterface({
           return [...prev, file]
         })
 
-        // Save to localStorage after state updates
+        // Queue file for batch save
+        pendingSaveRef.current.push(file)
+
+        // Debounced save after all files processed
         setTimeout(async () => {
-          const currentFiles = await loadFilesFromStorage('editor_uploadedImages')
-          await saveFilesToStorage('editor_uploadedImages', [...currentFiles, file])
-        }, 100)
+          if (pendingSaveRef.current.length > 0) {
+            const currentImages = imageFiles.length > 0 ? imageFiles : await loadFilesFromStorage('editor_uploadedImages')
+            const allFiles = [...currentImages, ...pendingSaveRef.current]
+            await saveFilesToStorage('editor_uploadedImages', allFiles)
+            console.log(`✅ [Editor] Saved ${pendingSaveRef.current.length} files to storage. Total: ${allFiles.length}`)
+            pendingSaveRef.current = []
+          }
+        }, 500) // Give time for all files to be queued
       }
       reader.onerror = () => {
         addToast({

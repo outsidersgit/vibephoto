@@ -33,15 +33,17 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
       const quality = loadQualityResults('fullBodyPhotosQuality')
 
       if (files.length > 0) {
+        console.log(`✅ [Step 3] Loaded ${files.length} persisted photos`)
         setModelData((prev: any) => ({ ...prev, fullBodyPhotos: files }))
       }
       if (quality.size > 0) {
+        console.log(`✅ [Step 3] Loaded ${quality.size} quality results`)
         setQualityResults(quality)
       }
     }
 
     loadPersistedData()
-  }, [])
+  }, []) // Empty dependency - only run on mount
 
   const validateFile = (file: File): string[] => {
     const errors: string[] = []

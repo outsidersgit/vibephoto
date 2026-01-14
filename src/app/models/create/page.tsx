@@ -30,7 +30,13 @@ export default function CreateModelPage() {
   const isAuthorized = useAuthGuard()
   const { data: creditBalance } = useCreditBalance()
   const { invalidateBalance } = useInvalidateCredits()
-  const [currentStep, setCurrentStep] = useState(1)
+  const [currentStep, setCurrentStep] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('model_currentStep')
+      return saved ? parseInt(saved, 10) : 1
+    }
+    return 1
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [modelCostInfo, setModelCostInfo] = useState<any>(null)
   const [pendingModelId, setPendingModelId] = useState<string | null>(null)
@@ -98,9 +104,10 @@ export default function CreateModelPage() {
     }
   ]
 
-  // useEffect para scroll automático sempre que a etapa mudar
+  // useEffect para scroll automático e salvar step sempre que a etapa mudar
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
+    localStorage.setItem('model_currentStep', currentStep.toString())
   }, [currentStep])
 
   const handleNextStep = () => {
@@ -135,6 +142,8 @@ export default function CreateModelPage() {
       setPendingModelMessage('Treinamento concluído! Abrindo seus modelos...')
       setPendingModelError(null)
       setIsSubmitting(false)
+      // Clear step on successful completion
+      localStorage.removeItem('model_currentStep')
       if (!hasRedirectedRef.current) {
         hasRedirectedRef.current = true
         addToast({

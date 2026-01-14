@@ -310,14 +310,14 @@ export function VideoGenerationInterface({
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Pre-load source image if provided via URL parameter
+  // Pre-load source image if provided via URL parameter (only if not already loaded from localStorage)
   useEffect(() => {
-    if (sourceImageUrl) {
+    if (sourceImageUrl && !uploadedImage) {
       setUploadedImage(sourceImageUrl)
       setActiveMode('image-to-video')
       setFormData(prev => ({ ...prev, sourceImageUrl }))
     }
-  }, [sourceImageUrl])
+  }, [sourceImageUrl]) // uploadedImage removed from deps to avoid clearing
 
   // Load persisted images on mount
   useEffect(() => {
@@ -326,15 +326,20 @@ export function VideoGenerationInterface({
     const savedLastFrame = localStorage.getItem('video_lastFrame')
 
     if (savedImage) {
+      console.log('✅ [VIDEO] Loaded persisted reference image')
       setUploadedImage(savedImage)
       setFormData(prev => ({ ...prev, sourceImageUrl: savedImage }))
+      if (savedImage) {
+        setActiveMode('image-to-video')
+      }
     }
 
     if (savedLastFrame) {
+      console.log('✅ [VIDEO] Loaded persisted last frame')
       setUploadedLastFrame(savedLastFrame)
       setFormData(prev => ({ ...prev, lastFrame: savedLastFrame }))
     }
-  }, [])
+  }, []) // Empty deps - only run once on mount
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
