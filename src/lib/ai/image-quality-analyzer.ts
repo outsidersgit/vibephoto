@@ -11,44 +11,30 @@ import { AI_CONFIG } from './config'
 
 /**
  * Image Quality Analyzer for Fine-Tuning Photos
- * Uses Astria Image Inspection API to analyze photos for AI model training
+ * Uses OpenAI GPT-4o Vision API to analyze photos for AI model training
  * Checks for: glasses, sunglasses, blur, multiple people, headwear, etc.
  */
 
-interface AstriaInspectionResponse {
-  name?: 'man' | 'woman' | 'boy' | 'girl' | 'baby' | 'cat' | 'dog' | 'NONE'
-  body_type?: 'slim body' | 'average body' | 'muscular body' | 'plussize body' | 'NONE'
-  ethnicity?: string
-  age?: '20 yo' | '30 yo' | '40 yo' | '50 yo' | '60 yo' | '70 yo'
-  glasses?: 'glasses' | 'NONE'
-  eye_color?: string
-  hair_color?: string
-  hair_length?: string
-  hair_style?: string
-  facial_hair?: 'mustache' | 'beard' | 'goatee' | 'NONE'
-  is_bald?: 'bald' | 'NONE'
-  headcover?: 'with head cover' | 'NONE'
-
-  // Boolean detection fields
-  funny_face?: boolean
-  wearing_sunglasses?: boolean
-  wearing_hat?: boolean
-  blurry?: boolean
-  includes_multiple_people?: boolean
-  full_body_image_or_longshot?: boolean
-  selfie?: boolean
-  low_resolution?: boolean
-  low_quality?: boolean
+interface OpenAIVisionResponse {
+  choices: Array<{
+    message: {
+      content: string
+    }
+  }>
 }
 
 export class ImageQualityAnalyzer {
   private apiKey: string
+  private model: string
+  private endpoint: string
 
   constructor() {
-    if (!AI_CONFIG.astria.apiKey) {
-      throw new Error('ASTRIA_API_KEY not configured')
+    if (!AI_CONFIG.openai.apiKey) {
+      throw new Error('OPENAI_API_KEY not configured')
     }
-    this.apiKey = AI_CONFIG.astria.apiKey
+    this.apiKey = AI_CONFIG.openai.apiKey
+    this.model = AI_CONFIG.openai.model
+    this.endpoint = AI_CONFIG.openai.endpoint
   }
 
   /**
@@ -62,41 +48,64 @@ export class ImageQualityAnalyzer {
     const startTime = Date.now()
 
     try {
-      console.log(`🔍 Analyzing with Astria: ${filename} (${options.photoType})`)
+      console.log(`🔍 Analyzing with OpenAI GPT-4o: ${filename} (${options.photoType})`)
 
-      // Convert base64 to blob
-      const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '')
-      const binaryData = atob(base64Data)
-      const bytes = new Uint8Array(binaryData.length)
-      for (let i = 0; i < binaryData.length; i++) {
-        bytes[i] = binaryData.charCodeAt(i)
-      }
-      const blob = new Blob([bytes], { type: this.getMimeType(imageData) })
+      // Build the analysis prompt
+      const prompt = this.buildAnalysisPrompt(options)
 
-      // Prepare form data
-      const formData = new FormData()
-      formData.append('file', blob, filename)
-      const className = this.mapClassToAstriaName(options.modelClass)
-      formData.append('name', className)
-
-      // Call Astria inspection API
-      const response = await fetch('https://api.astria.ai/images/inspect', {
+      // Call OpenAI API with base64 image
+      const response = await fetch(this.endpoint, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${this.apiKey}` },
-        body: formData
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: prompt
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: imageData // Already in data:image/jpeg;base64,... format
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: AI_CONFIG.openai.maxTokens,
+          temperature: AI_CONFIG.openai.temperature
+        })
       })
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('❌ Astria API error:', errorText)
-        throw new Error(`Astria API error: ${response.status}`)
+        console.error('❌ OpenAI API error:', errorText)
+        throw new Error(`OpenAI API error: ${response.status}`)
       }
 
-      const astriaData: AstriaInspectionResponse = await response.json()
-      console.log(`📊 Astria response for ${filename}:`, astriaData)
+      const data: OpenAIVisionResponse = await response.json()
+      const content = data.choices[0]?.message?.content
 
-      // Build quality score based on Astria's detection
-      const qualityScore = this.calculateQualityScore(astriaData, options)
+      if (!content) {
+        throw new Error('Empty response from OpenAI')
+      }
+
+      console.log(`📊 OpenAI response for ${filename}:`, content.substring(0, 200))
+
+      // Parse JSON response
+      const jsonMatch = content.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) {
+        throw new Error('No JSON found in OpenAI response')
+      }
+
+      const qualityScore: ImageQualityScore = JSON.parse(jsonMatch[0])
       const processingTime = Date.now() - startTime
 
       const result: ImageQualityAnalysisResult = {
@@ -143,7 +152,7 @@ export class ImageQualityAnalyzer {
     options: ImageQualityAnalysisOptions
   ): Promise<BatchQualityAnalysisResult> {
     const startTime = Date.now()
-    console.log(`📦 Analyzing ${images.length} images with Astria...`)
+    console.log(`📦 Analyzing ${images.length} images with OpenAI GPT-4o...`)
 
     const results: ImageQualityAnalysisResult[] = []
 
@@ -175,149 +184,81 @@ export class ImageQualityAnalyzer {
   }
 
   /**
-   * Calculate quality score based on Astria inspection results
+   * Build the analysis prompt based on photo type
    */
-  private calculateQualityScore(
-    data: AstriaInspectionResponse,
-    options: ImageQualityAnalysisOptions
-  ): ImageQualityScore {
-    let score = 100 // Start perfect
-    let technicalQuality = 25
-    let composition = 25
-    let finetuningReadiness = 50
+  private buildAnalysisPrompt(options: ImageQualityAnalysisOptions): string {
+    const { photoType, modelClass } = options
 
-    const criticalIssues: CriticalIssue[] = []
-    const minorIssues: MinorIssue[] = []
-    const recommendations: string[] = []
+    const subjectType = modelClass === 'ANIMAL' ? 'animal' : 'pessoa'
+    const photoDescription = this.getPhotoTypeDescription(photoType)
 
-    // CRITICAL ISSUES
-    if (data.wearing_sunglasses === true) {
-      criticalIssues.push('sunglasses')
-      finetuningReadiness -= 20
-      score -= 30
-      recommendations.push('Remova fotos com óculos escuros - impedem o modelo de aprender características faciais')
-    }
+    return `Você é um especialista em análise de fotos para fine-tuning de modelos de IA (FLUX, Stable Diffusion).
 
-    if (data.wearing_hat === true || data.headcover === 'with head cover') {
-      criticalIssues.push('hat_or_cap')
-      finetuningReadiness -= 20
-      score -= 30
-      recommendations.push('Remova fotos com chapéus, bonés ou gorros - cobrem características importantes')
-    }
+Analise esta foto de ${photoDescription} e avalie se ela é adequada para treinar um modelo de IA personalizado de ${subjectType}.
 
-    if (data.includes_multiple_people === true) {
-      criticalIssues.push('multiple_people')
-      finetuningReadiness -= 25
-      score -= 40
-      recommendations.push('Use apenas fotos com UMA pessoa - modelo pode ficar confuso com múltiplas pessoas')
-    }
+CRITÉRIOS DE AVALIAÇÃO:
 
-    if (data.blurry === true) {
-      criticalIssues.push('eyes_closed') // Using as proxy for blur
-      technicalQuality -= 15
-      score -= 25
-      recommendations.push('Foto embaçada - use imagens nítidas e focadas')
-    }
+1. QUALIDADE TÉCNICA (0-25 pontos):
+   - Nitidez e foco adequados
+   - Iluminação balanceada (sem sombras duras ou superexposição)
+   - Resolução suficiente (mínimo 512x512, ideal 1024x1024+)
+   - Sem artefatos de compressão ou ruído excessivo
 
-    if (data.funny_face === true) {
-      criticalIssues.push('making_faces')
-      finetuningReadiness -= 15
-      score -= 25
-      recommendations.push('Evite caretas ou expressões exageradas - use expressões naturais')
-    }
+2. COMPOSIÇÃO (0-25 pontos):
+   - ${subjectType === 'pessoa' ? 'Pessoa' : 'Animal'} centralizado(a) e bem enquadrado(a)
+   - Fundo não muito distrativo ou confuso
+   - Distância adequada da câmera (nem muito longe, nem muito perto)
+   - Pose não cortada (corpo completo visível para fotos de corpo inteiro)
 
-    if (data.low_quality === true) {
-      criticalIssues.push('hand_covering_face') // Using as proxy for low quality
-      technicalQuality -= 10
-      score -= 20
-      recommendations.push('Qualidade de imagem baixa - use fotos de melhor qualidade')
-    }
+3. ADEQUAÇÃO PARA FINE-TUNING (0-50 pontos) - MAIS IMPORTANTE:
 
-    // MINOR ISSUES
-    if (data.glasses === 'glasses' && !data.wearing_sunglasses) {
-      minorIssues.push('slight_blur') // Using as proxy for glasses
-      score -= 10
-      recommendations.push('Óculos de grau: OK se você sempre usa, caso contrário prefira fotos sem')
-    }
+   PROBLEMAS CRÍTICOS que prejudicam MUITO o treinamento:
+   ${subjectType === 'pessoa' ? `
+   ❌ Boné, chapéu, gorro ou qualquer coisa cobrindo a cabeça/cabelo
+   ❌ Óculos escuros (óculos de grau transparente são OK se a pessoa usa sempre)
+   ❌ Máscaras faciais, cachecóis ou mãos cobrindo o rosto
+   ❌ Outras pessoas visíveis na foto (mesmo parcialmente ou ao fundo)
+   ❌ Caretas, língua para fora, olhos fechados ou piscando
+   ❌ Expressões muito extremas ou não naturais
+   ❌ Filtros pesados (Instagram, Snapchat, beautify)
+   ❌ Ângulos muito extremos (muito de cima, muito de baixo, perfil completo)
+   ` : `
+   ❌ Múltiplos animais na foto
+   ❌ Pessoas muito visíveis junto com o animal
+   ❌ Animal com acessórios exagerados (fantasias, roupas muito chamativas)
+   ❌ Animal dormindo ou com olhos fechados
+   `}
 
-    if (data.selfie === true) {
-      minorIssues.push('poor_framing')
-      composition -= 5
-      score -= 10
-      recommendations.push('Selfies podem ter ângulos não ideais - prefira fotos tiradas por outra pessoa')
-    }
+   ✅ FOTO IDEAL: ${subjectType} sozinho(a), ${subjectType === 'pessoa' ? 'rosto descoberto, sem acessórios que cubram características faciais (cabelo, olhos, sobrancelhas)' : 'animal em destaque'}, expressão/pose natural, boa iluminação, sem filtros, fundo simples
 
-    if (data.full_body_image_or_longshot === true && options.photoType === 'face') {
-      minorIssues.push('poor_framing')
-      composition -= 10
-      score -= 15
-      recommendations.push('Foto muito distante para close de rosto - aproxime mais da câmera')
-    }
+IMPORTANTE: Seja RIGOROSO com acessórios que cobrem o rosto (bonés, chapéus, óculos escuros). Estes são os problemas MAIS GRAVES pois impedem o modelo de aprender características faciais corretamente.
 
-    if (data.low_resolution === true) {
-      minorIssues.push('low_resolution')
-      technicalQuality -= 8
-      score -= 12
-      recommendations.push('Resolução baixa - prefira fotos com maior resolução para melhor qualidade')
-    }
-
-    // Ensure no negative scores
-    score = Math.max(0, score)
-    technicalQuality = Math.max(0, technicalQuality)
-    composition = Math.max(0, composition)
-    finetuningReadiness = Math.max(0, finetuningReadiness)
-
-    return {
-      score,
-      technicalQuality,
-      composition,
-      finetuningReadiness,
-      criticalIssues,
-      minorIssues,
-      feedback: this.buildFeedback(score, criticalIssues),
-      recommendations: recommendations.length > 0 ? recommendations.slice(0, 3) : ['Foto adequada para treinamento'],
-      status: getQualityStatus(score)
-    }
+Responda APENAS em JSON válido (sem markdown, sem \`\`\`json):
+{
+  "score": <número 0-100>,
+  "technicalQuality": <número 0-25>,
+  "composition": <número 0-25>,
+  "finetuningReadiness": <número 0-50>,
+  "criticalIssues": [<array de strings: "hat_or_cap", "sunglasses", "face_covered", "multiple_people", "making_faces", "eyes_closed", "heavy_filters", "hand_covering_face", "extreme_angle", "mask">],
+  "minorIssues": [<array de strings: "slight_blur", "low_light", "busy_background", "low_resolution", "overexposed", "underexposed", "artifacts", "poor_framing">],
+  "feedback": "<texto curto em português (max 150 caracteres) explicando a avaliação geral>",
+  "recommendations": [<array com 1-3 recomendações específicas em português para melhorar a foto, se houver problemas>]
+}`
   }
 
   /**
-   * Build feedback message based on score and issues
+   * Get photo type description in Portuguese
    */
-  private buildFeedback(score: number, criticalIssues: CriticalIssue[]): string {
-    if (score >= 90) return 'Foto perfeita para treinamento!'
-    if (score >= 70) return 'Ótima foto para treinamento.'
-    if (score >= 50) {
-      return criticalIssues.length > 0
-        ? `Foto aceitável, mas com ${criticalIssues.length} problema(s) que podem afetar qualidade`
-        : 'Foto aceitável para treinamento'
+  private getPhotoTypeDescription(photoType: string): string {
+    switch (photoType) {
+      case 'face':
+        return 'rosto (close-up do rosto)'
+      case 'half_body':
+        return 'meio corpo (da cintura para cima)'
+      case 'full_body':
+        return 'corpo inteiro'
+      default:
+        return 'rosto'
     }
-    return criticalIssues.length > 0
-      ? `Foto inadequada - ${criticalIssues.length} problemas críticos detectados`
-      : 'Qualidade abaixo do recomendado para treinamento'
-  }
-
-  /**
-   * Map model class to Astria API name parameter
-   */
-  private mapClassToAstriaName(modelClass?: string): string {
-    const mapping: Record<string, string> = {
-      'MAN': 'man',
-      'WOMAN': 'woman',
-      'BOY': 'boy',
-      'GIRL': 'girl',
-      'ANIMAL': 'dog'
-    }
-    return mapping[modelClass || 'MAN'] || 'man'
-  }
-
-  /**
-   * Extract MIME type from base64 data URL
-   */
-  private getMimeType(dataUrl: string): string {
-    const match = dataUrl.match(/^data:(image\/\w+);base64,/)
-    return match ? match[1] : 'image/jpeg'
   }
 }
-
-// Export singleton instance
-export const imageQualityAnalyzer = new ImageQualityAnalyzer()
