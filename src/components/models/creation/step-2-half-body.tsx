@@ -705,14 +705,6 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
               <div className="mt-3 space-y-1.5">
                 <div className="flex items-start space-x-2">
                   <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Corpo cortado de forma estranha</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Braços ou mãos cortadas</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-gray-700">Postura forçada ou não natural</p>
                 </div>
                 <div className="flex items-start space-x-2">

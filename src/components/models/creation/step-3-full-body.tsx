@@ -630,11 +630,7 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
               <div className="mt-3 space-y-1.5">
                 <div className="flex items-start space-x-2">
                   <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Corpo inteiro visível da cabeça aos pés</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Poses variadas (em pé, sentado, caminhando)</p>
+                  <p className="text-xs text-gray-700">Poses variadas</p>
                 </div>
                 <div className="flex items-start space-x-2">
                   <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
@@ -646,7 +642,7 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
                 </div>
                 <div className="flex items-start space-x-2">
                   <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Corpo completo bem iluminado e nítido</p>
+                  <p className="text-xs text-gray-700">Corpo bem iluminado e nítido</p>
                 </div>
               </div>
             </div>
@@ -706,7 +702,7 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
               <div className="mt-3 space-y-1.5">
                 <div className="flex items-start space-x-2">
                   <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Pés ou cabeça cortados</p>
+                  <p className="text-xs text-gray-700">Foto cortada</p>
                 </div>
                 <div className="flex items-start space-x-2">
                   <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
@@ -714,7 +710,7 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
                 </div>
                 <div className="flex items-start space-x-2">
                   <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Pose forçada ou não natural</p>
+                  <p className="text-xs text-gray-700">Baixa iluminação</p>
                 </div>
                 <div className="flex items-start space-x-2">
                   <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
