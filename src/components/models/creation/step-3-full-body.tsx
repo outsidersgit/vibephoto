@@ -95,35 +95,77 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
     setIsAnalyzing(true)
 
     try {
-      const formData = new FormData()
-      formData.append('photoType', 'full_body')
-      formData.append('modelClass', modelData.class)
+      console.log(`📸 [Step 3] Starting analysis for ${files.length} images...`)
 
-      // Compress large images before sending for analysis
-      console.log(`📸 [Step 3] Preparing ${files.length} images for analysis...`)
-      const compressedFiles = await Promise.all(
-        files.map(async (file, idx) => {
-          try {
-            console.log(`[Step 3] Processing image ${idx + 1}/${files.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
-            const compressed = await compressImageIfNeeded(file, 4 * 1024 * 1024) // 4MB max for safety
-            console.log(`[Step 3] Image ${idx + 1} ready: ${compressed.name} (${(compressed.size / 1024 / 1024).toFixed(2)}MB)`)
-            return compressed
-          } catch (error) {
-            console.error(`❌ [Step 3] Failed to compress ${file.name}:`, error)
-            alert(`Aviso: Não foi possível comprimir ${file.name}. A imagem pode ser muito grande para análise.`)
-            return file
+      // Step 1: Compress and upload images to R2 (one by one)
+      const imageUrls: string[] = []
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        console.log(`[Step 3] Processing image ${i + 1}/${files.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
+
+        // Compress if needed
+        let processedFile = file
+        try {
+          processedFile = await compressImageIfNeeded(file, 4 * 1024 * 1024)
+          if (processedFile !== file) {
+            console.log(`✅ [Step 3] Compressed to ${(processedFile.size / 1024 / 1024).toFixed(2)}MB`)
           }
-        })
-      )
-      console.log(`✅ [Step 3] All ${compressedFiles.length} images prepared for analysis`)
+        } catch (error) {
+          console.error(`❌ [Step 3] Compression failed for ${file.name}:`, error)
+        }
 
-      compressedFiles.forEach((file, index) => {
-        formData.append(`photo_${index}`, file)
-      })
+        // Upload to R2 via presigned URL
+        try {
+          console.log(`☁️ [Step 3] Uploading ${processedFile.name} to R2...`)
 
+          const presignedResponse = await fetch('/api/upload/presigned-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              filename: processedFile.name,
+              contentType: processedFile.type,
+              category: 'model-training'
+            })
+          })
+
+          if (!presignedResponse.ok) {
+            throw new Error('Failed to get presigned URL')
+          }
+
+          const { data } = await presignedResponse.json()
+
+          const uploadResponse = await fetch(data.presignedUrl, {
+            method: 'PUT',
+            body: processedFile,
+            headers: {
+              'Content-Type': processedFile.type
+            }
+          })
+
+          if (!uploadResponse.ok) {
+            throw new Error('Failed to upload to R2')
+          }
+
+          imageUrls.push(data.publicUrl)
+          console.log(`✅ [Step 3] Image ${i + 1} uploaded successfully`)
+        } catch (error) {
+          console.error(`❌ [Step 3] Upload failed for ${file.name}:`, error)
+          throw new Error(`Falha ao enviar ${file.name}. Por favor, tente novamente.`)
+        }
+      }
+
+      console.log(`✅ [Step 3] All ${imageUrls.length} images uploaded, starting analysis...`)
+
+      // Step 2: Send URLs to analysis API
       const response = await fetch('/api/models/validate-photos', {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          photoType: 'full_body',
+          modelClass: modelData.class,
+          imageUrls: imageUrls
+        })
       })
 
       if (!response.ok) {
@@ -147,6 +189,7 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
       }
     } catch (error) {
       console.error('Error analyzing photos:', error)
+      alert(error instanceof Error ? error.message : 'Erro ao analisar fotos. Tente novamente.')
     } finally {
       setIsAnalyzing(false)
     }

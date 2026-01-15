@@ -28,45 +28,99 @@ export async function POST(request: NextRequest) {
 
     console.log(`🔍 Photo validation request from user ${session.user.email}`)
 
-    // Parse form data
-    const formData = await request.formData()
-
-    const photoType = formData.get('photoType') as string
-    const modelClass = formData.get('modelClass') as string | null
-
-    if (!photoType || !['face', 'half_body', 'full_body'].includes(photoType)) {
-      return NextResponse.json(
-        { error: 'Invalid photoType. Must be: face, half_body, or full_body' },
-        { status: 400 }
-      )
-    }
-
-    // Extract all photo files
+    const contentType = request.headers.get('content-type') || ''
+    let photoType: string
+    let modelClass: string | null = null
     const photos: Array<{ data: string; filename: string }> = []
 
-    for (const [key, value] of formData.entries()) {
-      if (key.startsWith('photo_') && value instanceof File) {
-        const file = value as File
+    // Support both FormData (legacy) and JSON (new URL-based approach)
+    if (contentType.includes('application/json')) {
+      // New approach: JSON with image URLs
+      const body = await request.json()
 
-        // Convert to base64
-        const arrayBuffer = await file.arrayBuffer()
-        const buffer = Buffer.from(arrayBuffer)
-        const base64 = buffer.toString('base64')
-        const mimeType = file.type || 'image/jpeg'
-        const dataUrl = `data:${mimeType};base64,${base64}`
+      photoType = body.photoType
+      modelClass = body.modelClass || null
+      const imageUrls = body.imageUrls as string[]
 
-        photos.push({
-          data: dataUrl,
-          filename: file.name
-        })
+      if (!photoType || !['face', 'half_body', 'full_body'].includes(photoType)) {
+        return NextResponse.json(
+          { error: 'Invalid photoType. Must be: face, half_body, or full_body' },
+          { status: 400 }
+        )
       }
-    }
 
-    if (photos.length === 0) {
-      return NextResponse.json(
-        { error: 'No photos provided. Send photos as form data with keys like photo_0, photo_1, etc.' },
-        { status: 400 }
-      )
+      if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+        return NextResponse.json(
+          { error: 'No imageUrls provided. Send array of image URLs.' },
+          { status: 400 }
+        )
+      }
+
+      console.log(`☁️ Downloading ${imageUrls.length} images from R2...`)
+
+      // Download images from URLs
+      for (let i = 0; i < imageUrls.length; i++) {
+        const url = imageUrls[i]
+        try {
+          const response = await fetch(url)
+          if (!response.ok) {
+            throw new Error(`Failed to fetch image from ${url}`)
+          }
+
+          const arrayBuffer = await response.arrayBuffer()
+          const buffer = Buffer.from(arrayBuffer)
+          const base64 = buffer.toString('base64')
+          const mimeType = response.headers.get('content-type') || 'image/jpeg'
+          const dataUrl = `data:${mimeType};base64,${base64}`
+
+          photos.push({
+            data: dataUrl,
+            filename: `image_${i}.jpg`
+          })
+        } catch (error) {
+          console.error(`❌ Failed to download image ${i + 1}:`, error)
+          throw new Error(`Failed to download image ${i + 1} from URL`)
+        }
+      }
+    } else {
+      // Legacy approach: FormData with files
+      const formData = await request.formData()
+
+      photoType = formData.get('photoType') as string
+      modelClass = formData.get('modelClass') as string | null
+
+      if (!photoType || !['face', 'half_body', 'full_body'].includes(photoType)) {
+        return NextResponse.json(
+          { error: 'Invalid photoType. Must be: face, half_body, or full_body' },
+          { status: 400 }
+        )
+      }
+
+      // Extract all photo files
+      for (const [key, value] of formData.entries()) {
+        if (key.startsWith('photo_') && value instanceof File) {
+          const file = value as File
+
+          // Convert to base64
+          const arrayBuffer = await file.arrayBuffer()
+          const buffer = Buffer.from(arrayBuffer)
+          const base64 = buffer.toString('base64')
+          const mimeType = file.type || 'image/jpeg'
+          const dataUrl = `data:${mimeType};base64,${base64}`
+
+          photos.push({
+            data: dataUrl,
+            filename: file.name
+          })
+        }
+      }
+
+      if (photos.length === 0) {
+        return NextResponse.json(
+          { error: 'No photos provided. Send photos as form data with keys like photo_0, photo_1, etc.' },
+          { status: 400 }
+        )
+      }
     }
 
     console.log(`📸 Validating ${photos.length} photos (type: ${photoType})`)
