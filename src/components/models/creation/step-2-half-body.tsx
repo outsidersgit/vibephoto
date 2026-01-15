@@ -399,10 +399,20 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                         className="w-full h-full object-contain"
                       />
 
-                      {/* Quality Badge */}
+                      {/* Quality Badge - Problems */}
                       {quality && quality.hasIssues && (
                         <div className="absolute top-2 right-2">
                           <Badge className="bg-red-500 text-white">⚠️ Problema</Badge>
+                        </div>
+                      )}
+
+                      {/* Quality Badge - Approved */}
+                      {quality && !quality.hasIssues && (
+                        <div className="absolute top-2 right-2">
+                          <Badge className="bg-green-500 text-white flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" />
+                            Aprovada
+                          </Badge>
                         </div>
                       )}
 
@@ -529,6 +539,17 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
         </Card>
       )}
 
+      {/* Info: How to view analysis details */}
+      {!isAnalyzing && qualityStats.analyzed > 0 && (
+        <Card className="border-gray-200 bg-gray-50">
+          <CardContent className="p-3">
+            <p className="text-xs text-gray-600 text-center">
+              💡 <strong>Dica:</strong> Passe o mouse sobre as fotos (desktop) ou clique nas fotos (mobile) para ver os detalhes da análise
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Navigation Buttons */}
       <div className="flex justify-between">
         <Button
@@ -564,7 +585,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
               <div className="grid grid-cols-2 gap-3">
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
                   <img
-                    src="/images/examples/good-1.jpg"
+                    src="/images/examples/step-2-half-body/good-1.jpg"
                     alt="Bom exemplo 1"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -574,7 +595,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                 </div>
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
                   <img
-                    src="/images/examples/good-2.jpg"
+                    src="/images/examples/step-2-half-body/good-2.jpg"
                     alt="Bom exemplo 2"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -584,7 +605,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                 </div>
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
                   <img
-                    src="/images/examples/good-3.jpg"
+                    src="/images/examples/step-2-half-body/good-3.jpg"
                     alt="Bom exemplo 3"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -594,7 +615,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                 </div>
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
                   <img
-                    src="/images/examples/good-4.jpg"
+                    src="/images/examples/step-2-half-body/good-4.jpg"
                     alt="Bom exemplo 4"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -608,23 +629,23 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
               <div className="mt-3 space-y-1.5">
                 <div className="flex items-start space-x-2">
                   <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Use imagens de ombros para cima</p>
+                  <p className="text-xs text-gray-700">Cintura para cima bem enquadrada</p>
                 </div>
                 <div className="flex items-start space-x-2">
                   <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Imagens da cintura para cima e do corpo todo</p>
+                  <p className="text-xs text-gray-700">Postura natural e relaxada</p>
                 </div>
                 <div className="flex items-start space-x-2">
                   <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Olhando para a câmera</p>
+                  <p className="text-xs text-gray-700">Roupas variadas em diferentes fotos</p>
                 </div>
                 <div className="flex items-start space-x-2">
                   <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Fotos de dias diferentes</p>
+                  <p className="text-xs text-gray-700">Fundos diversos (interno, externo)</p>
                 </div>
                 <div className="flex items-start space-x-2">
                   <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Mudança de fundos, iluminação e roupas</p>
+                  <p className="text-xs text-gray-700">Iluminação adequada no corpo e rosto</p>
                 </div>
               </div>
             </div>
@@ -640,7 +661,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
               <div className="grid grid-cols-2 gap-3">
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
                   <img
-                    src="/images/examples/bad-1.jpg"
+                    src="/images/examples/step-2-half-body/bad-1.jpg"
                     alt="Mau exemplo 1"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -650,7 +671,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                 </div>
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
                   <img
-                    src="/images/examples/bad-2.jpg"
+                    src="/images/examples/step-2-half-body/bad-2.jpg"
                     alt="Mau exemplo 2"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -660,7 +681,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                 </div>
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
                   <img
-                    src="/images/examples/bad-3.jpg"
+                    src="/images/examples/step-2-half-body/bad-3.jpg"
                     alt="Mau exemplo 3"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -670,7 +691,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                 </div>
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
                   <img
-                    src="/images/examples/bad-4.jpg"
+                    src="/images/examples/step-2-half-body/bad-4.jpg"
                     alt="Mau exemplo 4"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -684,35 +705,27 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
               <div className="mt-3 space-y-1.5">
                 <div className="flex items-start space-x-2">
                   <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-700">Corpo cortado de forma estranha</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-700">Braços ou mãos cortadas</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-700">Postura forçada ou não natural</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-700">Outras pessoas visíveis</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-700">Filtros ou edições pesadas</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-gray-700">Imagens geradas por IA</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Pessoas extras</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Caretas</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Filtros, Preto e Branco</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Iluminação ruim, baixa qualidade, desfocada</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Chapéu, óculos escuros</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Ângulos ruins</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Rosto cortado</p>
                 </div>
               </div>
             </div>
