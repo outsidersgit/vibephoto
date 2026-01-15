@@ -4,10 +4,11 @@ import { useState, useCallback, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Upload, X, AlertCircle, CheckCircle, Loader2, RefreshCw, ArrowLeft, ArrowRight, User, Users, Heart } from 'lucide-react'
+import { Upload, X, AlertCircle, CheckCircle, Loader2, ArrowLeft, ArrowRight, User, Users, Heart } from 'lucide-react'
 import Link from 'next/link'
 import { ImageQualityAnalysisResult, CRITICAL_ISSUE_LABELS, MINOR_ISSUE_LABELS } from '@/types/image-quality'
 import { saveFilesToIndexedDB, loadFilesFromIndexedDB, saveQualityToIndexedDB, loadQualityFromIndexedDB } from '@/lib/utils/indexed-db-persistence'
+import { compressImageIfNeeded } from '@/lib/utils/image-compression'
 
 interface ModelCreationStep2HalfBodyProps {
   modelData: {
@@ -98,7 +99,19 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
       formData.append('photoType', 'half_body')
       formData.append('modelClass', modelData.class)
 
-      files.forEach((file, index) => {
+      // Compress large images before sending for analysis
+      const compressedFiles = await Promise.all(
+        files.map(async (file) => {
+          try {
+            return await compressImageIfNeeded(file, 5 * 1024 * 1024) // 5MB max
+          } catch (error) {
+            console.error(`❌ [Step 2] Failed to compress ${file.name}:`, error)
+            return file // Use original if compression fails
+          }
+        })
+      )
+
+      compressedFiles.forEach((file, index) => {
         formData.append(`photo_${index}`, file)
       })
 
@@ -226,13 +239,6 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
     // Save to IndexedDB
     await saveFilesToIndexedDB('model_halfBodyPhotos', newPhotos)
     await saveQualityToIndexedDB('halfBodyPhotosQuality', reindexedResults)
-  }
-
-  const reanalyzePhoto = async (index: number) => {
-    const file = modelData.halfBodyPhotos[index]
-    if (file) {
-      await analyzePhotoQuality([file], index)
-    }
   }
 
   const getImagePreview = (file: File) => {
@@ -367,17 +373,6 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                       <X className="w-4 h-4" />
                     </button>
 
-                    {/* Reanalyze Button */}
-                    {quality && (
-                      <button
-                        onClick={() => reanalyzePhoto(index)}
-                        className="absolute -bottom-2 -right-2 bg-purple-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                        title="Reanalisar qualidade"
-                      >
-                        <RefreshCw className="w-3 h-3" />
-                      </button>
-                    )}
-
                     {/* File Size Badge */}
                     <div className="absolute bottom-2 left-2">
                       <Badge variant="secondary" className="text-xs">
@@ -425,6 +420,41 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
 
         </CardContent>
       </Card>
+
+      {/* Analyzing Progress Notice */}
+      {isAnalyzing && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-5 h-5 text-blue-600 animate-spin flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm text-blue-900">
+                  <strong>Analisando imagens...</strong> O processo pode demorar alguns segundos.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* All Images Approved Success Banner */}
+      {!isAnalyzing && qualityStats.analyzed > 0 && qualityStats.total === qualityStats.analyzed && qualityStats.photosWithIssues === 0 && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h4 className="text-sm font-semibold mb-1 text-green-900">
+                  ✅ Parabéns! Todas as imagens foram aprovadas
+                </h4>
+                <p className="text-xs text-green-700">
+                  Todas as {qualityStats.total} {qualityStats.total === 1 ? 'imagem foi analisada e aprovada' : 'imagens foram analisadas e aprovadas'}. Você pode prosseguir para a próxima etapa com confiança!
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quality Analysis Warning */}
       {qualityStats.analyzed > 0 && qualityStats.photosWithIssues > 0 && (
