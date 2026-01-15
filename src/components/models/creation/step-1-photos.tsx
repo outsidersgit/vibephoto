@@ -825,7 +825,7 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo, onA
         <Card className="border-gray-200 bg-gray-50">
           <CardContent className="p-3">
             <p className="text-xs text-gray-600 text-center">
-              💡 <strong>Dica:</strong> Passe o mouse sobre as fotos (desktop) ou clique nas fotos (mobile) para ver os detalhes da análise
+              💡 <strong>Dica:</strong> Clique nas fotos para ver os detalhes da análise
             </p>
           </CardContent>
         </Card>
