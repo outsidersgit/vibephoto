@@ -585,7 +585,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
               <div className="grid grid-cols-2 gap-3">
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
                   <img
-                    src="/images/examples/step-2-half-body/good-1.jpg"
+                    src="/images/examples/step-2-half-body/good-1.jpg?v=2"
                     alt="Bom exemplo 1"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -595,7 +595,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                 </div>
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
                   <img
-                    src="/images/examples/step-2-half-body/good-2.jpg"
+                    src="/images/examples/step-2-half-body/good-2.jpg?v=2"
                     alt="Bom exemplo 2"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -605,7 +605,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                 </div>
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
                   <img
-                    src="/images/examples/step-2-half-body/good-3.jpg"
+                    src="/images/examples/step-2-half-body/good-3.jpg?v=2"
                     alt="Bom exemplo 3"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -615,7 +615,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                 </div>
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
                   <img
-                    src="/images/examples/step-2-half-body/good-4.jpg"
+                    src="/images/examples/step-2-half-body/good-4.jpg?v=2"
                     alt="Bom exemplo 4"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -661,7 +661,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
               <div className="grid grid-cols-2 gap-3">
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
                   <img
-                    src="/images/examples/step-2-half-body/bad-1.jpg"
+                    src="/images/examples/step-2-half-body/bad-1.jpg?v=2"
                     alt="Mau exemplo 1"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -671,7 +671,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                 </div>
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
                   <img
-                    src="/images/examples/step-2-half-body/bad-2.jpg"
+                    src="/images/examples/step-2-half-body/bad-2.jpg?v=2"
                     alt="Mau exemplo 2"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -681,7 +681,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                 </div>
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
                   <img
-                    src="/images/examples/step-2-half-body/bad-3.jpg"
+                    src="/images/examples/step-2-half-body/bad-3.jpg?v=2"
                     alt="Mau exemplo 3"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -691,7 +691,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
                 </div>
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
                   <img
-                    src="/images/examples/step-2-half-body/bad-4.jpg"
+                    src="/images/examples/step-2-half-body/bad-4.jpg?v=2"
                     alt="Mau exemplo 4"
                     className="w-full h-full object-cover"
                     onError={(e) => {
