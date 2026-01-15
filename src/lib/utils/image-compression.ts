@@ -117,13 +117,19 @@ export function needsCompression(file: File, maxSize: number = 5 * 1024 * 1024):
 export async function compressImageIfNeeded(
   file: File,
   maxSize: number = 5 * 1024 * 1024,
-  maxDimension: number = 4096
+  maxDimension: number = 2048 // Reduced from 4096 to be more aggressive
 ): Promise<File> {
   if (needsCompression(file, maxSize)) {
-    console.log(`🔄 Compressing image: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
-    const compressed = await compressImage(file, maxSize, maxDimension)
-    console.log(`✅ Compressed to: ${(compressed.size / 1024 / 1024).toFixed(2)}MB`)
-    return compressed
+    console.log(`🔄 [Compression] Starting: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
+    try {
+      const compressed = await compressImage(file, maxSize, maxDimension)
+      console.log(`✅ [Compression] Success: ${(compressed.size / 1024 / 1024).toFixed(2)}MB`)
+      return compressed
+    } catch (error) {
+      console.error(`❌ [Compression] Failed for ${file.name}:`, error)
+      throw error // Re-throw to handle in caller
+    }
   }
+  console.log(`ℹ️ [Compression] Skipped: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB) - already within limit`)
   return file
 }

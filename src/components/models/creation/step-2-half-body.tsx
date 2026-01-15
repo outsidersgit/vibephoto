@@ -100,16 +100,22 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
       formData.append('modelClass', modelData.class)
 
       // Compress large images before sending for analysis
+      console.log(`📸 [Step 2] Preparing ${files.length} images for analysis...`)
       const compressedFiles = await Promise.all(
-        files.map(async (file) => {
+        files.map(async (file, idx) => {
           try {
-            return await compressImageIfNeeded(file, 5 * 1024 * 1024) // 5MB max
+            console.log(`[Step 2] Processing image ${idx + 1}/${files.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
+            const compressed = await compressImageIfNeeded(file, 4 * 1024 * 1024) // 4MB max for safety
+            console.log(`[Step 2] Image ${idx + 1} ready: ${compressed.name} (${(compressed.size / 1024 / 1024).toFixed(2)}MB)`)
+            return compressed
           } catch (error) {
             console.error(`❌ [Step 2] Failed to compress ${file.name}:`, error)
-            return file // Use original if compression fails
+            alert(`Aviso: Não foi possível comprimir ${file.name}. A imagem pode ser muito grande para análise.`)
+            return file
           }
         })
       )
+      console.log(`✅ [Step 2] All ${compressedFiles.length} images prepared for analysis`)
 
       compressedFiles.forEach((file, index) => {
         formData.append(`photo_${index}`, file)
@@ -493,7 +499,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
         <Button
           type="button"
           onClick={onNextStep}
-          disabled={!canProceed || modelData.halfBodyPhotos.length < 5}
+          disabled={!canProceed || modelData.halfBodyPhotos.length < 5 || isAnalyzing}
         >
           Próximo
           <ArrowRight className="w-4 h-4 ml-2" />

@@ -38,6 +38,7 @@ export default function CreateModelPage() {
     return 1
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isAnalyzingStep1, setIsAnalyzingStep1] = useState(false)
   const [modelCostInfo, setModelCostInfo] = useState<any>(null)
   const [pendingModelId, setPendingModelId] = useState<string | null>(null)
   const [pendingModelStatus, setPendingModelStatus] = useState<'UPLOADING' | 'PROCESSING' | 'TRAINING' | 'READY' | 'ERROR' | null>(null)
@@ -393,7 +394,7 @@ export default function CreateModelPage() {
   const canProceedToNext = () => {
     switch (currentStep) {
       case 1:
-        return modelData.name && modelData.class && modelData.facePhotos.length >= 5
+        return modelData.name && modelData.class && modelData.facePhotos.length >= 5 && !isAnalyzingStep1
       case 2:
         return modelData.halfBodyPhotos.length >= 5
       case 3:
@@ -480,6 +481,7 @@ export default function CreateModelPage() {
               modelData={modelData}
               setModelData={setModelData}
               modelCostInfo={modelCostInfo}
+              onAnalyzingChange={setIsAnalyzingStep1}
             />
           )}
 

@@ -18,9 +18,10 @@ interface ModelCreationStep1Props {
   }
   setModelData: (data: any) => void
   modelCostInfo?: any
+  onAnalyzingChange?: (isAnalyzing: boolean) => void
 }
 
-export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: ModelCreationStep1Props) {
+export function ModelCreationStep1({ modelData, setModelData, modelCostInfo, onAnalyzingChange }: ModelCreationStep1Props) {
   const [dragActive, setDragActive] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [qualityResults, setQualityResults] = useState<Map<number, ImageQualityAnalysisResult>>(new Map())
@@ -44,6 +45,11 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
 
     loadPersistedData()
   }, [])
+
+  // Notify parent component when analyzing state changes
+  useEffect(() => {
+    onAnalyzingChange?.(isAnalyzing)
+  }, [isAnalyzing, onAnalyzingChange])
 
   const classOptions = [
     { value: 'MAN', label: 'Homem', icon: User, description: 'Pessoa adulta do sexo masculino' },
@@ -107,16 +113,22 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo }: M
       formData.append('modelClass', modelData.class)
 
       // Compress large images before sending for analysis
+      console.log(`📸 [Step 1] Preparing ${files.length} images for analysis...`)
       const compressedFiles = await Promise.all(
-        files.map(async (file) => {
+        files.map(async (file, idx) => {
           try {
-            return await compressImageIfNeeded(file, 5 * 1024 * 1024) // 5MB max
+            console.log(`[Step 1] Processing image ${idx + 1}/${files.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
+            const compressed = await compressImageIfNeeded(file, 4 * 1024 * 1024) // 4MB max for safety
+            console.log(`[Step 1] Image ${idx + 1} ready: ${compressed.name} (${(compressed.size / 1024 / 1024).toFixed(2)}MB)`)
+            return compressed
           } catch (error) {
             console.error(`❌ [Step 1] Failed to compress ${file.name}:`, error)
-            return file // Use original if compression fails
+            alert(`Aviso: Não foi possível comprimir ${file.name}. A imagem pode ser muito grande para análise.`)
+            return file
           }
         })
       )
+      console.log(`✅ [Step 1] All ${compressedFiles.length} images prepared for analysis`)
 
       compressedFiles.forEach((file, index) => {
         formData.append(`photo_${index}`, file)
