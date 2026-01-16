@@ -197,6 +197,7 @@ export async function loadQualityFromIndexedDB(
 
 /**
  * Save prompt to IndexedDB
+ * If prompt is empty, deletes it from IndexedDB instead
  */
 export async function savePromptToIndexedDB(key: string, prompt: string): Promise<void> {
   try {
@@ -205,7 +206,8 @@ export async function savePromptToIndexedDB(key: string, prompt: string): Promis
     const store = transaction.objectStore(STORES.PROMPTS)
 
     await new Promise<void>((resolve, reject) => {
-      const request = store.put(prompt, key)
+      // If prompt is empty, delete it instead of saving
+      const request = prompt.trim() ? store.put(prompt, key) : store.delete(key)
       request.onsuccess = () => resolve()
       request.onerror = () => reject(request.error)
     })

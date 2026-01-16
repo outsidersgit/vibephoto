@@ -358,9 +358,8 @@ export function VideoGenerationInterface({
   // Save prompt on change (debounced)
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (formData.prompt) {
-        savePromptToIndexedDB('video_prompt', formData.prompt)
-      }
+      // Always save (or delete if empty)
+      savePromptToIndexedDB('video_prompt', formData.prompt)
     }, 1000) // Save 1 second after user stops typing
 
     return () => clearTimeout(timer)

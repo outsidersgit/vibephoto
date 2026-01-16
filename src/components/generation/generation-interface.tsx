@@ -123,9 +123,8 @@ export function GenerationInterface({
   // Save prompt on change (debounced)
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (prompt) {
-        savePromptToIndexedDB('generation_prompt', prompt)
-      }
+      // Always save (or delete if empty)
+      savePromptToIndexedDB('generation_prompt', prompt)
     }, 1000) // Save 1 second after user stops typing
 
     return () => clearTimeout(timer)
