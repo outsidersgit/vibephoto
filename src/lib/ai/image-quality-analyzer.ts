@@ -24,17 +24,26 @@ interface OpenAIVisionResponse {
 }
 
 export class ImageQualityAnalyzer {
-  private apiKey: string
-  private model: string
-  private endpoint: string
+  private _apiKey: string
+  private _model: string
+  private _endpoint: string
+  private isConfigured: boolean = false
 
   constructor() {
-    if (!AI_CONFIG.openai.apiKey) {
+    this._apiKey = AI_CONFIG.openai.apiKey || ''
+    this._model = AI_CONFIG.openai.model || 'gpt-4o'
+    this._endpoint = AI_CONFIG.openai.endpoint || 'https://api.openai.com/v1/chat/completions'
+    this.isConfigured = !!this._apiKey
+
+    if (!this.isConfigured && typeof window === 'undefined') {
+      console.warn('⚠️ [ImageQualityAnalyzer] OPENAI_API_KEY not configured. Quality analysis will be disabled.')
+    }
+  }
+
+  private checkConfiguration() {
+    if (!this.isConfigured) {
       throw new Error('OPENAI_API_KEY not configured')
     }
-    this.apiKey = AI_CONFIG.openai.apiKey
-    this.model = AI_CONFIG.openai.model
-    this.endpoint = AI_CONFIG.openai.endpoint
   }
 
   /**
@@ -48,20 +57,21 @@ export class ImageQualityAnalyzer {
     const startTime = Date.now()
 
     try {
+      this.checkConfiguration()
       console.log(`🔍 Analyzing with OpenAI GPT-4o: ${filename} (${options.photoType})`)
 
       // Build the analysis prompt
       const prompt = this.buildAnalysisPrompt(options)
 
       // Call OpenAI API with base64 image
-      const response = await fetch(this.endpoint, {
+      const response = await fetch(this._endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          'Authorization': `Bearer ${this._apiKey}`
         },
         body: JSON.stringify({
-          model: this.model,
+          model: this._model,
           messages: [
             {
               role: 'user',

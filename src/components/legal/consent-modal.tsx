@@ -7,18 +7,12 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { X, Shield, Cookie, BarChart3, Settings, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
+import { ConsentPreferences } from '@/hooks/use-consent'
 
 interface ConsentModalProps {
   isOpen: boolean
   onClose: () => void
   onConsentGiven: (consents: ConsentPreferences) => void
-}
-
-interface ConsentPreferences {
-  essential: boolean
-  functional: boolean
-  analytics: boolean
-  marketing: boolean
 }
 
 const defaultPreferences: ConsentPreferences = {

@@ -20,13 +20,6 @@ const nextConfig = {
       },
     ]
   },
-  // 🔧 Aumentar limite de payload para APIs (50MB para uploads)
-  api: {
-    bodyParser: {
-      sizeLimit: '50mb',
-    },
-    responseLimit: false,
-  },
   turbopack: {
     rules: {
       '*.svg': {
@@ -79,9 +72,9 @@ const nextConfig = {
     // já estava certo — mantém
     ignoreDuringBuilds: true,
   },
+  // 👇 desativa o sistema de rotas tipadas (origem do bug no Next 15)
+  typedRoutes: false,
   experimental: {
-    // 👇 desativa o sistema de rotas tipadas (origem do bug no Next 15)
-    typedRoutes: false,
     // Aumentar limite de body para App Router (suporta múltiplas imagens em base64)
     serverActions: {
       bodySizeLimit: '100mb',
