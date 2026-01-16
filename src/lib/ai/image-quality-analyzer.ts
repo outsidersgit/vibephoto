@@ -223,14 +223,12 @@ IMPORTANTE: Seja CONSISTENTE e OBJETIVO. A mesma foto deve SEMPRE receber a mesm
 ✅ CRITÉRIOS IDEAIS (se a foto tiver isso, está ótima):
 - Ombros para cima (close de rosto) OU cintura para cima OU corpo inteiro
 - Olhando para a câmera (ou levemente de lado)
-- Fotos de dias diferentes
-- Mudança de fundos, iluminação e roupas
 - Pessoa sozinha na foto
 
 ❌ PROBLEMAS CRÍTICOS - Marque se encontrar:
 ${subjectType === 'pessoa' ? `
 1. Imagens CLARAMENTE geradas por IA (rostos artificiais perfeitos demais, arte digital)
-2. QUALQUER pessoa extra visível na foto - mesmo que desfocada, ao fundo, ou parcial
+2. QUALQUER pessoa extra visível enquadrada na foto - exceto quando a outra pessoa estiver desfocada, de costas, ao fundo, ou aparecendo parcialmente na foto
 3. Caretas EXTREMAS (língua pra fora, olhos arregalados, boca muito aberta)
 4. Filtros PESADOS tipo Snapchat (orelhas de gato, distorção facial, efeitos digitais)
 5. Iluminação EXTREMAMENTE ruim (pessoa quase invisível, totalmente escura)
@@ -244,7 +242,7 @@ ${subjectType === 'pessoa' ? `
     - Fotos normais levemente de lado/cima/baixo são OK ✅
 11. Rosto cortado (falta testa, queixo, orelhas importantes)
 12. Qualidade MUITO baixa (pixelização grave, < 100px de rosto)
-13. Mão/máscara cobrindo MAIOR PARTE do rosto
+13. Mão ou objeto cobrindo a MAIOR PARTE do rosto. Permitir se a mão ou objeto cobrirem apenas um pouco do rosto.
 ` : `
 1. Múltiplos animais na mesma foto
 2. Pessoas muito visíveis junto com o animal
@@ -268,7 +266,7 @@ ${subjectType === 'pessoa' ? `
 ❌ SEMPRE marque como problema (sem exceção):
 - Óculos escuros - QUALQUER tipo, mesmo leves
 - Boné/chapéu/gorro - QUALQUER tipo, mesmo pequeno
-- Pessoas extras - QUALQUER pessoa visível, mesmo ao fundo
+- Pessoas extras - Pessoas claramente enquadradas na foto, ou qualquer pessoa com os dois olhos olhando para a foto.
 - Reflita bem antes de aprovar se houver dúvida sobre estes 3 itens
 
 REGRA DE OURO: Na DÚVIDA, aprove a foto. Só reprove se o problema for MUITO claro e GRAVE.
