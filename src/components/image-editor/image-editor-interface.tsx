@@ -31,6 +31,7 @@ import { notifyError } from '@/lib/errors'
 import { InsufficientCreditsBanner } from '@/components/ui/insufficient-credits-banner'
 import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
 import { saveFilesToIndexedDB, loadFilesFromIndexedDB, deleteFilesFromIndexedDB, savePromptToIndexedDB, loadPromptFromIndexedDB, finalizeDraft, touchDraft } from '@/lib/utils/indexed-db-persistence'
+import { EDITOR_PRESETS, FREE_MODE_PRESET, type EditorPreset } from '@/lib/editor-presets'
 
 // Custos dinâmicos baseados na resolução
 const getEditorCost = (resolution: EditorResolution) => getImageEditCost(1, resolution)
@@ -76,6 +77,7 @@ export function ImageEditorInterface({
   const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
   const [currentEditId, setCurrentEditId] = useState<string | null>(null)
   const [showCreditPurchase, setShowCreditPurchase] = useState(false)
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null)
   const router = useRouter()
   const fileInputId = useId()
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -1160,6 +1162,25 @@ export function ImageEditorInterface({
 
   const canProcess = (prompt.trim() || images.length > 0) && !loading
 
+  // Função para selecionar preset
+  const handlePresetSelect = (presetId: string) => {
+    if (presetId === 'free') {
+      // Modo livre: limpa preset e prompt
+      setSelectedPreset(null)
+      setPrompt('')
+    } else {
+      // Seleciona preset e preenche prompt
+      const preset = EDITOR_PRESETS.find(p => p.id === presetId)
+      if (preset) {
+        setSelectedPreset(presetId)
+        setPrompt(preset.promptBase)
+      }
+    }
+  }
+
+  // Get current preset data
+  const currentPreset = selectedPreset ? EDITOR_PRESETS.find(p => p.id === selectedPreset) : null
+
   // Mobile Layout - ChatGPT style
   if (isMobile) {
     return (
@@ -1182,10 +1203,68 @@ export function ImageEditorInterface({
                       <span className="text-white mr-2">•</span>
                       <span>Você também pode criar imagens do zero! Basta digitar sua ideia no prompt e gerar, sem precisar anexar nenhuma imagem</span>
                     </li>
+                    <li className="flex items-start">
+                      <span className="text-white mr-2">•</span>
+                      <span><strong>Use os presets:</strong> clique em um preset abaixo para preencher automaticamente o prompt com exemplos testados. Ideal para quem não sabe o que escrever!</span>
+                    </li>
                   </ul>
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Mobile: Presets Section */}
+          <div className="mb-4">
+            <div className="mb-2">
+              <h4 className="text-sm font-semibold text-gray-700">Presets (atalhos)</h4>
+              <p className="text-xs text-gray-500 mt-1">Role horizontal e clique para preencher</p>
+            </div>
+
+            {/* Presets Horizontal Scroll */}
+            <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4">
+              {EDITOR_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => handlePresetSelect(preset.id)}
+                  className={`flex-shrink-0 w-24 p-2 rounded-lg border-2 transition-all ${
+                    selectedPreset === preset.id
+                      ? 'border-[#667EEA] bg-[#667EEA]/10 shadow-md'
+                      : 'border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className="text-xl mb-1">{preset.icon}</div>
+                  <div className="text-xs font-semibold text-gray-900 leading-tight">{preset.title}</div>
+                </button>
+              ))}
+
+              {/* Modo Livre Button */}
+              <button
+                onClick={() => handlePresetSelect('free')}
+                className={`flex-shrink-0 w-24 p-2 rounded-lg border-2 transition-all ${
+                  selectedPreset === null
+                    ? 'border-gray-500 bg-gray-100 shadow-md'
+                    : 'border-gray-300 bg-white'
+                }`}
+              >
+                <div className="text-xl mb-1">{FREE_MODE_PRESET.icon}</div>
+                <div className="text-xs font-semibold text-gray-900 leading-tight">{FREE_MODE_PRESET.title}</div>
+              </button>
+            </div>
+
+            {/* Preset Info - Mobile */}
+            {currentPreset && (
+              <Card className="border-blue-200 bg-blue-50 mt-3">
+                <CardContent className="p-3">
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-blue-900">{currentPreset.subtitle}</p>
+                    <div className="flex items-center gap-2 text-xs text-blue-700">
+                      <ImageIcon className="w-3 h-3" />
+                      <span><strong>Anexos:</strong> {currentPreset.expectedAttachments}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Mobile: Single prompt box centered */}
@@ -1444,10 +1523,73 @@ export function ImageEditorInterface({
                     <span className="text-white mr-2">•</span>
                     <span>Você também pode criar imagens do zero! Basta digitar sua ideia no prompt e gerar, sem precisar anexar nenhuma imagem</span>
                   </li>
+                  <li className="flex items-start">
+                    <span className="text-white mr-2">•</span>
+                    <span><strong>Use os presets:</strong> clique em um preset abaixo para preencher automaticamente o prompt com exemplos testados. Ideal para quem não sabe o que escrever!</span>
+                  </li>
                 </ul>
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Presets Section */}
+        <div className="mb-6">
+          <div className="mb-3">
+            <h4 className="text-sm font-semibold text-gray-700">Presets (atalhos rápidos)</h4>
+            <p className="text-xs text-gray-500 mt-1">Clique em um preset para preencher o prompt automaticamente</p>
+          </div>
+
+          {/* Presets Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
+            {EDITOR_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => handlePresetSelect(preset.id)}
+                className={`p-3 rounded-lg border-2 transition-all text-left ${
+                  selectedPreset === preset.id
+                    ? 'border-[#667EEA] bg-[#667EEA]/10 shadow-md'
+                    : 'border-gray-300 bg-white hover:border-[#667EEA]/50 hover:bg-gray-50'
+                }`}
+              >
+                <div className="text-2xl mb-1">{preset.icon}</div>
+                <div className="text-xs font-semibold text-gray-900">{preset.title}</div>
+              </button>
+            ))}
+
+            {/* Modo Livre Button */}
+            <button
+              onClick={() => handlePresetSelect('free')}
+              className={`p-3 rounded-lg border-2 transition-all text-left ${
+                selectedPreset === null
+                  ? 'border-gray-500 bg-gray-100 shadow-md'
+                  : 'border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50'
+              }`}
+            >
+              <div className="text-2xl mb-1">{FREE_MODE_PRESET.icon}</div>
+              <div className="text-xs font-semibold text-gray-900">{FREE_MODE_PRESET.title}</div>
+            </button>
+          </div>
+
+          {/* Preset Info - Show subtitle and expected attachments */}
+          {currentPreset && (
+            <Card className="border-blue-200 bg-blue-50">
+              <CardContent className="p-3">
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900">{currentPreset.subtitle}</p>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-blue-700">
+                    <ImageIcon className="w-4 h-4" />
+                    <span><strong>Anexos esperados:</strong> {currentPreset.expectedAttachments}</span>
+                  </div>
+                  <div className="text-xs text-blue-600 italic">
+                    💡 Dica: Você pode editar o prompt manualmente após selecionar o preset
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* ChatGPT Style - Centered Layout */}
