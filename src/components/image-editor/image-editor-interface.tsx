@@ -1241,15 +1241,15 @@ export function ImageEditorInterface({
             <div className="flex items-center gap-2 pt-3 border-t border-gray-200 mt-2">
               <button
                 onClick={() => handlePresetSelect('free')}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
                   selectedPreset === null
-                    ? 'bg-gray-700 text-white'
-                    : 'text-gray-500 underline decoration-dotted'
+                    ? 'bg-gradient-to-b from-gray-700 to-gray-800 text-white shadow-lg shadow-gray-400/50'
+                    : 'bg-white text-gray-700 border border-gray-200 shadow-sm'
                 }`}
               >
                 {FREE_MODE_PRESET.title}
               </button>
-              <span className="text-xs text-gray-400">ou escreva seu prompt</span>
+              <span className="text-xs text-gray-500">ou escreva seu prompt</span>
             </div>
 
             {/* Helper Text - Mobile destacado */}
@@ -1561,15 +1561,15 @@ export function ImageEditorInterface({
           <div className="flex items-center gap-3 pt-3 border-t border-gray-200">
             <button
               onClick={() => handlePresetSelect('free')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
                 selectedPreset === null
-                  ? 'bg-gray-700 text-white'
-                  : 'text-gray-500 hover:text-gray-700 underline decoration-dotted'
+                  ? 'bg-gradient-to-b from-gray-700 to-gray-800 text-white shadow-lg shadow-gray-400/50 scale-105'
+                  : 'bg-white text-gray-700 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 hover:-translate-y-0.5'
               }`}
             >
               {FREE_MODE_PRESET.title}
             </button>
-            <span className="text-xs text-gray-400">ou escreva seu próprio prompt</span>
+            <span className="text-xs text-gray-500">ou escreva seu próprio prompt</span>
           </div>
 
           {/* Helper Text - Mais destacado */}
