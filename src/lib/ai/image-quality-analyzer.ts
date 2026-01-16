@@ -214,68 +214,88 @@ export class ImageQualityAnalyzer {
     const subjectType = modelClass === 'ANIMAL' ? 'animal' : 'pessoa'
     const photoDescription = this.getPhotoTypeDescription(photoType)
 
-    return `Você é um especialista em análise de fotos para fine-tuning de modelos de IA (FLUX, Stable Diffusion).
+    return `## Análise de Foto para Treinamento de IA
 
-Analise esta foto de ${photoDescription} para treinar um modelo de IA de ${subjectType}.
+**Foto:** ${photoDescription}
+**Tipo de sujeito:** ${subjectType}
 
-IMPORTANTE: Seja CONSISTENTE e OBJETIVO. A mesma foto deve SEMPRE receber a mesma avaliação, independente da etapa.
+---
 
-✅ CRITÉRIOS IDEAIS (se a foto tiver isso, está ótima):
-- Ombros para cima (close de rosto) OU cintura para cima OU corpo inteiro
+### 🎯 Objetivo
+Avaliar se a foto deve ser **APROVADA** ou **REPROVADA** para treino de um modelo de IA.
+
+> **REGRA DE OURO:**
+> Na dúvida, **APROVE**.
+> Só **REPROVE** se houver um problema **MUITO claro e GRAVE** que impeça aprender o rosto/identidade.
+
+> **Consistência é obrigatória:**
+> A mesma foto deve **sempre** receber a **mesma avaliação**.
+
+---
+
+## ✅ CRITÉRIOS IDEAIS (bônus – não obrigatórios)
+- Ombros para cima (close de rosto) **OU** cintura para cima **OU** corpo inteiro
 - Olhando para a câmera (ou levemente de lado)
-- Pessoa sozinha na foto
+- Pessoa/animal é o foco principal da foto
 
-❌ PROBLEMAS CRÍTICOS - Marque se encontrar:
-${subjectType === 'pessoa' ? `
-1. Imagens CLARAMENTE geradas por IA (rostos artificiais perfeitos demais, arte digital)
-2. QUALQUER pessoa extra que esteja claramente visível ou com o rosto enquadrado na foto. Permitir quando a outra pessoa estiver desfocada, de costas, ao fundo, ou aparecendo parcialmente na foto
-3. Caretas EXTREMAS (língua pra fora, olhos arregalados, boca muito aberta)
-4. Filtros PESADOS tipo Snapchat (orelhas de gato, distorção facial, efeitos digitais)
-5. Iluminação EXTREMAMENTE ruim (pessoa quase invisível, totalmente escura)
-6. Sombras FORTES cobrindo parte significativa do rosto (metade escura, diagonal de luz/sombra marcante)
-7. MUITO desfocada (impossível distinguir características faciais)
-8. QUALQUER chapéu, boné, gorro, ou qualquer coisa na cabeça - mesmo que pequeno ou parcial
-9. QUALQUER óculos escuros - mesmo que leves, claros, ou parcialmente transparentes (óculos de GRAU transparentes são OK)
-10. Ângulos EXTREMOS - APENAS se:
-    - Câmera MUITO de baixo olhando pra cima (ângulo > 45°)
-    - Câmera MUITO de cima olhando pra baixo (ângulo > 45°)
-    - Fotos normais levemente de lado/cima/baixo são OK ✅
-11. Rosto cortado (falta testa, queixo, orelhas importantes)
-12. Qualidade MUITO baixa (pixelização grave, < 100px de rosto)
-13. Mão ou objeto cobrindo a MAIOR PARTE do rosto. Permitir se a mão ou objeto cobrirem apenas um pouco do rosto.
-` : `
-1. Múltiplos animais na mesma foto
-2. Pessoas muito visíveis junto com o animal
-3. Animal com fantasias ou roupas exageradas
-4. Animal dormindo ou de olhos fechados
-5. Iluminação muito ruim
-6. Foto muito desfocada
-`}
+---
 
-✅ ATENÇÃO - Estas SÃO ACEITÁVEIS (NÃO marque como problema):
-- Óculos de GRAU transparentes (não escuros) ✅
-- Iluminação natural mesmo que não perfeita ✅
-- Leve desfoque ou granulação ✅
-- Expressões normais: sorriso, sério, pensativo, rindo ✅
-- Selfies normais ✅
-- Fotos levemente de lado (perfil 3/4) ✅
-- Fotos levemente de cima ou de baixo (ângulo < 30°) ✅
-- Fundos urbanos, natureza, interiores ✅
-- Filtros suaves de cor (não distorcem) ✅
+## 🔴 REPROVAR — **APENAS se for MUITO claro**
 
-❌ SEMPRE marque como problema (sem exceção):
-- Óculos escuros - QUALQUER tipo, mesmo leves
-- Boné/chapéu/gorro - QUALQUER tipo, mesmo pequeno
-- Reflita bem antes de aprovar se houver dúvida sobre estes 2 itens
+${subjectType === 'pessoa' ? `### 🔹 Se o sujeito for **PESSOA**
+Reprove **somente** se ocorrer **pelo menos 1 item abaixo**, de forma clara:
 
-REGRA DE OURO: Na DÚVIDA, aprove a foto. Só reprove se o problema for MUITO claro e GRAVE.
+- Imagem **claramente gerada por IA** (arte digital, pele irreal, inconsistências evidentes).
+- **Outra pessoa** com o **rosto claramente visível e nítido**, ocupando parte relevante da imagem.
+  - ✅ **Permita** se a outra pessoa estiver desfocada, ao fundo, de costas, cortada ou irreconhecível.
+- **Filtros pesados** (Snapchat/AR): distorções, embelezamento extremo.
+- **Careta extrema** que deforma o rosto (língua para fora, olhos arregalados, boca exageradamente aberta).
+- **Desfoque severo**: não dá para distinguir olhos, nariz e boca.
+- **Qualidade muito baixa**: pixelização grave **OU** rosto muito pequeno (< ~80–100px de altura).
+- **Corte crítico do rosto**: falta testa **OU** falta queixo **OU** ambos os olhos não aparecem.
+- **Oclusão grande**: ~40% ou mais do rosto coberto **OU** olhos/nariz encobertos.
+- **Iluminação extrema**: rosto quase invisível ou estourado a ponto de apagar detalhes.
+- **ÓCULOS ESCUROS**: qualquer tipo que esconda os olhos.
+- **BONÉ / CHAPÉU / GORRO**: qualquer tipo que esconda a testa/linha do cabelo de forma relevante.` : `### 🔹 Se o sujeito for **ANIMAL**
+Reprove **somente** se ocorrer **pelo menos 1 item abaixo**, de forma clara:
+
+- **Múltiplos animais** claramente visíveis como sujeitos principais.
+- **Pessoas muito visíveis e nítidas** competindo com o animal.
+- **Fantasias/roupas exageradas** que alterem a aparência real do animal.
+- Animal **dormindo/olhos fechados**, sem visual claro do rosto.
+- **Desfoque severo** ou **iluminação extrema** que impeça ver os traços.`}
+
+---
+
+## 🟡 ALERTAS (NÃO reprovar — apenas registrar, se quiser)
+Marque como **alerta**, mas **APROVE**, quando houver:
+
+- Sombra parcial no rosto, **desde que** olhos/nariz/boca sejam reconhecíveis.
+- Luz dura, contraluz moderado, iluminação "imperfeita".
+- Leve desfoque, granulação ou compressão.
+- Rosto levemente de lado (perfil 3/4), selfie normal.
+- Objeto/mão cobrindo pouco do rosto (não esconder os dois olhos).
+- Pedaço de outra pessoa aparecendo **sem** rosto reconhecível.
+- Pessoa ao fundo **sem** competir com o sujeito.
+
+---
+
+## ✅ ACEITÁVEL — exemplos explícitos
+- Sombras fortes no rosto **com traços visíveis** ✅
+- Parte de outra pessoa **sem rosto reconhecível** ✅
+- Praia, sol forte, sombra de árvore/coqueiro ✅
+- Criança/bebê parcialmente aparecendo **sem competir** ✅
+- Expressões normais: sorrindo, sério, rindo ✅
+- Óculos de grau **transparentes** ✅
+
+---
 
 Responda APENAS em JSON válido (sem markdown):
 {
-  "hasIssues": <true APENAS se houver problema GRAVE E ÓBVIO, false se OK ou duvidoso>,
+  "hasIssues": <true APENAS se houver problema GRAVE E ÓBVIO que impeça o treino, false se OK ou duvidoso>,
   "criticalIssues": [<array com códigos: "ai_generated", "multiple_people", "making_faces", "heavy_filters", "low_light", "blurry", "hat_or_cap", "sunglasses", "extreme_angle", "face_cut_off", "low_quality", "face_covered">],
   "minorIssues": [],
-  "issuesSummary": "<se hasIssues=true, descreva APENAS os problemas graves. Ex: 'Óculos escuros grossos'. Se false, omita>"
+  "issuesSummary": "<se hasIssues=true, descreva APENAS os problemas graves de forma objetiva. Ex: 'Óculos escuros'. Se false, omita>"
 }`
   }
 
