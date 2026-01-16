@@ -1,9 +1,9 @@
 'use client'
 
-import { MessageCircle } from 'lucide-react'
 import { getWhatsAppLink, WHATSAPP_CONFIG } from '@/lib/config/whatsapp'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { WhatsAppIcon } from '@/components/ui/social-icons'
 
 interface WhatsAppButtonProps {
   /**
@@ -61,7 +61,7 @@ export function WhatsAppButton({
 
   const content = (
     <>
-      <MessageCircle className={cn('h-5 w-5', iconOnly && size === 'icon' && 'h-6 w-6')} />
+      <WhatsAppIcon size={iconOnly && size === 'icon' ? 24 : 20} />
       {!iconOnly && <span>{label}</span>}
     </>
   )
