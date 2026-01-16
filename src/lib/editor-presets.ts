@@ -33,13 +33,13 @@ export const EDITOR_PRESETS: EditorPreset[] = [
     id: 'banner',
     title: 'Criar banner',
     promptBase: 'Crie um banner publicitário profissional para mídia paga (Facebook Ads, Google Display, Instagram). Use a imagem anexada como elemento visual principal ou background. Estilo moderno, clean e de alta conversão. Adicione hierarquia visual clara. Inclua os seguintes textos (EDITE ENTRE COLCHETES): Título principal (headline): [ESCREVA SEU TÍTULO AQUI - máx 5 palavras]. Subtítulo (subheadline): [ESCREVA SEU SUBTÍTULO AQUI - máx 10 palavras]. Call-to-action (CTA): [ESCREVA SEU CTA AQUI - ex: "Compre Agora", "Saiba Mais"]. Layout equilibrado e respirado, tipografia legível (sans-serif bold para título), contraste alto para leitura fácil, espaçamento generoso, sem poluição visual. Composição que guia o olhar naturalmente do título → subtítulo → CTA. Resultado: criativo pronto para veicular.',
-    instruction: '⚠️ Edite o prompt: substitua os textos entre [COLCHETES] pelo seu conteúdo'
+    instruction: 'Anexe a imagem base • ⚠️ Edite o prompt: substitua os textos entre [COLCHETES]'
   },
   {
     id: 'interior',
     title: 'Decorar ambiente',
     promptBase: 'Faça uma simulação fotorrealista de design de interiores. Use a imagem do ambiente atual como base estrutural. EDITE O ESTILO: aplique o estilo decorativo [ESCREVA O ESTILO AQUI - ex: "minimalista escandinavo", "industrial moderno", "boho chic", "clássico elegante"]. IMPORTANTE: mantenha 100% da arquitetura original (paredes, janelas, portas, pé-direito, piso). Substitua ou adicione mobiliário condizente com o estilo escolhido (sofás, mesas, cadeiras, estantes, luminárias). Adicione elementos decorativos coerentes (quadros, plantas, tapetes, almofadas, cortinas). Preserve perspectiva e proporções realistas. Iluminação natural e artificial verossímil. Paleta de cores harmoniosa com o estilo. Resultado: render fotográfico profissional como se fosse um projeto real de arquitetura.',
-    instruction: '⚠️ Edite o prompt: substitua [ESCREVA O ESTILO AQUI] pelo estilo de decoração desejado'
+    instruction: 'Anexe a foto do ambiente • ⚠️ Edite o prompt: substitua [ESCREVA O ESTILO AQUI]'
   }
 ]
 

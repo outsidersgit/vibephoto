@@ -1205,7 +1205,7 @@ export function ImageEditorInterface({
                     </li>
                     <li className="flex items-start">
                       <span className="text-white mr-2">•</span>
-                      <span><strong>Use os atalhos:</strong> clique em um atalho abaixo para preencher o prompt automaticamente. Ideal para quem não sabe o que escrever!</span>
+                      <span><strong>Use os atalhos:</strong> templates prontos para melhorar fotos, criar banners, experimentar roupas e muito mais. Clique e veja o poder da ferramenta!</span>
                     </li>
                   </ul>
                 </div>
@@ -1520,7 +1520,7 @@ export function ImageEditorInterface({
                   </li>
                   <li className="flex items-start">
                     <span className="text-white mr-2">•</span>
-                    <span><strong>Use os atalhos:</strong> clique em um atalho abaixo para preencher o prompt automaticamente. Ideal para quem não sabe o que escrever!</span>
+                    <span><strong>Use os atalhos:</strong> templates prontos para melhorar fotos, criar banners, experimentar roupas e muito mais. Clique e veja o poder da ferramenta!</span>
                   </li>
                 </ul>
               </div>
