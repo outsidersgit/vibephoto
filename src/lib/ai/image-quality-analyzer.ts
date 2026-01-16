@@ -228,7 +228,7 @@ IMPORTANTE: Seja CONSISTENTE e OBJETIVO. A mesma foto deve SEMPRE receber a mesm
 ❌ PROBLEMAS CRÍTICOS - Marque se encontrar:
 ${subjectType === 'pessoa' ? `
 1. Imagens CLARAMENTE geradas por IA (rostos artificiais perfeitos demais, arte digital)
-2. QUALQUER pessoa extra visível enquadrada na foto - exceto quando a outra pessoa estiver desfocada, de costas, ao fundo, ou aparecendo parcialmente na foto
+2. QUALQUER pessoa extra que esteja claramente visível ou com o rosto enquadrado na foto. Permitir quando a outra pessoa estiver desfocada, de costas, ao fundo, ou aparecendo parcialmente na foto
 3. Caretas EXTREMAS (língua pra fora, olhos arregalados, boca muito aberta)
 4. Filtros PESADOS tipo Snapchat (orelhas de gato, distorção facial, efeitos digitais)
 5. Iluminação EXTREMAMENTE ruim (pessoa quase invisível, totalmente escura)
@@ -266,8 +266,7 @@ ${subjectType === 'pessoa' ? `
 ❌ SEMPRE marque como problema (sem exceção):
 - Óculos escuros - QUALQUER tipo, mesmo leves
 - Boné/chapéu/gorro - QUALQUER tipo, mesmo pequeno
-- Pessoas extras - Pessoas claramente enquadradas na foto, ou qualquer pessoa com os dois olhos olhando para a foto.
-- Reflita bem antes de aprovar se houver dúvida sobre estes 3 itens
+- Reflita bem antes de aprovar se houver dúvida sobre estes 2 itens
 
 REGRA DE OURO: Na DÚVIDA, aprove a foto. Só reprove se o problema for MUITO claro e GRAVE.
 
