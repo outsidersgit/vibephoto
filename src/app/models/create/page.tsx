@@ -50,7 +50,7 @@ export default function CreateModelPage() {
 
   const [modelData, setModelData] = useState({
     name: '',
-    class: 'MAN' as 'MAN' | 'WOMAN' | 'BOY' | 'GIRL' | 'ANIMAL',
+    class: 'WOMAN' as 'MAN' | 'WOMAN' | 'BOY' | 'GIRL' | 'ANIMAL',
     facePhotos: [] as File[],
     halfBodyPhotos: [] as File[],
     fullBodyPhotos: [] as File[],

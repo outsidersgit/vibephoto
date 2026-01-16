@@ -537,9 +537,9 @@ export function GenerationInterface({
   }, [generationPolling.data, currentGeneration, handleGenerationPreview, addToast, clearGenerationLock])
   
   const [settings, setSettings] = useState({
-    aspectRatio: '1:1',
-    resolution: '1024x1024',
-    variations: 1,
+    aspectRatio: '3:4',
+    resolution: '1024x1365',
+    variations: 2,
     strength: 0.8,
     seed: undefined as number | undefined,
     style: 'photographic',

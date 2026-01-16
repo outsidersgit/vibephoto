@@ -52,8 +52,8 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo, onA
   }, [isAnalyzing, onAnalyzingChange])
 
   const classOptions = [
-    { value: 'MAN', label: 'Homem', icon: User, description: 'Pessoa adulta do sexo masculino' },
     { value: 'WOMAN', label: 'Mulher', icon: User, description: 'Pessoa adulta do sexo feminino' },
+    { value: 'MAN', label: 'Homem', icon: User, description: 'Pessoa adulta do sexo masculino' },
     { value: 'BOY', label: 'Menino', icon: Users, description: 'Pessoa jovem do sexo masculino' },
     { value: 'GIRL', label: 'Menina', icon: Users, description: 'Pessoa jovem do sexo feminino' },
     { value: 'ANIMAL', label: 'Animal', icon: Heart, description: 'Pet ou animal de estimação' }
