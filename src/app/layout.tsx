@@ -6,8 +6,7 @@ import { ThemeProvider } from '@/components/providers/theme-provider'
 import { AutoStorageProvider } from '@/components/providers/auto-storage-provider'
 import { ErrorLoggerProvider } from '@/components/providers/error-logger-provider'
 import { DraftGCProvider } from '@/components/providers/draft-gc-provider'
-import { QueryProvider } from '@/providers/query-provider'
-import { Toaster } from '@/components/ui/toaster'
+import { QueryProvider } from '@/components/providers/query-provider'
 import { Toaster as CustomToaster } from '@/components/ui/toast'
 import { PremiumNavigation } from '@/components/ui/premium-navigation'
 import { Footer } from '@/components/layout/footer'
@@ -58,7 +57,6 @@ export default function RootLayout({
                       </main>
                       <Footer />
                     </div>
-                    <Toaster />
                     <CustomToaster />
                   </DraftGCProvider>
                 </AutoStorageProvider>

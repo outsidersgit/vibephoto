@@ -122,7 +122,7 @@ export const authOptions: NextAuthOptions = {
             id: user.id,
             email: user.email,
             name: user.name || undefined,
-            role: (user as any).role || 'user',
+            role: user.role || 'USER',
             plan: user.plan,
             creditsUsed: user.creditsUsed,
             creditsLimit: user.creditsLimit,
@@ -142,26 +142,19 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user, account, trigger, session }) {
+    async jwt({ token, user, account }) {
       if (user) {
-        // @ts-ignore
-        token.role = ((user as any).role || 'user').toUpperCase()
+        token.role = (user.role || 'user').toUpperCase()
         token.plan = user.plan // Pode ser null - não usar fallback
         token.creditsUsed = user.creditsUsed || 0
         token.creditsLimit = user.creditsLimit ?? 0 // Usar 0 se null/undefined, mas manter 0 se for 0
         // Load Asaas billing fields from user
-        // @ts-ignore dynamic fields on token
-        token.asaasCustomerId = (user as any).asaasCustomerId || null
-        // @ts-ignore
-        token.subscriptionId = (user as any).subscriptionId || null
-        // @ts-ignore
-        token.subscriptionStatus = (user as any).subscriptionStatus || (account?.provider !== 'credentials' ? null : undefined)
-        // @ts-ignore - Load subscriptionEndsAt for CANCELLED subscriptions
-        token.subscriptionEndsAt = (user as any).subscriptionEndsAt ? (user as any).subscriptionEndsAt.toISOString() : null
-        // @ts-ignore - Load subscription state from user
-        token.hasActiveSubscription = (user as any).hasActiveSubscription || false
-        // @ts-ignore - Load development mode from user
-        token.isInDevelopmentMode = (user as any).isInDevelopmentMode || false
+        token.asaasCustomerId = user.asaasCustomerId || null
+        token.subscriptionId = user.subscriptionId || null
+        token.subscriptionStatus = user.subscriptionStatus || (account?.provider !== 'credentials' ? null : undefined)
+        token.subscriptionEndsAt = user.subscriptionEndsAt ? user.subscriptionEndsAt.toISOString() : null
+        token.hasActiveSubscription = user.hasActiveSubscription || false
+        token.isInDevelopmentMode = user.isInDevelopmentMode || false
 
         // Debug log
         console.log('🔐 JWT Callback - User Login:', {
@@ -197,18 +190,13 @@ export const authOptions: NextAuthOptions = {
 
             if (updatedUser) {
               token.name = updatedUser.name
-              // @ts-ignore
               token.role = (updatedUser.role || 'user').toUpperCase()
               token.plan = updatedUser.plan
               token.creditsUsed = updatedUser.creditsUsed
               token.creditsLimit = updatedUser.creditsLimit
-              // @ts-ignore
               token.asaasCustomerId = updatedUser.asaasCustomerId || null
-              // @ts-ignore
               token.subscriptionId = updatedUser.subscriptionId || null
-              // @ts-ignore
               token.subscriptionStatus = updatedUser.subscriptionStatus || null
-              // @ts-ignore
               token.subscriptionEndsAt = updatedUser.subscriptionEndsAt ? updatedUser.subscriptionEndsAt.toISOString() : null
             }
           }
@@ -222,27 +210,22 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.sub as string
-        // @ts-ignore
-        session.user.role = ((token as any).role || 'USER') as any
-        session.user.plan = token.plan as Plan
-        session.user.creditsUsed = token.creditsUsed as number
-        session.user.creditsLimit = token.creditsLimit as number
-        // @ts-ignore surfaced billing fields from Asaas
-        session.user.asaasCustomerId = (token as any).asaasCustomerId || null
-        // @ts-ignore
-        session.user.subscriptionId = (token as any).subscriptionId || null
-        // @ts-ignore
-        session.user.subscriptionStatus = (token as any).subscriptionStatus || null
-        // @ts-ignore
-        session.user.subscriptionEndsAt = (token as any).subscriptionEndsAt || null
-        // @ts-ignore enhanced subscription fields
-        session.user.hasActiveSubscription = (token as any).hasActiveSubscription || false
-        // @ts-ignore
-        session.user.isInDevelopmentMode = (token as any).isInDevelopmentMode || false
+        session.user.role = (token.role || 'USER')
+        session.user.plan = token.plan
+        session.user.creditsUsed = token.creditsUsed
+        session.user.creditsLimit = token.creditsLimit
+        // surfaced billing fields from Asaas
+        session.user.asaasCustomerId = token.asaasCustomerId || null
+        session.user.subscriptionId = token.subscriptionId || null
+        session.user.subscriptionStatus = token.subscriptionStatus || null
+        session.user.subscriptionEndsAt = token.subscriptionEndsAt || null
+        // enhanced subscription fields
+        session.user.hasActiveSubscription = token.hasActiveSubscription || false
+        session.user.isInDevelopmentMode = token.isInDevelopmentMode || false
 
         // Debug log
         console.log('📋 Session Callback:', {
-          role: (session.user as any).role,
+          role: session.user.role,
           plan: session.user.plan,
           subscriptionStatus: session.user.subscriptionStatus,
           hasActiveSubscription: session.user.hasActiveSubscription
@@ -251,7 +234,7 @@ export const authOptions: NextAuthOptions = {
       return session
     },
     async signIn({ user, account, profile }) {
-      if (account?.type === 'oauth' && account.provider && (profile as any)) {
+      if (account?.type === 'oauth' && account.provider && profile) {
         const profileData = profile as Record<string, any>
         const email = profileData.email || user.email
         if (!email) {
@@ -424,7 +407,7 @@ export async function requirePlan(requiredPlan: 'PREMIUM' | 'GOLD') {
 export async function requireAdmin() {
   const session = await requireAuth()
   
-  const role = String(((session.user as any)?.role) || '').toUpperCase()
+  const role = String(session.user.role || '').toUpperCase()
   
   if (role !== 'ADMIN') {
     redirect('/dashboard')
