@@ -1213,50 +1213,55 @@ export function ImageEditorInterface({
             </Card>
           </div>
 
-          {/* Mobile: Atalhos Section - Minimalista */}
+          {/* Mobile: Atalhos Section - Com profundidade */}
           <div className="mb-4">
             <div className="mb-2">
-              <h4 className="text-sm font-medium text-gray-700">Atalhos</h4>
-              <p className="text-xs text-gray-500">Escolha um atalho e gere mais rápido</p>
+              <h4 className="text-sm font-semibold text-gray-800">Atalhos</h4>
+              <p className="text-xs text-gray-600">Escolha um atalho e gere mais rápido</p>
             </div>
 
-            {/* Atalhos Horizontal Scroll - Minimalista */}
-            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            {/* Atalhos Horizontal Scroll - Com sombra */}
+            <div className="flex gap-2.5 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide">
               {EDITOR_PRESETS.map((preset) => (
                 <button
                   key={preset.id}
                   onClick={() => handlePresetSelect(preset.id)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
+                  className={`flex-shrink-0 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
                     selectedPreset === preset.id
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-700'
+                      ? 'bg-gradient-to-b from-gray-800 to-gray-900 text-white shadow-lg shadow-gray-400/50'
+                      : 'bg-white text-gray-700 border border-gray-200 shadow-sm'
                   }`}
                 >
                   {preset.title}
                 </button>
               ))}
+            </div>
 
-              {/* Modo Livre Button */}
+            {/* Modo Livre - Separado */}
+            <div className="flex items-center gap-2 pt-3 border-t border-gray-200 mt-2">
               <button
                 onClick={() => handlePresetSelect('free')}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                   selectedPreset === null
-                    ? 'bg-gray-900 text-white'
-                    : 'bg-gray-100 text-gray-700'
+                    ? 'bg-gray-700 text-white'
+                    : 'text-gray-500 underline decoration-dotted'
                 }`}
               >
                 {FREE_MODE_PRESET.title}
               </button>
+              <span className="text-xs text-gray-400">ou escreva seu prompt</span>
             </div>
 
-            {/* Helper Text - Mobile Minimalista */}
+            {/* Helper Text - Mobile destacado */}
             {currentPreset && (
-              <div className="text-xs text-gray-600 leading-relaxed mt-2 px-0.5">
-                <span className="font-medium">{currentPreset.instruction}</span>
+              <div className="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                <p className="text-sm font-semibold text-blue-900 mb-1">
+                  {currentPreset.instruction}
+                </p>
                 {(currentPreset.id === 'banner' || currentPreset.id === 'interior') && (
-                  <span className="block mt-1 text-gray-500 italic">
-                    Lembre-se de editar o prompt para personalizar
-                  </span>
+                  <p className="text-xs text-blue-700">
+                    💡 Edite o prompt para personalizar
+                  </p>
                 )}
               </div>
             )}
@@ -1528,50 +1533,55 @@ export function ImageEditorInterface({
           </Card>
         </div>
 
-        {/* Atalhos Section - Minimalista */}
+        {/* Atalhos Section - Com profundidade */}
         <div className="mb-6">
-          <div className="mb-2">
-            <h4 className="text-sm font-medium text-gray-700">Atalhos</h4>
-            <p className="text-xs text-gray-500">Escolha um atalho e gere mais rápido</p>
+          <div className="mb-3">
+            <h4 className="text-sm font-semibold text-gray-800">Atalhos</h4>
+            <p className="text-xs text-gray-600">Escolha um atalho e gere mais rápido</p>
           </div>
 
-          {/* Atalhos Grid - Minimalista */}
-          <div className="flex flex-wrap gap-2 mb-3">
+          {/* Atalhos Grid - Com sombra e profundidade */}
+          <div className="flex flex-wrap gap-2.5 mb-4">
             {EDITOR_PRESETS.map((preset) => (
               <button
                 key={preset.id}
                 onClick={() => handlePresetSelect(preset.id)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
                   selectedPreset === preset.id
-                    ? 'bg-gray-900 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-gradient-to-b from-gray-800 to-gray-900 text-white shadow-lg shadow-gray-400/50 scale-105'
+                    : 'bg-white text-gray-700 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 hover:-translate-y-0.5'
                 }`}
               >
                 {preset.title}
               </button>
             ))}
+          </div>
 
-            {/* Modo Livre Button */}
+          {/* Modo Livre - Separado */}
+          <div className="flex items-center gap-3 pt-3 border-t border-gray-200">
             <button
               onClick={() => handlePresetSelect('free')}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 selectedPreset === null
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-500 hover:text-gray-700 underline decoration-dotted'
               }`}
             >
               {FREE_MODE_PRESET.title}
             </button>
+            <span className="text-xs text-gray-400">ou escreva seu próprio prompt</span>
           </div>
 
-          {/* Helper Text - Minimalista */}
+          {/* Helper Text - Mais destacado */}
           {currentPreset && (
-            <div className="text-xs text-gray-600 leading-relaxed">
-              <span className="font-medium">{currentPreset.instruction}</span>
+            <div className="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+              <p className="text-sm font-semibold text-blue-900 mb-1">
+                {currentPreset.instruction}
+              </p>
               {(currentPreset.id === 'banner' || currentPreset.id === 'interior') && (
-                <span className="block mt-1 text-gray-500 italic">
-                  Lembre-se de editar o prompt para personalizar seu resultado
-                </span>
+                <p className="text-xs text-blue-700">
+                  💡 Lembre-se de editar o prompt para personalizar seu resultado
+                </p>
               )}
             </div>
           )}
