@@ -1205,7 +1205,7 @@ export function ImageEditorInterface({
                     </li>
                     <li className="flex items-start">
                       <span className="text-white mr-2">•</span>
-                      <span><strong>Use os presets:</strong> clique em um preset abaixo para preencher automaticamente o prompt com exemplos testados. Ideal para quem não sabe o que escrever!</span>
+                      <span><strong>Use os atalhos:</strong> clique em um atalho abaixo para preencher o prompt automaticamente. Ideal para quem não sabe o que escrever!</span>
                     </li>
                   </ul>
                 </div>
@@ -1213,57 +1213,52 @@ export function ImageEditorInterface({
             </Card>
           </div>
 
-          {/* Mobile: Presets Section */}
+          {/* Mobile: Atalhos Section - Minimalista */}
           <div className="mb-4">
             <div className="mb-2">
-              <h4 className="text-sm font-semibold text-gray-700">Presets (atalhos)</h4>
-              <p className="text-xs text-gray-500 mt-1">Role horizontal e clique para preencher</p>
+              <h4 className="text-sm font-medium text-gray-700">Atalhos</h4>
+              <p className="text-xs text-gray-500">Escolha um atalho e gere mais rápido</p>
             </div>
 
-            {/* Presets Horizontal Scroll */}
-            <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4">
+            {/* Atalhos Horizontal Scroll - Minimalista */}
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
               {EDITOR_PRESETS.map((preset) => (
                 <button
                   key={preset.id}
                   onClick={() => handlePresetSelect(preset.id)}
-                  className={`flex-shrink-0 w-24 p-2 rounded-lg border-2 transition-all ${
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
                     selectedPreset === preset.id
-                      ? 'border-[#667EEA] bg-[#667EEA]/10 shadow-md'
-                      : 'border-gray-300 bg-white'
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-gray-100 text-gray-700'
                   }`}
                 >
-                  <div className="text-xl mb-1">{preset.icon}</div>
-                  <div className="text-xs font-semibold text-gray-900 leading-tight">{preset.title}</div>
+                  {preset.title}
                 </button>
               ))}
 
               {/* Modo Livre Button */}
               <button
                 onClick={() => handlePresetSelect('free')}
-                className={`flex-shrink-0 w-24 p-2 rounded-lg border-2 transition-all ${
+                className={`flex-shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
                   selectedPreset === null
-                    ? 'border-gray-500 bg-gray-100 shadow-md'
-                    : 'border-gray-300 bg-white'
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-700'
                 }`}
               >
-                <div className="text-xl mb-1">{FREE_MODE_PRESET.icon}</div>
-                <div className="text-xs font-semibold text-gray-900 leading-tight">{FREE_MODE_PRESET.title}</div>
+                {FREE_MODE_PRESET.title}
               </button>
             </div>
 
-            {/* Preset Info - Mobile */}
+            {/* Helper Text - Mobile Minimalista */}
             {currentPreset && (
-              <Card className="border-blue-200 bg-blue-50 mt-3">
-                <CardContent className="p-3">
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-blue-900">{currentPreset.subtitle}</p>
-                    <div className="flex items-center gap-2 text-xs text-blue-700">
-                      <ImageIcon className="w-3 h-3" />
-                      <span><strong>Anexos:</strong> {currentPreset.expectedAttachments}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="text-xs text-gray-600 leading-relaxed mt-2 px-0.5">
+                <span className="font-medium">{currentPreset.instruction}</span>
+                {(currentPreset.id === 'banner' || currentPreset.id === 'interior') && (
+                  <span className="block mt-1 text-gray-500 italic">
+                    Lembre-se de editar o prompt para personalizar
+                  </span>
+                )}
+              </div>
             )}
           </div>
 
@@ -1525,7 +1520,7 @@ export function ImageEditorInterface({
                   </li>
                   <li className="flex items-start">
                     <span className="text-white mr-2">•</span>
-                    <span><strong>Use os presets:</strong> clique em um preset abaixo para preencher automaticamente o prompt com exemplos testados. Ideal para quem não sabe o que escrever!</span>
+                    <span><strong>Use os atalhos:</strong> clique em um atalho abaixo para preencher o prompt automaticamente. Ideal para quem não sabe o que escrever!</span>
                   </li>
                 </ul>
               </div>
@@ -1533,62 +1528,52 @@ export function ImageEditorInterface({
           </Card>
         </div>
 
-        {/* Presets Section */}
+        {/* Atalhos Section - Minimalista */}
         <div className="mb-6">
-          <div className="mb-3">
-            <h4 className="text-sm font-semibold text-gray-700">Presets (atalhos rápidos)</h4>
-            <p className="text-xs text-gray-500 mt-1">Clique em um preset para preencher o prompt automaticamente</p>
+          <div className="mb-2">
+            <h4 className="text-sm font-medium text-gray-700">Atalhos</h4>
+            <p className="text-xs text-gray-500">Escolha um atalho e gere mais rápido</p>
           </div>
 
-          {/* Presets Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
+          {/* Atalhos Grid - Minimalista */}
+          <div className="flex flex-wrap gap-2 mb-3">
             {EDITOR_PRESETS.map((preset) => (
               <button
                 key={preset.id}
                 onClick={() => handlePresetSelect(preset.id)}
-                className={`p-3 rounded-lg border-2 transition-all text-left ${
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                   selectedPreset === preset.id
-                    ? 'border-[#667EEA] bg-[#667EEA]/10 shadow-md'
-                    : 'border-gray-300 bg-white hover:border-[#667EEA]/50 hover:bg-gray-50'
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                <div className="text-2xl mb-1">{preset.icon}</div>
-                <div className="text-xs font-semibold text-gray-900">{preset.title}</div>
+                {preset.title}
               </button>
             ))}
 
             {/* Modo Livre Button */}
             <button
               onClick={() => handlePresetSelect('free')}
-              className={`p-3 rounded-lg border-2 transition-all text-left ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 selectedPreset === null
-                  ? 'border-gray-500 bg-gray-100 shadow-md'
-                  : 'border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50'
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <div className="text-2xl mb-1">{FREE_MODE_PRESET.icon}</div>
-              <div className="text-xs font-semibold text-gray-900">{FREE_MODE_PRESET.title}</div>
+              {FREE_MODE_PRESET.title}
             </button>
           </div>
 
-          {/* Preset Info - Show subtitle and expected attachments */}
+          {/* Helper Text - Minimalista */}
           {currentPreset && (
-            <Card className="border-blue-200 bg-blue-50">
-              <CardContent className="p-3">
-                <div className="space-y-2">
-                  <div>
-                    <p className="text-sm font-semibold text-blue-900">{currentPreset.subtitle}</p>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-blue-700">
-                    <ImageIcon className="w-4 h-4" />
-                    <span><strong>Anexos esperados:</strong> {currentPreset.expectedAttachments}</span>
-                  </div>
-                  <div className="text-xs text-blue-600 italic">
-                    💡 Dica: Você pode editar o prompt manualmente após selecionar o preset
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="text-xs text-gray-600 leading-relaxed">
+              <span className="font-medium">{currentPreset.instruction}</span>
+              {(currentPreset.id === 'banner' || currentPreset.id === 'interior') && (
+                <span className="block mt-1 text-gray-500 italic">
+                  Lembre-se de editar o prompt para personalizar seu resultado
+                </span>
+              )}
+            </div>
           )}
         </div>
 
