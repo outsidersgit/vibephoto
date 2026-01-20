@@ -104,6 +104,7 @@ export class AstriaProvider extends AIProvider {
     triggerWord?: string
     classWord?: string
     title?: string // Idempotent title (idealmente modelId)
+    steps?: number // Training steps (default: preset-based, recommended: 600-1200)
   } = {}): Promise<{ id: string; status: string }> {
     try {
       // Conforme documentação Astria, podemos enviar JSON com image_urls
@@ -137,7 +138,9 @@ export class AstriaProvider extends AIProvider {
           // Valor fixo solicitado: 1504944 (Flux1.dev na doc)
           base_tune_id: 1504944,
           // Preset recomendado para LoRA (doc Astria)
-          preset: 'flux-lora-portrait'
+          preset: 'flux-lora-portrait',
+          // Training steps: 900 (sobrescreve o default do preset que é ~27 steps/imagem)
+          steps: options.steps || 900
         }
       }
 
@@ -152,6 +155,17 @@ export class AstriaProvider extends AIProvider {
         })
       }
       if (options.testMode) payload.tune.branch = 'fast'
+
+      console.log(`🎯 [ASTRIA_TUNE] Tune creation payload:`, {
+        title: payload.tune.title,
+        name: payload.tune.name,
+        model_type: payload.tune.model_type,
+        base_tune_id: payload.tune.base_tune_id,
+        preset: payload.tune.preset,
+        steps: payload.tune.steps,
+        images_count: images.length,
+        token: payload.tune.token
+      })
 
       // Retry resiliente para 429/5xx (ex.: 503 Service Unavailable)
       const maxAttempts = 5
@@ -210,7 +224,8 @@ export class AstriaProvider extends AIProvider {
         triggerWord: request.triggerWord || 'ohwx',
         classWord: request.classWord, // Será usado como tune[name] conforme docs
         callback: request.webhookUrl,
-        title: request.modelId // Idempotent title conforme doc Astria
+        title: request.modelId, // Idempotent title conforme doc Astria
+        steps: request.params?.steps || 900 // Training steps (default: 900)
       })
 
       console.log(`✅ Astria tune created with ID: ${tuneResult.id}`)
