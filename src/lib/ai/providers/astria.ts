@@ -139,8 +139,8 @@ export class AstriaProvider extends AIProvider {
           base_tune_id: 1504944,
           // Preset recomendado para LoRA (doc Astria)
           preset: 'flux-lora-portrait',
-          // Training steps: 900 (sobrescreve o default do preset que é ~27 steps/imagem)
-          steps: options.steps || 900
+          // Training steps: 864 (sobrescreve o default do preset que é ~27 steps/imagem)
+          steps: options.steps || 864
         }
       }
 
@@ -225,7 +225,7 @@ export class AstriaProvider extends AIProvider {
         classWord: request.classWord, // Será usado como tune[name] conforme docs
         callback: request.webhookUrl,
         title: request.modelId, // Idempotent title conforme doc Astria
-        steps: request.params?.steps || 900 // Training steps (default: 900)
+        steps: request.params?.steps || 864 // Training steps (default: 864)
       })
 
       console.log(`✅ Astria tune created with ID: ${tuneResult.id}`)
