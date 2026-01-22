@@ -24,11 +24,11 @@ export async function PUT(
 
     const { subscriptionStatus } = await request.json()
 
-    // Validate status
-    const validStatuses = ['ACTIVE', 'CANCELLED', 'EXPIRED', 'OVERDUE', 'PENDING']
-    if (!validStatuses.includes(subscriptionStatus)) {
+    // Validate status (aceita NULL também)
+    const validStatuses = ['ACTIVE', 'CANCELLED', 'EXPIRED', 'OVERDUE', 'PENDING', null]
+    if (subscriptionStatus !== null && !validStatuses.includes(subscriptionStatus)) {
       return NextResponse.json(
-        { error: `Status inválido. Use: ${validStatuses.join(', ')}` },
+        { error: `Status inválido. Use: ${validStatuses.filter(s => s !== null).join(', ')} ou NULL` },
         { status: 400 }
       )
     }

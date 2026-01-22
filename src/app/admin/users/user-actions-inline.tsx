@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { NumericInput } from '@/components/ui/numeric-input'
 
 export default function UserActionsInline({ userId, email }: { userId: string; email: string }) {
-  const [open, setOpen] = useState<'none' | 'credits' | 'delete' | 'edit' | 'subscription'>('none')
+  const [open, setOpen] = useState<'none' | 'credits' | 'delete' | 'edit'>('none')
   const [delta, setDelta] = useState<number>(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -22,8 +22,7 @@ export default function UserActionsInline({ userId, email }: { userId: string; e
   const [commissionFixedValue, setCommissionFixedValue] = useState('')
 
   // Subscription status state
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string>('ACTIVE')
-  const [subscriptionLoading, setSubscriptionLoading] = useState(false)
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null)
 
   async function adjustCredits() {
     setLoading(true)
@@ -99,6 +98,9 @@ export default function UserActionsInline({ userId, email }: { userId: string; e
       setWalletId(data.influencer?.asaasWalletId || '')
       setCouponCode(data.influencer?.couponCode || '')
 
+      // Carregar status da assinatura
+      setSubscriptionStatus(data.subscriptionStatus || null)
+
       if (data.influencer?.commissionPercentage) {
         setCommissionMode('percentage')
         setCommissionPercentage(String(data.influencer.commissionPercentage))
@@ -117,6 +119,24 @@ export default function UserActionsInline({ userId, email }: { userId: string; e
     setEditLoading(true)
     setError(null)
     try {
+      // 1. Atualizar subscription status se mudou
+      if (subscriptionStatus !== userData?.subscriptionStatus) {
+        try {
+          const statusRes = await fetch(`/api/admin/users/${userId}/subscription-status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subscriptionStatus })
+          })
+          if (!statusRes.ok) {
+            const json = await statusRes.json()
+            throw new Error(json.error || 'Falha ao atualizar status de assinatura')
+          }
+        } catch (statusError: any) {
+          throw new Error(`Erro ao atualizar status: ${statusError.message}`)
+        }
+      }
+
+      // 2. Atualizar dados de influencer
       const body: any = {}
 
       // Se está habilitando influencer
@@ -167,20 +187,19 @@ export default function UserActionsInline({ userId, email }: { userId: string; e
         }
       }
 
-      if (Object.keys(body).length === 0) {
-        setOpen('none')
-        return
+      // Só chama API de influencer se houver mudanças
+      if (Object.keys(body).length > 0) {
+        const res = await fetch(`/api/admin/users/${userId}/influencer`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        })
+        if (!res.ok) {
+          const json = await res.json()
+          throw new Error(json.error || 'Falha ao atualizar dados')
+        }
       }
 
-      const res = await fetch(`/api/admin/users/${userId}/influencer`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      })
-      if (!res.ok) {
-        const json = await res.json()
-        throw new Error(json.error || 'Falha ao atualizar dados')
-      }
       setOpen('none')
       if (typeof window !== 'undefined') {
         window.location.reload()
@@ -189,31 +208,6 @@ export default function UserActionsInline({ userId, email }: { userId: string; e
       setError(e.message)
     } finally {
       setEditLoading(false)
-    }
-  }
-
-  async function updateSubscriptionStatus() {
-    if (!confirm(`Alterar status de assinatura para ${subscriptionStatus}?`)) return
-    setSubscriptionLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/admin/users/${userId}/subscription-status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscriptionStatus })
-      })
-      if (!res.ok) {
-        const json = await res.json()
-        throw new Error(json.error || 'Falha ao atualizar status')
-      }
-      setOpen('none')
-      if (typeof window !== 'undefined') {
-        window.location.reload()
-      }
-    } catch (e: any) {
-      setError(e.message)
-    } finally {
-      setSubscriptionLoading(false)
     }
   }
 
@@ -226,7 +220,6 @@ export default function UserActionsInline({ userId, email }: { userId: string; e
   return (
     <div className="flex items-center gap-2">
       <button className="text-blue-700 hover:underline" onClick={() => setOpen('edit')}>Editar</button>
-      <button className="text-green-700 hover:underline" onClick={() => setOpen('subscription')}>Status Assinatura</button>
       <button className="text-purple-700 hover:underline" onClick={() => setOpen('credits')}>Ajustar créditos</button>
       <button className="text-red-600 hover:underline" onClick={() => setOpen('delete')}>Excluir</button>
       <button className="text-gray-700 hover:underline" onClick={sendSetPassword} disabled={sending}>
@@ -296,6 +289,28 @@ export default function UserActionsInline({ userId, email }: { userId: string; e
                     <div className="text-sm text-gray-700 mb-1">Nome</div>
                     <div className="text-sm text-gray-900">{userData.name || '—'}</div>
                   </div>
+                </div>
+
+                {/* Subscription Status */}
+                <div className="border-t pt-3">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Status de Assinatura
+                  </label>
+                  <select
+                    value={subscriptionStatus || ''}
+                    onChange={(e) => setSubscriptionStatus(e.target.value || null)}
+                    className="w-full border rounded-md px-3 py-2 text-sm"
+                  >
+                    <option value="">Nenhum (NULL)</option>
+                    <option value="ACTIVE">ACTIVE - Acesso ativo</option>
+                    <option value="CANCELLED">CANCELLED - Assinatura cancelada</option>
+                    <option value="EXPIRED">EXPIRED - Assinatura expirada</option>
+                    <option value="OVERDUE">OVERDUE - Pagamento atrasado</option>
+                    <option value="PENDING">PENDING - Aguardando pagamento</option>
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    ⚠️ ACTIVE libera acesso. CANCELLED/EXPIRED/OVERDUE bloqueiam.
+                  </p>
                 </div>
 
                 <div className="border-t pt-3">
@@ -436,42 +451,6 @@ export default function UserActionsInline({ userId, email }: { userId: string; e
                 className="rounded bg-blue-600 text-white px-4 py-2 text-sm hover:bg-blue-700 disabled:opacity-60"
               >
                 {editLoading ? 'Salvando…' : 'Salvar'}
-              </button>
-              <button onClick={() => setOpen('none')} className="text-sm text-gray-700 hover:underline">Cancelar</button>
-            </div>
-          </div>
-        </div>
-      )}
-      {open === 'subscription' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded p-4 w-full max-w-sm">
-            <div className="font-semibold mb-2">Alterar Status de Assinatura</div>
-            {error && <div className="text-sm text-red-600 mb-2">{error}</div>}
-            <div className="mb-3">
-              <label className="block text-sm text-gray-700 mb-1">Novo Status</label>
-              <select
-                value={subscriptionStatus}
-                onChange={(e) => setSubscriptionStatus(e.target.value)}
-                className="w-full border rounded px-3 py-2 text-sm"
-              >
-                <option value="ACTIVE">ACTIVE - Acesso ativo</option>
-                <option value="CANCELLED">CANCELLED - Assinatura cancelada</option>
-                <option value="EXPIRED">EXPIRED - Assinatura expirada</option>
-                <option value="OVERDUE">OVERDUE - Pagamento atrasado</option>
-                <option value="PENDING">PENDING - Aguardando pagamento</option>
-              </select>
-            </div>
-            <div className="text-xs text-gray-600 mb-3">
-              ⚠️ Alterar para ACTIVE dá acesso imediato ao sistema.
-              CANCELLED/EXPIRED/OVERDUE bloqueiam o acesso.
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={updateSubscriptionStatus}
-                disabled={subscriptionLoading}
-                className="rounded bg-green-600 text-white px-3 py-2 text-sm hover:bg-green-700 disabled:opacity-60"
-              >
-                {subscriptionLoading ? 'Atualizando…' : 'Atualizar'}
               </button>
               <button onClick={() => setOpen('none')} className="text-sm text-gray-700 hover:underline">Cancelar</button>
             </div>

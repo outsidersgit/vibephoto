@@ -19,6 +19,7 @@ export default async function AdminHomePage() {
           { title: 'Pacotes de Fotos', href: '/admin/photo-packages', desc: 'CRUD de pacotes' },
           { title: 'Analytics', href: '/admin/analytics', desc: 'KPIs e gráficos' },
           { title: 'Retenção', href: '/admin/retention', desc: 'Crescimento e churn' },
+          { title: 'Ferramentas 🔧', href: '/admin/tools', desc: 'Sincronização, manutenção e correções do sistema' },
           { title: 'Client Errors 🔴', href: '/admin/client-errors', desc: 'Logs de erros do navegador (Safari/iOS)' },
         ].map(card => (
           <a key={card.href} href={card.href} className="block rounded-lg border border-gray-200 p-4 hover:shadow-sm transition">
