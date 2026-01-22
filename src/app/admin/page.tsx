@@ -13,6 +13,7 @@ export default async function AdminHomePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
           { title: 'Usuários', href: '/admin/users', desc: 'Gerencie usuários, planos e créditos' },
+          { title: 'Cobranças 💳', href: '/admin/payments', desc: 'Histórico de todas as cobranças e inadimplência' },
           { title: 'Planos de Assinatura', href: '/admin/subscription-plans', desc: 'Gerencie planos, preços, créditos e features' },
           { title: 'Pacotes de Créditos', href: '/admin/credit-packages', desc: 'Gerencie pacotes de créditos avulsos' },
           { title: 'Cupons de Desconto', href: '/admin/coupons', desc: 'Gerencie cupons de desconto e híbridos' },

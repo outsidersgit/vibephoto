@@ -154,13 +154,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Calculate steps dynamically: 27 steps per photo (min: 540, max: 810 for 30 photos)
+    // Calculate steps dynamically: 27 steps per photo (max: 810 for 30 photos)
     const calculatedSteps = totalPhotos * 27
-    const STEPS_MIN = 540  // Minimum steps (floor)
     const STEPS_MAX = 810  // 30 photos × 27 (ceiling)
-    const finalSteps = Math.max(STEPS_MIN, Math.min(calculatedSteps, STEPS_MAX))
+    const finalSteps = Math.min(calculatedSteps, STEPS_MAX)
 
-    console.log(`📊 [TRAIN_STEPS_CALC] Photos: ${totalPhotos}, Calculated: ${calculatedSteps}, Final: ${finalSteps} (min: ${STEPS_MIN}, max: ${STEPS_MAX})`)
+    console.log(`📊 [TRAIN_STEPS_CALC] Photos: ${totalPhotos}, Calculated: ${calculatedSteps}, Final: ${finalSteps} (max: ${STEPS_MAX})`)
 
     // Calculate training cost with optimized parameters for maximum quality
     const finalParams = {

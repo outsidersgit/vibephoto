@@ -9,6 +9,10 @@ export default function AdminToolsPage() {
   const [syncResult, setSyncResult] = useState<any>(null)
   const [syncError, setSyncError] = useState<string | null>(null)
 
+  const [verifying, setVerifying] = useState(false)
+  const [verifyResult, setVerifyResult] = useState<any>(null)
+  const [verifyError, setVerifyError] = useState<string | null>(null)
+
   async function handleSyncSubscriptions() {
     if (!confirm('Sincronizar nextDueDate de todas as assinaturas ativas com o Asaas?')) return
 
@@ -32,6 +36,30 @@ export default function AdminToolsPage() {
       setSyncError(error.message)
     } finally {
       setSyncing(false)
+    }
+  }
+
+  async function handleVerifyPayments() {
+    if (!confirm('Verificar inconsistências entre pagamentos e status de assinatura?')) return
+
+    setVerifying(true)
+    setVerifyError(null)
+    setVerifyResult(null)
+
+    try {
+      const res = await fetch('/api/cron/verify-payment-inconsistencies')
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao verificar')
+      }
+
+      setVerifyResult(data.results)
+    } catch (error: any) {
+      setVerifyError(error.message)
+    } finally {
+      setVerifying(false)
     }
   }
 
@@ -90,16 +118,49 @@ export default function AdminToolsPage() {
           </CardContent>
         </Card>
 
-        {/* Placeholder para outras ferramentas futuras */}
-        <Card className="opacity-50">
+        {/* Verify Payment Inconsistencies */}
+        <Card>
           <CardHeader>
-            <CardTitle>Outras Ferramentas</CardTitle>
+            <CardTitle>Verificar Inconsistências de Pagamentos</CardTitle>
             <CardDescription>
-              Mais ferramentas administrativas serão adicionadas aqui conforme necessário.
+              Detecta e corrige problemas entre status de pagamentos e assinaturas.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-500">Em breve...</p>
+          <CardContent className="space-y-4">
+            <div className="text-sm text-gray-700">
+              <p className="mb-2"><strong>O que verifica:</strong></p>
+              <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+                <li>Usuários ACTIVE mas com último pagamento OVERDUE</li>
+                <li>Pagamentos PENDING que já passaram da data de vencimento</li>
+                <li>Usuários ACTIVE sem cobranças registradas no banco</li>
+              </ul>
+            </div>
+
+            {verifyError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
+                ❌ Erro: {verifyError}
+              </div>
+            )}
+
+            {verifyResult && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded text-sm text-green-800">
+                <p className="font-semibold mb-2">✅ Verificação concluída!</p>
+                <ul className="space-y-1">
+                  <li>Usuários ACTIVE com pagamentos OVERDUE corrigidos: {verifyResult.active_users_with_overdue}</li>
+                  <li>Pagamentos PENDING marcados como OVERDUE: {verifyResult.pending_payments_now_overdue}</li>
+                  <li>Usuários ACTIVE sem pagamentos registrados: {verifyResult.active_users_without_payments}</li>
+                  <li>Erros: {verifyResult.errors}</li>
+                </ul>
+              </div>
+            )}
+
+            <Button
+              onClick={handleVerifyPayments}
+              disabled={verifying}
+              className="w-full sm:w-auto"
+            >
+              {verifying ? 'Verificando...' : '🔍 Verificar Agora'}
+            </Button>
           </CardContent>
         </Card>
       </div>

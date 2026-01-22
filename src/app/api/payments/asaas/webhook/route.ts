@@ -434,7 +434,8 @@ async function handlePaymentSuccess(payment: any) {
         discountApplied: true,
         influencerId: true,
         referralCodeUsed: true,
-        type: true
+        type: true,
+        asaasPaymentId: true
       }
     })
 
@@ -449,7 +450,7 @@ async function handlePaymentSuccess(payment: any) {
         }
       })
 
-      console.log('✅ Updated payment status to CONFIRMED:', {
+      console.log('✅ [PAYMENT_CONFIRMED] Payment status updated to CONFIRMED:', {
         paymentId: paymentRecord.id,
         asaasPaymentId: payment.id
       })
@@ -685,18 +686,48 @@ async function handleCheckoutPaid(checkout: any) {
 async function handlePaymentOverdue(payment: any) {
   try {
     const user = await getUserByAsaasCustomerId(payment.customer)
-    
+
     if (!user) {
-      console.error('User not found for overdue payment:', payment.id)
+      console.error('❌ [PAYMENT_OVERDUE] User not found for payment:', payment.id)
       return
     }
+
+    console.log('⚠️ [PAYMENT_OVERDUE] Processing overdue payment:', {
+      paymentId: payment.id,
+      userId: user.id,
+      value: payment.value,
+      dueDate: payment.dueDate
+    })
+
+    // Atualizar Payment no banco de dados
+    await prisma.payment.upsert({
+      where: { asaasPaymentId: payment.id },
+      create: {
+        userId: user.id,
+        asaasPaymentId: payment.id,
+        type: payment.subscription ? 'SUBSCRIPTION' : 'CREDIT_PURCHASE',
+        status: 'OVERDUE',
+        billingType: payment.billingType as any,
+        value: payment.value,
+        description: payment.description || 'Cobrança em atraso',
+        dueDate: new Date(payment.dueDate),
+        planType: user.plan as any,
+        billingCycle: user.billingCycle as any,
+      },
+      update: {
+        status: 'OVERDUE',
+        updatedAt: new Date()
+      }
+    })
+
+    console.log('✅ [PAYMENT_OVERDUE] Payment status updated to OVERDUE')
 
     // Update subscription status to overdue
     await updateSubscriptionStatus(user.id, 'OVERDUE')
 
-    console.log('Payment overdue for user:', user.id)
+    console.log('✅ [PAYMENT_OVERDUE] User subscription status updated to OVERDUE:', user.id)
   } catch (error) {
-    console.error('Error handling payment overdue:', error)
+    console.error('❌ [PAYMENT_OVERDUE] Error handling payment overdue:', error)
   }
 }
 
@@ -777,16 +808,82 @@ async function handleSubscriptionReactivated(subscription: any) {
 async function handlePaymentCreated(payment: any) {
   try {
     const user = await getUserByAsaasCustomerId(payment.customer)
-    if (!user) return
+    if (!user) {
+      console.log('⚠️ [PAYMENT_CREATED] User not found for customer:', payment.customer)
+      return
+    }
+
+    console.log('💳 [PAYMENT_CREATED] Saving payment to database:', {
+      paymentId: payment.id,
+      userId: user.id,
+      value: payment.value,
+      dueDate: payment.dueDate,
+      billingType: payment.billingType
+    })
+
+    // Inferir plan e cycle do valor (se for subscription)
+    let planType = null
+    let billingCycle = null
+
+    if (payment.subscription) {
+      const value = payment.value
+      // Planos mensais
+      if (value === 39) { planType = 'STARTER'; billingCycle = 'MONTHLY' }
+      else if (value === 69) { planType = 'PREMIUM'; billingCycle = 'MONTHLY' }
+      else if (value === 149) { planType = 'GOLD'; billingCycle = 'MONTHLY' }
+      // Planos anuais
+      else if (value === 390) { planType = 'STARTER'; billingCycle = 'YEARLY' }
+      else if (value === 690) { planType = 'PREMIUM'; billingCycle = 'YEARLY' }
+      else if (value === 1490) { planType = 'GOLD'; billingCycle = 'YEARLY' }
+
+      // Fallback: usar plan atual do usuário
+      if (!planType && user.plan) {
+        planType = user.plan
+        billingCycle = user.billingCycle || 'MONTHLY'
+      }
+    }
+
+    // Salvar ou atualizar payment no banco (upsert para evitar duplicatas)
+    await prisma.payment.upsert({
+      where: { asaasPaymentId: payment.id },
+      create: {
+        userId: user.id,
+        asaasPaymentId: payment.id,
+        type: payment.subscription ? 'SUBSCRIPTION' : 'CREDIT_PURCHASE',
+        status: 'PENDING', // Cobrança gerada mas ainda não paga
+        billingType: payment.billingType as any,
+        value: payment.value,
+        description: payment.description || `Cobrança ${payment.subscription ? 'recorrente' : 'avulsa'}`,
+        dueDate: new Date(payment.dueDate),
+        planType: planType as any,
+        billingCycle: billingCycle as any,
+      },
+      update: {
+        status: 'PENDING', // Atualizar status se já existe
+        billingType: payment.billingType as any,
+        value: payment.value,
+        dueDate: new Date(payment.dueDate),
+        updatedAt: new Date()
+      }
+    })
+
+    console.log('✅ [PAYMENT_CREATED] Payment saved successfully:', payment.id)
 
     await logUsage({
       userId: user.id,
       action: 'PAYMENT_CREATED',
       creditsUsed: 0,
-      details: { paymentId: payment.id, value: payment.value, billingType: payment.billingType }
+      details: {
+        paymentId: payment.id,
+        value: payment.value,
+        billingType: payment.billingType,
+        dueDate: payment.dueDate,
+        planType,
+        billingCycle
+      }
     })
   } catch (error) {
-    console.error('Error handling payment created:', error)
+    console.error('❌ [PAYMENT_CREATED] Error handling payment created:', error)
   }
 }
 

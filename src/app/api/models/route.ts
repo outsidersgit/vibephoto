@@ -259,10 +259,18 @@ export async function POST(request: NextRequest) {
       // Create training request
       // 🔍 CORRETO: Callback de treinamento (TUNE) conforme documentação oficial do Astria
       // Formato: https://seu-dominio/api/webhooks/astria?user_id={USER_ID}
-      // NOTA: O Astria NÃO aceita placeholders na URL (retorna 422). O tune_id virá no payload.id do webhook
+      // NOTA: O Astria NÃO aceita placeholders na URL (retorna 422). O tune_id virá no payload do webhook
       // Usando apenas user_id real na URL, tune_id será extraído do payload do webhook
       const callbackUrl = `${process.env.NEXTAUTH_URL}/api/webhooks/astria?user_id=${session.user.id}`
-      
+
+      // Calculate steps dynamically: 27 steps per photo (no floor, max: 810 for 30 photos)
+      const totalPhotos = facePhotoUrls.length + halfBodyPhotoUrls.length + fullBodyPhotoUrls.length
+      const calculatedSteps = totalPhotos * 27
+      const STEPS_MAX = 810  // 30 photos × 27 (ceiling)
+      const finalSteps = Math.min(calculatedSteps, STEPS_MAX)
+
+      console.log(`📊 [TRAIN_STEPS_CALC] Photos: ${totalPhotos}, Calculated: ${calculatedSteps}, Final: ${finalSteps} (max: ${STEPS_MAX})`)
+
       const trainingRequest = {
         modelId: model.id,
         modelName: model.name,
@@ -272,7 +280,7 @@ export async function POST(request: NextRequest) {
         triggerWord: `${model.name.toLowerCase().replace(/\s+/g, '')}_person`,
         classWord: model.class.toLowerCase(),
         params: {
-          steps: 1000,
+          steps: finalSteps,
           resolution: 1024,
           learningRate: 1e-4,
           batchSize: 1,
