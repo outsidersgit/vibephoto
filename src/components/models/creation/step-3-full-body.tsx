@@ -218,8 +218,8 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
     }
 
     const totalFiles = modelData.fullBodyPhotos.length + newFiles.length
-    if (totalFiles > 10) {
-      errors.push(`Máximo 10 fotos de corpo inteiro permitidas (você selecionou ${totalFiles})`)
+    if (totalFiles > 7) {
+      errors.push(`Máximo 7 fotos de corpo inteiro permitidas (você selecionou ${totalFiles})`)
       setValidationErrors(errors)
       return
     }
@@ -313,12 +313,12 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
               Fotos de Corpo Inteiro
               {isAnalyzing && <Loader2 className="w-4 h-4 animate-spin text-purple-600" />}
             </span>
-            <Badge variant={modelData.fullBodyPhotos.length >= 5 ? 'default' : 'secondary'}>
-              {modelData.fullBodyPhotos.length}/10 fotos
+            <Badge variant={modelData.fullBodyPhotos.length >= 4 ? 'default' : 'secondary'}>
+              {modelData.fullBodyPhotos.length}/7 fotos
             </Badge>
           </CardTitle>
           <CardDescription>
-            Envie de 5 a 10 fotos de corpo inteiro (corpo completo da cabeça aos pés). Elas serão analisadas automaticamente para garantir qualidade ideal.
+            Envie de 4 a 7 fotos de corpo inteiro (corpo completo da cabeça aos pés). Elas serão analisadas automaticamente para garantir qualidade ideal.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -564,7 +564,7 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
         <Button
           type="button"
           onClick={onNextStep}
-          disabled={!canProceed || modelData.fullBodyPhotos.length < 5 || isAnalyzing}
+          disabled={!canProceed || modelData.fullBodyPhotos.length < 4 || isAnalyzing}
         >
           Próximo
           <ArrowRight className="w-4 h-4 ml-2" />

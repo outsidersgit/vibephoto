@@ -450,7 +450,7 @@ const ScrollStackingCards = ({ scrollContainerRef }: { scrollContainerRef: React
     {
       id: 1,
       title: "Upload das Fotos",
-      description: "Carregue 15-30 fotos suas em diferentes poses. Nossa IA analisará seus traços únicos para criar seu modelo personalizado.",
+      description: "Carregue 20-30 fotos suas em diferentes poses (10-14 de rosto, 6-9 de meio corpo, 4-7 de corpo inteiro). Nossa IA analisará seus traços únicos para criar seu modelo personalizado.",
       gradient: "from-blue-50 to-blue-100",
       borderColor: "border-blue-200",
       iconBg: "from-blue-500 to-blue-600"
@@ -611,7 +611,7 @@ const MobileStackingCards = () => {
     {
       id: 1,
       title: "Upload das Fotos",
-      description: "Carregue 15-30 fotos suas em diferentes poses. Nossa IA analisará seus traços únicos para criar seu modelo personalizado.",
+      description: "Carregue 20-30 fotos suas em diferentes poses (10-14 de rosto, 6-9 de meio corpo, 4-7 de corpo inteiro). Nossa IA analisará seus traços únicos para criar seu modelo personalizado.",
       gradient: "from-blue-50 to-blue-100",
       borderColor: "border-blue-200",
       iconBg: "from-blue-500 to-blue-600"

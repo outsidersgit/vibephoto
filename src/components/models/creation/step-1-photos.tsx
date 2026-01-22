@@ -234,8 +234,8 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo, onA
     }
 
     const totalFiles = modelData.facePhotos.length + newFiles.length
-    if (totalFiles > 10) {
-      errors.push(`Máximo de 10 fotos do rosto permitidas (você selecionou ${totalFiles})`)
+    if (totalFiles > 14) {
+      errors.push(`Máximo de 14 fotos do rosto permitidas (você selecionou ${totalFiles})`)
       setValidationErrors(errors)
       return
     }
@@ -593,12 +593,12 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo, onA
               Fotos do Rosto
               {isAnalyzing && <Loader2 className="w-4 h-4 animate-spin text-purple-600" />}
             </span>
-            <Badge variant={modelData.facePhotos.length >= 5 ? 'default' : 'secondary'}>
-              {modelData.facePhotos.length}/10 fotos
+            <Badge variant={modelData.facePhotos.length >= 10 ? 'default' : 'secondary'}>
+              {modelData.facePhotos.length}/14 fotos
             </Badge>
           </CardTitle>
           <CardDescription>
-            Envie de 5 a 10 fotos claras do rosto. Elas serão analisadas automaticamente para garantir qualidade ideal.
+            Envie de 10 a 14 fotos claras do rosto. Elas serão analisadas automaticamente para garantir qualidade ideal.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

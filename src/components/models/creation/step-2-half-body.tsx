@@ -217,8 +217,8 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
     }
 
     const totalFiles = modelData.halfBodyPhotos.length + newFiles.length
-    if (totalFiles > 10) {
-      errors.push(`Máximo de 10 fotos do rosto permitidas (você selecionou ${totalFiles})`)
+    if (totalFiles > 9) {
+      errors.push(`Máximo de 9 fotos de meio corpo permitidas (você selecionou ${totalFiles})`)
       setValidationErrors(errors)
       return
     }
@@ -312,12 +312,12 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
               Fotos de Meio Corpo
               {isAnalyzing && <Loader2 className="w-4 h-4 animate-spin text-purple-600" />}
             </span>
-            <Badge variant={modelData.halfBodyPhotos.length >= 5 ? 'default' : 'secondary'}>
-              {modelData.halfBodyPhotos.length}/10 fotos
+            <Badge variant={modelData.halfBodyPhotos.length >= 6 ? 'default' : 'secondary'}>
+              {modelData.halfBodyPhotos.length}/9 fotos
             </Badge>
           </CardTitle>
           <CardDescription>
-            Envie de 5 a 10 fotos de meio corpo (da cintura para cima). Elas serão analisadas automaticamente para garantir qualidade ideal.
+            Envie de 6 a 9 fotos de meio corpo (da cintura para cima). Elas serão analisadas automaticamente para garantir qualidade ideal.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -563,7 +563,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
         <Button
           type="button"
           onClick={onNextStep}
-          disabled={!canProceed || modelData.halfBodyPhotos.length < 5 || isAnalyzing}
+          disabled={!canProceed || modelData.halfBodyPhotos.length < 6 || isAnalyzing}
         >
           Próximo
           <ArrowRight className="w-4 h-4 ml-2" />
