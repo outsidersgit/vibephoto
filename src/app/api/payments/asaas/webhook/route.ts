@@ -387,16 +387,25 @@ async function handlePaymentSuccess(payment: any) {
         }
       }
 
+      // Calculate next billing date (subscriptionEndsAt / nextDueDate)
+      const now = new Date()
+      const nextBillingDate = new Date(now)
+      if (billingCycle === 'YEARLY') {
+        nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1)
+      } else {
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + 1)
+      }
+
       // Update subscription status to active with plan and cycle
       if (planType && billingCycle) {
         await updateSubscriptionStatus(
           user.id,
           'ACTIVE',
-          undefined,
+          nextBillingDate, // Pass next billing date
           planType,
           billingCycle
         )
-        console.log(`✅ Activated ${planType} ${billingCycle} subscription for user ${user.id}`)
+        console.log(`✅ Activated ${planType} ${billingCycle} subscription for user ${user.id}, next billing: ${nextBillingDate.toISOString()}`)
       } else {
         // Fallback: activate without changing plan (keeps existing plan if any)
         await updateSubscriptionStatus(user.id, 'ACTIVE')

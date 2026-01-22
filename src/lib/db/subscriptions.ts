@@ -131,6 +131,7 @@ export async function updateSubscriptionStatus(
 
   if (currentPeriodEnd) {
     updateData.subscriptionEndsAt = currentPeriodEnd
+    updateData.nextDueDate = currentPeriodEnd // Sempre atualiza nextDueDate junto com subscriptionEndsAt
   }
 
   // If subscription is activated, set credits limit and reset usage
