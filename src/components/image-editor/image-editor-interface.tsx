@@ -1357,18 +1357,32 @@ export function ImageEditorInterface({
               </select>
             </div>
 
-            {/* 4K Resolution Option */}
+            {/* 4K Resolution Option - Destacado */}
             <div className="flex items-center">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className={`flex items-center gap-2.5 cursor-pointer px-4 py-2.5 rounded-lg border-2 transition-all ${
+                resolution === '4k'
+                  ? 'bg-purple-50 border-purple-500 shadow-sm'
+                  : 'bg-white border-gray-300 hover:border-purple-300 hover:bg-purple-50/50'
+              }`}>
                 <input
                   type="checkbox"
                   checked={resolution === '4k'}
                   onChange={(e) => setResolution(e.target.checked ? '4k' : 'standard')}
-                  className="w-4 h-4 rounded border-gray-300 text-[#667EEA] focus:ring-[#667EEA]"
+                  className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                 />
-                <span className="text-sm text-gray-700">
-                  Gerar em 4K
-                </span>
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className={`text-sm font-medium ${resolution === '4k' ? 'text-purple-900' : 'text-gray-700'}`}>
+                    Gerar em 4K
+                  </span>
+                  {resolution === '4k' && (
+                    <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">
+                      Alta Qualidade
+                    </span>
+                  )}
+                </div>
               </label>
             </div>
 
@@ -1677,18 +1691,32 @@ export function ImageEditorInterface({
             </select>
           </div>
 
-          {/* 4K Resolution Option */}
+          {/* 4K Resolution Option - Destacado (Mobile) */}
           <div className="flex items-center">
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className={`flex items-center gap-2.5 cursor-pointer px-4 py-2.5 rounded-lg border-2 transition-all w-full ${
+              resolution === '4k'
+                ? 'bg-purple-50 border-purple-500 shadow-sm'
+                : 'bg-white border-gray-300 hover:border-purple-300 hover:bg-purple-50/50'
+            }`}>
               <input
                 type="checkbox"
                 checked={resolution === '4k'}
                 onChange={(e) => setResolution(e.target.checked ? '4k' : 'standard')}
-                className="w-4 h-4 rounded border-gray-300 text-[#667EEA] focus:ring-[#667EEA]"
+                className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
               />
-              <span className="text-sm text-gray-700">
-                Gerar em 4K
-              </span>
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span className={`text-sm font-medium ${resolution === '4k' ? 'text-purple-900' : 'text-gray-700'}`}>
+                  Gerar em 4K
+                </span>
+                {resolution === '4k' && (
+                  <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">
+                    Alta Qualidade
+                  </span>
+                )}
+              </div>
             </label>
           </div>
 
