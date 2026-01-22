@@ -439,7 +439,7 @@ export async function createSubscriptionCheckout(
 
   // Preparar dados do checkout
   const checkoutData: any = {
-    billingTypes: ['PIX', 'CREDIT_CARD'], // PIX e Cartão para assinaturas
+    billingTypes: ['CREDIT_CARD'], // Apenas CREDIT_CARD permitido para RECURRENT (limitação do Asaas)
     chargeTypes: ['RECURRENT'], // Pagamento recorrente
     minutesToExpire: 100, // 100 minutos de validade
     items: [
