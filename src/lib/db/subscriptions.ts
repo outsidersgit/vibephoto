@@ -43,7 +43,8 @@ export async function createSubscription(data: {
         billingCycle: data.billingCycle,
         subscriptionId: data.asaasSubscriptionId,
         subscriptionStatus: data.status,
-        subscriptionEndsAt: data.currentPeriodEnd,
+        nextDueDate: data.currentPeriodEnd, // Data da próxima renovação automática
+        // subscriptionEndsAt: usado APENAS para cancelamentos (não preencher na criação)
         subscriptionStartedAt: now,
         lastCreditRenewalAt: now,
         creditsExpiresAt,
@@ -129,9 +130,11 @@ export async function updateSubscriptionStatus(
     subscriptionStatus: status
   }
 
+  // IMPORTANTE: nextDueDate é usado para renovações automáticas
+  // subscriptionEndsAt é usado APENAS para cancelamentos (quando usuário cancela mas ainda está no período pago)
   if (currentPeriodEnd) {
-    updateData.subscriptionEndsAt = currentPeriodEnd
-    updateData.nextDueDate = currentPeriodEnd // Sempre atualiza nextDueDate junto com subscriptionEndsAt
+    updateData.nextDueDate = currentPeriodEnd
+    // NÃO atualizar subscriptionEndsAt aqui - ele só deve ser usado em cancelamentos
   }
 
   // If subscription is activated, set credits limit and reset usage

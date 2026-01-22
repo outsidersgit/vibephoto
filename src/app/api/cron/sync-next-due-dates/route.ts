@@ -110,11 +110,13 @@ export async function GET(request: NextRequest) {
 
         if (nextDueDate) {
           // Atualizar banco de dados
+          // IMPORTANTE: Apenas atualizar nextDueDate
+          // subscriptionEndsAt é usado APENAS para cancelamentos
           await prisma.user.update({
             where: { id: user.id },
             data: {
-              nextDueDate,
-              subscriptionEndsAt: nextDueDate // Atualizar ambos
+              nextDueDate
+              // NÃO atualizar subscriptionEndsAt aqui
             }
           })
 
