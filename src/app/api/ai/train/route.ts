@@ -18,8 +18,8 @@ const trainModelSchema = z.object({
   triggerWord: z.string().optional(),
   classWord: z.string().optional(),
   trainingParams: z.object({
-    // Core training parameters - optimized for maximum quality
-    steps: z.number().min(500).max(4000).default(2500),
+    // Core training parameters - optimized for Astria (864 steps)
+    steps: z.number().min(500).max(4000).default(864),
     learningRate: z.number().min(5e-6).max(5e-4).default(1e-4),
     batchSize: z.number().min(1).max(8).default(1),
     resolution: z.string().default("512,768,1024"), // Multiple resolutions for better training
@@ -154,10 +154,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Calculate steps dynamically: 27 steps per photo (min: 540, max: 810 for 30 photos)
+    const calculatedSteps = totalPhotos * 27
+    const STEPS_MIN = 540  // Minimum steps (floor)
+    const STEPS_MAX = 810  // 30 photos × 27 (ceiling)
+    const finalSteps = Math.max(STEPS_MIN, Math.min(calculatedSteps, STEPS_MAX))
+
+    console.log(`📊 [TRAIN_STEPS_CALC] Photos: ${totalPhotos}, Calculated: ${calculatedSteps}, Final: ${finalSteps} (min: ${STEPS_MIN}, max: ${STEPS_MAX})`)
+
     // Calculate training cost with optimized parameters for maximum quality
     const finalParams = {
       // Core parameters
-      steps: trainingParams?.steps || 2500,
+      steps: trainingParams?.steps || finalSteps,
       learningRate: trainingParams?.learningRate || 1e-4,
       batchSize: trainingParams?.batchSize || 1,
       resolution: trainingParams?.resolution || "512,768,1024",
@@ -235,6 +243,7 @@ export async function POST(request: NextRequest) {
     // Start training
     console.log('🚀 TA AQUI: Starting AI training...')
     console.log('🚀 TA AQUI: Training request...', trainingRequest)
+    console.log('🎯 [TRAIN_STEPS] Steps being sent to provider:', finalParams.steps)
     const trainingResponse = await aiProvider.startTraining(trainingRequest)
     console.log('🚀 TA AQUI: Training response...', trainingResponse)
     
