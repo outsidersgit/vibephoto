@@ -82,20 +82,20 @@ export default function CreateModelPage() {
     {
       number: 1,
       title: 'Fotos do Rosto',
-      description: '5-10 fotos claras do rosto',
-      completed: modelData.facePhotos.length >= 5
+      description: '10-14 fotos claras do rosto',
+      completed: modelData.facePhotos.length >= 10
     },
     {
       number: 2,
       title: 'Fotos de Meio Corpo',
-      description: '5-10 fotos de meio corpo',
-      completed: modelData.halfBodyPhotos.length >= 5
+      description: '6-9 fotos de meio corpo',
+      completed: modelData.halfBodyPhotos.length >= 6
     },
     {
       number: 3,
       title: 'Fotos de Corpo Inteiro',
-      description: '5-10 fotos de corpo inteiro',
-      completed: modelData.fullBodyPhotos.length >= 5
+      description: '4-7 fotos de corpo inteiro',
+      completed: modelData.fullBodyPhotos.length >= 4
     },
     {
       number: 4,
@@ -394,11 +394,11 @@ export default function CreateModelPage() {
   const canProceedToNext = () => {
     switch (currentStep) {
       case 1:
-        return modelData.name && modelData.class && modelData.facePhotos.length >= 5 && !isAnalyzingStep1
+        return modelData.name && modelData.class && modelData.facePhotos.length >= 10 && !isAnalyzingStep1
       case 2:
-        return modelData.halfBodyPhotos.length >= 5
+        return modelData.halfBodyPhotos.length >= 6
       case 3:
-        return modelData.fullBodyPhotos.length >= 5
+        return modelData.fullBodyPhotos.length >= 4
       case 4:
         return true
       default:
