@@ -72,7 +72,7 @@ export function ImageEditorInterface({
   const [error, setError] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3' | '3:4' | '9:16' | '16:9'>('3:4')
-  const [resolution, setResolution] = useState<EditorResolution>('4k')
+  const [resolution, setResolution] = useState<EditorResolution>('1080p')
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' } | null>(null)
   const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
   const [currentEditId, setCurrentEditId] = useState<string | null>(null)
