@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useRef, useCallback, useEffect } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
-import { X, Sparkles, Download, ChevronDown, ChevronUp } from 'lucide-react'
+import { X, Sparkles, Download } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { getUpscaleCost } from '@/lib/credits/pricing'
 
@@ -26,9 +25,6 @@ export function UpscaleConfigModal({
   isLoading = false,
   resultImageUrl
 }: UpscaleConfigModalProps) {
-  const [scaleFactor, setScaleFactor] = useState<string>('2x')
-  const [objectDetection, setObjectDetection] = useState<string>('none')
-  const [showAdvanced, setShowAdvanced] = useState<boolean>(false)
   const comparisonContainerRef = useRef<HTMLDivElement | null>(null)
   const afterImageMaskRef = useRef<HTMLDivElement | null>(null)
   const sliderRef = useRef<HTMLDivElement | null>(null)
@@ -135,7 +131,8 @@ export function UpscaleConfigModal({
   }, [resultImageUrl, addToast])
 
   const handleUpscale = () => {
-    onUpscale(scaleFactor, objectDetection)
+    // Nano Banana Pro: 4K fixo, sem opções adicionais
+    onUpscale('4k', 'none')
   }
 
   // Calcular custo de créditos
@@ -143,7 +140,7 @@ export function UpscaleConfigModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px] bg-[#34495E] border-[#4A5F7A] p-6 rounded-2xl [&>button]:hidden">
+      <DialogContent className="sm:max-w-[1100px] bg-[#34495E] border-[#4A5F7A] p-6 rounded-2xl [&>button]:hidden">
         <DialogTitle className="sr-only">Upscale</DialogTitle>
 
         {/* Header */}
@@ -162,19 +159,19 @@ export function UpscaleConfigModal({
         </div>
 
         {/* Images Section */}
-        <div className="grid grid-cols-[300px_1fr] gap-6 mb-6">
-          {/* Original Image - Menor */}
+        <div className="grid grid-cols-[240px_1fr] gap-6 mb-6">
+          {/* Original Image - Compacto sem padding */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-gray-300 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
               Imagem Original
             </h3>
-            <Card className="bg-[#2C3E50] border-[#4A5F7A] p-3 rounded-xl h-64">
+            <Card className="bg-[#2C3E50] border-[#4A5F7A] p-0 rounded-xl h-80 overflow-hidden">
               {imageUrl ? (
                 <div className="w-full h-full relative">
                   <img
                     src={imageUrl}
                     alt="Imagem original"
-                    className="w-full h-full object-contain rounded-lg"
+                    className="w-full h-full object-cover"
                   />
                   <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
                     Antes
@@ -188,12 +185,12 @@ export function UpscaleConfigModal({
             </Card>
           </div>
 
-          {/* Result Image - Maior */}
+          {/* Result Image - Maior para análise */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-gray-300 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
               Antes e Depois
             </h3>
-            <Card className="bg-[#2C3E50] border-[#4A5F7A] p-3 rounded-xl h-64">
+            <Card className="bg-[#2C3E50] border-[#4A5F7A] p-3 rounded-xl h-80">
               {resultImageUrl ? (
                 <div className="w-full h-full relative select-none touch-none">
                   <div
@@ -273,83 +270,12 @@ export function UpscaleConfigModal({
           </div>
         )}
 
-        {/* Controls */}
-        <div className="space-y-4 mb-6">
-          {/* Tamanho da Imagem - Dropdown Minimalista */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-300 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-              Tamanho da Imagem
-            </label>
-            <Select value={scaleFactor} onValueChange={setScaleFactor}>
-              <SelectTrigger className="h-10 bg-[#2C3E50] border-[#4A5F7A] text-white text-sm font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-[#2C3E50] border-[#4A5F7A]">
-                <SelectItem 
-                  value="none" 
-                  className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-                >
-                  Mesma, apenas melhora qualidade
-                </SelectItem>
-                <SelectItem 
-                  value="2x" 
-                  className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-                >
-                  2x Maior
-                </SelectItem>
-                <SelectItem 
-                  value="4x" 
-                  className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-                >
-                  4x Maior
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Advanced Options - Collapsible */}
-          <div className="border-t border-[#4A5F7A] pt-4">
-            <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center justify-between w-full text-sm font-medium text-gray-300 hover:text-white transition-colors font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
-            >
-              <span>Opções Avançadas</span>
-              {showAdvanced ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
-            </button>
-            
-            {showAdvanced && (
-              <div className="mt-4 space-y-2">
-                <label className="text-xs font-medium text-gray-400 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                  Foco da Melhoria
-                </label>
-                <Select value={objectDetection} onValueChange={setObjectDetection}>
-                  <SelectTrigger className="h-9 bg-[#2C3E50] border-[#4A5F7A] text-white text-sm font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#2C3E50] border-[#4A5F7A]">
-                    <SelectItem value="none" className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                      Imagem Toda (Padrão)
-                    </SelectItem>
-                    <SelectItem value="all" className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                      Detectar Automaticamente
-                    </SelectItem>
-                    <SelectItem value="foreground" className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                      Focar na Pessoa
-                    </SelectItem>
-                    <SelectItem value="background" className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                      Focar no Fundo
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-400 mt-1">
-                  Escolha onde aplicar mais qualidade na imagem
-                </p>
-              </div>
-            )}
+        {/* Info sobre o Upscale 4K */}
+        <div className="mb-6">
+          <div className="bg-[#2C3E50] border border-[#4A5F7A] rounded-xl px-4 py-3">
+            <p className="text-sm text-gray-300 leading-relaxed">
+              <span className="font-semibold text-white">Upscale 4K Ultra HD:</span> Melhora automaticamente a resolução e qualidade da imagem para até 4K, preservando detalhes, reduzindo ruídos e aprimorando texturas de forma natural.
+            </p>
           </div>
         </div>
 
