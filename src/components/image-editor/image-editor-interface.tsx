@@ -32,6 +32,7 @@ import { InsufficientCreditsBanner } from '@/components/ui/insufficient-credits-
 import { PackageSelectorModal } from '@/components/credits/package-selector-modal'
 import { saveFilesToIndexedDB, loadFilesFromIndexedDB, deleteFilesFromIndexedDB, savePromptToIndexedDB, loadPromptFromIndexedDB, finalizeDraft, touchDraft } from '@/lib/utils/indexed-db-persistence'
 import { EDITOR_PRESETS, FREE_MODE_PRESET, type EditorPreset } from '@/lib/editor-presets'
+import { ImagePreviewSlider } from './image-preview-slider'
 
 // Custos dinâmicos baseados na resolução
 const getEditorCost = (resolution: EditorResolution) => getImageEditCost(1, resolution)
@@ -73,7 +74,7 @@ export function ImageEditorInterface({
   const [isMobile, setIsMobile] = useState(false)
   const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:3' | '3:4' | '9:16' | '16:9'>('3:4')
   const [resolution, setResolution] = useState<EditorResolution>('1080p')
-  const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' } | null>(null)
+  const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image'; originalUrl?: string } | null>(null)
   const [isPreviewLightboxOpen, setIsPreviewLightboxOpen] = useState(false)
   const [currentEditId, setCurrentEditId] = useState<string | null>(null)
   const [showCreditPurchase, setShowCreditPurchase] = useState(false)
@@ -282,8 +283,12 @@ export function ImageEditorInterface({
     const urlToUse = temporaryUrl || permanentUrl
 
     if (urlToUse) {
-      // Update preview state PRIMEIRO
-      setPreviewMedia({ url: urlToUse, type: 'image' })
+      // Update preview state PRIMEIRO com URL original se disponível
+      setPreviewMedia({
+        url: urlToUse,
+        type: 'image',
+        originalUrl: images[0] || undefined // primeira imagem anexada
+      })
       setIsPreviewLightboxOpen(false)
 
       // CRITICAL: Limpar loading DEPOIS de atualizar preview
@@ -1122,8 +1127,12 @@ export function ImageEditorInterface({
         throw new Error('URL da imagem não foi retornada pela API')
       }
 
-      // CRITICAL: Atualizar preview ANTES de limpar loading
-      setPreviewMedia({ url: modalUrl, type: 'image' })
+      // CRITICAL: Atualizar preview ANTES de limpar loading com URL original
+      setPreviewMedia({
+        url: modalUrl,
+        type: 'image',
+        originalUrl: images[0] || undefined // primeira imagem anexada
+      })
       setIsPreviewLightboxOpen(false)
 
       console.log('✅ [IMAGE_EDITOR] Inline preview updated with', temporaryUrl ? 'temporary URL' : 'permanent URL')
@@ -1481,23 +1490,13 @@ export function ImageEditorInterface({
           )}
 
           <Dialog open={isPreviewLightboxOpen} onOpenChange={setIsPreviewLightboxOpen}>
-            <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden p-0">
+            <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-hidden p-0">
               {previewMedia?.type === 'image' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleDownloadPreview}
-                    className="absolute right-16 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-medium text-gray-900 shadow-sm transition-all duration-200 ease-in-out hover:bg-white hover:ring-2 hover:ring-[#3b82f6] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] focus-visible:ring-offset-2"
-                  >
-                    <Download className="w-3 h-3" />
-                    Baixar
-                  </button>
-                  <img
-                    src={previewMedia.url}
-                    alt="Resultado gerado"
-                    className="w-full h-auto max-h-[80vh] object-contain"
-                  />
-                </>
+                <ImagePreviewSlider
+                  resultUrl={previewMedia.url}
+                  originalUrl={previewMedia.originalUrl}
+                  onDownload={handleDownloadPreview}
+                />
               )}
             </DialogContent>
           </Dialog>
@@ -1803,23 +1802,13 @@ export function ImageEditorInterface({
           )}
 
           <Dialog open={isPreviewLightboxOpen} onOpenChange={setIsPreviewLightboxOpen}>
-            <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden p-0">
+            <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-hidden p-0">
               {previewMedia?.type === 'image' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleDownloadPreview}
-                className="absolute right-16 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-medium text-gray-900 shadow-sm transition-all duration-200 ease-in-out hover:bg-white hover:ring-2 hover:ring-[#3b82f6] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] focus-visible:ring-offset-2"
-                  >
-                    <Download className="w-3 h-3" />
-                    Baixar
-                  </button>
-                  <img
-                    src={previewMedia.url}
-                    alt="Resultado gerado"
-                    className="w-full h-auto max-h-[85vh] object-contain"
-                  />
-                </>
+                <ImagePreviewSlider
+                  resultUrl={previewMedia.url}
+                  originalUrl={previewMedia.originalUrl}
+                  onDownload={handleDownloadPreview}
+                />
               )}
             </DialogContent>
           </Dialog>
