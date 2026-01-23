@@ -1259,9 +1259,11 @@ export function AutoSyncGalleryInterface({
     })
 
     // Convert scale factor to number for API
+    // Nano Banana Pro: sempre 4K, não precisa converter
     const scaleFactorNumber = scaleFactor === 'none' ? 1 :
                              scaleFactor === '2x' ? 2 :
-                             scaleFactor === '4x' ? 4 : 2
+                             scaleFactor === '4x' ? 4 :
+                             scaleFactor === '4k' ? 4 : 4 // Default 4K (Nano Banana Pro)
 
     const options = {
       scale_factor: scaleFactorNumber,

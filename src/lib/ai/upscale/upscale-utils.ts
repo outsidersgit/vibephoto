@@ -49,46 +49,35 @@ export function validateUpscaleOptions(options: UpscaleOptions): { isValid: bool
   const errors: string[] = []
   const { ranges } = UPSCALE_CONFIG
 
-  // Valida upscale_factor
-  if (options.upscale_factor && !UPSCALE_CONFIG.options.upscale_factors.includes(options.upscale_factor)) {
-    errors.push(`Upscale factor deve ser um de: ${UPSCALE_CONFIG.options.upscale_factors.join(', ')}`)
-  }
-
-  // Valida enhance_model
-  if (options.enhance_model && !UPSCALE_CONFIG.options.enhance_models.includes(options.enhance_model)) {
-    errors.push(`Enhance model deve ser um de: ${UPSCALE_CONFIG.options.enhance_models.join(', ')}`)
-  }
-
-  // Valida output_format
+  // Validações Nano Banana Pro (apenas parâmetros relevantes)
+  // output_format
   if (options.output_format && !UPSCALE_CONFIG.options.output_formats.includes(options.output_format)) {
     errors.push(`Formato de saída deve ser um de: ${UPSCALE_CONFIG.options.output_formats.join(', ')}`)
   }
 
-  // Valida subject_detection
-  if (options.subject_detection && !UPSCALE_CONFIG.options.subject_detection_options.includes(options.subject_detection)) {
-    errors.push(`Subject detection deve ser um de: ${UPSCALE_CONFIG.options.subject_detection_options.join(', ')}`)
+  // resolution (opcional, default 4K)
+  if (options.resolution && !UPSCALE_CONFIG.options.resolutions.includes(options.resolution)) {
+    errors.push(`Resolução deve ser um de: ${UPSCALE_CONFIG.options.resolutions.join(', ')}`)
   }
 
-  // Valida face_enhancement_strength
-  if (options.face_enhancement_strength !== undefined) {
-    if (options.face_enhancement_strength < ranges.face_enhancement_strength.min ||
-        options.face_enhancement_strength > ranges.face_enhancement_strength.max) {
-      errors.push(`Face enhancement strength deve estar entre ${ranges.face_enhancement_strength.min} e ${ranges.face_enhancement_strength.max}`)
-    }
+  // aspect_ratio (opcional, default match_input_image)
+  if (options.aspect_ratio && !UPSCALE_CONFIG.options.aspect_ratios.includes(options.aspect_ratio)) {
+    errors.push(`Aspect ratio deve ser um de: ${UPSCALE_CONFIG.options.aspect_ratios.join(', ')}`)
   }
 
-  // Valida face_enhancement_creativity
-  if (options.face_enhancement_creativity !== undefined) {
-    if (options.face_enhancement_creativity < ranges.face_enhancement_creativity.min ||
-        options.face_enhancement_creativity > ranges.face_enhancement_creativity.max) {
-      errors.push(`Face enhancement creativity deve estar entre ${ranges.face_enhancement_creativity.min} e ${ranges.face_enhancement_creativity.max}`)
-    }
+  // safety_filter_level (opcional, default block_only_high)
+  if (options.safety_filter_level && !UPSCALE_CONFIG.options.safety_filter_levels.includes(options.safety_filter_level)) {
+    errors.push(`Safety filter deve ser um de: ${UPSCALE_CONFIG.options.safety_filter_levels.join(', ')}`)
   }
 
-  // Backward compatibility: valida scale_factor se fornecido
-  if (options.scale_factor !== undefined && !UPSCALE_CONFIG.scaleFactors.includes(options.scale_factor)) {
-    errors.push(`Scale factor deve ser um de: ${UPSCALE_CONFIG.scaleFactors.join(', ')}`)
+  // Parâmetros legados (Topaz Labs) são ignorados silenciosamente
+  if (options.upscale_factor || options.scale_factor || options.enhance_model ||
+      options.face_enhancement || options.subject_detection) {
+    console.log('ℹ️ Parâmetros legados (Topaz Labs) ignorados - usando Nano Banana Pro 4K')
   }
+
+  // Backward compatibility: scale_factor legado é ignorado (Nano Banana Pro usa 4K fixo)
+  // Não valida mais scale_factor para permitir transição suave do código legado
 
   return {
     isValid: errors.length === 0,
