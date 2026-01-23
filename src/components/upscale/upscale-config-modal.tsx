@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
-import { X, Sparkles, Download } from 'lucide-react'
+import { X, Sparkles, Download, ChevronDown, ChevronUp } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { getUpscaleCost } from '@/lib/credits/pricing'
 
@@ -28,6 +28,7 @@ export function UpscaleConfigModal({
 }: UpscaleConfigModalProps) {
   const [scaleFactor, setScaleFactor] = useState<string>('2x')
   const [objectDetection, setObjectDetection] = useState<string>('none')
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false)
   const comparisonContainerRef = useRef<HTMLDivElement | null>(null)
   const afterImageMaskRef = useRef<HTMLDivElement | null>(null)
   const sliderRef = useRef<HTMLDivElement | null>(null)
@@ -273,73 +274,102 @@ export function UpscaleConfigModal({
         )}
 
         {/* Controls */}
-        <div className="grid grid-cols-2 gap-6 mb-6">
-          {/* Scale Factor */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-300 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-              Fator de Escala
-            </label>
-            <div className="flex gap-1">
+        <div className="space-y-4 mb-6">
+          {/* Tamanho da Imagem */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-300 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                Tamanho da Imagem
+              </label>
+              <span className="text-xs text-gray-400">
+                {scaleFactor === 'none' && 'Mantém tamanho original'}
+                {scaleFactor === '2x' && 'Aumenta 2x (Recomendado)'}
+                {scaleFactor === '4x' && 'Aumenta 4x (Máximo)'}
+              </span>
+            </div>
+            <div className="flex gap-2">
               <Button
                 variant={scaleFactor === 'none' ? "default" : "outline"}
                 onClick={() => setScaleFactor('none')}
-                className={`flex-1 h-8 text-xs font-medium font-[system-ui,-apple-system,'SF Pro Display',sans-serif] ${
+                className={`flex-1 h-auto py-3 px-4 flex flex-col items-start text-left font-[system-ui,-apple-system,'SF Pro Display',sans-serif] ${
                   scaleFactor === 'none'
                     ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white border-0'
                     : 'bg-[#2C3E50] border-[#4A5F7A] text-gray-300 hover:bg-[#4A5F7A] hover:text-white'
                 }`}
               >
-                Nenhum
+                <span className="text-sm font-semibold">Apenas Melhorar</span>
+                <span className="text-xs opacity-80 mt-0.5">Mantém tamanho</span>
               </Button>
               <Button
                 variant={scaleFactor === '2x' ? "default" : "outline"}
                 onClick={() => setScaleFactor('2x')}
-                className={`flex-1 h-8 text-xs font-medium font-[system-ui,-apple-system,'SF Pro Display',sans-serif] ${
+                className={`flex-1 h-auto py-3 px-4 flex flex-col items-start text-left font-[system-ui,-apple-system,'SF Pro Display',sans-serif] ${
                   scaleFactor === '2x'
                     ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white border-0'
                     : 'bg-[#2C3E50] border-[#4A5F7A] text-gray-300 hover:bg-[#4A5F7A] hover:text-white'
                 }`}
               >
-                2x
+                <span className="text-sm font-semibold">2x Maior</span>
+                <span className="text-xs opacity-80 mt-0.5">Recomendado</span>
               </Button>
               <Button
                 variant={scaleFactor === '4x' ? "default" : "outline"}
                 onClick={() => setScaleFactor('4x')}
-                className={`flex-1 h-8 text-xs font-medium font-[system-ui,-apple-system,'SF Pro Display',sans-serif] ${
+                className={`flex-1 h-auto py-3 px-4 flex flex-col items-start text-left font-[system-ui,-apple-system,'SF Pro Display',sans-serif] ${
                   scaleFactor === '4x'
                     ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white border-0'
                     : 'bg-[#2C3E50] border-[#4A5F7A] text-gray-300 hover:bg-[#4A5F7A] hover:text-white'
                 }`}
               >
-                4x
+                <span className="text-sm font-semibold">4x Maior</span>
+                <span className="text-xs opacity-80 mt-0.5">Máxima qualidade</span>
               </Button>
             </div>
           </div>
 
-          {/* Object Detection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-300 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-              Detecção de Objeto
-            </label>
-            <Select value={objectDetection} onValueChange={setObjectDetection}>
-              <SelectTrigger className="h-8 bg-[#2C3E50] border-[#4A5F7A] text-white text-xs font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-[#2C3E50] border-[#4A5F7A]">
-                <SelectItem value="none" className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                  Nenhum
-                </SelectItem>
-                <SelectItem value="all" className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                  Todos
-                </SelectItem>
-                <SelectItem value="foreground" className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                  Primeiro Plano
-                </SelectItem>
-                <SelectItem value="background" className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                  Fundo
-                </SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Advanced Options - Collapsible */}
+          <div className="border-t border-[#4A5F7A] pt-4">
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center justify-between w-full text-sm font-medium text-gray-300 hover:text-white transition-colors font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+            >
+              <span>Opções Avançadas</span>
+              {showAdvanced ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+            </button>
+            
+            {showAdvanced && (
+              <div className="mt-4 space-y-2">
+                <label className="text-xs font-medium text-gray-400 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                  Foco da Melhoria
+                </label>
+                <Select value={objectDetection} onValueChange={setObjectDetection}>
+                  <SelectTrigger className="h-9 bg-[#2C3E50] border-[#4A5F7A] text-white text-sm font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#2C3E50] border-[#4A5F7A]">
+                    <SelectItem value="none" className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                      Imagem Toda (Padrão)
+                    </SelectItem>
+                    <SelectItem value="all" className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                      Detectar Automaticamente
+                    </SelectItem>
+                    <SelectItem value="foreground" className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                      Focar na Pessoa
+                    </SelectItem>
+                    <SelectItem value="background" className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                      Focar no Fundo
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Escolha onde aplicar mais qualidade na imagem
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
