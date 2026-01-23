@@ -125,22 +125,9 @@ export async function POST(request: NextRequest) {
       console.warn('⚠️ Input images contain temporary URLs that may expire during processing')
     }
 
-    // Convert legacy scale_factor to upscale_factor if needed
-    if (options.scale_factor && !options.upscale_factor) {
-      options.upscale_factor = `${options.scale_factor}x` as "2x" | "4x" | "6x"
-    }
-
-    // Set default upscale_factor if not provided
-    if (!options.upscale_factor) {
-      options.upscale_factor = "2x"
-    }
-
-    // Validate upscale_factor
-    if (!UPSCALE_CONFIG.options.upscale_factors.includes(options.upscale_factor)) {
-      return NextResponse.json({
-        error: `upscale_factor deve ser um de: ${UPSCALE_CONFIG.options.upscale_factors.join(', ')}`
-      }, { status: 400 })
-    }
+    // Nano Banana Pro: parâmetros legados são ignorados
+    // Não precisa converter ou validar scale_factor/upscale_factor
+    // O upscaler usa sempre 4K internamente
 
     // Verifica se usuário pode fazer upscale
     // For now, we'll count upscale generations by checking if prompt contains [UPSCALED]
@@ -158,8 +145,8 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Extract numeric scale factor for validation
-    const numericScaleFactor = parseInt(options.upscale_factor.replace('x', '')) || 2
+    // Nano Banana Pro: sempre 4K (scale factor 4)
+    const numericScaleFactor = 4
 
     const canUpscale = canUserUpscale(userPlan, numericScaleFactor, dailyUsage + imageCount - 1)
     if (!canUpscale.canUpscale) {
