@@ -305,10 +305,11 @@ export function ResultPreview({
       <div className="p-4">
         {showComparison && originalImage ? (
           // Before/After Slider Comparison
-          <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden max-w-3xl mx-auto select-none touch-none">
+          <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden max-w-3xl mx-auto">
             <div
               ref={comparisonContainerRef}
-              className="relative w-full h-full cursor-ew-resize"
+              className="relative w-full h-full cursor-ew-resize select-none"
+              style={{ touchAction: 'none' }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
