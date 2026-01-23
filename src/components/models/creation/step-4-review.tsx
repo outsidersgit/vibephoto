@@ -150,8 +150,8 @@ export function ModelCreationStep4({
   }
 
   // Cálculo da avaliação de quantidade de fotos
-  const minPhotos = 15 // 5 rosto + 5 meio corpo + 5 corpo inteiro (mínimo)
-  const maxPhotos = 30 // 10 rosto + 10 meio corpo + 10 corpo inteiro (máximo ideal)
+  const minPhotos = 20 // 10 rosto + 6 meio corpo + 4 corpo inteiro (mínimo)
+  const maxPhotos = 30 // 14 rosto + 9 meio corpo + 7 corpo inteiro (máximo ideal)
   const quantityScore = Math.min((totalPhotos - minPhotos) / (maxPhotos - minPhotos), 1)
 
   const getQuantityQuality = () => {

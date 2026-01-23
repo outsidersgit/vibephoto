@@ -1359,10 +1359,10 @@ export function ImageEditorInterface({
 
             {/* 4K Resolution Option - Minimalista com efeito 3D discreto */}
             <div className="flex items-center">
-              <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md transition-all ${
+              <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md border transition-all ${
                 resolution === '4k'
-                  ? 'shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] bg-gray-100'
-                  : 'hover:shadow-[0_1px_3px_rgba(0,0,0,0.08)] bg-white'
+                  ? 'shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] bg-gray-100 border-gray-300'
+                  : 'hover:shadow-[0_1px_3px_rgba(0,0,0,0.08)] bg-white border-gray-200 hover:border-gray-300'
               }`}>
                 <input
                   type="checkbox"
@@ -1683,10 +1683,10 @@ export function ImageEditorInterface({
 
           {/* 4K Resolution Option - Minimalista com efeito 3D discreto (Mobile) */}
           <div className="flex items-center">
-            <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md transition-all ${
+            <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md border transition-all ${
               resolution === '4k'
-                ? 'shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] bg-gray-100'
-                : 'hover:shadow-[0_1px_3px_rgba(0,0,0,0.08)] bg-white'
+                ? 'shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] bg-gray-100 border-gray-300'
+                : 'hover:shadow-[0_1px_3px_rgba(0,0,0,0.08)] bg-white border-gray-200 hover:border-gray-300'
             }`}>
               <input
                 type="checkbox"
