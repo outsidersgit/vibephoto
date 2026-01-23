@@ -604,19 +604,27 @@ export function AutoSyncGalleryInterface({
     console.log(`📥 Gallery received generation status update: ${generationId} -> ${status}`, {
       isUpscale: data.isUpscale,
       hasImageUrls: !!data.imageUrls,
-      imageUrlsCount: data.imageUrls?.length
+      imageUrlsCount: data.imageUrls?.length,
+      hasActiveUpscale: !!activeUpscale,
+      modalIsOpen: upscaleConfigModal.isOpen
     })
     
-    // Processar upscale se for o caso
-    if (data.isUpscale && activeUpscale?.jobId) {
+    // CRITICAL: Processar upscale se:
+    // 1. É um upscale (data.isUpscale)
+    // 2. E QUALQUER UMA dessas condições:
+    //    - activeUpscale existe (polling ativo)
+    //    - OU modal de upscale está aberto (upscale síncrono rápido)
+    if (data.isUpscale && (activeUpscale?.jobId || upscaleConfigModal.isOpen)) {
       if (status === 'succeeded' || status === 'COMPLETED') {
         if (data.imageUrls?.length > 0) {
+          console.log('✅ Upscale succeeded, calling handleUpscaleComplete')
           handleUpscaleComplete({
             resultImages: data.imageUrls,
             downloadUrl: data.imageUrls[0]
           })
         }
       } else if (status === 'failed' || status === 'FAILED') {
+        console.error('❌ Upscale failed, calling handleUpscaleError:', data.errorMessage)
         handleUpscaleError(data.errorMessage || 'Upscale failed')
       }
     }
@@ -624,7 +632,7 @@ export function AutoSyncGalleryInterface({
     // CRITICAL: Sempre atualizar a galeria para TODAS as atualizações de geração
     // Não apenas upscales - isso garante que novas gerações apareçam automaticamente
     handleGenerationStatusChange(generationId, status, data)
-  }, [activeUpscale, handleGenerationStatusChange])
+  }, [activeUpscale, upscaleConfigModal.isOpen, handleGenerationStatusChange])
 
   // Set mounted flag on client-side to prevent hydration mismatch
   useEffect(() => {
@@ -1360,6 +1368,12 @@ export function AutoSyncGalleryInterface({
       type: "error"
     })
     setActiveUpscale(null)
+    
+    // CRITICAL: Reset modal loading state when error occurs
+    setUpscaleConfigModal(prev => ({
+      ...prev,
+      isLoading: false
+    }))
   }
 
   const handleResetUpscale = () => {

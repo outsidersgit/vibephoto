@@ -36,7 +36,9 @@ export function UpscaleProgress({
   useEffect(() => {
     let interval: NodeJS.Timeout
     let timeInterval: NodeJS.Timeout
+    let timeoutTimer: NodeJS.Timeout
     let cancelled = false
+    const MAX_UPSCALE_TIME = 5 * 60 * 1000 // 5 minutos de timeout
 
     const checkStatus = async () => {
       try {
@@ -63,11 +65,13 @@ export function UpscaleProgress({
           }
           if (interval) clearInterval(interval)
           if (timeInterval) clearInterval(timeInterval)
+          if (timeoutTimer) clearTimeout(timeoutTimer)
         } else if (data.status === 'failed') {
           setError(data.error || 'Upscale falhou')
           onError?.(data.error || 'Upscale falhou')
           if (interval) clearInterval(interval)
           if (timeInterval) clearInterval(timeInterval)
+          if (timeoutTimer) clearTimeout(timeoutTimer)
         }
       } catch (err) {
         if (cancelled) return
@@ -79,6 +83,7 @@ export function UpscaleProgress({
         
         if (interval) clearInterval(interval)
         if (timeInterval) clearInterval(timeInterval)
+        if (timeoutTimer) clearTimeout(timeoutTimer)
       }
     }
 
@@ -92,10 +97,25 @@ export function UpscaleProgress({
       setElapsedTime(Date.now() - startTime)
     }, 1000)
 
+    // CRITICAL: Timeout de 5 minutos - se não completar, mostrar erro
+    timeoutTimer = setTimeout(() => {
+      if (!cancelled && status !== 'completed' && status !== 'failed') {
+        console.error(`❌ Upscale timeout after ${MAX_UPSCALE_TIME}ms`)
+        const timeoutMessage = 'Tempo limite excedido. O processamento pode ter falhado.'
+        setError(timeoutMessage)
+        setStatus('failed')
+        onError?.(timeoutMessage)
+        
+        if (interval) clearInterval(interval)
+        if (timeInterval) clearInterval(timeInterval)
+      }
+    }, MAX_UPSCALE_TIME)
+
     return () => {
       cancelled = true
       if (interval) clearInterval(interval)
       if (timeInterval) clearInterval(timeInterval)
+      if (timeoutTimer) clearTimeout(timeoutTimer)
     }
   }, [jobId, onComplete, onError])
 

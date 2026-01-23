@@ -276,6 +276,30 @@ export async function POST(request: NextRequest) {
         imageUrls: finalImageUrls,
         thumbnailUrls: finalThumbnailUrls
       })
+      
+      // CRITICAL: Broadcast status change for synchronous results (success OR failure)
+      // Async results are handled by webhook, but sync results need manual broadcast
+      if (synchronousResult) {
+        try {
+          const { broadcastGenerationStatusChange } = await import('@/lib/services/realtime-service')
+          await broadcastGenerationStatusChange(
+            generationRecord.id,
+            userId,
+            finalStatus, // COMPLETED or FAILED
+            {
+              imageUrls: finalImageUrls,
+              thumbnailUrls: finalThumbnailUrls,
+              isUpscale: true,
+              synchronous: true,
+              errorMessage: finalStatus === 'FAILED' ? 'Falha ao armazenar imagem upscaled' : undefined,
+              timestamp: new Date().toISOString()
+            }
+          )
+          console.log(`📡 Broadcasted ${finalStatus} status for synchronous upscale ${generationRecord.id}`)
+        } catch (broadcastError) {
+          console.error('❌ Failed to broadcast synchronous upscale status:', broadcastError)
+        }
+      }
     }
 
     const chargeResult = await CreditManager.deductCredits(
