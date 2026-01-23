@@ -481,40 +481,54 @@ export class GeminiProvider extends AIProvider {
       })
 
       const systemPrompt = type === 'image'
-        ? `Você é um especialista em engenharia de prompts para modelos de geração de imagens como FLUX, Stable Diffusion e Midjourney.
+        ? `Você é um especialista técnico em engenharia de prompts para modelos de geração de imagens como FLUX, Stable Diffusion e Midjourney.
 
-Tarefa: Transforme o prompt simples do usuário em um prompt detalhado e de alta qualidade.
+Tarefa: Otimize o prompt do usuário adicionando APENAS detalhes técnicos e de qualidade, mantendo 100% o conceito original.
 
-Diretrizes:
-- Adicione detalhes artísticos (estilo, iluminação, composição, ângulo da câmera)
-- Inclua termos de qualidade (8k, ultra detalhado, obra-prima, profissional)
-- Especifique aspectos técnicos (profundidade de campo, tipo de iluminação, paleta de cores)
-- Mantenha a ideia central intacta - não mude o que o usuário quer
-- Seja conciso mas descritivo (máximo 200 palavras)
+Diretrizes CRÍTICAS:
+- NÃO invente elementos novos (objetos, pessoas, locais, cores específicas não mencionadas)
+- NÃO mude a ideia central do usuário
+- MANTENHA exatamente o que foi pedido
+- ADICIONE apenas: qualidade técnica (8k, ultra detalhado, fotorrealista), iluminação profissional, composição, textura, profundidade de campo
+- FOQUE em aspectos técnicos: tipo de lente, abertura, ISO, balanço de brancos, pós-processamento
+- Especifique renderização realista e física precisa
+- Seja técnico, não criativo
+- Máximo 200 palavras
 - Use o mesmo idioma da entrada (português ou inglês)
 - Retorne APENAS o prompt otimizado, sem explicações
 
-Exemplo:
-Entrada: "um gato em uma cadeira"
-Saída: "um majestoso gato malhado sentado elegantemente em uma cadeira de madeira vintage, iluminação de estúdio, profundidade de campo rasa, fotografia profissional de animais, resolução 8k, textura de pelagem ultra detalhada, paleta de cores quentes, fundo desfocado bokeh"
+Exemplo CORRETO:
+Entrada: "cachorro correndo"
+Saída: "cachorro correndo com movimento dinâmico e fluido, anatomia canina precisa, física de movimento realista, pelagem com textura detalhada, captura de alta velocidade, iluminação natural balanceada, profundidade de campo cinematográfica, resolução 8k, fotografia profissional de ação, motion blur sutil, músculos definidos, expressão natural, fotorrealismo extremo"
+
+Exemplo ERRADO (não faça assim):
+Entrada: "cachorro correndo"
+Saída: "golden retriever correndo alegremente em uma praia tropical ao pôr do sol com céu rosa e laranja" ❌
 
 Agora otimize este prompt:`
-        : `Você é um especialista em engenharia de prompts para modelos de geração de vídeo.
+        : `Você é um especialista técnico em engenharia de prompts para modelos de geração de vídeo.
 
-Tarefa: Transforme o prompt simples do usuário em um prompt cinematográfico detalhado.
+Tarefa: Otimize o prompt do usuário adicionando APENAS detalhes técnicos cinematográficos, mantendo 100% o conceito original.
 
-Diretrizes:
-- Descreva a cena, ação e movimento claramente
-- Adicione detalhes cinematográficos (movimento de câmera, ângulos, transições)
-- Especifique humor, iluminação e atmosfera
-- Inclua sugestões de ritmo e timing
-- Mantenha focado e coerente (máximo 150 palavras)
+Diretrizes CRÍTICAS:
+- NÃO invente cenários, locais ou elementos novos não mencionados pelo usuário
+- NÃO mude a ação ou cena descrita
+- MANTENHA exatamente o que foi pedido
+- ADICIONE apenas: movimento de câmera (pan, tilt, dolly, steadicam), ângulos (wide shot, close-up, over-shoulder), iluminação cinematográfica, frame rate, qualidade técnica
+- FOQUE em aspectos técnicos: transições suaves, motion blur, estabilização, gradação de cor profissional, resolução 4k
+- Especifique física de movimento realista e timing preciso
+- Seja técnico, não criativo
+- Máximo 150 palavras
 - Use o mesmo idioma da entrada (português ou inglês)
 - Retorne APENAS o prompt otimizado, sem explicações
 
-Exemplo:
-Entrada: "pessoa caminhando na praia"
-Saída: "plano cinematográfico de uma pessoa caminhando ao longo de uma praia pristina durante a hora dourada, ondas suaves lambendo seus pés, câmera acompanhando lentamente ao lado, iluminação quente do pôr do sol criando sombras longas na areia molhada, atmosfera serena e pacífica, movimento lento, qualidade 4k, gradação de cor profissional"
+Exemplo CORRETO:
+Entrada: "pessoa caminhando"
+Saída: "pessoa caminhando com movimento natural e fluido, câmera em steadicam acompanhando lateralmente, plano médio, transição suave, física de movimento realista, iluminação balanceada, profundidade de campo cinematográfica, motion blur natural, 24fps, resolução 4k, gradação de cor profissional, estabilização avançada"
+
+Exemplo ERRADO (não faça assim):
+Entrada: "pessoa caminhando"
+Saída: "mulher de vestido vermelho caminhando em um campo de girassóis ao entardecer" ❌
 
 Agora otimize este prompt de vídeo:`
 
