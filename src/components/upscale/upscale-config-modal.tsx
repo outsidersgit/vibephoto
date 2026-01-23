@@ -162,8 +162,8 @@ export function UpscaleConfigModal({
         </div>
 
         {/* Images Section */}
-        <div className="grid grid-cols-2 gap-6 mb-6">
-          {/* Original Image */}
+        <div className="grid grid-cols-[300px_1fr] gap-6 mb-6">
+          {/* Original Image - Menor */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-gray-300 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
               Imagem Original
@@ -188,7 +188,7 @@ export function UpscaleConfigModal({
             </Card>
           </div>
 
-          {/* Result Image */}
+          {/* Result Image - Maior */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-gray-300 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
               Antes e Depois
@@ -275,56 +275,45 @@ export function UpscaleConfigModal({
 
         {/* Controls */}
         <div className="space-y-4 mb-6">
-          {/* Tamanho da Imagem */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-300 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-                Tamanho da Imagem
-              </label>
-              <span className="text-xs text-gray-400">
-                {scaleFactor === 'none' && 'Mantém tamanho original'}
-                {scaleFactor === '2x' && 'Aumenta 2x (Recomendado)'}
-                {scaleFactor === '4x' && 'Aumenta 4x (Máximo)'}
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant={scaleFactor === 'none' ? "default" : "outline"}
-                onClick={() => setScaleFactor('none')}
-                className={`flex-1 h-auto py-3 px-4 flex flex-col items-start text-left font-[system-ui,-apple-system,'SF Pro Display',sans-serif] ${
-                  scaleFactor === 'none'
-                    ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white border-0'
-                    : 'bg-[#2C3E50] border-[#4A5F7A] text-gray-300 hover:bg-[#4A5F7A] hover:text-white'
-                }`}
-              >
-                <span className="text-sm font-semibold">Apenas Melhorar</span>
-                <span className="text-xs opacity-80 mt-0.5">Mantém tamanho</span>
-              </Button>
-              <Button
-                variant={scaleFactor === '2x' ? "default" : "outline"}
-                onClick={() => setScaleFactor('2x')}
-                className={`flex-1 h-auto py-3 px-4 flex flex-col items-start text-left font-[system-ui,-apple-system,'SF Pro Display',sans-serif] ${
-                  scaleFactor === '2x'
-                    ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white border-0'
-                    : 'bg-[#2C3E50] border-[#4A5F7A] text-gray-300 hover:bg-[#4A5F7A] hover:text-white'
-                }`}
-              >
-                <span className="text-sm font-semibold">2x Maior</span>
-                <span className="text-xs opacity-80 mt-0.5">Recomendado</span>
-              </Button>
-              <Button
-                variant={scaleFactor === '4x' ? "default" : "outline"}
-                onClick={() => setScaleFactor('4x')}
-                className={`flex-1 h-auto py-3 px-4 flex flex-col items-start text-left font-[system-ui,-apple-system,'SF Pro Display',sans-serif] ${
-                  scaleFactor === '4x'
-                    ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white border-0'
-                    : 'bg-[#2C3E50] border-[#4A5F7A] text-gray-300 hover:bg-[#4A5F7A] hover:text-white'
-                }`}
-              >
-                <span className="text-sm font-semibold">4x Maior</span>
-                <span className="text-xs opacity-80 mt-0.5">Máxima qualidade</span>
-              </Button>
-            </div>
+          {/* Tamanho da Imagem - Dropdown Minimalista */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-300 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+              Tamanho da Imagem
+            </label>
+            <Select value={scaleFactor} onValueChange={setScaleFactor}>
+              <SelectTrigger className="h-10 bg-[#2C3E50] border-[#4A5F7A] text-white text-sm font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-[#2C3E50] border-[#4A5F7A]">
+                <SelectItem 
+                  value="none" 
+                  className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium">Apenas Melhorar Qualidade</span>
+                    <span className="text-xs text-gray-400">Mantém o tamanho original</span>
+                  </div>
+                </SelectItem>
+                <SelectItem 
+                  value="2x" 
+                  className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium">2x Maior (Recomendado)</span>
+                    <span className="text-xs text-gray-400">Dobra o tamanho da imagem</span>
+                  </div>
+                </SelectItem>
+                <SelectItem 
+                  value="4x" 
+                  className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium">4x Maior (Máxima Qualidade)</span>
+                    <span className="text-xs text-gray-400">Quadruplica o tamanho da imagem</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Advanced Options - Collapsible */}
