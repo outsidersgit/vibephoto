@@ -190,7 +190,7 @@ export function UpscaleConfigModal({
             <h3 className="text-xs font-medium text-gray-400 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
               Antes e Depois (arraste para comparar)
             </h3>
-            <Card className="bg-[#2C3E50] border-[#4A5F7A] p-0 rounded-lg h-[450px] overflow-hidden">
+            <Card className="bg-[#2C3E50] border-[#4A5F7A] p-0 rounded-lg overflow-hidden" style={{ height: '450px' }}>
               {resultImageUrl ? (
                 <div className="w-full h-full relative select-none touch-none">
                   <div
@@ -236,6 +236,15 @@ export function UpscaleConfigModal({
                     <div className="absolute top-3 right-3 bg-black/70 text-white text-[10px] px-2 py-1 rounded">
                       Depois
                     </div>
+                    {/* Botão Download - Estilo dos outros previews */}
+                    <button
+                      onClick={handleDownloadResult}
+                      className="absolute top-3 right-16 p-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white rounded-lg transition-all duration-200 flex items-center gap-1.5 text-xs font-medium shadow-lg border border-white/20 hover:border-white/30"
+                      title="Baixar imagem em alta resolução"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Baixar</span>
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -256,31 +265,18 @@ export function UpscaleConfigModal({
           </div>
         </div>
 
-        {/* Informações compactas */}
-        {resultImageUrl ? (
-          <div className="mb-4">
-            <div className="flex items-center justify-between bg-[#2C3E50]/50 border border-[#4A5F7A]/50 rounded-lg px-3 py-2">
-              <p className="text-xs text-gray-300">
-                Imagem salva na galeria
-              </p>
-              <Button
-                type="button"
-                onClick={handleDownloadResult}
-                size="sm"
-                className="h-7 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 text-white text-xs px-2 gap-1"
-              >
-                <Download className="w-3 h-3" />
-                Baixar
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="mb-4">
+        {/* Informação compacta */}
+        <div className="mb-4">
+          {resultImageUrl ? (
+            <p className="text-xs text-gray-300 text-center">
+              ✓ Imagem salva na galeria
+            </p>
+          ) : (
             <p className="text-xs text-gray-400 text-center">
               <span className="font-medium text-gray-300">4K Ultra HD:</span> Melhora resolução e qualidade preservando detalhes
             </p>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Action Buttons */}
         <div className="flex gap-3">
