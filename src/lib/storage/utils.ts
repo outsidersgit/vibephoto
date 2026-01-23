@@ -43,7 +43,8 @@ export async function downloadAndStoreImages(
   temporaryUrls: string[],
   generationId: string,
   userId: string,
-  context: string = 'generated' // Deprecated parameter, maintained for backward compatibility
+  context: string = 'generated', // Deprecated parameter, maintained for backward compatibility
+  isUpscale: boolean = false // Flag to indicate upscale images (allows larger file size)
 ): Promise<DownloadResult> {
   try {
     // 🔑 CRITICAL: Check if storage provider is properly initialized
@@ -148,7 +149,8 @@ export async function downloadAndStoreImages(
         const uploadResult = await storage.upload(imageFile, imagePath, {
           folder: `generated/${userId}`,
           makePublic: true, // Same as training
-          quality: 87 // 🎯 OPTIMIZED: Reduced from 90 to 87 (imperceptible difference, ~15-20% smaller files)
+          quality: 87, // 🎯 OPTIMIZED: Reduced from 90 to 87 (imperceptible difference, ~15-20% smaller files)
+          isUpscale // Pass isUpscale flag to allow larger file sizes (50MB)
         })
 
         if (!uploadResult || !uploadResult.url) {

@@ -213,7 +213,8 @@ export async function POST(request: NextRequest) {
             result.result,
             `temp_${jobId}`, // Temporary generation ID
             userId,
-            'upscaled'
+            'upscaled',
+            true // isUpscale flag to allow larger file sizes (50MB)
           )
           
           if (storageResult.success && storageResult.permanentUrls && storageResult.permanentUrls.length > 0) {
@@ -437,8 +438,8 @@ export async function GET() {
       options: {
         upscale_factor: 'String - Fator de escala: "2x", "4x", "6x" ou "None" (padrão: "2x")',
         enhance_model: 'String - Modelo: "Standard V2", "Low Resolution V2", "CGI", "High Fidelity V2", "Text Refine" (padrão: "Standard V2")',
-        output_format: 'String - Formato: "png" ou "jpg" (padrão: "png")',
-        face_enhancement: 'Boolean - Melhoria de faces (padrão: false)',
+        output_format: 'String - Formato: "png" ou "jpg" (padrão: "jpg")',
+        face_enhancement: 'Boolean - Melhoria de faces (padrão: true)',
         subject_detection: 'String - Detecção: "None", "All", "Foreground", "Background" (padrão: "None")',
         face_enhancement_strength: 'Number - Força da melhoria de faces (0-1, padrão: 0.8)',
         face_enhancement_creativity: 'Number - Criatividade da melhoria de faces (0-1, padrão: 0.0)',

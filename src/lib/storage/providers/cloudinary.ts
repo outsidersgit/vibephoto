@@ -41,9 +41,22 @@ export class CloudinaryProvider extends StorageProvider {
         size = buffer.length
       }
 
+      // Validate file size (File or Buffer)
+      const maxSize = options.isUpscale 
+        ? STORAGE_CONFIG.limits.maxUpscaleFileSize 
+        : STORAGE_CONFIG.limits.maxFileSize
+      
+      if (size > maxSize) {
+        throw new StorageError(
+          `File size exceeds maximum allowed size of ${maxSize / 1024 / 1024}MB`,
+          'VALIDATION_ERROR',
+          400
+        )
+      }
+      
       // Validate file if it's a File object
       if (file instanceof File) {
-        const validation = this.validateFile(file)
+        const validation = this.validateFile(file, options.isVideo, options.isUpscale)
         if (!validation.isValid) {
           throw new StorageError(validation.error!, 'VALIDATION_ERROR', 400)
         }
@@ -141,12 +154,16 @@ export class CloudinaryProvider extends StorageProvider {
     })
   }
 
-  validateFile(file: File): FileValidation {
-    // Check file size
-    if (file.size > STORAGE_CONFIG.limits.maxFileSize) {
+  validateFile(file: File, isVideo?: boolean, isUpscale?: boolean): FileValidation {
+    // Check file size with appropriate limit
+    const maxSize = isUpscale 
+      ? STORAGE_CONFIG.limits.maxUpscaleFileSize 
+      : (isVideo ? STORAGE_CONFIG.limits.maxVideoSize : STORAGE_CONFIG.limits.maxFileSize)
+      
+    if (file.size > maxSize) {
       return {
         isValid: false,
-        error: `File size exceeds maximum allowed size of ${STORAGE_CONFIG.limits.maxFileSize / 1024 / 1024}MB`
+        error: `File size exceeds maximum allowed size of ${maxSize / 1024 / 1024}MB`
       }
     }
 

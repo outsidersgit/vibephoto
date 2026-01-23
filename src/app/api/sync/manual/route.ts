@@ -190,7 +190,8 @@ export async function POST(request: NextRequest) {
                   temporaryUrls,
                   upscale.id,
                   userId,
-                  'upscaled'
+                  'upscaled',
+                  true // isUpscale flag to allow larger file sizes (50MB)
                 )
 
                 if (storageResult.success && storageResult.permanentUrls?.length) {

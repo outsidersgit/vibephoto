@@ -22,6 +22,7 @@ export const STORAGE_CONFIG = {
   // File upload constraints
   limits: {
     maxFileSize: 10 * 1024 * 1024, // 10MB
+    maxUpscaleFileSize: 50 * 1024 * 1024, // 50MB for upscaled images (PNG can be large)
     maxVideoSize: 100 * 1024 * 1024, // 100MB for videos
     maxFiles: 20,
     allowedMimeTypes: [

@@ -110,7 +110,8 @@ export async function POST(request: NextRequest) {
             temporaryUrls,
             generation.id,
             generation.userId,
-            'upscaled' // Special folder for upscaled images
+            'upscaled', // Special folder for upscaled images
+            true // isUpscale flag to allow larger file sizes (50MB)
           )
           
           console.log(`📊 Storage result:`, {

@@ -1262,7 +1262,7 @@ export function AutoSyncGalleryInterface({
       dynamic: 6,
       sharpen: 0,
       handfix: 'disabled',
-      output_format: 'png',
+      output_format: 'jpg',
       object_detection: objectDetection
     }
 

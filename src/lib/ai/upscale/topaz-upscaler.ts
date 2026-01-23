@@ -34,7 +34,7 @@ export class TopazUpscaler {
     options: Partial<UpscaleOptions>,
     preferSync: boolean = true
   ): Promise<{ jobId: string; status: string; result?: string[] }> {
-    console.log('🔍 Starting Clarity AI upscale:', { imageUrl: imageUrl.substring(0, 50), options })
+    console.log('🔍 Starting Topaz Labs upscale:', { imageUrl: imageUrl.substring(0, 50), options })
 
     // Valida URL da imagem
     const urlValidation = validateImageUrl(imageUrl)
