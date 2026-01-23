@@ -98,75 +98,31 @@ over-sharpening, artificial texture, plastic skin, exaggerated details, style ch
       })
 
       // Opções da prediction
+      // Usar SDK do Replicate (aceita 'model' em vez de 'version')
       const predictionOptions: any = {
         model: this.modelName,
         input,
         ...webhookConfig
       }
 
-      // Tentar processamento síncrono primeiro (Prefer: wait=60)
-      let prediction
-      if (preferSync) {
-        try {
-          prediction = await fetch('https://api.replicate.com/v1/predictions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Token ${AI_CONFIG.replicate.apiToken}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'wait=60'
-            },
-            body: JSON.stringify(predictionOptions)
-          })
+      // Usar Replicate SDK em vez de fetch direto
+      console.log('🔧 Creating prediction via Replicate SDK...')
+      const prediction = await this.replicate.predictions.create(predictionOptions)
 
-          if (prediction.ok) {
-            const result = await prediction.json()
-            console.log('✅ Resposta síncrona recebida:', result.status)
+      console.log('✅ Upscale job criado:', prediction.id, 'status:', prediction.status)
 
-            // Se completou síncronamente, retornar com resultado
-            if (result.status === 'succeeded' && result.output) {
-              const outputUrl = typeof result.output === 'string' ? result.output : result.output[0]
-              console.log('✅ Upscale síncrono completado, preparando storage...')
+      // Se completou imediatamente (improvável mas possível)
+      if (prediction.status === 'succeeded' && prediction.output) {
+        const outputUrl = typeof prediction.output === 'string' ? prediction.output : prediction.output[0]
+        console.log('✅ Upscale completado imediatamente!')
 
-              return {
-                jobId: result.id,
-                status: 'succeeded',
-                result: [outputUrl],
-                requiresStorage: true // Flag para storage imediato
-              }
-            }
-
-            // Se ainda processando, continuar com polling normal
-            return {
-              jobId: result.id,
-              status: 'processing'
-            }
-          } else {
-            console.warn('⚠️ Requisição síncrona falhou, fallback para async')
-          }
-        } catch (syncError) {
-          console.warn('⚠️ Erro na requisição síncrona, fallback para async:', syncError)
+        return {
+          jobId: prediction.id,
+          status: 'succeeded',
+          result: [outputUrl],
+          requiresStorage: true
         }
       }
-
-      // Fallback: Processamento assíncrono via SDK
-      const response = await fetch('https://api.replicate.com/v1/predictions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Token ${AI_CONFIG.replicate.apiToken}`,
-          'Content-Type': 'application/json',
-          'User-Agent': 'VibePhoto-Upscale/2.0-NanoBanana'
-        },
-        body: JSON.stringify(predictionOptions)
-      })
-
-      if (!response.ok) {
-        const errorBody = await response.text()
-        throw new Error(`Replicate API error: ${response.status} ${response.statusText}: ${errorBody}`)
-      }
-
-      prediction = await response.json()
-
-      console.log('✅ Upscale job criado:', prediction.id)
 
       return {
         jobId: prediction.id,
