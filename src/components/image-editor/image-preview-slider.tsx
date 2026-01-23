@@ -138,22 +138,32 @@ export function ImagePreviewSlider({
           />
         </div>
 
-        {/* Linha divisória do slider */}
+        {/* Linha divisória do slider com alto contraste */}
         <div
           ref={sliderRef}
-          className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg -translate-x-1/2 pointer-events-none z-10"
-          style={{ left: '50%' }}
+          className="absolute top-0 bottom-0 w-1 -translate-x-1/2 pointer-events-none z-10"
+          style={{
+            left: '50%',
+            background: 'linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(255,255,255,0.9) 40%, rgba(255,255,255,0.9) 60%, rgba(0,0,0,0.5) 100%)',
+            boxShadow: '0 0 10px rgba(0,0,0,0.5), 0 0 20px rgba(255,255,255,0.3)'
+          }}
         >
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/30 backdrop-blur-sm border-2 border-white shadow-xl flex items-center justify-center">
-            <div className="w-0.5 h-4 bg-white rounded-full" />
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border-2 border-gray-800 flex items-center justify-center"
+            style={{ boxShadow: '0 0 0 3px rgba(255,255,255,0.3), 0 4px 12px rgba(0,0,0,0.5)' }}
+          >
+            <div className="flex gap-0.5">
+              <div className="w-0.5 h-4 bg-gray-800 rounded-full" />
+              <div className="w-0.5 h-4 bg-gray-800 rounded-full" />
+            </div>
           </div>
         </div>
 
-        {/* Labels antes/depois */}
-        <div className="absolute top-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded pointer-events-none z-10">
+        {/* Labels antes/depois - centralizados verticalmente */}
+        <div className="absolute top-1/2 -translate-y-1/2 left-6 bg-black/80 text-white text-sm px-3 py-1.5 rounded-lg pointer-events-none z-10 font-medium shadow-lg">
           Antes
         </div>
-        <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded pointer-events-none z-10">
+        <div className="absolute top-1/2 -translate-y-1/2 right-24 bg-black/80 text-white text-sm px-3 py-1.5 rounded-lg pointer-events-none z-10 font-medium shadow-lg">
           Depois
         </div>
       </div>

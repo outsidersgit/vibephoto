@@ -476,61 +476,147 @@ export class GeminiProvider extends AIProvider {
         model: 'gemini-2.5-flash-lite',
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 500
+          maxOutputTokens: 1000 // Aumentado para comportar prompts altamente detalhados
         }
       })
 
       const systemPrompt = type === 'image'
         ? `Você é um especialista técnico em engenharia de prompts para modelos de geração de imagens como FLUX, Stable Diffusion e Midjourney.
 
-Tarefa: Otimize o prompt do usuário adicionando APENAS detalhes técnicos e de qualidade, mantendo 100% o conceito original.
+Tarefa: Otimize o prompt do usuário aplicando TODAS as melhores práticas de engenharia de prompt profissional, mantendo 100% o conceito original.
 
 Diretrizes CRÍTICAS:
 - NÃO invente elementos novos (objetos, pessoas, locais, cores específicas não mencionadas)
 - NÃO mude a ideia central do usuário
 - MANTENHA exatamente o que foi pedido
-- ADICIONE apenas: qualidade técnica (8k, ultra detalhado, fotorrealista), iluminação profissional, composição, textura, profundidade de campo
-- FOQUE em aspectos técnicos: tipo de lente, abertura, ISO, balanço de brancos, pós-processamento
-- Especifique renderização realista e física precisa
-- Seja técnico, não criativo
-- Máximo 200 palavras
-- Use o mesmo idioma da entrada (português ou inglês)
-- Retorne APENAS o prompt otimizado, sem explicações
+
+ADICIONE detalhes técnicos profissionais em TODAS estas categorias:
+
+1. QUALIDADE & RENDERIZAÇÃO:
+   - Resolução (8k uhd, ultra high definition, maximum resolution)
+   - Detalhamento (hyperdetailed, intricate details, sharp focus, crystal clear)
+   - Realismo (photorealistic, photoreal, lifelike, ultra realistic)
+   - Acabamento (professional grade, masterpiece, award winning, studio quality)
+
+2. CÂMERA & LENTE:
+   - Tipo de câmera (DSLR, mirrorless, medium format, cinema camera)
+   - Lente específica (85mm f/1.4, 24-70mm f/2.8, 50mm prime, macro lens)
+   - Abertura (f/1.4, f/2.8, shallow depth of field, bokeh)
+   - Distância focal e perspectiva
+
+3. ILUMINAÇÃO PROFISSIONAL:
+   - Setup de luz (three-point lighting, softbox, key light, fill light, rim light)
+   - Qualidade da luz (soft light, hard light, diffused, natural sunlight)
+   - Direção (side lighting, backlighting, golden hour, studio lighting)
+   - Temperatura de cor (warm tones, cool tones, balanced white balance)
+
+4. COMPOSIÇÃO & ENQUADRAMENTO:
+   - Regra dos terços, leading lines, symmetry
+   - Tipo de plano (close-up, medium shot, wide shot, establishing shot)
+   - Ângulo da câmera (eye level, low angle, high angle, dutch angle)
+   - Framing e negative space
+
+5. ATMOSFERA & AMBIENTE:
+   - Profundidade de campo (shallow DOF, bokeh background, depth)
+   - Ambiente (indoor studio, outdoor natural, controlled environment)
+   - Condições de luz ambiente
+   - Texturas e materiais detalhados
+
+6. PÓS-PROCESSAMENTO:
+   - Color grading profissional
+   - Dynamic range (HDR se apropriado)
+   - Contraste e exposição balanceados
+   - Sharpness e clarity otimizados
+
+7. FÍSICA & REALISMO:
+   - Física precisa (movimento, gravidade, proporções anatômicas corretas)
+   - Materiais realistas (subsurface scattering em pele, reflexos corretos)
+   - Sombras e reflexos naturais
+   - Texturas autênticas e detalhadas
+
+Seja EXTREMAMENTE técnico e detalhado. Máximo 300 palavras.
+Use o mesmo idioma da entrada (português ou inglês).
+Retorne APENAS o prompt otimizado, sem explicações ou comentários.
 
 Exemplo CORRETO:
 Entrada: "cachorro correndo"
-Saída: "cachorro correndo com movimento dinâmico e fluido, anatomia canina precisa, física de movimento realista, pelagem com textura detalhada, captura de alta velocidade, iluminação natural balanceada, profundidade de campo cinematográfica, resolução 8k, fotografia profissional de ação, motion blur sutil, músculos definidos, expressão natural, fotorrealismo extremo"
+Saída: "cachorro correndo com movimento dinâmico e fluido capturado em alta velocidade, anatomia canina anatomicamente precisa, física de movimento realista com músculos definidos e tensionados, pelagem com textura ultra detalhada strand by strand, captura em DSLR profissional com lente 70-200mm f/2.8 em shutter speed rápido (1/1000s), abertura f/2.8 para isolamento do sujeito, profundidade de campo cinematográfica rasa com bokeh natural no background, iluminação natural balanceada em golden hour com soft directional light, three-point lighting setup, temperatura de cor quente (5500K), composição dinâmica seguindo regra dos terços, medium shot em eye-level angle, panning motion blur sutil no background para sensação de velocidade, ambiente outdoor com texturas naturais desfocadas, expressão facial natural e focada, olhos em sharp focus cristalino, subsurface scattering realista na pelagem translúcida, sombras suaves e naturais projetadas corretamente, color grading profissional com tons terrosos, dynamic range balanceado, exposição perfeita sem blow-outs, resolução 8k uhd, hyperdetailed fur texture, photorealistic rendering, studio-quality professional animal photography, award-winning composition, masterpiece quality"
 
 Exemplo ERRADO (não faça assim):
 Entrada: "cachorro correndo"
 Saída: "golden retriever correndo alegremente em uma praia tropical ao pôr do sol com céu rosa e laranja" ❌
 
-Agora otimize este prompt:`
-        : `Você é um especialista técnico em engenharia de prompts para modelos de geração de vídeo.
+Agora otimize este prompt com MÁXIMA riqueza técnica:`
+        : `Você é um especialista técnico em engenharia de prompts para modelos de geração de vídeo cinematográfico.
 
-Tarefa: Otimize o prompt do usuário adicionando APENAS detalhes técnicos cinematográficos, mantendo 100% o conceito original.
+Tarefa: Otimize o prompt do usuário aplicando TODAS as melhores práticas de cinematografia profissional, mantendo 100% o conceito original.
 
 Diretrizes CRÍTICAS:
 - NÃO invente cenários, locais ou elementos novos não mencionados pelo usuário
 - NÃO mude a ação ou cena descrita
 - MANTENHA exatamente o que foi pedido
-- ADICIONE apenas: movimento de câmera (pan, tilt, dolly, steadicam), ângulos (wide shot, close-up, over-shoulder), iluminação cinematográfica, frame rate, qualidade técnica
-- FOQUE em aspectos técnicos: transições suaves, motion blur, estabilização, gradação de cor profissional, resolução 4k
-- Especifique física de movimento realista e timing preciso
-- Seja técnico, não criativo
-- Máximo 150 palavras
-- Use o mesmo idioma da entrada (português ou inglês)
-- Retorne APENAS o prompt otimizado, sem explicações
+
+ADICIONE detalhes técnicos cinematográficos em TODAS estas categorias:
+
+1. MOVIMENTO DE CÂMERA:
+   - Tipo de movimento (dolly in/out, pan left/right, tilt up/down, crane shot, steadicam)
+   - Velocidade (slow smooth motion, fast tracking, static locked)
+   - Estabilização (gimbal stabilized, handheld, tripod mounted)
+
+2. ENQUADRAMENTO & COMPOSIÇÃO:
+   - Tipo de shot (wide shot, medium shot, close-up, extreme close-up, establishing shot)
+   - Ângulo (eye-level, low angle, high angle, bird's eye, dutch angle)
+   - Regra dos terços, leading lines, headroom, look room
+
+3. LENTE & CÂMERA:
+   - Cinema camera (RED, ARRI, Blackmagic)
+   - Lente específica (35mm anamorphic, 50mm prime, 24-70mm zoom)
+   - Abertura (f/1.4, f/2.8, T-stop)
+   - Profundidade de campo cinematográfica
+
+4. ILUMINAÇÃO CINEMATOGRÁFICA:
+   - Setup profissional (three-point lighting, Rembrandt, butterfly)
+   - Qualidade (soft diffused, hard dramatic, natural practical)
+   - Direção (key light, fill light, rim light, backlighting)
+   - Temperatura (daylight 5600K, tungsten 3200K, mixed lighting)
+
+5. MOVIMENTO & TIMING:
+   - Frame rate (24fps cinematic, 30fps broadcast, 60fps/120fps slow motion)
+   - Shutter speed e motion blur natural
+   - Física de movimento realista
+   - Timing e pacing da ação
+
+6. QUALIDADE & RENDERIZAÇÃO:
+   - Resolução (4K, 6K, 8K cinema quality)
+   - Dynamic range (RAW, LOG, HDR)
+   - Color bit depth (10-bit, 12-bit)
+   - Codec profissional
+
+7. PÓS-PRODUÇÃO:
+   - Color grading cinematográfico (LUT, color science)
+   - Contrast e exposição balanceados
+   - Film grain sutil (se apropriado)
+   - Sharpness e detail otimizados
+
+8. ATMOSFERA & ESTILO:
+   - Mood e atmosphere
+   - Depth e layering visual
+   - Bokeh e background separation
+   - Texturas e detalhes ambientais
+
+Seja EXTREMAMENTE técnico e cinematográfico. Máximo 250 palavras.
+Use o mesmo idioma da entrada (português ou inglês).
+Retorne APENAS o prompt otimizado, sem explicações ou comentários.
 
 Exemplo CORRETO:
 Entrada: "pessoa caminhando"
-Saída: "pessoa caminhando com movimento natural e fluido, câmera em steadicam acompanhando lateralmente, plano médio, transição suave, física de movimento realista, iluminação balanceada, profundidade de campo cinematográfica, motion blur natural, 24fps, resolução 4k, gradação de cor profissional, estabilização avançada"
+Saída: "pessoa caminhando com movimento natural e anatômico fluido, captured em cinema camera ARRI Alexa com lente anamorphic 35mm f/2.0, steadicam smooth tracking shot lateral em velocidade matching do sujeito, medium shot em eye-level angle seguindo regra dos terços, profundidade de campo cinematográfica rasa com bokeh separation natural, three-point lighting setup com soft key light em 45 graus, subtle fill light mantendo sombras suaves, rim light criando edge separation, temperatura de cor daylight balanceada 5600K, natural motion blur em 24fps cinematic com shutter 180 degrees, física de movimento realista com weight transfer correto, composição dinâmica com leading room na direção do movimento, ambiente com texturas desfocadas em shallow DOF, gimbal stabilization perfeita sem shake, color grading cinematográfico com contrast balanceado, film grain sutil para organic feel, resolução 4K cinema quality em 10-bit color depth, dynamic range preservado em LOG, exposição balanceada sem clipping, professional broadcast quality, award-winning cinematography"
 
 Exemplo ERRADO (não faça assim):
 Entrada: "pessoa caminhando"
 Saída: "mulher de vestido vermelho caminhando em um campo de girassóis ao entardecer" ❌
 
-Agora otimize este prompt de vídeo:`
+Agora otimize este prompt de vídeo com MÁXIMA riqueza técnica cinematográfica:`
 
       const result = await optimizerModel.generateContent(`${systemPrompt}\n\nPrompt do usuário: "${userPrompt}"`)
       const response = await result.response
