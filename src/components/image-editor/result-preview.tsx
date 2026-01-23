@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Download, Eye, EyeOff, RotateCcw } from 'lucide-react'
 import { ImageEditResponse } from '@/lib/ai/image-editor'
 
@@ -14,8 +14,8 @@ interface ResultPreviewProps {
   className?: string
 }
 
-export function ResultPreview({ 
-  result, 
+export function ResultPreview({
+  result,
   originalImage,
   loading = false,
   onDownload,
@@ -26,6 +26,67 @@ export function ResultPreview({
   const [showComparison, setShowComparison] = useState(true)
   const [imageLoading, setImageLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  // Slider refs for before/after comparison
+  const comparisonContainerRef = useRef<HTMLDivElement | null>(null)
+  const afterImageMaskRef = useRef<HTMLDivElement | null>(null)
+  const sliderRef = useRef<HTMLDivElement | null>(null)
+  const pointerActiveRef = useRef(false)
+
+  // Slider functionality
+  const applySliderPosition = useCallback((percentage: number) => {
+    const clamped = Math.min(100, Math.max(0, percentage))
+    if (afterImageMaskRef.current) {
+      afterImageMaskRef.current.style.clipPath = `polygon(${clamped}% 0, 100% 0, 100% 100%, ${clamped}% 100%)`
+    }
+    if (sliderRef.current) {
+      sliderRef.current.style.left = `${clamped}%`
+    }
+  }, [])
+
+  const updateFromClientX = useCallback((clientX: number) => {
+    const container = comparisonContainerRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    if (rect.width === 0) return
+    const relative = ((clientX - rect.left) / rect.width) * 100
+    applySliderPosition(relative)
+  }, [applySliderPosition])
+
+  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    pointerActiveRef.current = true
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    document.body.style.userSelect = 'none'
+    updateFromClientX(event.clientX)
+  }, [updateFromClientX])
+
+  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!pointerActiveRef.current) return
+    event.preventDefault()
+    updateFromClientX(event.clientX)
+  }, [updateFromClientX])
+
+  const handlePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    pointerActiveRef.current = false
+    event.preventDefault()
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    } catch {
+      // ignore
+    }
+    document.body.style.userSelect = ''
+  }, [])
+
+  useEffect(() => {
+    applySliderPosition(50)
+  }, [applySliderPosition, result, originalImage])
+
+  useEffect(() => {
+    return () => {
+      document.body.style.userSelect = ''
+    }
+  }, [])
 
   const downloadImage = async () => {
     if (!result?.resultImage) return
@@ -243,36 +304,62 @@ export function ResultPreview({
       {/* Image Display */}
       <div className="p-4">
         {showComparison && originalImage ? (
-          // Before/After Comparison
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Original</h4>
-              <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                <img
-                  src={originalImage}
-                  alt="Original"
-                  className="w-full h-full object-cover"
-                  onLoad={() => setImageLoading(false)}
-                  onLoadStart={() => setImageLoading(true)}
-                />
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Edited</h4>
-              <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+          // Before/After Slider Comparison
+          <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden max-w-3xl mx-auto select-none touch-none">
+            <div
+              ref={comparisonContainerRef}
+              className="relative w-full h-full cursor-ew-resize"
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
+            >
+              {/* Original image (before) */}
+              <img
+                src={originalImage}
+                alt="Original"
+                className="absolute inset-0 w-full h-full object-contain"
+                onLoad={() => setImageLoading(false)}
+                onLoadStart={() => setImageLoading(true)}
+              />
+
+              {/* Edited image (after) - with clip path */}
+              <div
+                ref={afterImageMaskRef}
+                className="absolute inset-0"
+                style={{ clipPath: 'polygon(50% 0, 100% 0, 100% 100%, 50% 100%)' }}
+              >
                 {imageLoading && (
-                  <div className="w-full h-full flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
                     <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
                   </div>
                 )}
                 <img
                   src={result.resultImage.startsWith('http') ? result.resultImage : `data:image/png;base64,${result.resultImage}`}
                   alt="Edited result"
-                  className="w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-contain"
                   onLoad={() => setImageLoading(false)}
                   onLoadStart={() => setImageLoading(true)}
                 />
+              </div>
+
+              {/* Slider divider */}
+              <div
+                ref={sliderRef}
+                className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg -translate-x-1/2 pointer-events-none z-10"
+                style={{ left: '50%' }}
+              >
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/30 backdrop-blur-sm border-2 border-white shadow-xl flex items-center justify-center">
+                  <div className="w-0.5 h-4 bg-white rounded-full" />
+                </div>
+              </div>
+
+              {/* Labels before/after */}
+              <div className="absolute top-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded pointer-events-none">
+                Antes
+              </div>
+              <div className="absolute top-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded pointer-events-none">
+                Depois
               </div>
             </div>
           </div>
@@ -288,7 +375,7 @@ export function ResultPreview({
               <img
                 src={result.resultImage.startsWith('http') ? result.resultImage : `data:image/png;base64,${result.resultImage}`}
                 alt="Edited result"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 onLoad={() => setImageLoading(false)}
                 onLoadStart={() => setImageLoading(true)}
               />
