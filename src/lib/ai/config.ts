@@ -28,8 +28,10 @@ export const AI_CONFIG = {
         generation: 'stability-ai/sdxl:7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc',
         turbo: 'stability-ai/sdxl-turbo:da77bc59ee60423279fd632efb4795ab731d9e3ca9705ef3341091fb989b7eaf' // Faster generation
       },
-      // Topaz Labs upscaler for upscaling (official model)
-      upscaler: 'topazlabs/image-upscale:2fdc3b86a01d338ae89ad58e5d9241398a8a01de9b0dda41ba8a0434c8a00dc3',
+      // Nano Banana Pro for 4K upscaling (via Replicate)
+      upscaler: 'google/nano-banana-pro',
+      // Legacy Topaz Labs (backup)
+      upscalerLegacy: 'topazlabs/image-upscale:2fdc3b86a01d338ae89ad58e5d9241398a8a01de9b0dda41ba8a0434c8a00dc3',
       // Background removal
       backgroundRemoval: 'rembg/new:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003',
       // Video generation with Kling AI 2.1

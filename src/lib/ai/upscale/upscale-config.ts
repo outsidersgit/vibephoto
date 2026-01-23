@@ -1,52 +1,40 @@
 export const UPSCALE_CONFIG = {
-  // Modelo Topaz Labs para upscale
-  model: 'topazlabs/image-upscale',
-  version: '2fdc3b86a01d338ae89ad58e5d9241398a8a01de9b0dda41ba8a0434c8a00dc3',
+  // Modelo Nano Banana Pro para upscale 4K
+  model: 'google/nano-banana-pro',
+  version: 'latest', // Replicate usa versão mais recente automaticamente
 
   // Limites e validações
   maxFileSize: 20 * 1024 * 1024, // 20MB
   supportedFormats: ['jpg', 'jpeg', 'png', 'webp'],
   minResolution: { width: 64, height: 64 },
-  maxResolution: { width: 4096, height: 4096 },
+  maxResolution: { width: 8192, height: 8192 }, // 4K e superior
 
-  // Fatores de escala disponíveis (Topaz Labs usa formato 2x, 4x, 6x)
-  scaleFactors: [2, 4, 6] as const,
+  // Nano Banana Pro usa resolução fixa "4K"
+  scaleFactors: [4] as const, // 4K upscale
 
-  // Configurações padrão para Topaz Labs (otimizadas para menor tamanho)
+  // Configurações padrão para Nano Banana Pro
   defaults: {
-    upscale_factor: "2x",
-    enhance_model: "Standard V2",
-    output_format: "jpg", // MUDANÇA: JPG para arquivos menores
-    face_enhancement: true, // MUDANÇA: True por padrão
-    subject_detection: "None",
-    face_enhancement_strength: 0.8,
-    face_enhancement_creativity: 0.0
-  },
-  
-  // Opções disponíveis para Topaz Labs
-  options: {
-    enhance_models: [
-      "Standard V2",
-      "Low Resolution V2",
-      "CGI",
-      "High Fidelity V2",
-      "Text Refine"
-    ],
-    upscale_factors: ["None", "2x", "4x", "6x"],
-    output_formats: ["png", "jpg"],
-    subject_detection_options: ["None", "All", "Foreground", "Background"]
+    resolution: "4K",
+    output_format: "jpg",
+    aspect_ratio: "match_input_image", // Preserva proporções originais
+    safety_filter_level: "block_only_high"
   },
 
-  // Ranges para validação
-  ranges: {
-    face_enhancement_strength: { min: 0, max: 1 },
-    face_enhancement_creativity: { min: 0, max: 1 }
+  // Opções disponíveis para Nano Banana Pro
+  options: {
+    resolutions: ["2K", "4K"],
+    output_formats: ["png", "jpg"],
+    aspect_ratios: ["match_input_image", "1:1", "4:3", "3:4", "9:16", "16:9"],
+    safety_filter_levels: ["none", "block_only_high", "block_some"]
   },
-  
-  // Sistema de créditos
+
+  // Ranges (não aplicável para Nano Banana Pro, mantido para compatibilidade)
+  ranges: {},
+
+  // Sistema de créditos (atualizado para Nano Banana Pro)
   credits: {
-    baseUpscale: 10,
-    batchDiscount: 8, // Para 10+ imagens
+    baseUpscale: 30, // Nano Banana Pro 4K upscale
+    batchDiscount: 25, // Para 10+ imagens
     batchMinimum: 10
   },
   
@@ -54,31 +42,36 @@ export const UPSCALE_CONFIG = {
   planLimits: {
     STARTER: {
       dailyLimit: 999,
-      maxScaleFactor: 6, // Máximo do Topaz Labs
+      maxScaleFactor: 4, // 4K upscale (Nano Banana Pro)
       enabledFeatures: ['basic', 'advanced', 'batch', 'auto']
     },
     PREMIUM: {
       dailyLimit: 999,
-      maxScaleFactor: 6,
+      maxScaleFactor: 4,
       enabledFeatures: ['basic', 'advanced', 'batch', 'auto']
     },
     GOLD: {
       dailyLimit: 999,
-      maxScaleFactor: 6,
+      maxScaleFactor: 4,
       enabledFeatures: ['basic', 'advanced', 'batch', 'auto']
     }
   }
 } as const
 
 export type UpscaleOptions = {
+  // Nano Banana Pro options
+  resolution?: "2K" | "4K"
+  output_format?: "png" | "jpg"
+  aspect_ratio?: "match_input_image" | "1:1" | "4:3" | "3:4" | "9:16" | "16:9"
+  safety_filter_level?: "none" | "block_only_high" | "block_some"
+
+  // Legacy fields for backward compatibility (Topaz Labs)
   upscale_factor?: "None" | "2x" | "4x" | "6x"
   enhance_model?: "Standard V2" | "Low Resolution V2" | "CGI" | "High Fidelity V2" | "Text Refine"
-  output_format?: "png" | "jpg"
   face_enhancement?: boolean
   subject_detection?: "None" | "All" | "Foreground" | "Background"
   face_enhancement_strength?: number
   face_enhancement_creativity?: number
-  // Legacy fields for backward compatibility
   scale_factor?: 2 | 4 | 6
 }
 

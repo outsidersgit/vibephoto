@@ -2,7 +2,7 @@ export const CREDIT_COSTS = {
   IMAGE_GENERATION_PER_OUTPUT: 10,
   IMAGE_EDIT_PER_IMAGE: 20,      // Custo base do editor
   IMAGE_EDIT_4K_PER_IMAGE: 30,   // Custo do editor em 4K
-  UPSCALE_PER_IMAGE: 10,
+  UPSCALE_PER_IMAGE: 30,         // Nano Banana Pro 4K upscale
   VIDEO_DURATION: {
     4: 80,
     6: 120,

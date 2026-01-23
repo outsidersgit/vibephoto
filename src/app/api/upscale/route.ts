@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuthAPI } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { TopazUpscaler } from '@/lib/ai/upscale/topaz-upscaler'
+import { NanoBananaUpscaler } from '@/lib/ai/upscale/nano-banana-upscaler'
 import { UPSCALE_CONFIG, UpscaleOptions } from '@/lib/ai/upscale/upscale-config'
 import {
   canUserUpscale,
@@ -178,8 +178,8 @@ export async function POST(request: NextRequest) {
       }, { status: 402 })
     }
 
-    // Inicializa upscaler
-    const upscaler = new TopazUpscaler()
+    // Inicializa upscaler (Nano Banana Pro 4K)
+    const upscaler = new NanoBananaUpscaler()
     
     // Processa upscale (com preferência síncrona para armazenamento imediato)
     let result
@@ -453,35 +453,32 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     endpoint: 'VibePhoto Upscale API',
-    description: 'Sistema de upscale de imagens usando Topaz Labs via Replicate',
+    description: 'Sistema de upscale de imagens usando Nano Banana Pro (4K) via Replicate',
     methods: ['POST'],
     parameters: {
       imageUrl: 'String - URL da imagem para upscale (obrigatório para modo single)',
       imageUrls: 'Array - URLs das imagens para batch upscale',
       batchMode: 'Boolean - Ativa modo batch para múltiplas imagens',
       options: {
-        upscale_factor: 'String - Fator de escala: "2x", "4x", "6x" ou "None" (padrão: "2x")',
-        enhance_model: 'String - Modelo: "Standard V2", "Low Resolution V2", "CGI", "High Fidelity V2", "Text Refine" (padrão: "Standard V2")',
-        output_format: 'String - Formato: "png" ou "jpg" (padrão: "jpg")',
-        face_enhancement: 'Boolean - Melhoria de faces (padrão: true)',
-        subject_detection: 'String - Detecção: "None", "All", "Foreground", "Background" (padrão: "None")',
-        face_enhancement_strength: 'Number - Força da melhoria de faces (0-1, padrão: 0.8)',
-        face_enhancement_creativity: 'Number - Criatividade da melhoria de faces (0-1, padrão: 0.0)',
-        // Legacy compatibility
-        scale_factor: 'Number - [Legacy] Fator de escala: 2, 4 ou 6 (convertido para upscale_factor)'
+        resolution: 'String - Resolução de saída: "4K" (padrão e recomendado)',
+        output_format: 'String - Formato: "jpg" ou "png" (padrão: "jpg")',
+        aspect_ratio: 'String - Proporção: "match_input_image" (padrão - preserva original)',
+        safety_filter_level: 'String - Filtro: "block_only_high" (padrão)'
       }
     },
     features: [
       'Upscale single e batch',
-      'Múltiplos fatores de escala (2x, 4x, 6x)',
-      'Modelos especializados (Standard V2, High Fidelity V2, CGI, etc.)',
-      'Melhoria automática de faces',
-      'Detecção inteligente de objetos',
+      'Resolução 4K ultra-alta qualidade',
+      'Preservação de identidade e proporções',
+      'Melhoria de claridade e detalhes',
+      'Redução de ruído e artefatos',
+      'Processamento síncrono e assíncrono',
       'Sistema integrado de créditos',
       'Tracking de progresso',
       'Limites por plano de usuário'
     ],
-    provider: 'Topaz Labs',
+    provider: 'Nano Banana Pro (Google)',
+    cost: '30 créditos por imagem',
     limits: UPSCALE_CONFIG.planLimits
   })
 }

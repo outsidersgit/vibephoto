@@ -42,7 +42,8 @@ export function validateImageUrl(imageUrl: string): { isValid: boolean; error?: 
 }
 
 /**
- * Valida opções de upscale conforme parâmetros do Topaz Labs
+ * Valida opções de upscale conforme parâmetros do Nano Banana Pro
+ * Mantém compatibilidade com parâmetros legados do Topaz Labs
  */
 export function validateUpscaleOptions(options: UpscaleOptions): { isValid: boolean; errors: string[] } {
   const errors: string[] = []
@@ -125,6 +126,7 @@ export function canUserUpscale(userPlan: UpscalePlan, scaleFactor: number, daily
 
 /**
  * Calcula créditos necessários para upscale
+ * Atualizado para Nano Banana Pro: 30 créditos por imagem (4K upscale)
  */
 export function calculateUpscaleCredits(imagesCount: number): number {
   return getUpscaleCost(imagesCount)

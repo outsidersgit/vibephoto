@@ -35,7 +35,7 @@ export function calculateOperationCost(
       return getImageGenerationCost(metadata?.variations || 1)
 
     case 'upscaled':
-      // Upscale costs: 10 créditos
+      // Upscale costs: 30 créditos (Nano Banana Pro 4K)
       return getUpscaleCost(metadata?.imageCount || 1)
 
     case 'edited':

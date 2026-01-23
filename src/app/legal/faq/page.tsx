@@ -73,7 +73,7 @@ const faqData: FAQItem[] = [
   {
     category: 'funcionamento',
     question: 'Como funciona o Upscale de imagens?',
-    answer: 'O Upscale é uma ferramenta que aumenta a resolução e aprimora a nitidez das suas fotos, elevando o nível de detalhe e realismo. Cada uso custa 10 créditos por imagem e pode ampliar a resolução em até 4x.'
+    answer: 'O Upscale é uma ferramenta que aumenta a resolução e aprimora a nitidez das suas fotos, elevando o nível de detalhe e realismo. Cada uso custa 30 créditos por imagem e amplia a resolução para 4K.'
   },
   {
     category: 'funcionamento',

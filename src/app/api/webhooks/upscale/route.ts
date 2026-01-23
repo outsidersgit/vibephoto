@@ -90,12 +90,13 @@ export async function POST(request: NextRequest) {
         
         if (payload.output) {
           // Handle different output formats
+          // Nano Banana Pro retorna string direta (URL única)
           let temporaryUrls: string[] = []
-          
-          if (Array.isArray(payload.output)) {
-            temporaryUrls = payload.output
-          } else if (typeof payload.output === 'string') {
+
+          if (typeof payload.output === 'string') {
             temporaryUrls = [payload.output]
+          } else if (Array.isArray(payload.output)) {
+            temporaryUrls = payload.output
           } else if (payload.output.images) {
             temporaryUrls = payload.output.images
           }
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
         // Debit credits and register transaction for successful upscale
         if (updateData.status === 'COMPLETED') {
           try {
-            const creditsUsed = 10 // Upscale cost
+            const creditsUsed = 30 // Nano Banana Pro 4K upscale cost
 
             await prisma.user.update({
               where: { id: generation.userId },
