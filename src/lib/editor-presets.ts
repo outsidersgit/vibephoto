@@ -13,9 +13,21 @@ export interface EditorPreset {
 export const EDITOR_PRESETS: EditorPreset[] = [
   {
     id: 'enhance',
-    title: 'Melhorar foto',
+    title: 'Otimizar qualidade da foto',
     promptBase: 'Melhore a qualidade desta imagem mantendo o conteúdo original intacto. Aplique correção profissional de iluminação (ajuste de exposição, balanço de brancos, contraste dinâmico). Aumente a nitidez de forma natural usando técnicas de sharpening seletivo. Reduza ruído digital preservando detalhes finos e textura. Melhore saturação e vibrância das cores de forma balanceada e realista. Corrija aberrações cromáticas e distorções. Preserve a composição original, não adicione nem remova elementos. Resultado final: foto com qualidade profissional, natural e sem artifícios exagerados.',
-    instruction: 'Anexe a foto que você quer melhorar'
+    instruction: 'Anexe a foto que você quer otimizar'
+  },
+  {
+    id: 'skin-realism',
+    title: 'Melhorar Pele',
+    promptBase: 'Transforme esta foto gerada por IA em uma imagem ultra-realista com foco total na naturalização da pele e traços faciais. Adicione textura de pele humana autêntica: poros visíveis mas sutis, micro-variações de tom, leve vermelhidão natural em maçãs do rosto. Corrija o brilho artificial dos olhos, adicionando reflexos naturais e pequenas imperfeições realistas (veias leves, úmidade natural). Naturalize cabelos: adicione fios soltos, baby hairs, textura individual de cada fio, brilho natural não uniforme. Ajuste lábios para aparência natural: textura, linhas sutis, hidratação realista. Remova aspecto "plástico" ou "perfeito demais" típico de IA. Adicione micro-imperfeições humanas naturais (sardas leves, variações de tom, linhas de expressão sutis onde apropriado). Resultado: foto indistinguível de fotografia real, com todas as imperfeições naturais que provam humanidade.',
+    instruction: 'Anexe a foto gerada por IA que você quer naturalizar'
+  },
+  {
+    id: 'fix-hands',
+    title: 'Corrigir mãos',
+    promptBase: 'Corrija completamente as mãos, dedos e pés (se visíveis) nesta imagem gerada por IA, garantindo anatomia humana perfeita e realista. MÃOS - Regras CRÍTICAS: cada mão tem EXATAMENTE 5 dedos (polegar, indicador, médio, anelar, mínimo). Proporções anatômicas corretas: dedos com 3 falanges (exceto polegar com 2), articulações no lugar certo, tamanho proporcional à mão. Posição natural dos dedos: curvatura realista, ângulos possíveis anatomicamente, sem dedos extras ou fundidos. Textura de pele realista: linhas da palma, rugas dos nós dos dedos, unhas com formato natural e cutícula. PÉS (se visíveis) - Regras: cada pé tem EXATAMENTE 5 dedos, proporções anatômicas corretas, arco plantar natural, tornozelo proporcional. Se não houver mãos ou pés visíveis na imagem, ignore esta instrução e mantenha a imagem original intacta. Iluminação consistente com o resto da imagem. Sombras e profundidade corretas. Remova: dedos extras, dedos fundidos, proporções impossíveis, articulações erradas, posições antinaturais. Resultado: mãos e pés anatomicamente perfeitos, indistinguíveis de foto real.',
+    instruction: 'Anexe a foto com mãos ou pés que precisam ser corrigidos'
   },
   {
     id: 'product',
