@@ -159,13 +159,13 @@ export function UpscaleConfigModal({
         </div>
 
         {/* Images Section */}
-        <div className="grid grid-cols-[240px_1fr] gap-6 mb-6">
-          {/* Original Image - Compacto sem padding */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-gray-300 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-              Imagem Original
+        <div className="grid grid-cols-[220px_1fr] gap-4 mb-4">
+          {/* Original Image - Compacto */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-medium text-gray-400 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+              Original
             </h3>
-            <Card className="bg-[#2C3E50] border-[#4A5F7A] p-0 rounded-xl h-80 overflow-hidden">
+            <Card className="bg-[#2C3E50] border-[#4A5F7A] p-0 rounded-lg h-[450px] overflow-hidden">
               {imageUrl ? (
                 <div className="w-full h-full relative">
                   <img
@@ -173,7 +173,7 @@ export function UpscaleConfigModal({
                     alt="Imagem original"
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                  <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded">
                     Antes
                   </div>
                 </div>
@@ -185,27 +185,29 @@ export function UpscaleConfigModal({
             </Card>
           </div>
 
-          {/* Result Image - Maior para análise */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-gray-300 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
-              Antes e Depois
+          {/* Result Image - Responsivo ao aspect ratio */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-medium text-gray-400 font-[system-ui,-apple-system,'SF Pro Display',sans-serif]">
+              Antes e Depois (arraste para comparar)
             </h3>
-            <Card className="bg-[#2C3E50] border-[#4A5F7A] p-3 rounded-xl h-80">
+            <Card className="bg-[#2C3E50] border-[#4A5F7A] p-0 rounded-lg h-[450px] overflow-hidden">
               {resultImageUrl ? (
                 <div className="w-full h-full relative select-none touch-none">
                   <div
                     ref={comparisonContainerRef}
-                    className="absolute inset-0 rounded-lg overflow-hidden cursor-ew-resize"
+                    className="absolute inset-0 overflow-hidden cursor-ew-resize"
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
                     onPointerCancel={handlePointerUp}
                   >
+                    {/* Imagem original (antes) */}
                     <img
                       src={imageUrl || resultImageUrl}
                       alt="Imagem original"
                       className="absolute inset-0 w-full h-full object-contain"
                     />
+                    {/* Imagem upscaled (depois) - com clip path */}
                     <div
                       ref={afterImageMaskRef}
                       className="absolute inset-0"
@@ -217,19 +219,21 @@ export function UpscaleConfigModal({
                         className="absolute inset-0 w-full h-full object-contain"
                       />
                     </div>
+                    {/* Slider divisor */}
                     <div
                       ref={sliderRef}
-                      className="absolute top-0 bottom-0 w-0.5 bg-white shadow-md -translate-x-1/2 transition-colors duration-150 pointer-events-none"
+                      className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg -translate-x-1/2 pointer-events-none z-10"
                       style={{ left: '50%' }}
                     >
-                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/25 backdrop-blur-sm border border-white/40 shadow-lg flex items-center justify-center">
-                        <div className="w-1 h-6 bg-white rounded-full" />
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/30 backdrop-blur-sm border-2 border-white shadow-xl flex items-center justify-center">
+                        <div className="w-0.5 h-4 bg-white rounded-full" />
                       </div>
                     </div>
-                    <div className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                    {/* Labels antes/depois */}
+                    <div className="absolute top-3 left-3 bg-black/70 text-white text-[10px] px-2 py-1 rounded">
                       Antes
                     </div>
-                    <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                    <div className="absolute top-3 right-3 bg-black/70 text-white text-[10px] px-2 py-1 rounded">
                       Depois
                     </div>
                   </div>
@@ -237,13 +241,13 @@ export function UpscaleConfigModal({
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400">
                   {isLoading ? (
-                    <div className="flex flex-col items-center space-y-2">
-                      <Sparkles className="w-8 h-8 animate-spin" />
-                      <span className="text-xs">Processando...</span>
+                    <div className="flex flex-col items-center space-y-3">
+                      <Sparkles className="w-10 h-10 animate-spin text-[#667EEA]" />
+                      <span className="text-sm font-medium">Processando 4K...</span>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center w-12 h-12 bg-white/10 rounded-full">
-                      <div className="w-6 h-6 border-2 border-dashed border-gray-400 rounded"></div>
+                    <div className="flex items-center justify-center w-16 h-16 bg-white/5 rounded-full">
+                      <div className="w-8 h-8 border-2 border-dashed border-gray-500 rounded"></div>
                     </div>
                   )}
                 </div>
@@ -252,32 +256,31 @@ export function UpscaleConfigModal({
           </div>
         </div>
 
-        {resultImageUrl && (
-          <div className="mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-[#2C3E50] border border-[#4A5F7A] rounded-2xl px-4 py-3">
-              <p className="text-xs sm:text-sm text-gray-200 leading-relaxed">
-                A versão em alta resolução já está na sua galeria. Você também pode baixá-la agora.
+        {/* Informações compactas */}
+        {resultImageUrl ? (
+          <div className="mb-4">
+            <div className="flex items-center justify-between bg-[#2C3E50]/50 border border-[#4A5F7A]/50 rounded-lg px-3 py-2">
+              <p className="text-xs text-gray-300">
+                Imagem salva na galeria
               </p>
               <Button
                 type="button"
                 onClick={handleDownloadResult}
-                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 text-white text-xs font-semibold px-3 py-2 rounded-lg"
+                size="sm"
+                className="h-7 bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#667EEA]/90 hover:to-[#764BA2]/90 text-white text-xs px-2 gap-1"
               >
-                <Download className="w-4 h-4" />
-                Baixar imagem
+                <Download className="w-3 h-3" />
+                Baixar
               </Button>
             </div>
           </div>
-        )}
-
-        {/* Info sobre o Upscale 4K */}
-        <div className="mb-6">
-          <div className="bg-[#2C3E50] border border-[#4A5F7A] rounded-xl px-4 py-3">
-            <p className="text-sm text-gray-300 leading-relaxed">
-              <span className="font-semibold text-white">Upscale 4K Ultra HD:</span> Melhora automaticamente a resolução e qualidade da imagem para até 4K, preservando detalhes, reduzindo ruídos e aprimorando texturas de forma natural.
+        ) : (
+          <div className="mb-4">
+            <p className="text-xs text-gray-400 text-center">
+              <span className="font-medium text-gray-300">4K Ultra HD:</span> Melhora resolução e qualidade preservando detalhes
             </p>
           </div>
-        </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex gap-3">
