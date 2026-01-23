@@ -289,28 +289,19 @@ export function UpscaleConfigModal({
                   value="none" 
                   className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
                 >
-                  <div className="flex flex-col">
-                    <span className="font-medium">Apenas Melhorar Qualidade</span>
-                    <span className="text-xs text-gray-400">Mantém o tamanho original</span>
-                  </div>
+                  Mesma, apenas melhora qualidade
                 </SelectItem>
                 <SelectItem 
                   value="2x" 
                   className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
                 >
-                  <div className="flex flex-col">
-                    <span className="font-medium">2x Maior (Recomendado)</span>
-                    <span className="text-xs text-gray-400">Dobra o tamanho da imagem</span>
-                  </div>
+                  2x Maior
                 </SelectItem>
                 <SelectItem 
                   value="4x" 
                   className="text-white hover:bg-[#4A5F7A] font-[system-ui,-apple-system,'SF Pro Display',sans-serif]"
                 >
-                  <div className="flex flex-col">
-                    <span className="font-medium">4x Maior (Máxima Qualidade)</span>
-                    <span className="text-xs text-gray-400">Quadruplica o tamanho da imagem</span>
-                  </div>
+                  4x Maior
                 </SelectItem>
               </SelectContent>
             </Select>
