@@ -964,11 +964,11 @@ const AIToolsShowcase = () => {
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1920px"
                   quality={100}
-                  className="object-cover"
-                  style={{ objectPosition: 'center center' }}
+                  className="object-contain"
+                  priority
                 />
                 <div
-                  className="absolute inset-0 transition-all duration-300 ease-out"
+                  className="absolute inset-0"
                   style={{
                     clipPath: 'polygon(50% 0, 100% 0, 100% 100%, 50% 100%)'
                   }}
@@ -979,8 +979,8 @@ const AIToolsShowcase = () => {
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1920px"
                     quality={100}
-                    className="object-cover"
-                    style={{ objectPosition: 'center center' }}
+                    className="object-contain"
+                    priority
                   />
                 </div>
               </div>
