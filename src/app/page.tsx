@@ -946,7 +946,7 @@ const AIToolsShowcase = () => {
         <div className="bg-gray-100 rounded-2xl p-0 relative overflow-hidden">
           {/* Upscale: Comparison Slider */}
           {currentTool.type === 'comparison' && (
-            <div className="relative aspect-video rounded-2xl overflow-hidden bg-gray-200 group/slider">
+            <div className="relative aspect-video rounded-2xl overflow-hidden bg-black group/slider">
               {/* Tag "Antes" - Canto superior esquerdo */}
               <div className="absolute top-6 left-6 bg-black bg-opacity-80 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg z-10">
                 <span>Antes</span>
