@@ -149,8 +149,8 @@ export function ImageEditorInterface({
     setImageFiles([])
     setError(null)
     setCurrentEditId(null) // Clear edit monitoring
-    setSelectedPreset(null) // Reset preset selection
-    setSelectedSubPreset(null) // Reset sub-preset selection
+    // NÃO limpar selectedPreset/selectedSubPreset aqui - precisa estar disponível para o modal
+    // O preset será mantido para próxima geração (comportamento desejável)
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
