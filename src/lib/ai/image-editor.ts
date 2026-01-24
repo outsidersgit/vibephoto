@@ -44,13 +44,14 @@ export class ImageEditor {
    * @param aspectRatio - Aspect ratio for the output image
    * @param webhookUrl - Optional webhook URL for async processing
    * @param resolution - Output resolution ('2K' or '4K')
+   * @param presetId - Optional preset ID for special handling
    * @returns Promise<ImageEditResponse>
    */
-  async editImageWithPrompt(imageFile: File, promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string, resolution?: string): Promise<ImageEditResponse> {
+  async editImageWithPrompt(imageFile: File, promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string, resolution?: string, presetId?: string): Promise<ImageEditResponse> {
     this.checkConfiguration()
 
     try {
-      console.log('🍌 Starting Nano Banana image edit via Replicate:', { fileName: imageFile.name, prompt: promptText, resolution })
+      console.log('🍌 Starting Nano Banana image edit via Replicate:', { fileName: imageFile.name, prompt: promptText, resolution, presetId })
 
       // Validate input
       if (!imageFile) {
@@ -76,7 +77,7 @@ export class ImageEditor {
       const imageUrl = await NanoBananaProvider.fileToUrl(imageFile)
 
       // Call Nano Banana provider via Replicate with webhook support
-      const result = await this.provider!.editWithPrompt(imageUrl, promptText, 'jpg', aspectRatio, webhookUrl, resolution)
+      const result = await this.provider!.editWithPrompt(imageUrl, promptText, 'jpg', aspectRatio, webhookUrl, resolution, presetId)
 
       console.log('✅ Nano Banana edit completed:', result.id)
       return result
@@ -97,16 +98,18 @@ export class ImageEditor {
    * @param aspectRatio - Aspect ratio for the output image
    * @param webhookUrl - Optional webhook URL for async processing
    * @param resolution - Output resolution ('2K' or '4K')
+   * @param presetId - Optional preset ID for special handling
    * @returns Promise<ImageEditResponse>
    */
-  async editWithMultipleImages(imageFiles: File[], promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string, resolution?: string): Promise<ImageEditResponse> {
+  async editWithMultipleImages(imageFiles: File[], promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string, resolution?: string, presetId?: string): Promise<ImageEditResponse> {
     this.checkConfiguration()
 
     try {
       console.log('🍌 Starting Nano Banana multi-image edit via Replicate:', {
         imageCount: imageFiles.length,
         prompt: promptText,
-        resolution
+        resolution,
+        presetId
       })
 
       // Validate input
@@ -146,7 +149,8 @@ export class ImageEditor {
         outputFormat: 'jpg',
         aspectRatio,
         resolution,
-        webhookUrl
+        webhookUrl,
+        presetId
       })
 
       console.log('✅ Nano Banana multi-image edit completed:', result.id)
@@ -169,9 +173,10 @@ export class ImageEditor {
    * @param aspectRatio - Aspect ratio for the output image
    * @param webhookUrl - Optional webhook URL for async processing
    * @param resolution - Output resolution ('2K' or '4K')
+   * @param presetId - Optional preset ID for special handling
    * @returns Promise<ImageEditResponse>
    */
-  async editWithMultipleImageUrls(imageUrls: string[], promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string, resolution?: string): Promise<ImageEditResponse> {
+  async editWithMultipleImageUrls(imageUrls: string[], promptText: string, aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', webhookUrl?: string, resolution?: string, presetId?: string): Promise<ImageEditResponse> {
     this.checkConfiguration()
 
     try {
@@ -179,6 +184,7 @@ export class ImageEditor {
         imageCount: imageUrls.length,
         prompt: promptText,
         resolution,
+        presetId,
         firstUrlPreview: imageUrls[0]?.substring(0, 100),
         isBase64: imageUrls[0]?.startsWith('data:')
       })
@@ -210,7 +216,8 @@ export class ImageEditor {
         outputFormat: 'jpg',
         aspectRatio,
         resolution,
-        webhookUrl
+        webhookUrl,
+        presetId
       })
 
       console.log('✅ Nano Banana multi-image edit completed (URL mode):', result.id)

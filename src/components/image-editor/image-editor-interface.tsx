@@ -1006,7 +1006,8 @@ export function ImageEditorInterface({
         prompt,
         aspectRatio,
         resolution,
-        imageUrls // Array of R2 URLs
+        imageUrls, // Array of R2 URLs
+        presetId: selectedPreset // Pass preset ID to API for special handling
       }
 
       // CRITICAL VALIDATION: Ensure no data URLs are being sent

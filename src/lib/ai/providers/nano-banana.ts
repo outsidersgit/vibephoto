@@ -6,10 +6,11 @@ export interface NanoBananaEditRequest {
   prompt: string
   imageInput?: string | string[] // Base64 or URLs
   outputFormat?: 'jpg' | 'png'
-  aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9'
+  aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9' | 'match_input_image'
   resolution?: string // Output resolution (default: "2K") - Nano Banana Pro
   safetyFilterLevel?: string // Safety filter level (default: "block_only_high") - Nano Banana Pro
   webhookUrl?: string // Optional webhook URL for async processing
+  presetId?: string // Preset ID for special handling (e.g., 'skin-realism' forces match_input_image)
 }
 
 export interface NanoBananaEditResponse {
@@ -101,10 +102,15 @@ export class NanoBananaProvider {
         input.image_input = []
       }
 
-      // CRITICAL: aspect_ratio validation based on image_input
+      // CRITICAL: aspect_ratio validation based on image_input and presetId
       // - With images: can be "match_input_image" (default) or specific ratio
       // - Without images (generation): MUST be a specific ratio, NOT "match_input_image"
-      if (request.aspectRatio) {
+      // - Special handling for 'skin-realism' preset: ALWAYS use "match_input_image"
+      if (request.presetId === 'skin-realism' && hasImages) {
+        // Force match_input_image for skin realism to preserve original aspect ratio
+        input.aspect_ratio = 'match_input_image'
+        console.log('🎯 Forcing aspect_ratio="match_input_image" for skin-realism preset')
+      } else if (request.aspectRatio) {
         if (!hasImages && request.aspectRatio === 'match_input_image') {
           // Cannot use match_input_image without images - use default 1:1
           console.warn('⚠️ Cannot use match_input_image without images, defaulting to 1:1')
@@ -267,12 +273,13 @@ export class NanoBananaProvider {
    * Edit image with text prompt
    */
   async editWithPrompt(
-    imageUrl: string, 
-    prompt: string, 
-    outputFormat: 'jpg' | 'png' = 'jpg', 
-    aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9', 
+    imageUrl: string,
+    prompt: string,
+    outputFormat: 'jpg' | 'png' = 'jpg',
+    aspectRatio?: '1:1' | '4:3' | '3:4' | '9:16' | '16:9',
     webhookUrl?: string,
     resolution?: string,
+    presetId?: string,
     safetyFilterLevel?: string
   ): Promise<NanoBananaEditResponse> {
     // Use prompt directly without adding prefix - user's prompt should be used as-is
@@ -283,7 +290,8 @@ export class NanoBananaProvider {
       aspectRatio,
       resolution,
       safetyFilterLevel,
-      webhookUrl
+      webhookUrl,
+      presetId
     })
   }
 

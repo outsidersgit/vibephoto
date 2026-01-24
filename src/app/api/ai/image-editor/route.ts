@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
     const aspectRatio = body.aspectRatio as string
     const resolution = body.resolution as string
     const imageUrls = (body.imageUrls || []) as string[]
+    const presetId = body.presetId as string | undefined
 
     // Validate input - prompt is required, images can be empty for generation from scratch
     if (!operation || !prompt || !prompt.trim()) {
@@ -128,6 +129,9 @@ export async function POST(request: NextRequest) {
     }
     if (resolution) {
       forwardFormData.append('resolution', resolution) // 'standard' ou '4k'
+    }
+    if (presetId) {
+      forwardFormData.append('presetId', presetId) // Pass preset ID for special handling
     }
 
     // Add image URLs to FormData

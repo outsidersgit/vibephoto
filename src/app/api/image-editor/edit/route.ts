@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     const aspectRatio = formData.get('aspectRatio') as string | null
     const resolutionParam = formData.get('resolution') as string | null
     const resolution: EditorResolution = resolutionParam === '4k' ? '4k' : 'standard'
+    const presetId = formData.get('presetId') as string | null
 
     // Collect images from Files OR URLs (OPTIMIZED: keep URLs as-is, don't download)
     const images: File[] = []
@@ -194,14 +195,14 @@ export async function POST(request: NextRequest) {
     if (imageUrls.length > 0) {
       // URL mode (OPTIMIZED - no download/conversion needed)
       // Always use editWithMultipleImageUrls for consistency (works for single or multiple)
-      console.log('🚀 Using optimized URL method (single or multiple)')
-      result = await imageEditor.editWithMultipleImageUrls(imageUrls, prompt, aspectRatioValue, webhookUrl, nanoBananaResolution)
+      console.log('🚀 Using optimized URL method (single or multiple)', { presetId })
+      result = await imageEditor.editWithMultipleImageUrls(imageUrls, prompt, aspectRatioValue, webhookUrl, nanoBananaResolution, presetId || undefined)
     } else if (images.length > 1) {
       // Multiple images - use edit with multiple images (Nano Banana Pro feature)
-      result = await imageEditor.editWithMultipleImages(images, prompt, aspectRatioValue, webhookUrl, nanoBananaResolution)
+      result = await imageEditor.editWithMultipleImages(images, prompt, aspectRatioValue, webhookUrl, nanoBananaResolution, presetId || undefined)
     } else if (images.length === 1) {
       // Single image - edit existing image
-      result = await imageEditor.editImageWithPrompt(images[0], prompt, aspectRatioValue, webhookUrl, nanoBananaResolution)
+      result = await imageEditor.editImageWithPrompt(images[0], prompt, aspectRatioValue, webhookUrl, nanoBananaResolution, presetId || undefined)
     } else {
       // No images - generate from scratch
       result = await imageEditor.generateImageFromPrompt(prompt, aspectRatioValue, webhookUrl, nanoBananaResolution)
