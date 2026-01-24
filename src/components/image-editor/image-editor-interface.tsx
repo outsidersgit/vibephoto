@@ -149,6 +149,8 @@ export function ImageEditorInterface({
     setImageFiles([])
     setError(null)
     setCurrentEditId(null) // Clear edit monitoring
+    setSelectedPreset(null) // Reset preset selection
+    setSelectedSubPreset(null) // Reset sub-preset selection
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
