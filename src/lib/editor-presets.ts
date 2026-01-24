@@ -3,11 +3,20 @@
  * Configuração centralizada para fácil manutenção
  */
 
+export interface EditorSubPreset {
+  id: string
+  title: string
+  description: string
+  promptBase: string
+  instruction: string
+}
+
 export interface EditorPreset {
   id: string
   title: string
-  promptBase: string
-  instruction: string
+  promptBase?: string // Opcional quando tem subPresets
+  instruction?: string // Opcional quando tem subPresets
+  subPresets?: EditorSubPreset[] // Sub-opções do atalho
 }
 
 export const EDITOR_PRESETS: EditorPreset[] = [
@@ -38,8 +47,29 @@ export const EDITOR_PRESETS: EditorPreset[] = [
   {
     id: 'product',
     title: 'Foto de produto',
-    promptBase: 'Crie uma foto de produto premium para e-commerce de alta conversão. Use a imagem anexada como referência do produto, mantendo 100% de fidelidade visual (forma exata, proporções, cores, texturas, detalhes e acabamentos). Aplique iluminação de estúdio profissional com softbox (luz principal a 45°, luz de preenchimento suave, backlight sutil para separação do fundo). Fundo limpo e minimalista (branco puro ou gradiente neutro elegante). Sombras suaves e difusas para dar profundidade. Composição centrada com produto em destaque absoluto. Perspectiva frontal levemente superior. Aparência hiper-realista e apetecível. Sem elementos distrativos, foco 100% no produto. Resultado: imagem pronta para marketplace premium.',
-    instruction: 'Anexe a foto do produto'
+    subPresets: [
+      {
+        id: 'product-clean',
+        title: 'Clean (e-commerce)',
+        description: 'Fundo branco, iluminação de estúdio',
+        promptBase: 'Crie uma foto de produto clean para e-commerce de alta conversão. Use a imagem anexada como referência do produto, mantendo 100% de fidelidade visual (forma exata, proporções, cores, texturas, detalhes e acabamentos). FUNDO: branco puro ou gradiente neutro sutil, sem elementos distrativos. ILUMINAÇÃO: estúdio profissional com softbox (luz principal a 45°, luz de preenchimento suave, backlight para separação do fundo), sombras suaves e difusas para profundidade. COMPOSIÇÃO: produto centralizado em destaque absoluto, perspectiva frontal levemente superior, aparência hiper-realista e apetecível. RESULTADO: imagem limpa e profissional, pronta para marketplace premium (Amazon, Mercado Livre, loja virtual).',
+        instruction: 'Anexe a foto do produto'
+      },
+      {
+        id: 'product-model',
+        title: 'Com modelo (roupa)',
+        description: 'Roupa em modelo humano ou manequim',
+        promptBase: 'Crie uma fotografia de moda/produto vestível apresentando a peça em modelo humano ou manequim profissional. Use a imagem anexada como referência da roupa/acessório, mantendo 100% de fidelidade visual (corte, tecido, cor, detalhes, caimento). MODELO: se a peça for roupa, apresente em modelo humano realista (corpo proporcional, pose natural e elegante) OU manequim de loja profissional. Se for acessório vestível (relógio, bolsa, sapato), mostre em uso ou em modelo apropriado. FUNDO: clean e minimalista (branco, cinza claro ou gradiente neutro) para destacar a peça. ILUMINAÇÃO: estúdio de moda profissional, luz suave e difusa, sombras sutis, destaque na textura do tecido e detalhes da peça. COMPOSIÇÃO: foco total na roupa/acessório, modelo serve apenas para mostrar caimento e escala, pose elegante mas não exagerada. CAIMENTO: tecido com dobras e vincos naturais, física realista do material, ajuste apropriado ao corpo. RESULTADO: foto comercial de moda/produto, pronta para e-commerce de roupas e acessórios.',
+        instruction: 'Anexe a foto da roupa ou acessório'
+      },
+      {
+        id: 'product-editorial',
+        title: 'Editorial (premium)',
+        description: 'Composição sofisticada com styling',
+        promptBase: 'Crie uma fotografia editorial premium e sofisticada do produto, estilo revista de luxo. Use a imagem anexada como referência do produto, mantendo 100% de fidelidade visual. ESTILO EDITORIAL: composição artística e refinada, iluminação dramática e cinematográfica (luz direcionada, sombras marcadas, contraste elegante), elementos de styling complementares (tecidos nobres, superfícies premium, objetos de design discretos). COMPOSIÇÃO: assimétrica e dinâmica, uso criativo de espaço negativo, ângulos interessantes mas não extremos, profundidade de campo seletiva (produto em foco, background artisticamente desfocado). PALETA: cores harmoniosas e elegantes, tons ricos e profundos ou minimalismo sofisticado conforme produto. CONTEXTO: elementos que elevam percepção de valor (mármore, madeira nobre, metal escovado, vidro, tecidos luxuosos), sem competir com produto principal. ATMOSFERA: sofisticação, exclusividade, desejo, aspiração. IDEAL PARA: perfumes, cosméticos, joias, relógios, produtos premium, itens de luxo. RESULTADO: imagem editorial de alto impacto, pronta para campanha publicitária premium, revista ou catálogo sofisticado.',
+        instruction: 'Anexe a foto do produto'
+      }
+    ]
   },
   {
     id: 'try-on',

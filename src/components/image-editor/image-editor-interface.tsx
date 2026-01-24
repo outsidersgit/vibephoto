@@ -79,6 +79,7 @@ export function ImageEditorInterface({
   const [currentEditId, setCurrentEditId] = useState<string | null>(null)
   const [showCreditPurchase, setShowCreditPurchase] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null)
+  const [selectedSubPreset, setSelectedSubPreset] = useState<string | null>(null)
   const router = useRouter()
   const fileInputId = useId()
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -1177,19 +1178,44 @@ export function ImageEditorInterface({
     if (presetId === 'free') {
       // Modo livre: limpa preset e prompt
       setSelectedPreset(null)
+      setSelectedSubPreset(null)
       setPrompt('')
     } else {
-      // Seleciona preset e preenche prompt
+      // Seleciona preset
       const preset = EDITOR_PRESETS.find(p => p.id === presetId)
       if (preset) {
         setSelectedPreset(presetId)
-        setPrompt(preset.promptBase)
+
+        // Se tem sub-presets, limpa sub-seleção anterior (usuário precisará escolher)
+        if (preset.subPresets) {
+          setSelectedSubPreset(null)
+          setPrompt('') // Limpa prompt até escolher sub-preset
+        } else {
+          // Preset normal sem sub-opções
+          setSelectedSubPreset(null)
+          setPrompt(preset.promptBase || '')
+        }
+      }
+    }
+  }
+
+  // Função para selecionar sub-preset
+  const handleSubPresetSelect = (subPresetId: string) => {
+    const preset = selectedPreset ? EDITOR_PRESETS.find(p => p.id === selectedPreset) : null
+    if (preset?.subPresets) {
+      const subPreset = preset.subPresets.find(sp => sp.id === subPresetId)
+      if (subPreset) {
+        setSelectedSubPreset(subPresetId)
+        setPrompt(subPreset.promptBase)
       }
     }
   }
 
   // Get current preset data
   const currentPreset = selectedPreset ? EDITOR_PRESETS.find(p => p.id === selectedPreset) : null
+  const currentSubPreset = selectedSubPreset && currentPreset?.subPresets
+    ? currentPreset.subPresets.find(sp => sp.id === selectedSubPreset)
+    : null
 
   // Mobile Layout - ChatGPT style
   if (isMobile) {
@@ -1263,7 +1289,7 @@ export function ImageEditorInterface({
             </div>
 
             {/* Helper Text - Mobile destacado */}
-            {currentPreset && (
+            {currentPreset && !currentPreset.subPresets && (
               <div className="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
                 <p className="text-sm font-semibold text-blue-900 mb-1">
                   {currentPreset.instruction}
@@ -1272,6 +1298,51 @@ export function ImageEditorInterface({
                   <p className="text-xs text-blue-700">
                     💡 Edite o prompt para personalizar
                   </p>
+                )}
+              </div>
+            )}
+
+            {/* Sub-Presets Selector - Mobile */}
+            {currentPreset?.subPresets && (
+              <div className="mt-3 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+                <p className="text-sm font-semibold text-gray-900 mb-3">
+                  Escolha o estilo:
+                </p>
+                <div className="space-y-2">
+                  {currentPreset.subPresets.map((subPreset) => (
+                    <label
+                      key={subPreset.id}
+                      className={`flex items-start p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        selectedSubPreset === subPreset.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="subPreset"
+                        value={subPreset.id}
+                        checked={selectedSubPreset === subPreset.id}
+                        onChange={() => handleSubPresetSelect(subPreset.id)}
+                        className="mt-0.5 mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {subPreset.title}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-0.5">
+                          {subPreset.description}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                {currentSubPreset && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <p className="text-xs text-blue-700">
+                      📸 {currentSubPreset.instruction}
+                    </p>
+                  </div>
                 )}
               </div>
             )}
@@ -1588,7 +1659,7 @@ export function ImageEditorInterface({
           </div>
 
           {/* Helper Text - Mais destacado */}
-          {currentPreset && (
+          {currentPreset && !currentPreset.subPresets && (
             <div className="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
               <p className="text-sm font-semibold text-blue-900 mb-1">
                 {currentPreset.instruction}
@@ -1597,6 +1668,51 @@ export function ImageEditorInterface({
                 <p className="text-xs text-blue-700">
                   💡 Lembre-se de editar o prompt para personalizar seu resultado
                 </p>
+              )}
+            </div>
+          )}
+
+          {/* Sub-Presets Selector - Desktop */}
+          {currentPreset?.subPresets && (
+            <div className="mt-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+              <p className="text-sm font-semibold text-gray-900 mb-3">
+                Escolha o estilo:
+              </p>
+              <div className="space-y-2">
+                {currentPreset.subPresets.map((subPreset) => (
+                  <label
+                    key={subPreset.id}
+                    className={`flex items-start p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      selectedSubPreset === subPreset.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="subPreset"
+                      value={subPreset.id}
+                      checked={selectedSubPreset === subPreset.id}
+                      onChange={() => handleSubPresetSelect(subPreset.id)}
+                      className="mt-0.5 mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {subPreset.title}
+                      </p>
+                      <p className="text-xs text-gray-600 mt-0.5">
+                        {subPreset.description}
+                      </p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              {currentSubPreset && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <p className="text-xs text-blue-700">
+                    📸 {currentSubPreset.instruction}
+                  </p>
+                </div>
               )}
             </div>
           )}
