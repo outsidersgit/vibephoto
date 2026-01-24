@@ -858,16 +858,19 @@ const AIToolsShowcase = () => {
   const [activeTab, setActiveTab] = useState<'skin' | 'editor' | 'video'>('skin')
   const [selectedExample, setSelectedExample] = useState(0)
 
+  // Cache busting - atualiza quando as imagens mudarem
+  const imageVersion = '20260124-1'
+
   const toolsData = {
     skin: {
       title: "Upscale de pele",
       description: "Textura de pele naturalizada e realista com IA",
       type: "comparison",
-      beforeImage: "/examples/tools/upscale-before.jpg",
-      afterImage: "/examples/tools/upscale-after.jpg",
+      beforeImage: `/examples/tools/upscale-before.jpg?v=${imageVersion}`,
+      afterImage: `/examples/tools/upscale-after.jpg?v=${imageVersion}`,
       examples: [
-        { thumb: "/examples/tools/upscale-thumb-1.jpg", before: "/examples/tools/upscale-before.jpg", after: "/examples/tools/upscale-after.jpg", label: "Retrato" },
-        { thumb: "/examples/tools/upscale-thumb-2.jpg", before: "/examples/tools/upscale-before-2.jpg", after: "/examples/tools/upscale-after-2.jpg", label: "Paisagem" }
+        { thumb: `/examples/tools/upscale-thumb-1.jpg?v=${imageVersion}`, before: `/examples/tools/upscale-before.jpg?v=${imageVersion}`, after: `/examples/tools/upscale-after.jpg?v=${imageVersion}`, label: "Retrato" },
+        { thumb: `/examples/tools/upscale-thumb-2.jpg?v=${imageVersion}`, before: `/examples/tools/upscale-before-2.jpg?v=${imageVersion}`, after: `/examples/tools/upscale-after-2.jpg?v=${imageVersion}`, label: "Paisagem" }
       ]
     },
     editor: {
