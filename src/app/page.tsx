@@ -965,7 +965,7 @@ const AIToolsShowcase = () => {
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1920px"
                   quality={100}
                   className="object-cover"
-                  style={{ objectPosition: 'center top' }}
+                  style={{ objectPosition: 'center center' }}
                 />
                 <div
                   className="absolute inset-0 transition-all duration-300 ease-out"
@@ -980,7 +980,7 @@ const AIToolsShowcase = () => {
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1920px"
                     quality={100}
                     className="object-cover"
-                    style={{ objectPosition: 'center top' }}
+                    style={{ objectPosition: 'center center' }}
                   />
                 </div>
               </div>
