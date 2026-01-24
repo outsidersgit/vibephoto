@@ -114,7 +114,7 @@ export function ImagePreviewSlider({
 
       <div
         ref={comparisonContainerRef}
-        className="relative w-full cursor-ew-resize aspect-video overflow-hidden rounded-lg"
+        className="relative w-full cursor-ew-resize aspect-video overflow-hidden rounded-lg bg-black"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -124,7 +124,7 @@ export function ImagePreviewSlider({
         <img
           src={originalUrl}
           alt="Original"
-          className="absolute inset-0 w-full h-full object-cover object-center"
+          className="absolute inset-0 w-full h-full object-contain"
         />
 
         {/* Imagem resultado (depois) - com clip path */}
@@ -136,7 +136,7 @@ export function ImagePreviewSlider({
           <img
             src={resultUrl}
             alt="Resultado"
-            className="absolute inset-0 w-full h-full object-cover object-center"
+            className="absolute inset-0 w-full h-full object-contain"
           />
         </div>
 
