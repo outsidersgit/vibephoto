@@ -2393,7 +2393,7 @@ export default function HomePage() {
                       <img
                         src="/examples/tools/upscale-before.jpg"
                         alt="Antes do upscale"
-                        className="absolute inset-0 w-full h-full object-contain"
+                        className="absolute inset-0 w-full h-full object-cover object-center"
                         onError={(e) => {
                           e.currentTarget.src = '/examples/professional-woman.jpg';
                         }}
@@ -2407,7 +2407,7 @@ export default function HomePage() {
                         <img
                           src="/examples/tools/upscale-after.jpg"
                           alt="Depois do upscale"
-                          className="w-full h-full object-contain"
+                          className="w-full h-full object-cover object-center"
                           onError={(e) => {
                             e.currentTarget.src = '/examples/card-fotos-profissionais.jpg';
                           }}

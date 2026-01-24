@@ -19,7 +19,7 @@ export const EDITOR_PRESETS: EditorPreset[] = [
   },
   {
     id: 'skin-realism',
-    title: 'Fix skin',
+    title: 'Melhorar pele',
     promptBase: 'CRÍTICO: Preserve 100% a identidade da pessoa (formato do rosto, traços faciais, expressão, maquiagem se houver). Melhore APENAS a textura e qualidade da pele mantendo todas as características originais intactas. Adicione textura de pele humana autêntica: poros visíveis mas sutis, micro-variações de tom, leve vermelhidão natural em maçãs do rosto. Se houver maquiagem (batom, sombra, blush, etc), preserve EXATAMENTE como está. Corrija o brilho artificial dos olhos, adicionando reflexos naturais e pequenas imperfeições realistas (veias leves, úmidade natural). Naturalize cabelos: adicione fios soltos, baby hairs, textura individual de cada fio, brilho natural não uniforme. Ajuste textura dos lábios mas mantenha cor e formato originais. Remova apenas o aspecto "plástico" ou "perfeito demais" da pele, sem alterar estrutura facial. Adicione micro-imperfeições humanas naturais (sardas leves se apropriado, variações de tom sutis). NÃO ALTERE: formato do rosto, traços faciais, maquiagem, expressão, identidade da pessoa. Resultado: mesma pessoa com pele naturalizada e textura humana realista.',
     instruction: 'Anexe a foto que você quer melhorar a pele'
   },
