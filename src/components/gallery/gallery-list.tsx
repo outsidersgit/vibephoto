@@ -16,7 +16,6 @@ import {
   Calendar,
   User,
   Edit2,
-  ZoomIn,
   Video,
   Info,
   Trash2
@@ -35,7 +34,6 @@ interface GalleryListProps {
   onImageSelect: (imageUrl: string) => void
   onImageClick: (imageUrl: string) => void
   onToggleFavorite?: (imageUrl: string, generation: any) => void | Promise<boolean>
-  onUpscale?: (imageUrl: string, generation?: any) => void
   userPlan?: string
   onDeleteGeneration?: (generationId: string) => Promise<boolean>
   deleting?: boolean
@@ -50,7 +48,6 @@ export function GalleryList({
   onImageSelect,
   onImageClick,
   onToggleFavorite,
-  onUpscale,
   userPlan = 'FREE',
   onDeleteGeneration,
   deleting = false
@@ -139,9 +136,6 @@ export function GalleryList({
         break
       case 'edit':
         router.push(`/editor?image=${encodeURIComponent(imageUrl)}`)
-        break
-      case 'upscale':
-        onUpscale?.(imageUrl, generation)
         break
       case 'delete':
         if (!onDeleteGeneration || !generation?.id) return
@@ -276,18 +270,6 @@ export function GalleryList({
                     >
                       <Edit2 className="w-4 h-4" />
                     </Button>
-
-                    {onUpscale && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 w-7 p-0 text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
-                        onClick={() => handleImageAction('upscale', imageUrl, generation)}
-                        title="Fazer upscale"
-                      >
-                        <ZoomIn className="w-4 h-4" />
-                      </Button>
-                    )}
 
                     <Button
                       size="sm"

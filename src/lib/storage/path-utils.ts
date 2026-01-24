@@ -5,12 +5,12 @@
  */
 
 export type MediaType = 'IMAGE' | 'VIDEO'
-export type StorageContext = 'generation' | 'training' | 'edit' | 'upscale'
+export type StorageContext = 'generation' | 'training' | 'edit'
 
 // Controlled categories - whitelist for validation
-export type ValidCategory = 'images' | 'videos' | 'edited' | 'upscaled' | 'thumbnails'
+export type ValidCategory = 'images' | 'videos' | 'edited' | 'thumbnails'
 
-const VALID_CATEGORIES: ValidCategory[] = ['images', 'videos', 'edited', 'upscaled', 'thumbnails']
+const VALID_CATEGORIES: ValidCategory[] = ['images', 'videos', 'edited', 'thumbnails']
 
 /**
  * Validate if category is allowed
@@ -86,8 +86,6 @@ export function buildKey(
     category = 'videos'
   } else if (context === 'edit') {
     category = 'edited'
-  } else if (context === 'upscale') {
-    category = 'upscaled'
   } else {
     category = 'images'
   }
@@ -262,8 +260,6 @@ export function getCategoryForMediaType(type: MediaType, context: StorageContext
     return 'videos'
   } else if (context === 'edit') {
     return 'edited'
-  } else if (context === 'upscale') {
-    return 'upscaled'
   } else {
     return 'images'
   }

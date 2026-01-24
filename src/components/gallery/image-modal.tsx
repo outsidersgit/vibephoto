@@ -32,7 +32,6 @@ interface ImageModalProps {
   mediaItem: MediaItem
   onClose: () => void
   allImages: MediaItem[]
-  onUpscale?: (imageUrl: string, generation: any) => void
   onDeleteGeneration?: (generationId: string) => Promise<boolean>
   onToggleFavorite?: (imageUrl: string, generation?: any) => Promise<boolean>
   userPlan?: string
@@ -43,7 +42,6 @@ export function ImageModal({
   mediaItem,
   onClose,
   allImages,
-  onUpscale,
   onDeleteGeneration,
   onToggleFavorite,
   userPlan,
@@ -325,14 +323,6 @@ export function ImageModal({
     }, 4000)
   }
 
-  const handleUpscaleClick = () => {
-    const currentImage = allImages[currentImageIndex]
-    if (!currentImage || !onUpscale) return
-
-    triggerEvent('feature_use', { metadata: { feature: 'upscale' } })
-    onUpscale(currentImage.url, currentImage.generation)
-  }
-
   const handleCopyPrompt = () => {
     const currentImage = allImages[currentImageIndex]
     if (!currentImage?.generation?.prompt) {
@@ -498,20 +488,6 @@ export function ImageModal({
               <Trash2 className="w-4 h-4" />
               {isDeleting ? 'Excluindo...' : 'Excluir'}
             </Button>
-
-            {onUpscale && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleUpscaleClick}
-                className="inline-flex items-center gap-1 px-3 py-2 text-white hover:bg-white hover:bg-opacity-20"
-                title="Fazer upscale"
-                type="button"
-              >
-                <ZoomIn className="w-4 h-4" />
-                Upscale
-              </Button>
-            )}
 
             {currentImage.operationType === 'generated' && (
               <Button

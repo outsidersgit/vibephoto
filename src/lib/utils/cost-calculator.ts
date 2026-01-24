@@ -3,7 +3,6 @@ import {
   CREDIT_COSTS,
   getImageGenerationCost,
   getImageEditCost,
-  getUpscaleCost,
   getVideoGenerationCost,
   EditorResolution
 } from '@/lib/credits/pricing'
@@ -34,9 +33,6 @@ export function calculateOperationCost(
       }
       return getImageGenerationCost(metadata?.variations || 1)
 
-    case 'upscaled':
-      // Upscale costs: 30 créditos (Nano Banana Pro 4K)
-      return getUpscaleCost(metadata?.imageCount || 1)
 
     case 'edited':
       // Edit costs: 20 créditos (standard) ou 30 créditos (4K)

@@ -19,7 +19,6 @@ export interface UploadOptions {
   generateThumbnail?: boolean
   makePublic?: boolean
   isVideo?: boolean
-  isUpscale?: boolean  // Flag to indicate upscale image (allows larger file size)
   generateModernFormats?: boolean  // Fase 3 - Gerar WebP/AVIF (default: true)
 }
 
@@ -44,7 +43,7 @@ export abstract class StorageProvider {
   
   abstract getPublicUrl(key: string): string
   
-  abstract validateFile(file: File, isVideo?: boolean, isUpscale?: boolean): FileValidation
+  abstract validateFile(file: File, isVideo?: boolean): FileValidation
   
   abstract generateThumbnail(
     sourceKey: string,

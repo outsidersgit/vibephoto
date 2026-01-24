@@ -22,7 +22,6 @@ export const STORAGE_CONFIG = {
   // File upload constraints
   limits: {
     maxFileSize: 10 * 1024 * 1024, // 10MB
-    maxUpscaleFileSize: 50 * 1024 * 1024, // 50MB for upscaled images (PNG can be large)
     maxVideoSize: 100 * 1024 * 1024, // 100MB for videos
     maxFiles: 20,
     allowedMimeTypes: [
@@ -81,7 +80,6 @@ export const UPLOAD_PATHS = {
     images: 'generated/{userId}/images',
     videos: 'generated/{userId}/videos',
     edited: 'generated/{userId}/edited',
-    upscaled: 'generated/{userId}/upscaled',
     thumbnails: 'generated/{userId}/thumbnails'
   },
   // Legacy paths (to be migrated)
@@ -98,7 +96,6 @@ export const VALID_UPLOAD_CATEGORIES = [
   'images',
   'videos',
   'edited',
-  'upscaled',
   'thumbnails'
 ] as const
 

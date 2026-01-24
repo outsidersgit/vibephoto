@@ -171,17 +171,6 @@ export class HybridAIProvider extends AIProvider {
   // Utility methods for specific operations
 
   /**
-   * Route upscaling operations specifically to Replicate
-   */
-  async upscaleImage(imageUrl: string, options: any): Promise<any> {
-    console.log('🎯 Routing upscale operation to Replicate provider')
-    // Use Replicate's upscaling capabilities
-    const { TopazUpscaler } = await import('./upscale/topaz-upscaler')
-    const upscaler = new TopazUpscaler()
-    return upscaler.upscaleImage(imageUrl, options)
-  }
-
-  /**
    * Route video generation specifically to Replicate
    */
   async generateVideo(request: any): Promise<any> {

@@ -57,9 +57,7 @@ export class AWSS3Provider extends StorageProvider {
       }
 
       // Validate file size (File or Buffer)
-      const maxSize = options.isUpscale 
-        ? STORAGE_CONFIG.limits.maxUpscaleFileSize 
-        : (options.isVideo ? STORAGE_CONFIG.limits.maxVideoSize : STORAGE_CONFIG.limits.maxFileSize)
+      const maxSize = options.isVideo ? STORAGE_CONFIG.limits.maxVideoSize : STORAGE_CONFIG.limits.maxFileSize
       
       if (size > maxSize) {
         throw new StorageError(
@@ -71,7 +69,7 @@ export class AWSS3Provider extends StorageProvider {
       
       // Validate file if it's a File object
       if (file instanceof File) {
-        const validation = this.validateFile(file, options.isVideo, options.isUpscale)
+        const validation = this.validateFile(file, options.isVideo)
         if (!validation.isValid) {
           throw new StorageError(validation.error!, 'VALIDATION_ERROR', 400)
         }
@@ -370,11 +368,9 @@ export class AWSS3Provider extends StorageProvider {
     }
   }
 
-  validateFile(file: File, isVideo?: boolean, isUpscale?: boolean): FileValidation {
+  validateFile(file: File, isVideo?: boolean): FileValidation {
     // Check file size with appropriate limit
-    const maxSize = isUpscale 
-      ? STORAGE_CONFIG.limits.maxUpscaleFileSize 
-      : (isVideo ? STORAGE_CONFIG.limits.maxVideoSize : STORAGE_CONFIG.limits.maxFileSize)
+    const maxSize = isVideo ? STORAGE_CONFIG.limits.maxVideoSize : STORAGE_CONFIG.limits.maxFileSize
       
     if (file.size > maxSize) {
       return {

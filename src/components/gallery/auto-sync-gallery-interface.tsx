@@ -37,22 +37,11 @@ import {
 import { GalleryGrid } from './gallery-grid'
 import { GalleryList } from './gallery-list'
 import { GalleryStats } from './gallery-stats'
-import { UpscaleProgress } from '@/components/upscale/upscale-progress'
 import { VideoGalleryWrapper } from './video-gallery-wrapper'
 import { PackageProgressBarMinimal } from '@/components/packages/package-progress-bar-minimal'
 
 // Lazy load modals pesados (Fase 2 - Otimização de Performance)
 const ImageModal = dynamic(() => import('./image-modal').then(mod => ({ default: mod.ImageModal })), {
-  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
-  ssr: false
-})
-
-const ComparisonModal = dynamic(() => import('./comparison-modal').then(mod => ({ default: mod.ComparisonModal })), {
-  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
-  ssr: false
-})
-
-const UpscaleConfigModal = dynamic(() => import('@/components/upscale/upscale-config-modal').then(mod => ({ default: mod.UpscaleConfigModal })), {
   loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
   ssr: false
 })
@@ -396,25 +385,6 @@ export function AutoSyncGalleryInterface({
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [bulkSelectMode, setBulkSelectMode] = useState(false)
 
-  // Upscale states
-  const [activeUpscale, setActiveUpscale] = useState<{
-    jobId: string
-    originalImage: string
-    scaleFactor: number
-  } | null>(null)
-  const [upscaleResult, setUpscaleResult] = useState<{
-    originalImage: string
-    upscaledImage: string
-    scaleFactor: number
-  } | null>(null)
-  const [upscaleConfigModal, setUpscaleConfigModal] = useState<{
-    isOpen: boolean
-    imageUrl: string
-    generation?: any
-    isLoading: boolean
-    resultImageUrl?: string
-  }>({ isOpen: false, imageUrl: '', generation: null, isLoading: false, resultImageUrl: undefined })
-
   // ✅ Função refatorada para usar React Query
   const refreshGalleryData = async (showLoading = false) => {
     console.log('🔄 Refreshing gallery data using React Query...')
@@ -599,40 +569,14 @@ export function AutoSyncGalleryInterface({
     
   }, [queryClient])
 
-  // Handler para atualizações de upscale via WebSocket
-  const handleUpscaleUpdate = useCallback((generationId: string, status: string, data: any) => {
-    console.log(`📥 Gallery received generation status update: ${generationId} -> ${status}`, {
-      isUpscale: data.isUpscale,
-      hasImageUrls: !!data.imageUrls,
-      imageUrlsCount: data.imageUrls?.length,
-      hasActiveUpscale: !!activeUpscale,
-      modalIsOpen: upscaleConfigModal.isOpen
-    })
-    
-    // CRITICAL: Processar upscale se:
-    // 1. É um upscale (data.isUpscale)
-    // 2. E QUALQUER UMA dessas condições:
-    //    - activeUpscale existe (polling ativo)
-    //    - OU modal de upscale está aberto (upscale síncrono rápido)
-    if (data.isUpscale && (activeUpscale?.jobId || upscaleConfigModal.isOpen)) {
-      if (status === 'succeeded' || status === 'COMPLETED') {
-        if (data.imageUrls?.length > 0) {
-          console.log('✅ Upscale succeeded, calling handleUpscaleComplete')
-          handleUpscaleComplete({
-            resultImages: data.imageUrls,
-            downloadUrl: data.imageUrls[0]
-          })
-        }
-      } else if (status === 'failed' || status === 'FAILED') {
-        console.error('❌ Upscale failed, calling handleUpscaleError:', data.errorMessage)
-        handleUpscaleError(data.errorMessage || 'Upscale failed')
-      }
-    }
-    
-    // CRITICAL: Sempre atualizar a galeria para TODAS as atualizações de geração
-    // Não apenas upscales - isso garante que novas gerações apareçam automaticamente
+  // Handler para atualizações de geração via WebSocket
+  const handleGenerationUpdate = useCallback((generationId: string, status: string, data: any) => {
+    console.log(`📥 Gallery received generation status update: ${generationId} -> ${status}`)
+
+    // Atualizar a galeria para TODAS as atualizações de geração
+    // Isso garante que novas gerações apareçam automaticamente
     handleGenerationStatusChange(generationId, status, data)
-  }, [activeUpscale, upscaleConfigModal.isOpen, handleGenerationStatusChange])
+  }, [handleGenerationStatusChange])
 
   // Set mounted flag on client-side to prevent hydration mismatch
   useEffect(() => {
@@ -641,7 +585,7 @@ export function AutoSyncGalleryInterface({
 
   // Configurar WebSocket para atualizações em tempo real
   const { isConnected, connectionError } = useRealtimeUpdates({
-    onGenerationStatusChange: handleUpscaleUpdate, // Usa o handler que suporta upscale
+    onGenerationStatusChange: handleGenerationUpdate,
     onVideoStatusChange: (videoId, status, data) => {
       console.log('🎬 [Gallery] Video status changed:', { videoId, status, data })
       
@@ -1164,232 +1108,6 @@ export function AutoSyncGalleryInterface({
       }
       return newSet
     })
-  }
-
-  // Upscale functions - Show configuration modal
-  const handleOpenUpscale = async (imageUrl: string, generation?: any) => {
-    const isReplicateUrl = imageUrl.includes('replicate.delivery') || imageUrl.includes('pbxt.replicate.delivery')
-
-    if (isReplicateUrl && generation) {
-      const shouldRecover = confirm(
-        'Esta imagem usa uma URL temporária que pode ter expirado. Deseja tentar recuperar a imagem permanentemente antes do upscale?'
-      )
-
-      if (shouldRecover) {
-        try {
-          const response = await fetch('/api/images/recover', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ generationId: generation.id })
-          })
-
-          const result = await response.json()
-
-          if (result.success && result.recovered) {
-            addToast({
-              title: "Imagem recuperada",
-              description: "Abrindo configurações de upscale...",
-              type: "success"
-            })
-            const newImageUrl = result.imageUrls[0]
-            setUpscaleConfigModal({
-              isOpen: true,
-              imageUrl: newImageUrl,
-              generation,
-              isLoading: false,
-              resultImageUrl: undefined
-            })
-            refreshGalleryData()
-            return
-          } else if (response.status === 410) {
-            addToast({
-              title: "URL expirada",
-              description: "As imagens expiraram. Gere novas imagens.",
-              type: "error"
-            })
-            return
-          } else {
-            addToast({
-              title: "Falha na recuperação",
-              description: result.error || "Tente novamente.",
-              type: "error"
-            })
-            return
-          }
-        } catch (error) {
-          addToast({
-            title: "Erro na recuperação",
-            description: "Tente novamente ou gere novas imagens.",
-            type: "error"
-          })
-          return
-        }
-      } else {
-        addToast({
-          title: "Upscale cancelado",
-          description: "URLs permanentes são necessárias.",
-          type: "info"
-        })
-        return
-      }
-    }
-
-    // Show upscale configuration modal
-    setUpscaleConfigModal({
-      isOpen: true,
-      imageUrl,
-      generation,
-      isLoading: false,
-      resultImageUrl: undefined
-    })
-  }
-
-  // Direct upscale processing function
-  const startDirectUpscale = async (imageUrl: string, scaleFactor: string = '2x', objectDetection: string = 'none', generation?: any) => {
-    // Update modal to loading state
-    setUpscaleConfigModal(prev => ({
-      ...prev,
-      isLoading: true
-    }))
-
-    addToast({
-      title: "Iniciando upscale",
-      description: "Processando imagem com IA...",
-      type: "info"
-    })
-
-    // Convert scale factor to number for API
-    // Nano Banana Pro: sempre 4K, não precisa converter
-    const scaleFactorNumber = scaleFactor === 'none' ? 1 :
-                             scaleFactor === '2x' ? 2 :
-                             scaleFactor === '4x' ? 4 :
-                             scaleFactor === '4k' ? 4 : 4 // Default 4K (Nano Banana Pro)
-
-    const options = {
-      scale_factor: scaleFactorNumber,
-      creativity: 0.35,
-      resemblance: 0.6,
-      dynamic: 6,
-      sharpen: 0,
-      handfix: 'disabled',
-      output_format: 'jpg',
-      object_detection: objectDetection
-    }
-
-    try {
-      const response = await fetch('/api/upscale', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageUrl,
-          options
-        })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || `Erro ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      if (!data.jobIds && !data.jobId) {
-        throw new Error('Resposta inválida do servidor')
-      }
-
-      setActiveUpscale({
-        jobId: data.jobIds?.[0] || data.jobId,
-        originalImage: imageUrl,
-        scaleFactor: scaleFactorNumber
-      })
-
-      addToast({
-        title: "Upscale em processamento",
-        description: "Sua imagem será processada em alguns momentos...",
-        type: "success"
-      })
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
-
-      // Reset modal loading state
-      setUpscaleConfigModal(prev => ({
-        ...prev,
-        isLoading: false
-      }))
-
-      addToast({
-        title: "Erro no upscale",
-        description: errorMessage,
-        type: "error"
-      })
-    }
-  }
-
-  const handleUpscaleComplete = (result: { resultImages: string[]; downloadUrl: string }) => {
-    if (activeUpscale && result.resultImages?.length > 0) {
-      // Update modal with result
-      setUpscaleConfigModal(prev => ({
-        ...prev,
-        isLoading: false,
-        resultImageUrl: result.resultImages[0]
-      }))
-
-      addToast({
-        title: "Upscale concluído",
-        description: "Sua imagem foi processada com sucesso!",
-        type: "success"
-      })
-    }
-    setActiveUpscale(null)
-
-    // Refresh da galeria para mostrar novo upscale
-    setTimeout(async () => {
-      try {
-        await refreshGalleryData(false)
-        console.log('✅ Gallery refreshed successfully after upscale completion')
-      } catch (error) {
-        console.error('❌ Failed to refresh gallery after upscale, retrying...', error)
-        setTimeout(() => {
-          refreshGalleryData(false).catch(retryError => {
-            console.error('❌ Gallery refresh retry also failed:', retryError)
-          })
-        }, 3000)
-      }
-    }, 1000)
-  }
-
-  const handleUpscaleCancel = () => {
-    setActiveUpscale(null)
-  }
-
-  const handleUpscaleError = (error: string) => {
-    addToast({
-      title: "Erro no upscale",
-      description: error,
-      type: "error"
-    })
-    setActiveUpscale(null)
-    
-    // CRITICAL: Reset modal loading state when error occurs
-    setUpscaleConfigModal(prev => ({
-      ...prev,
-      isLoading: false
-    }))
-  }
-
-  const handleResetUpscale = () => {
-    setUpscaleResult(null)
-  }
-
-  // Handler for upscale configuration modal
-  const handleUpscaleConfigClose = () => {
-    setUpscaleConfigModal({ isOpen: false, imageUrl: '', generation: null, isLoading: false, resultImageUrl: undefined })
-  }
-
-  const handleUpscaleConfigSubmit = (scaleFactor: string, objectDetection: string) => {
-    const { imageUrl, generation } = upscaleConfigModal
-    startDirectUpscale(imageUrl, scaleFactor, objectDetection, generation)
   }
 
   // 🚀 OTIMIZAÇÃO: Memoize filteredGenerations para evitar re-processamento
@@ -2053,7 +1771,6 @@ export function AutoSyncGalleryInterface({
                       selectedImages={selectedImages}
                       onImageSelect={toggleImageSelection}
                       onImageClick={setSelectedImage}
-                      onUpscale={handleOpenUpscale}
                       userPlan={user?.plan || 'PREMIUM'}
                       favoriteImages={favoriteImages}
                       onToggleFavorite={toggleFavorite}
@@ -2065,7 +1782,6 @@ export function AutoSyncGalleryInterface({
                       selectedImages={selectedImages}
                       onImageSelect={toggleImageSelection}
                       onImageClick={setSelectedImage}
-                      onUpscale={handleOpenUpscale}
                       favoriteImages={favoriteImages}
                       onToggleFavorite={toggleFavorite}
                       userPlan={user?.plan || 'FREE'}
@@ -2147,7 +1863,6 @@ export function AutoSyncGalleryInterface({
             mediaItem={mediaItem}
             onClose={() => setSelectedImage(null)}
             allImages={allImages}
-            onUpscale={handleOpenUpscale}
             onDeleteGeneration={handleDeleteGeneration}
             onToggleFavorite={toggleFavorite}
             isFavorite={favoriteImages.includes(mediaItem.url)}
@@ -2155,42 +1870,6 @@ export function AutoSyncGalleryInterface({
           />
         )
       })()}
-
-      {/* Upscale Result Comparison Modal */}
-      {upscaleResult && (
-        <ComparisonModal
-          isOpen={true}
-          originalImage={upscaleResult.originalImage}
-          processedImage={upscaleResult.upscaledImage}
-          title={`Upscale ${upscaleResult.scaleFactor}x - Resultado`}
-          onClose={handleResetUpscale}
-          showDownload={true}
-        />
-      )}
-
-      {/* Upscale Progress - Hidden background process */}
-      {activeUpscale && (
-        <div className="hidden">
-          <UpscaleProgress
-            jobId={activeUpscale.jobId}
-            originalImage={activeUpscale.originalImage}
-            scaleFactor={activeUpscale.scaleFactor}
-            onComplete={handleUpscaleComplete}
-            onCancel={handleUpscaleCancel}
-            onError={handleUpscaleError}
-          />
-        </div>
-      )}
-
-      {/* Upscale Configuration Modal */}
-      <UpscaleConfigModal
-        isOpen={upscaleConfigModal.isOpen}
-        onClose={handleUpscaleConfigClose}
-        onUpscale={handleUpscaleConfigSubmit}
-        imageUrl={upscaleConfigModal.imageUrl}
-        isLoading={upscaleConfigModal.isLoading}
-        resultImageUrl={upscaleConfigModal.resultImageUrl}
-      />
 
       {/* Barra de progresso minimalista para pacotes - apenas fallback quando modal está fechado */}
       <PackageProgressBarMinimal />

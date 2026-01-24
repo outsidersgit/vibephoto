@@ -10,10 +10,10 @@ import crypto from 'crypto'
 
 /**
  * Webhook unificado do Replicate para todos os tipos de jobs
- * 
+ *
  * Este endpoint:
  * 1. Recebe notificações instantâneas do Replicate
- * 2. Detecta automaticamente o tipo de job (generation/training/upscale)
+ * 2. Detecta automaticamente o tipo de job (generation/training)
  * 3. Atualiza o banco de dados apropriado
  * 4. Propaga atualizações via WebSocket para UI em tempo real
  * 5. Zero polling necessário - tudo baseado em eventos
@@ -256,9 +256,6 @@ export async function POST(request: NextRequest) {
       case 'generation':
         result = await processGenerationWebhook(payload, jobType.record)
         break
-      case 'upscale':
-        result = await processUpscaleWebhook(payload, jobType.record)
-        break
       case 'training':
         result = await processTrainingWebhook(payload, jobType.record)
         break
@@ -358,9 +355,8 @@ async function getJobByParameters(type: string, recordId: string, userId?: strin
       })
 
       if (generation) {
-        const isUpscale = generation.prompt?.startsWith('[UPSCALED]')
         return {
-          type: isUpscale ? 'upscale' : 'generation',
+          type: 'generation',
           record: generation
         }
       }
@@ -450,7 +446,7 @@ async function getJobByParameters(type: string, recordId: string, userId?: strin
  * Detecta automaticamente o tipo de job baseado no jobId (fallback)
  */
 async function detectJobType(jobId: string) {
-  // Verificar se é uma geração (incluindo upscales)
+  // Verificar se é uma geração
   const generation = await prisma.generation.findFirst({
     where: { jobId },
     select: {
@@ -462,10 +458,8 @@ async function detectJobType(jobId: string) {
   })
 
   if (generation) {
-    // Verificar se é upscale baseado no prompt
-    const isUpscale = generation.prompt?.startsWith('[UPSCALED]')
     return {
-      type: isUpscale ? 'upscale' : 'generation',
+      type: 'generation',
       record: generation
     }
   }
@@ -725,135 +719,6 @@ async function processGenerationWebhook(payload: WebhookPayload, generation: any
   }
 
   return { success: true, type: 'generation', updated: !!Object.keys(updateData).length }
-}
-
-/**
- * Processa webhook de upscale
- */
-async function processUpscaleWebhook(payload: WebhookPayload, generation: any) {
-  console.log(`🔍 Processing upscale webhook for ${generation.id}`)
-  
-  const updateData: any = {}
-  let creditRefund = false
-
-  switch (payload.status) {
-    case 'starting':
-      updateData.status = 'PROCESSING'
-      break
-
-    case 'processing':
-      updateData.status = 'PROCESSING'
-      break
-
-    case 'succeeded':
-      updateData.status = 'COMPLETED'
-      updateData.completedAt = new Date()
-      
-      if (payload.output) {
-        const storageResult = await processAndStoreImages(payload.output, generation.id, generation.userId, generation)
-        
-        if (storageResult.success) {
-          updateData.imageUrls = storageResult.permanentUrls
-          updateData.thumbnailUrls = storageResult.thumbnailUrls
-          updateData.errorMessage = null
-          
-          // Salvar contexto de operação no banco
-          if (storageResult.context) {
-            updateData.operationType = storageResult.context.operationType
-            updateData.storageContext = storageResult.context.storageContext
-            updateData.metadata = {
-              context: storageResult.context,
-              webhook: true,
-              timestamp: new Date().toISOString()
-            }
-          }
-          
-          console.log(`✅ Upscale ${generation.id}: Images stored permanently`)
-        } else {
-          updateData.status = 'FAILED'
-          updateData.errorMessage = `Upscale storage failed: ${storageResult.error}`
-          creditRefund = true
-        }
-      } else {
-        updateData.status = 'FAILED'
-        updateData.errorMessage = 'Upscale completed but no output provided'
-        creditRefund = true
-      }
-      
-      if (payload.metrics?.total_time) {
-        updateData.processingTime = Math.round(payload.metrics.total_time * 1000)
-      }
-      break
-
-    case 'failed':
-      // Extract error message from payload.error or logs
-      let upscaleErrorMessage = payload.error || 'Unknown error'
-
-      // If no explicit error but has logs, try to extract error from logs
-      if (!payload.error && payload.logs) {
-        const logs = payload.logs.toString()
-        if (logs.includes('nsfw') || logs.includes('NSFW') || logs.includes('safety')) {
-          upscaleErrorMessage = 'Conteúdo bloqueado por filtro de segurança'
-        } else if (logs.includes('Error:')) {
-          const errorMatch = logs.match(/Error:\s*(.+?)(?:\n|$)/i)
-          if (errorMatch && errorMatch[1].trim()) {
-            upscaleErrorMessage = errorMatch[1].trim()
-          }
-        }
-      }
-
-      updateData.status = 'FAILED'
-      updateData.completedAt = new Date()
-      updateData.errorMessage = `Upscale failed: ${upscaleErrorMessage}`
-      creditRefund = true
-      break
-
-    case 'canceled':
-      updateData.status = 'CANCELLED'
-      updateData.completedAt = new Date()
-      updateData.errorMessage = 'Upscale was cancelled'
-      creditRefund = true
-      break
-  }
-
-  // Atualizar banco de dados
-  await prisma.generation.update({
-    where: { id: generation.id },
-    data: updateData
-  })
-
-  // Refund de créditos se necessário
-  if (creditRefund) {
-    await refundUpscaleCredits(generation.id, generation.userId)
-  }
-
-  // Broadcast via WebSocket
-  await broadcastGenerationStatusChange(
-    generation.id,
-    generation.userId,
-    payload.status,
-    {
-      imageUrls: updateData.imageUrls,
-      thumbnailUrls: updateData.thumbnailUrls,
-      processingTime: updateData.processingTime,
-      errorMessage: updateData.errorMessage,
-      isUpscale: true,
-      webhook: true,
-      timestamp: new Date().toISOString()
-    }
-  )
-
-  // Notificação de sucesso
-  if (payload.status === 'succeeded' && updateData.status === 'COMPLETED') {
-    await broadcastNotification(
-      generation.userId,
-      'Upscale Concluído!',
-      'Sua imagem foi ampliada com sucesso e está pronta para download!',
-      'success'
-    )
-  }
-
-  return { success: true, type: 'upscale', updated: !!Object.keys(updateData).length }
 }
 
 /**
@@ -1561,9 +1426,6 @@ function detectOperationContext(generation: any): {
   if (declaredOperation === 'edit' || declaredOperation === 'edited' || metadataSource === 'editor') {
     return { operationType: 'edit', storageContext: 'edited' }
   }
-  if (declaredOperation === 'upscale' || metadataSource === 'upscale') {
-    return { operationType: 'upscale', storageContext: 'upscaled' }
-  }
   if (declaredOperation === 'video' || metadataSource === 'video') {
     return { operationType: 'video', storageContext: 'videos' }
   }
@@ -1574,9 +1436,6 @@ function detectOperationContext(generation: any): {
   }
   if (prompt.startsWith('[EDITOR]')) {
     return { operationType: 'edit', storageContext: 'edited' }
-  }
-  if (prompt.startsWith('[UPSCALED]')) {
-    return { operationType: 'upscale', storageContext: 'upscaled' }
   }
   if (prompt.startsWith('[VIDEO]')) {
     return { operationType: 'video', storageContext: 'videos' }
@@ -1714,59 +1573,6 @@ async function refundGenerationCredits(generationId: string, userId: string) {
     }
   } catch (error) {
     console.error('Failed to refund generation credits:', error)
-  }
-}
-
-/**
- * Refund de créditos para upscale
- */
-async function refundUpscaleCredits(generationId: string, userId: string) {
-  try {
-    const originalUsage = await prisma.usageLog.findFirst({
-      where: {
-        userId,
-        OR: [
-          { action: 'upscale' },
-          { action: 'generation' }
-        ],
-        details: {
-          path: ['generationId'],
-          equals: generationId
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    })
-
-    if (originalUsage && originalUsage.creditsUsed > 0) {
-      await prisma.$transaction(async (tx) => {
-        await tx.usageLog.create({
-          data: {
-            userId,
-            action: 'upscale_refund',
-            details: {
-              generationId,
-              originalCreditsUsed: originalUsage.creditsUsed,
-              reason: 'Upscale failed/cancelled',
-              webhook: true
-            },
-            creditsUsed: -originalUsage.creditsUsed
-          }
-        })
-
-        await tx.user.update({
-          where: { id: userId },
-          data: {
-            creditsUsed: {
-              decrement: originalUsage.creditsUsed
-            }
-          }
-        })
-      })
-
-      console.log(`💰 Refunded ${originalUsage.creditsUsed} credits to user ${userId} for failed upscale`)
-    }
-  } catch (error) {
-    console.error('Failed to refund upscale credits:', error)
   }
 }
 

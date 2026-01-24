@@ -5,7 +5,6 @@ import {
   createCreditTransaction,
   recordImageGenerationCost,
   recordModelTrainingCost,
-  recordUpscaleCost,
   recordImageEditCost,
   recordVideoGenerationCost,
   recordPhotoPackagePurchase
@@ -16,7 +15,6 @@ type CreditChargeType =
   | 'IMAGE_GENERATION'
   | 'IMAGE_EDIT'
   | 'VIDEO_GENERATION'
-  | 'UPSCALE'
   | 'TRAINING'
   | 'PHOTO_PACKAGE'
 
@@ -25,7 +23,6 @@ interface DeductCreditsMetadata {
   generationId?: string
   editId?: string
   videoId?: string
-  upscaleId?: string
   userPackageId?: string
   packageName?: string
   type?: CreditChargeType
@@ -435,8 +432,6 @@ export class CreditManager {
                   duration: metadata.duration,
                   resolution: metadata.resolution
                 })
-              } else if (metadata?.type === 'UPSCALE' && metadata.upscaleId) {
-                await recordUpscaleCost(userId, metadata.upscaleId, amount)
               } else if (metadata?.type === 'PHOTO_PACKAGE' && metadata.userPackageId) {
                 await recordPhotoPackagePurchase(userId, metadata.userPackageId, amount, {
                   packageName: metadata.packageName

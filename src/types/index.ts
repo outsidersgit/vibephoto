@@ -11,7 +11,7 @@ export type {
 }
 
 // Media types for gallery operations
-export type MediaOperationType = "generated" | "edited" | "upscaled" | "video"
+export type MediaOperationType = "generated" | "edited" | "video"
 
 // Extended media information for gallery
 export interface MediaItem {

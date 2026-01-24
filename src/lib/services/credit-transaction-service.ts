@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client'
 interface CreateCreditTransactionParams {
   userId: string
   type: 'EARNED' | 'SPENT' | 'EXPIRED' | 'REFUNDED'
-  source: 'SUBSCRIPTION' | 'PURCHASE' | 'BONUS' | 'GENERATION' | 'TRAINING' | 'REFUND' | 'EXPIRATION' | 'UPSCALE' | 'EDIT' | 'VIDEO'
+  source: 'SUBSCRIPTION' | 'PURCHASE' | 'BONUS' | 'GENERATION' | 'TRAINING' | 'REFUND' | 'EXPIRATION' | 'EDIT' | 'VIDEO'
   amount: number // Positive for earned, negative for spent
   description?: string
   referenceId?: string // Generation ID, Model ID, etc
@@ -127,27 +127,6 @@ export async function recordModelTrainingCost(
     amount: -Math.abs(creditsUsed), // Sempre negativo
     description: `Criação de modelo IA${metadata?.modelName ? `: ${metadata.modelName}` : ''}`,
     referenceId: modelId,
-    metadata
-  }, tx)
-}
-
-/**
- * Registra gasto de créditos em upscale de imagem
- */
-export async function recordUpscaleCost(
-  userId: string,
-  upscaleId: string,
-  creditsUsed: number,
-  metadata?: { originalResolution?: string; targetResolution?: string },
-  tx?: Prisma.TransactionClient
-) {
-  return createCreditTransaction({
-    userId,
-    type: 'SPENT',
-    source: 'UPSCALE',
-    amount: -Math.abs(creditsUsed), // Sempre negativo
-    description: 'Upscale de imagem',
-    referenceId: upscaleId,
     metadata
   }, tx)
 }

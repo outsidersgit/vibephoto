@@ -2,7 +2,6 @@ export const CREDIT_COSTS = {
   IMAGE_GENERATION_PER_OUTPUT: 10,
   IMAGE_EDIT_PER_IMAGE: 20,      // Custo base do editor
   IMAGE_EDIT_4K_PER_IMAGE: 30,   // Custo do editor em 4K
-  UPSCALE_PER_IMAGE: 30,         // Nano Banana Pro 4K upscale
   VIDEO_DURATION: {
     4: 80,
     6: 120,
@@ -24,11 +23,6 @@ export function getImageEditCost(imageCount: number = 1, resolution: EditorResol
     ? CREDIT_COSTS.IMAGE_EDIT_4K_PER_IMAGE
     : CREDIT_COSTS.IMAGE_EDIT_PER_IMAGE
   return count * costPerImage
-}
-
-export function getUpscaleCost(imageCount: number = 1): number {
-  const count = Math.max(1, imageCount)
-  return count * CREDIT_COSTS.UPSCALE_PER_IMAGE
 }
 
 export function getVideoGenerationCost(duration: number): number {

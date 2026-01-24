@@ -26,22 +26,11 @@ import { GalleryGrid } from './gallery-grid'
 import { GalleryList } from './gallery-list'
 import { GalleryStats } from './gallery-stats'
 import { FilterPanel } from './filter-panel'
-import { UpscaleProgress } from '@/components/upscale/upscale-progress'
 import { combineAllMediaItems, generationToMediaItems, editHistoryToMediaItems, videoToMediaItems } from '@/lib/utils/media-transformers'
 import { MediaItem } from '@/types'
 
 // Lazy load modals pesados (Fase 2 - Otimização de Performance)
 const ImageModal = dynamic(() => import('./image-modal').then(mod => ({ default: mod.ImageModal })), {
-  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
-  ssr: false
-})
-
-const UpscaleModal = dynamic(() => import('@/components/upscale/upscale-modal').then(mod => ({ default: mod.UpscaleModal })), {
-  loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
-  ssr: false
-})
-
-const UpscalePreview = dynamic(() => import('@/components/upscale/upscale-preview').then(mod => ({ default: mod.UpscalePreview })), {
   loading: () => <div className="fixed inset-0 bg-black/50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>,
   ssr: false
 })
@@ -103,23 +92,6 @@ export function GalleryInterface({
   useEffect(() => {
     favoriteImagesRef.current = favoriteImages
   }, [favoriteImages])
-  
-  // Upscale states
-  const [upscaleModal, setUpscaleModal] = useState({
-    isOpen: false,
-    imageUrl: '',
-    generation: null
-  })
-  const [activeUpscale, setActiveUpscale] = useState<{
-    jobId: string
-    originalImage: string
-    scaleFactor: number
-  } | null>(null)
-  const [upscaleResult, setUpscaleResult] = useState<{
-    originalImage: string
-    upscaledImage: string
-    scaleFactor: number
-  } | null>(null)
 
   const sortOptions = [
     { value: 'newest', label: 'Mais recente' },
@@ -415,142 +387,6 @@ export function GalleryInterface({
     }
   }
 
-  // Single delete handler (from modal)
-  // Upscale functions
-  const handleOpenUpscale = async (imageUrl: string, generation?: any) => {
-    // Check if the URL is a temporary Replicate URL (will be expired)
-    const isReplicateUrl = imageUrl.includes('replicate.delivery') || imageUrl.includes('pbxt.replicate.delivery')
-    
-    if (isReplicateUrl && generation) {
-      const shouldRecover = confirm(
-        'Esta imagem usa uma URL temporária que pode ter expirado. Deseja tentar recuperar a imagem permanentemente antes do upscale?'
-      )
-      
-      if (shouldRecover) {
-        try {
-          const response = await fetch('/api/images/recover', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ generationId: generation.id })
-          })
-          
-          const result = await response.json()
-          
-          if (result.success && result.recovered) {
-            alert(`Imagem recuperada com sucesso! Agora você pode fazer o upscale.`)
-            // Use the new permanent URL
-            const newImageUrl = result.imageUrls[0]
-            setUpscaleModal({
-              isOpen: true,
-              imageUrl: newImageUrl,
-              generation
-            })
-            // Reload the page to show updated URLs
-            window.location.reload()
-            return
-          } else if (response.status === 410) {
-            alert('As imagens expiraram e não podem mais ser recuperadas. Gere novas imagens.')
-            return
-          } else {
-            alert(`Falha na recuperação: ${result.error}. Você pode tentar novamente ou gerar novas imagens.`)
-            return
-          }
-        } catch (error) {
-          console.error('Recovery error:', error)
-          alert('Erro ao tentar recuperar a imagem. Tente novamente ou gere novas imagens.')
-          return
-        }
-      } else {
-        alert('Upscale cancelado. Para fazer upscale, é necessário ter URLs permanentes.')
-        return
-      }
-    }
-    
-    // No need to check image availability with fetch/HEAD since:
-    // 1. If image is displayed in gallery, it's accessible
-    // 2. CORS restrictions can block HEAD requests while allowing img tags
-    // 3. The upscale API will validate the URL anyway
-    setUpscaleModal({
-      isOpen: true,
-      imageUrl,
-      generation
-    })
-  }
-
-  const handleCloseUpscale = () => {
-    setUpscaleModal({
-      isOpen: false,
-      imageUrl: '',
-      generation: null
-    })
-  }
-
-  const handleStartUpscale = async (options: any) => {
-    try {
-      const requestBody = {
-        imageUrl: upscaleModal.imageUrl,
-        options: options
-      }
-      
-      
-      const response = await fetch('/api/upscale', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao iniciar upscale')
-      }
-
-      // Start monitoring upscale progress
-      setActiveUpscale({
-        jobId: data.jobIds?.[0] || data.jobId,
-        originalImage: upscaleModal.imageUrl,
-        scaleFactor: options.scale_factor || 2
-      })
-
-      // Clear modal
-      setUpscaleModal({
-        isOpen: false,
-        imageUrl: '',
-        generation: null
-      })
-
-    } catch (error) {
-      console.error('Error starting upscale:', error)
-      alert('Erro ao iniciar upscale: ' + (error instanceof Error ? error.message : 'Erro desconhecido'))
-    }
-  }
-
-  const handleUpscaleComplete = (result: { resultImages: string[]; downloadUrl: string }) => {
-    if (activeUpscale && result.resultImages?.length > 0) {
-      setUpscaleResult({
-        originalImage: activeUpscale.originalImage,
-        upscaledImage: result.resultImages[0],
-        scaleFactor: activeUpscale.scaleFactor
-      })
-    }
-    setActiveUpscale(null)
-  }
-
-  const handleUpscaleCancel = () => {
-    setActiveUpscale(null)
-  }
-
-  const handleUpscaleError = (error: string) => {
-    alert('Erro no upscale: ' + error)
-    setActiveUpscale(null)
-  }
-
-  const handleResetUpscale = () => {
-    setUpscaleResult(null)
-  }
-
   // Load specific data for each tab
   const loadEditedImages = async () => {
     try {
@@ -671,7 +507,7 @@ export function GalleryInterface({
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
           >
-            🎨 Fotos Geradas ({generations.filter(g => !g.prompt?.startsWith('[EDITED]') && !g.prompt?.startsWith('[UPSCALED]')).length})
+            🎨 Fotos Geradas ({generations.filter(g => !g.prompt?.startsWith('[EDITED]')).length})
           </button>
           <button
             onClick={() => setActiveTab('edited')}
@@ -988,7 +824,6 @@ export function GalleryInterface({
                       selectedImages={selectedImages}
                       onImageSelect={toggleImageSelection}
                       onImageClick={setSelectedImage}
-                      onUpscale={handleOpenUpscale}
                       onDeleteGeneration={deleteGeneration}
                       deleting={isDeleting}
                       favoriteImages={favoriteImages}
@@ -1002,7 +837,6 @@ export function GalleryInterface({
                       selectedImages={selectedImages}
                       onImageSelect={toggleImageSelection}
                       onImageClick={setSelectedImage}
-                      onUpscale={handleOpenUpscale}
                       onDeleteGeneration={deleteGeneration}
                       deleting={isDeleting}
                       favoriteImages={favoriteImages}
@@ -1063,7 +897,6 @@ export function GalleryInterface({
             mediaItem={mediaItem}
             allImages={currentData}
             onClose={() => setSelectedImage(null)}
-            onUpscale={handleOpenUpscale}
             onDeleteGeneration={deleteGeneration}
             onToggleFavorite={toggleFavorite}
             isFavorite={favoriteImages.includes(mediaItem.url)}
@@ -1071,46 +904,6 @@ export function GalleryInterface({
           />
         )
       })()}
-
-      {/* Upscale Modal */}
-      {upscaleModal.isOpen && (
-        <UpscaleModal
-          isOpen={upscaleModal.isOpen}
-          imageUrl={upscaleModal.imageUrl}
-          generation={upscaleModal.generation}
-          onClose={handleCloseUpscale}
-          onUpscale={handleStartUpscale}
-          userPlan={session?.user?.plan || 'FREE'}
-        />
-      )}
-
-      {/* Upscale Progress */}
-      {activeUpscale && (
-        <div className="fixed bottom-4 right-4 z-50 max-w-md">
-          <UpscaleProgress
-            jobId={activeUpscale.jobId}
-            originalImage={activeUpscale.originalImage}
-            scaleFactor={activeUpscale.scaleFactor}
-            onComplete={handleUpscaleComplete}
-            onCancel={handleUpscaleCancel}
-            onError={handleUpscaleError}
-          />
-        </div>
-      )}
-
-      {/* Upscale Result */}
-      {upscaleResult && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-            <UpscalePreview
-              originalImage={upscaleResult.originalImage}
-              upscaledImage={upscaleResult.upscaledImage}
-              scaleFactor={upscaleResult.scaleFactor}
-              onReset={handleResetUpscale}
-            />
-          </div>
-        </div>
-      )}
     </div>
   )
 }

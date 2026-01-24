@@ -340,8 +340,8 @@ model Generation {
   storageProvider String? // "aws", "supabase", etc
   storageBucket   String?
   storageKeys     Json    @default("[]") // Array of storage keys as JSON for compatibility
-  operationType   String? // "generation", "edit", "upscale", "video", "package"
-  storageContext  String? // "generated", "edited", "upscaled", "videos", "packages"
+  operationType   String? // "generation", "edit", "video", "package"
+  storageContext  String? // "generated", "edited", "videos", "packages"
   metadata        Json?   @default("{}") // Additional metadata for context
 
   errorMessage            String?
@@ -842,7 +842,6 @@ enum CreditTransactionSource {
   TRAINING // Spent on model training
   REFUND // Refunded credits
   EXPIRATION // Expired credits
-  UPSCALE // Spent on image upscale
   EDIT // Spent on image editing
   VIDEO // Spent on video generation
   MODEL_CREATION // Spent on extra model creation

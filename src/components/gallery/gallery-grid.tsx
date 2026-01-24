@@ -50,7 +50,6 @@ interface GalleryGridProps {
   selectedImages: string[]
   onImageSelect: (imageUrl: string) => void
   onImageClick: (imageUrl: string) => void
-  onUpscale?: (imageUrl: string, generation: any) => void
   userPlan?: string
   favoriteImages?: string[]
   onToggleFavorite?: (imageUrl: string, generation: any) => void | Promise<boolean>
@@ -64,7 +63,6 @@ export function GalleryGrid({
   selectedImages,
   onImageSelect,
   onImageClick,
-  onUpscale,
   userPlan,
   favoriteImages = [],
   onToggleFavorite,
@@ -156,19 +154,6 @@ export function GalleryGrid({
             generation,
             imageUrl,
             showSlider: false
-          })
-        }
-        break
-      case 'upscaled':
-        if (!generation.originalImageUrl) {
-          console.warn('Upscaled image missing originalImageUrl, falling back to simple modal')
-          onImageClick(imageUrl)
-        } else {
-          setCurrentModal({
-            type: 'comparison',
-            generation,
-            imageUrl,
-            showSlider: true
           })
         }
         break
@@ -365,9 +350,6 @@ export function GalleryGrid({
         break
       case 'favorite':
         onToggleFavorite?.(imageUrl, generation)
-        break
-      case 'upscale':
-        onUpscale?.(imageUrl, generation)
         break
       case 'edit':
         // Navigate to editor with image URL using client-side routing
@@ -572,22 +554,6 @@ export function GalleryGrid({
                       >
                         <Heart className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${favoriteImages.includes(currentImageUrl) ? 'fill-current' : ''}`} />
                       </Button>
-
-                      {/* Fazer upscale */}
-                      {onUpscale && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="h-9 w-9 sm:h-7 sm:w-7 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleImageAction('upscale', currentImageUrl, generation)
-                          }}
-                          title="Fazer upscale"
-                        >
-                          <ZoomIn className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                        </Button>
-                      )}
 
                       {/* Editar imagem */}
                       <Button
