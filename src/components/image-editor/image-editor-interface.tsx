@@ -1357,7 +1357,12 @@ export function ImageEditorInterface({
               <select
                 value={aspectRatio}
                 onChange={(e) => setAspectRatio(e.target.value as typeof aspectRatio)}
-                className="w-full p-2 bg-gray-200 border border-gray-900 rounded text-gray-900 text-sm focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20"
+                disabled={selectedPreset === 'skin-realism'}
+                className={`w-full p-2 border border-gray-900 rounded text-gray-900 text-sm focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 ${
+                  selectedPreset === 'skin-realism'
+                    ? 'bg-gray-100 cursor-not-allowed opacity-60'
+                    : 'bg-gray-200'
+                }`}
               >
                 <option value="1:1">Quadrado (1:1)</option>
                 <option value="4:3">Padrão (4:3)</option>
@@ -1365,6 +1370,11 @@ export function ImageEditorInterface({
                 <option value="9:16">Vertical (9:16)</option>
                 <option value="16:9">Paisagem (16:9)</option>
               </select>
+              {selectedPreset === 'skin-realism' && (
+                <p className="mt-1 text-xs text-gray-600">
+                  ℹ️ O formato será igual ao da imagem enviada para melhores resultados
+                </p>
+              )}
             </div>
 
             {/* 4K Resolution Option - Minimalista com efeito 3D discreto */}
@@ -1672,7 +1682,12 @@ export function ImageEditorInterface({
             <select
               value={aspectRatio}
               onChange={(e) => setAspectRatio(e.target.value as typeof aspectRatio)}
-              className="w-full p-2 bg-gray-200 border border-gray-900 rounded text-gray-900 text-sm focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20"
+              disabled={selectedPreset === 'skin-realism'}
+              className={`w-full p-2 border border-gray-900 rounded text-gray-900 text-sm focus:border-[#667EEA] focus:ring-2 focus:ring-[#667EEA]/20 ${
+                selectedPreset === 'skin-realism'
+                  ? 'bg-gray-100 cursor-not-allowed opacity-60'
+                  : 'bg-gray-200'
+              }`}
             >
               <option value="1:1">Quadrado (1:1)</option>
               <option value="4:3">Padrão (4:3)</option>
@@ -1680,6 +1695,11 @@ export function ImageEditorInterface({
               <option value="9:16">Vertical (9:16)</option>
               <option value="16:9">Paisagem (16:9)</option>
             </select>
+            {selectedPreset === 'skin-realism' && (
+              <p className="mt-1 text-xs text-gray-600">
+                ℹ️ O formato será igual ao da imagem enviada para melhores resultados
+              </p>
+            )}
           </div>
 
           {/* 4K Resolution Option - Minimalista com efeito 3D discreto (Mobile) */}
