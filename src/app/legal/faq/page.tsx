@@ -72,11 +72,6 @@ const faqData: FAQItem[] = [
   },
   {
     category: 'funcionamento',
-    question: 'Como funciona o Upscale de imagens?',
-    answer: 'O Upscale é uma ferramenta que aumenta a resolução e aprimora a nitidez das suas fotos, elevando o nível de detalhe e realismo. Cada uso custa 30 créditos por imagem e amplia a resolução para 4K.'
-  },
-  {
-    category: 'funcionamento',
     question: 'Como funciona a geração de vídeos?',
     answer: 'Nossa ferramenta de geração de vídeos permite criar clipes curtos e realistas a partir de imagens ou descrições em texto. Os vídeos são gerados em alta qualidade (1080p), com animações, transições e movimentos naturais. O custo é de 80 créditos para vídeos de 4 segundos, 120 créditos para vídeos de 6 segundos e 160 créditos para vídeos de 8 segundos.'
   },

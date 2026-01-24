@@ -855,13 +855,13 @@ const MarqueeCarousel = ({ items, hoveredIndex, onHoverChange, onImageClick }: M
 
 // AI Tools Showcase Component
 const AIToolsShowcase = () => {
-  const [activeTab, setActiveTab] = useState<'upscale' | 'editor' | 'video'>('upscale')
+  const [activeTab, setActiveTab] = useState<'skin' | 'editor' | 'video'>('skin')
   const [selectedExample, setSelectedExample] = useState(0)
 
   const toolsData = {
-    upscale: {
-      title: "Upscale",
-      description: "Ampliação inteligente, resultado impecável.",
+    skin: {
+      title: "Melhorar pele",
+      description: "Textura de pele naturalizada e realista com IA",
       type: "comparison",
       beforeImage: "/examples/tools/upscale-before.jpg",
       afterImage: "/examples/tools/upscale-after.jpg",
@@ -925,7 +925,7 @@ const AIToolsShowcase = () => {
             <button
               key={tool}
               onClick={() => {
-                setActiveTab(tool as 'upscale' | 'editor' | 'video')
+                setActiveTab(tool as 'skin' | 'editor' | 'video')
                 setSelectedExample(0)
               }}
               className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
@@ -1209,7 +1209,7 @@ function NavigationSteps() {
     {
       id: 2,
       title: 'Gere imagens',
-      description: 'Depois, vá em Gerar Imagem e escolha o estilo que quiser. Se quiser aprimorar o resultado, use o botão de lupa nos botões de ação da imagem e aplique upscale, aumentando a resolução e deixando sua criação ainda mais nítida.',
+      description: 'Depois, vá em Gerar Imagem e escolha o estilo que quiser. Personalize poses, iluminação e ambientes para criar exatamente a foto que você imaginou.',
       action: 'Gerar Fotos',
       href: '/generate'
     },
@@ -1434,7 +1434,7 @@ export default function HomePage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
   const [selectedPlan, setSelectedPlan] = useState<'STARTER' | 'PREMIUM' | 'GOLD'>('PREMIUM')
   const [selectedImage, setSelectedImage] = useState<{src: string, alt: string, title: string} | null>(null)
-  const [activeToolModal, setActiveToolModal] = useState<'upscale' | 'editor' | 'video' | null>(null)
+  const [activeToolModal, setActiveToolModal] = useState<'skin' | 'editor' | 'video' | null>(null)
   const [selectedPackage, setSelectedPackage] = useState<'ESSENCIAL' | 'AVANÇADO' | 'PRO' | 'ENTERPRISE'>('AVANÇADO')
   const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0)
   const [isCarouselPaused, setIsCarouselPaused] = useState(false)
@@ -2366,7 +2366,7 @@ export default function HomePage() {
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4 text-white">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-semibold">
-                  {activeToolModal === 'upscale' && 'Upscale IA - Demonstração'}
+                  {activeToolModal === 'skin' && 'Melhorar Pele - Demonstração'}
                   {activeToolModal === 'editor' && 'Studio IA - Demonstração'}
                   {activeToolModal === 'video' && 'Vídeos IA - Demonstração'}
                 </h2>
@@ -2381,13 +2381,13 @@ export default function HomePage() {
 
             {/* Modal Content */}
             <div className="p-6">
-              {activeToolModal === 'upscale' && (
+              {activeToolModal === 'skin' && (
                 <div className="space-y-6">
                   <p className="text-gray-600 text-center text-lg">
-                    Arraste a linha divisória para comparar a qualidade antes e depois do upscale
+                    Arraste a linha divisória para comparar a textura de pele antes e depois
                   </p>
 
-                  {/* Upscale Slider Grande */}
+                  {/* Skin Improvement Slider Grande */}
                   <div className="relative aspect-video max-w-4xl mx-auto rounded-xl overflow-hidden shadow-xl bg-gray-200 group/modal-slider">
                     <div className="absolute inset-0">
                       <img
@@ -2507,9 +2507,9 @@ export default function HomePage() {
                   </div>
 
                   <div className="text-center">
-                    <Link href="/upscale">
+                    <Link href="/studio">
                       <Button size="lg" className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-10">
-                        Experimentar Upscale
+                        Experimentar Studio IA
                       </Button>
                     </Link>
                   </div>

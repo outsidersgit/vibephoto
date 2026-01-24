@@ -12,6 +12,7 @@ interface ResultPreviewProps {
   onReset?: () => void
   onSave?: (success: boolean) => void
   className?: string
+  presetId?: string // ID do preset usado para determinar se mostra slider
 }
 
 export function ResultPreview({
@@ -21,7 +22,8 @@ export function ResultPreview({
   onDownload,
   onReset,
   onSave,
-  className = ''
+  className = '',
+  presetId
 }: ResultPreviewProps) {
   const [showComparison, setShowComparison] = useState(true)
   const [imageLoading, setImageLoading] = useState(false)
@@ -269,8 +271,8 @@ export function ResultPreview({
           </div>
           
           <div className="flex items-center space-x-2">
-            {/* Comparison Toggle */}
-            {originalImage && (
+            {/* Comparison Toggle (apenas para "Melhorar pele") */}
+            {originalImage && presetId === 'skin-realism' && (
               <button
                 onClick={() => setShowComparison(!showComparison)}
                 className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -303,8 +305,8 @@ export function ResultPreview({
 
       {/* Image Display */}
       <div className="p-4">
-        {showComparison && originalImage ? (
-          // Before/After Slider Comparison
+        {showComparison && originalImage && presetId === 'skin-realism' ? (
+          // Before/After Slider Comparison (apenas para "Melhorar pele")
           <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden max-w-3xl mx-auto">
             <div
               ref={comparisonContainerRef}

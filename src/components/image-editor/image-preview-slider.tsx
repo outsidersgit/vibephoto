@@ -7,12 +7,14 @@ interface ImagePreviewSliderProps {
   resultUrl: string
   originalUrl?: string
   onDownload?: () => void
+  presetId?: string // ID do preset para determinar se mostra slider
 }
 
 export function ImagePreviewSlider({
   resultUrl,
   originalUrl,
-  onDownload
+  onDownload,
+  presetId
 }: ImagePreviewSliderProps) {
   const comparisonContainerRef = useRef<HTMLDivElement | null>(null)
   const afterImageMaskRef = useRef<HTMLDivElement | null>(null)
@@ -73,8 +75,8 @@ export function ImagePreviewSlider({
     }
   }, [])
 
-  // Se não houver imagem original, mostrar apenas o resultado
-  if (!originalUrl) {
+  // Se não houver imagem original OU não for o preset "melhorar pele", mostrar apenas o resultado
+  if (!originalUrl || presetId !== 'skin-realism') {
     return (
       <div className="relative w-full bg-gray-100">
         {onDownload && (

@@ -24,6 +24,12 @@ export const EDITOR_PRESETS: EditorPreset[] = [
     instruction: 'Anexe a foto que você quer melhorar a pele'
   },
   {
+    id: 'improve-sharpness',
+    title: 'Melhorar nitidez',
+    promptBase: 'CRÍTICO: Preserve 100% a identidade, composição e conteúdo original da imagem. Melhore APENAS a nitidez e clareza da foto. Aumente a definição de bordas e contornos. Reduza qualquer desfoque ou suavização excessiva. Melhore os detalhes finos: textura de tecidos, fios de cabelo, poros da pele, texturas de superfícies. Aumente o micro-contraste para maior percepção de profundidade. Corrija aberrações cromáticas se presentes. Remova ruído digital preservando detalhes. Otimize a nitidez de forma natural, sem criar halos ou artefatos artificiais. Mantenha o equilíbrio tonal e cores originais. NÃO ALTERE: composição, enquadramento, iluminação geral, cores, identidade de pessoas, objetos ou cenário. NÃO adicione elementos novos. Resultado: mesma imagem com nitidez e clareza profissional, como se tivesse sido capturada com lente de alta qualidade e foco perfeito.',
+    instruction: 'Anexe a foto que você quer melhorar a nitidez'
+  },
+  {
     id: 'fix-hands',
     title: 'Corrigir mãos e pés',
     promptBase: 'CRÍTICO: Preserve 100% a identidade da pessoa (rosto, traços faciais, corpo, roupa, maquiagem). Corrija APENAS as mãos, dedos e pés (se visíveis), mantendo todo o resto intacto. MÃOS - Regras CRÍTICAS: cada mão tem EXATAMENTE 5 dedos (polegar, indicador, médio, anelar, mínimo). Proporções anatômicas corretas: dedos com 3 falanges (exceto polegar com 2), articulações no lugar certo, tamanho proporcional à mão. Posição natural dos dedos: curvatura realista, ângulos possíveis anatomicamente, sem dedos extras ou fundidos. Textura de pele realista: linhas da palma, rugas dos nós dos dedos, unhas com formato natural e cutícula. PÉS (se visíveis) - Regras: cada pé tem EXATAMENTE 5 dedos, proporções anatômicas corretas, arco plantar natural, tornozelo proporcional. Se não houver mãos ou pés visíveis na imagem, ignore esta instrução e mantenha a imagem original intacta. Iluminação consistente com o resto da imagem. Sombras e profundidade corretas. NÃO ALTERE: rosto, traços faciais, corpo, roupa, maquiagem, fundo, composição. Remova: dedos extras, dedos fundidos, proporções impossíveis, articulações erradas, posições antinaturais. Resultado: mesma pessoa e contexto, com mãos e pés anatomicamente perfeitos.',

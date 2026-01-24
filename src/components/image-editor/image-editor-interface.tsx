@@ -1496,6 +1496,7 @@ export function ImageEditorInterface({
                   resultUrl={previewMedia.url}
                   originalUrl={previewMedia.originalUrl}
                   onDownload={handleDownloadPreview}
+                  presetId={selectedPreset || undefined}
                 />
               )}
             </DialogContent>
@@ -1808,6 +1809,7 @@ export function ImageEditorInterface({
                   resultUrl={previewMedia.url}
                   originalUrl={previewMedia.originalUrl}
                   onDownload={handleDownloadPreview}
+                  presetId={selectedPreset || undefined}
                 />
               )}
             </DialogContent>

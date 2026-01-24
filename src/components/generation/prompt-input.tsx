@@ -43,9 +43,9 @@ export function PromptInput({
     // Reset height first to get accurate scrollHeight
     el.style.height = 'auto'
 
-    // If prompt is empty, set to minimum height (3 rows = ~72px)
+    // If prompt is empty, set to minimum height (5 rows = ~120px)
     if (!prompt || prompt.trim().length === 0) {
-      el.style.height = '72px'
+      el.style.height = '120px'
       return
     }
 
@@ -185,7 +185,7 @@ export function PromptInput({
                 onSanitizedChange={handleSanitizedChange}
                 disabled={isGenerating}
                 className="w-full px-3 py-3 pr-40 bg-gray-200 border border-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-[#667EEA] focus:border-[#667EEA] resize-none text-gray-900 placeholder:text-gray-500"
-                rows={3}
+                rows={5}
                 maxLength={4000}
                 placeholder="Descreva a foto que deseja criar... ex: 'foto profissional com roupa social, sorrindo, iluminação natural, alta qualidade'"
                 style={{
