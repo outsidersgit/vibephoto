@@ -860,7 +860,7 @@ const AIToolsShowcase = () => {
 
   const toolsData = {
     skin: {
-      title: "Fix skin",
+      title: "Upscale de pele",
       description: "Textura de pele naturalizada e realista com IA",
       type: "comparison",
       beforeImage: "/examples/tools/upscale-before.jpg",
@@ -2366,7 +2366,7 @@ export default function HomePage() {
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4 text-white">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-semibold">
-                  {activeToolModal === 'skin' && 'Fix Skin - Demonstração'}
+                  {activeToolModal === 'skin' && 'Upscale de Pele - Demonstração'}
                   {activeToolModal === 'editor' && 'Studio IA - Demonstração'}
                   {activeToolModal === 'video' && 'Vídeos IA - Demonstração'}
                 </h2>
