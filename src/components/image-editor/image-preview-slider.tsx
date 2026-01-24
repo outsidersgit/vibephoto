@@ -114,7 +114,7 @@ export function ImagePreviewSlider({
 
       <div
         ref={comparisonContainerRef}
-        className="relative w-full cursor-ew-resize overflow-hidden rounded-lg bg-black"
+        className="relative w-full cursor-ew-resize overflow-hidden rounded-lg bg-black inline-block"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -127,10 +127,10 @@ export function ImagePreviewSlider({
           className="w-full h-auto max-h-[85vh] block"
         />
 
-        {/* Imagem resultado (depois) - com clip path */}
+        {/* Imagem resultado (depois) - com clip path - posicionada exatamente sobre a de antes */}
         <div
           ref={afterImageMaskRef}
-          className="absolute inset-0"
+          className="absolute top-0 left-0 w-full h-full"
           style={{ clipPath: 'polygon(50% 0, 100% 0, 100% 100%, 50% 100%)' }}
         >
           <img
