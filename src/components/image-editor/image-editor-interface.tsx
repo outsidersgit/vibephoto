@@ -1259,17 +1259,38 @@ export function ImageEditorInterface({
             {/* Atalhos Horizontal Scroll - Com sombra */}
             <div className="flex gap-2.5 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide">
               {EDITOR_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  onClick={() => handlePresetSelect(preset.id)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-                    selectedPreset === preset.id
-                      ? 'bg-gradient-to-b from-gray-800 to-gray-900 text-white shadow-lg shadow-gray-400/50'
-                      : 'bg-white text-gray-700 border border-gray-200 shadow-sm'
-                  }`}
-                >
-                  {preset.title}
-                </button>
+                <div key={preset.id} className="flex-shrink-0">
+                  <button
+                    onClick={() => handlePresetSelect(preset.id)}
+                    className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                      selectedPreset === preset.id
+                        ? 'bg-gradient-to-b from-gray-800 to-gray-900 text-white shadow-lg shadow-gray-400/50'
+                        : 'bg-white text-gray-700 border border-gray-200 shadow-sm'
+                    }`}
+                  >
+                    {preset.title} {preset.subPresets && selectedPreset === preset.id && ' ▼'}
+                  </button>
+
+                  {/* Sub-presets expandidos abaixo do botão principal */}
+                  {preset.subPresets && selectedPreset === preset.id && (
+                    <div className="mt-2 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden min-w-[200px]">
+                      {preset.subPresets.map((subPreset, index) => (
+                        <button
+                          key={subPreset.id}
+                          onClick={() => handleSubPresetSelect(subPreset.id)}
+                          className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                            selectedSubPreset === subPreset.id
+                              ? 'bg-blue-50 text-blue-900 font-semibold'
+                              : 'text-gray-700 hover:bg-gray-50'
+                          } ${index !== 0 ? 'border-t border-gray-100' : ''}`}
+                        >
+                          <div className="font-medium">{subPreset.title}</div>
+                          <div className="text-[10px] text-gray-500 mt-0.5">{subPreset.description}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
 
@@ -1289,60 +1310,15 @@ export function ImageEditorInterface({
             </div>
 
             {/* Helper Text - Mobile destacado */}
-            {currentPreset && !currentPreset.subPresets && (
+            {currentPreset && (
               <div className="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
                 <p className="text-sm font-semibold text-blue-900 mb-1">
-                  {currentPreset.instruction}
+                  {currentSubPreset ? currentSubPreset.instruction : currentPreset.instruction}
                 </p>
                 {(currentPreset.id === 'banner' || currentPreset.id === 'interior') && (
                   <p className="text-xs text-blue-700">
                     💡 Edite o prompt para personalizar
                   </p>
-                )}
-              </div>
-            )}
-
-            {/* Sub-Presets Selector - Mobile */}
-            {currentPreset?.subPresets && (
-              <div className="mt-3 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-                <p className="text-sm font-semibold text-gray-900 mb-3">
-                  Escolha o estilo:
-                </p>
-                <div className="space-y-2">
-                  {currentPreset.subPresets.map((subPreset) => (
-                    <label
-                      key={subPreset.id}
-                      className={`flex items-start p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                        selectedSubPreset === subPreset.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="subPreset"
-                        value={subPreset.id}
-                        checked={selectedSubPreset === subPreset.id}
-                        onChange={() => handleSubPresetSelect(subPreset.id)}
-                        className="mt-0.5 mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900">
-                          {subPreset.title}
-                        </p>
-                        <p className="text-xs text-gray-600 mt-0.5">
-                          {subPreset.description}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-                {currentSubPreset && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <p className="text-xs text-blue-700">
-                      📸 {currentSubPreset.instruction}
-                    </p>
-                  </div>
                 )}
               </div>
             )}
@@ -1629,17 +1605,38 @@ export function ImageEditorInterface({
           {/* Atalhos Grid - Com sombra e profundidade */}
           <div className="flex flex-wrap gap-2.5 mb-4">
             {EDITOR_PRESETS.map((preset) => (
-              <button
-                key={preset.id}
-                onClick={() => handlePresetSelect(preset.id)}
-                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  selectedPreset === preset.id
-                    ? 'bg-gradient-to-b from-gray-800 to-gray-900 text-white shadow-lg shadow-gray-400/50 scale-105'
-                    : 'bg-white text-gray-700 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 hover:-translate-y-0.5'
-                }`}
-              >
-                {preset.title}
-              </button>
+              <div key={preset.id} className="relative">
+                <button
+                  onClick={() => handlePresetSelect(preset.id)}
+                  className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    selectedPreset === preset.id
+                      ? 'bg-gradient-to-b from-gray-800 to-gray-900 text-white shadow-lg shadow-gray-400/50 scale-105'
+                      : 'bg-white text-gray-700 border border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 hover:-translate-y-0.5'
+                  }`}
+                >
+                  {preset.title} {preset.subPresets && selectedPreset === preset.id && ' ▼'}
+                </button>
+
+                {/* Sub-presets expandidos abaixo do botão principal */}
+                {preset.subPresets && selectedPreset === preset.id && (
+                  <div className="absolute top-full left-0 mt-2 bg-white rounded-lg border border-gray-200 shadow-lg overflow-hidden min-w-[200px] z-10">
+                    {preset.subPresets.map((subPreset, index) => (
+                      <button
+                        key={subPreset.id}
+                        onClick={() => handleSubPresetSelect(subPreset.id)}
+                        className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                          selectedSubPreset === subPreset.id
+                            ? 'bg-blue-50 text-blue-900 font-semibold'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        } ${index !== 0 ? 'border-t border-gray-100' : ''}`}
+                      >
+                        <div className="font-medium">{subPreset.title}</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5">{subPreset.description}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
 
@@ -1659,60 +1656,15 @@ export function ImageEditorInterface({
           </div>
 
           {/* Helper Text - Mais destacado */}
-          {currentPreset && !currentPreset.subPresets && (
+          {currentPreset && (
             <div className="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
               <p className="text-sm font-semibold text-blue-900 mb-1">
-                {currentPreset.instruction}
+                {currentSubPreset ? currentSubPreset.instruction : currentPreset.instruction}
               </p>
               {(currentPreset.id === 'banner' || currentPreset.id === 'interior') && (
                 <p className="text-xs text-blue-700">
                   💡 Lembre-se de editar o prompt para personalizar seu resultado
                 </p>
-              )}
-            </div>
-          )}
-
-          {/* Sub-Presets Selector - Desktop */}
-          {currentPreset?.subPresets && (
-            <div className="mt-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-              <p className="text-sm font-semibold text-gray-900 mb-3">
-                Escolha o estilo:
-              </p>
-              <div className="space-y-2">
-                {currentPreset.subPresets.map((subPreset) => (
-                  <label
-                    key={subPreset.id}
-                    className={`flex items-start p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                      selectedSubPreset === subPreset.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="subPreset"
-                      value={subPreset.id}
-                      checked={selectedSubPreset === subPreset.id}
-                      onChange={() => handleSubPresetSelect(subPreset.id)}
-                      className="mt-0.5 mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900">
-                        {subPreset.title}
-                      </p>
-                      <p className="text-xs text-gray-600 mt-0.5">
-                        {subPreset.description}
-                      </p>
-                    </div>
-                  </label>
-                ))}
-              </div>
-              {currentSubPreset && (
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <p className="text-xs text-blue-700">
-                    📸 {currentSubPreset.instruction}
-                  </p>
-                </div>
               )}
             </div>
           )}
