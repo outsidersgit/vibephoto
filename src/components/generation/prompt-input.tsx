@@ -39,7 +39,17 @@ export function PromptInput({
   const adjustPromptHeight = () => {
     const el = promptRef.current
     if (!el) return
+
+    // Reset height first to get accurate scrollHeight
     el.style.height = 'auto'
+
+    // If prompt is empty, set to minimum height (3 rows = ~72px)
+    if (!prompt || prompt.trim().length === 0) {
+      el.style.height = '72px'
+      return
+    }
+
+    // Otherwise, adjust based on content
     el.style.height = Math.min(el.scrollHeight, 600) + 'px'
   }
   useEffect(() => { adjustPromptHeight() }, [prompt])
