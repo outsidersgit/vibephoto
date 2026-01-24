@@ -1631,7 +1631,7 @@ export function ImageEditorInterface({
             </div>
             <div className="relative">
               <Textarea
-                placeholder="Descreva o que deseja editar, adicionar ou remover da imagem..."
+                placeholder="Descreva o que deseja criar..."
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={5}
