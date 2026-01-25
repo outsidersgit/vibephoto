@@ -27,8 +27,259 @@ interface PromptBuilderProps {
   modelClass?: string
 }
 
+// Contextual tree structure: each style defines its own compatible options
+const CONTEXTUAL_OPTIONS = {
+  // STEP 1: Style (5 options - starting point)
+  style: [
+    { id: 'prof', name: 'Profissional', value: 'foto profissional de negócios, expressão confiante' },
+    { id: 'casual', name: 'Casual', value: 'retrato casual, pose natural relaxada, roupas confortáveis' },
+    { id: 'artistic', name: 'Artístico', value: 'retrato artístico, composição criativa, humor expressivo' },
+    { id: 'fashion', name: 'Fashion', value: 'retrato de alta moda, roupa elegante, pose sofisticada' },
+    { id: 'lifestyle', name: 'Lifestyle', value: 'fotografia lifestyle, momento espontâneo, ambiente cotidiano' },
+  ],
+
+  // STEP 2: Lighting (contextual per style)
+  lighting: {
+    prof: [
+      { id: 'studio', name: 'Studio', value: 'iluminação profissional de estúdio, iluminação controlada' },
+      { id: 'natural', name: 'Natural', value: 'luz natural do dia, luz suave da janela' },
+      { id: 'soft', name: 'Suave', value: 'iluminação difusa suave, sombras gentis' },
+    ],
+    casual: [
+      { id: 'natural', name: 'Natural', value: 'luz natural do dia, luz suave da janela' },
+      { id: 'golden', name: 'Golden Hour', value: 'luz solar dourada, luz atmosférica quente' },
+      { id: 'soft', name: 'Suave', value: 'iluminação difusa suave, sombras gentis' },
+    ],
+    artistic: [
+      { id: 'dramatic', name: 'Dramática', value: 'iluminação dramática, sombras fortes, alto contraste' },
+      { id: 'natural', name: 'Natural', value: 'luz natural do dia, luz suave da janela' },
+      { id: 'golden', name: 'Golden Hour', value: 'luz solar dourada, luz atmosférica quente' },
+      { id: 'studio', name: 'Studio', value: 'iluminação profissional de estúdio, iluminação controlada' },
+    ],
+    fashion: [
+      { id: 'studio', name: 'Studio', value: 'iluminação profissional de estúdio, iluminação controlada' },
+      { id: 'dramatic', name: 'Dramática', value: 'iluminação dramática, sombras fortes, alto contraste' },
+      { id: 'natural', name: 'Natural', value: 'luz natural do dia, luz suave da janela' },
+    ],
+    lifestyle: [
+      { id: 'natural', name: 'Natural', value: 'luz natural do dia, luz suave da janela' },
+      { id: 'golden', name: 'Golden Hour', value: 'luz solar dourada, luz atmosférica quente' },
+      { id: 'soft', name: 'Suave', value: 'iluminação difusa suave, sombras gentis' },
+    ],
+  },
+
+  // STEP 3: Camera (contextual per style + lighting combination)
+  camera: {
+    prof: {
+      studio: [
+        { id: '85mm', name: '85mm - Retrato clássico', value: 'fotografado com lente 85mm, fotografia de retrato', description: 'Ideal para retratos - desfoca o fundo e destaca o rosto' },
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+      ],
+      natural: [
+        { id: '85mm', name: '85mm - Retrato clássico', value: 'fotografado com lente 85mm, fotografia de retrato', description: 'Ideal para retratos - desfoca o fundo e destaca o rosto' },
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+      ],
+      soft: [
+        { id: '85mm', name: '85mm - Retrato clássico', value: 'fotografado com lente 85mm, fotografia de retrato', description: 'Ideal para retratos - desfoca o fundo e destaca o rosto' },
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+      ],
+    },
+    casual: {
+      natural: [
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+        { id: '35mm', name: '35mm - Contexto amplo', value: 'fotografado com lente 35mm, retrato ambiental', description: 'Inclui mais do ambiente ao redor da pessoa' },
+      ],
+      golden: [
+        { id: '85mm', name: '85mm - Retrato clássico', value: 'fotografado com lente 85mm, fotografia de retrato', description: 'Ideal para retratos - desfoca o fundo e destaca o rosto' },
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+        { id: '35mm', name: '35mm - Contexto amplo', value: 'fotografado com lente 35mm, retrato ambiental', description: 'Inclui mais do ambiente ao redor da pessoa' },
+      ],
+      soft: [
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+        { id: '35mm', name: '35mm - Contexto amplo', value: 'fotografado com lente 35mm, retrato ambiental', description: 'Inclui mais do ambiente ao redor da pessoa' },
+      ],
+    },
+    artistic: {
+      dramatic: [
+        { id: '85mm', name: '85mm - Retrato clássico', value: 'fotografado com lente 85mm, fotografia de retrato', description: 'Ideal para retratos - desfoca o fundo e destaca o rosto' },
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+        { id: 'macro', name: 'Macro - Detalhes extremos', value: 'fotografia macro, close-up detalhado', description: 'Close extremo - captura detalhes minuciosos' },
+      ],
+      natural: [
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+        { id: '35mm', name: '35mm - Contexto amplo', value: 'fotografado com lente 35mm, retrato ambiental', description: 'Inclui mais do ambiente ao redor da pessoa' },
+        { id: 'macro', name: 'Macro - Detalhes extremos', value: 'fotografia macro, close-up detalhado', description: 'Close extremo - captura detalhes minuciosos' },
+      ],
+      golden: [
+        { id: '85mm', name: '85mm - Retrato clássico', value: 'fotografado com lente 85mm, fotografia de retrato', description: 'Ideal para retratos - desfoca o fundo e destaca o rosto' },
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+        { id: '35mm', name: '35mm - Contexto amplo', value: 'fotografado com lente 35mm, retrato ambiental', description: 'Inclui mais do ambiente ao redor da pessoa' },
+      ],
+      studio: [
+        { id: '85mm', name: '85mm - Retrato clássico', value: 'fotografado com lente 85mm, fotografia de retrato', description: 'Ideal para retratos - desfoca o fundo e destaca o rosto' },
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+        { id: 'macro', name: 'Macro - Detalhes extremos', value: 'fotografia macro, close-up detalhado', description: 'Close extremo - captura detalhes minuciosos' },
+      ],
+    },
+    fashion: {
+      studio: [
+        { id: '85mm', name: '85mm - Retrato clássico', value: 'fotografado com lente 85mm, fotografia de retrato', description: 'Ideal para retratos - desfoca o fundo e destaca o rosto' },
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+      ],
+      dramatic: [
+        { id: '85mm', name: '85mm - Retrato clássico', value: 'fotografado com lente 85mm, fotografia de retrato', description: 'Ideal para retratos - desfoca o fundo e destaca o rosto' },
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+      ],
+      natural: [
+        { id: '85mm', name: '85mm - Retrato clássico', value: 'fotografado com lente 85mm, fotografia de retrato', description: 'Ideal para retratos - desfoca o fundo e destaca o rosto' },
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+        { id: '35mm', name: '35mm - Contexto amplo', value: 'fotografado com lente 35mm, retrato ambiental', description: 'Inclui mais do ambiente ao redor da pessoa' },
+      ],
+    },
+    lifestyle: {
+      natural: [
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+        { id: '35mm', name: '35mm - Contexto amplo', value: 'fotografado com lente 35mm, retrato ambiental', description: 'Inclui mais do ambiente ao redor da pessoa' },
+      ],
+      golden: [
+        { id: '85mm', name: '85mm - Retrato clássico', value: 'fotografado com lente 85mm, fotografia de retrato', description: 'Ideal para retratos - desfoca o fundo e destaca o rosto' },
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+        { id: '35mm', name: '35mm - Contexto amplo', value: 'fotografado com lente 35mm, retrato ambiental', description: 'Inclui mais do ambiente ao redor da pessoa' },
+      ],
+      soft: [
+        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
+        { id: '35mm', name: '35mm - Contexto amplo', value: 'fotografado com lente 35mm, retrato ambiental', description: 'Inclui mais do ambiente ao redor da pessoa' },
+      ],
+    },
+  },
+
+  // STEP 4: Quality (multiple allowed - always available regardless of context)
+  quality: [
+    { id: 'ultra', name: 'Ultra Realista', value: 'ultra realista, fotorrealista' },
+    { id: 'sharp', name: 'Sharp Focus', value: 'foco nítido, detalhes precisos' },
+    { id: 'raw', name: 'RAW Photo', value: 'estilo foto RAW, qualidade profissional' },
+    { id: 'hires', name: 'Alta Resolução', value: 'alta resolução, detalhado' },
+  ],
+
+  // STEP 5: Mood (contextual per style)
+  mood: {
+    prof: [
+      { id: 'confident', name: 'Confiante', value: 'expressão confiante, presença marcante' },
+      { id: 'serious', name: 'Sério', value: 'expressão séria, comportamento profissional' },
+      { id: 'friendly', name: 'Amigável', value: 'sorriso caloroso, comportamento acessível' },
+    ],
+    casual: [
+      { id: 'friendly', name: 'Amigável', value: 'sorriso caloroso, comportamento acessível' },
+      { id: 'energetic', name: 'Energético', value: 'pose energética, expressão dinâmica' },
+      { id: 'contemplative', name: 'Contemplativo', value: 'expressão pensativa, humor introspectivo' },
+    ],
+    artistic: [
+      { id: 'contemplative', name: 'Contemplativo', value: 'expressão pensativa, humor introspectivo' },
+      { id: 'confident', name: 'Confiante', value: 'expressão confiante, presença marcante' },
+      { id: 'serious', name: 'Sério', value: 'expressão séria, comportamento profissional' },
+    ],
+    fashion: [
+      { id: 'confident', name: 'Confiante', value: 'expressão confiante, presença marcante' },
+      { id: 'serious', name: 'Sério', value: 'expressão séria, comportamento profissional' },
+      { id: 'contemplative', name: 'Contemplativo', value: 'expressão pensativa, humor introspectivo' },
+    ],
+    lifestyle: [
+      { id: 'friendly', name: 'Amigável', value: 'sorriso caloroso, comportamento acessível' },
+      { id: 'energetic', name: 'Energético', value: 'pose energética, expressão dinâmica' },
+      { id: 'confident', name: 'Confiante', value: 'expressão confiante, presença marcante' },
+    ],
+  },
+
+  // STEP 6: Environment (contextual per style + lighting)
+  environment: {
+    prof: {
+      studio: [
+        { id: 'office', name: 'Escritório', value: 'ambiente de escritório moderno, ambiente corporativo' },
+        { id: 'studio', name: 'Estúdio', value: 'estúdio de fotografia, fundo neutro' },
+      ],
+      natural: [
+        { id: 'office', name: 'Escritório', value: 'ambiente de escritório moderno, ambiente corporativo' },
+        { id: 'urban', name: 'Urbano', value: 'ambiente urbano, fundo de cidade' },
+      ],
+      soft: [
+        { id: 'office', name: 'Escritório', value: 'ambiente de escritório moderno, ambiente corporativo' },
+        { id: 'studio', name: 'Estúdio', value: 'estúdio de fotografia, fundo neutro' },
+      ],
+    },
+    casual: {
+      natural: [
+        { id: 'home', name: 'Casa', value: 'ambiente doméstico, interior aconchegante' },
+        { id: 'outdoor', name: 'Ar Livre', value: 'ambiente ao ar livre, fundo natural' },
+        { id: 'urban', name: 'Urbano', value: 'ambiente urbano, fundo de cidade' },
+      ],
+      golden: [
+        { id: 'outdoor', name: 'Ar Livre', value: 'ambiente ao ar livre, fundo natural' },
+        { id: 'urban', name: 'Urbano', value: 'ambiente urbano, fundo de cidade' },
+      ],
+      soft: [
+        { id: 'home', name: 'Casa', value: 'ambiente doméstico, interior aconchegante' },
+        { id: 'outdoor', name: 'Ar Livre', value: 'ambiente ao ar livre, fundo natural' },
+      ],
+    },
+    artistic: {
+      dramatic: [
+        { id: 'studio', name: 'Estúdio', value: 'estúdio de fotografia, fundo neutro' },
+        { id: 'urban', name: 'Urbano', value: 'ambiente urbano, fundo de cidade' },
+      ],
+      natural: [
+        { id: 'outdoor', name: 'Ar Livre', value: 'ambiente ao ar livre, fundo natural' },
+        { id: 'urban', name: 'Urbano', value: 'ambiente urbano, fundo de cidade' },
+        { id: 'home', name: 'Casa', value: 'ambiente doméstico, interior aconchegante' },
+      ],
+      golden: [
+        { id: 'outdoor', name: 'Ar Livre', value: 'ambiente ao ar livre, fundo natural' },
+        { id: 'urban', name: 'Urbano', value: 'ambiente urbano, fundo de cidade' },
+      ],
+      studio: [
+        { id: 'studio', name: 'Estúdio', value: 'estúdio de fotografia, fundo neutro' },
+      ],
+    },
+    fashion: {
+      studio: [
+        { id: 'studio', name: 'Estúdio', value: 'estúdio de fotografia, fundo neutro' },
+        { id: 'urban', name: 'Urbano', value: 'ambiente urbano, fundo de cidade' },
+      ],
+      dramatic: [
+        { id: 'studio', name: 'Estúdio', value: 'estúdio de fotografia, fundo neutro' },
+        { id: 'urban', name: 'Urbano', value: 'ambiente urbano, fundo de cidade' },
+      ],
+      natural: [
+        { id: 'outdoor', name: 'Ar Livre', value: 'ambiente ao ar livre, fundo natural' },
+        { id: 'urban', name: 'Urbano', value: 'ambiente urbano, fundo de cidade' },
+      ],
+    },
+    lifestyle: {
+      natural: [
+        { id: 'home', name: 'Casa', value: 'ambiente doméstico, interior aconchegante' },
+        { id: 'outdoor', name: 'Ar Livre', value: 'ambiente ao ar livre, fundo natural' },
+        { id: 'urban', name: 'Urbano', value: 'ambiente urbano, fundo de cidade' },
+      ],
+      golden: [
+        { id: 'outdoor', name: 'Ar Livre', value: 'ambiente ao ar livre, fundo natural' },
+        { id: 'urban', name: 'Urbano', value: 'ambiente urbano, fundo de cidade' },
+      ],
+      soft: [
+        { id: 'home', name: 'Casa', value: 'ambiente doméstico, interior aconchegante' },
+        { id: 'outdoor', name: 'Ar Livre', value: 'ambiente ao ar livre, fundo natural' },
+      ],
+    },
+  },
+}
+
+interface SelectedOption {
+  category: string
+  id: string
+  name: string
+  value: string
+}
+
 export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelected, modelClass = 'MAN' }: PromptBuilderProps) {
-  const [selectedBlocks, setSelectedBlocks] = useState<PromptBlock[]>([])
+  const [selectedOptions, setSelectedOptions] = useState<SelectedOption[]>([])
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['style'])
   const [copiedBlocks, setCopiedBlocks] = useState<string[]>([])
 
@@ -38,7 +289,7 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelect
   // Auto-expand next category and collapse completed ones
   useEffect(() => {
     const manageCategories = () => {
-      const selectedCategories = selectedBlocks.map(block => block.category)
+      const selectedCategories = selectedOptions.map(opt => opt.category)
       let newExpandedCategories = [...expandedCategories]
 
       for (let i = 0; i < categoryOrder.length; i++) {
@@ -75,127 +326,50 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelect
     }
 
     manageCategories()
-  }, [selectedBlocks])
+  }, [selectedOptions])
 
-  // Compatibility rules: which options are incompatible with each other
-  const incompatibilityRules = {
-    // Lighting incompatibilities
-    lighting: {
-      golden: ['office', 'studio'], // Golden hour doesn't work in indoor spaces
-      studio: ['outdoor'], // Studio lighting is indoor only
-      natural: ['studio'], // Natural light conflicts with controlled studio lighting
-    },
-    // Style incompatibilities
-    style: {
-      prof: ['outdoor'], // Professional style typically not in outdoor casual settings
-      casual: ['office', 'studio'], // Casual style doesn't match formal environments
-      fashion: ['home'], // Fashion shoots rarely in home environments
-    },
-    // Camera incompatibilities
-    camera: {
-      macro: ['outdoor', 'urban'], // Macro doesn't work well in wide outdoor settings
-    },
-    // Environment incompatibilities
-    environment: {
-      outdoor: ['studio'], // Outdoor and studio are mutually exclusive
-      studio: ['outdoor', 'urban'], // Studio is indoor only
-      office: ['golden'], // Office doesn't have golden hour lighting
-    }
-  }
-
-  // Function to check if a block is compatible with current selections
-  const isBlockCompatible = (block: PromptBlock): boolean => {
-    if (selectedBlocks.length === 0) return true
-
-    // Check if this block is incompatible with any selected blocks
-    for (const selectedBlock of selectedBlocks) {
-      const categoryRules = incompatibilityRules[selectedBlock.category as keyof typeof incompatibilityRules]
-      if (categoryRules) {
-        const blockIncompatibilities = categoryRules[selectedBlock.id as keyof typeof categoryRules] as string[] | undefined
-        if (blockIncompatibilities?.includes(block.id)) {
-          return false
-        }
-      }
-
-      const blockCategoryRules = incompatibilityRules[block.category as keyof typeof incompatibilityRules]
-      if (blockCategoryRules) {
-        const selectedIncompatibilities = blockCategoryRules[block.id as keyof typeof blockCategoryRules] as string[] | undefined
-        if (selectedIncompatibilities?.includes(selectedBlock.id)) {
-          return false
-        }
-      }
+  // Get available options for the current context
+  const getAvailableOptions = (category: string): any[] => {
+    if (category === 'style') {
+      return CONTEXTUAL_OPTIONS.style
     }
 
-    return true
-  }
+    if (category === 'quality') {
+      return CONTEXTUAL_OPTIONS.quality
+    }
 
-  // Prompt building blocks organized by category
-  const promptCategories: PromptCategory[] = [
-    {
-      name: 'style',
-      blocks: [
-        { id: 'prof', name: 'Profissional', value: 'foto profissional de negócios, expressão confiante', category: 'style', isSelected: false },
-        { id: 'casual', name: 'Casual', value: 'retrato casual, pose natural relaxada, roupas confortáveis', category: 'style', isSelected: false },
-        { id: 'artistic', name: 'Artístico', value: 'retrato artístico, composição criativa, humor expressivo', category: 'style', isSelected: false },
-        { id: 'fashion', name: 'Fashion', value: 'retrato de alta moda, roupa elegante, pose sofisticada', category: 'style', isSelected: false },
-        { id: 'lifestyle', name: 'Lifestyle', value: 'fotografia lifestyle, momento espontâneo, ambiente cotidiano', category: 'style', isSelected: false },
-      ],
-      allowMultiple: false
-    },
-    {
-      name: 'lighting',
-      blocks: [
-        { id: 'natural', name: 'Natural', value: 'luz natural do dia, luz suave da janela', category: 'lighting', isSelected: false },
-        { id: 'studio', name: 'Studio', value: 'iluminação profissional de estúdio, iluminação controlada', category: 'lighting', isSelected: false },
-        { id: 'golden', name: 'Golden Hour', value: 'luz solar dourada, luz atmosférica quente', category: 'lighting', isSelected: false },
-        { id: 'dramatic', name: 'Dramática', value: 'iluminação dramática, sombras fortes, alto contraste', category: 'lighting', isSelected: false },
-        { id: 'soft', name: 'Suave', value: 'iluminação difusa suave, sombras gentis', category: 'lighting', isSelected: false },
-      ],
-      allowMultiple: false
-    },
-    {
-      name: 'camera',
-      blocks: [
-        { id: '85mm', name: '85mm - Retrato clássico', value: 'fotografado com lente 85mm, fotografia de retrato', category: 'camera', isSelected: false, description: 'Ideal para retratos - desfoca o fundo e destaca o rosto' },
-        { id: '50mm', name: '50mm - Visão natural', value: 'fotografado com lente 50mm, perspectiva natural', category: 'camera', isSelected: false, description: 'Mais natural - mostra a pessoa como você vê com seus olhos' },
-        { id: '35mm', name: '35mm - Contexto amplo', value: 'fotografado com lente 35mm, retrato ambiental', category: 'camera', isSelected: false, description: 'Inclui mais do ambiente ao redor da pessoa' },
-        { id: 'macro', name: 'Macro - Detalhes extremos', value: 'fotografia macro, close-up detalhado', category: 'camera', isSelected: false, description: 'Close extremo - captura detalhes minuciosos' },
-      ],
-      allowMultiple: false
-    },
-    {
-      name: 'quality',
-      blocks: [
-        { id: 'ultra', name: 'Ultra Realista', value: 'ultra realista, fotorrealista', category: 'quality', isSelected: false },
-        { id: 'sharp', name: 'Sharp Focus', value: 'foco nítido, detalhes precisos', category: 'quality', isSelected: false },
-        { id: 'raw', name: 'RAW Photo', value: 'estilo foto RAW, qualidade profissional', category: 'quality', isSelected: false },
-        { id: 'hires', name: 'Alta Resolução', value: 'alta resolução, detalhado', category: 'quality', isSelected: false },
-      ],
-      allowMultiple: true
-    },
-    {
-      name: 'mood',
-      blocks: [
-        { id: 'confident', name: 'Confiante', value: 'expressão confiante, presença marcante', category: 'mood', isSelected: false },
-        { id: 'friendly', name: 'Amigável', value: 'sorriso caloroso, comportamento acessível', category: 'mood', isSelected: false },
-        { id: 'serious', name: 'Sério', value: 'expressão séria, comportamento profissional', category: 'mood', isSelected: false },
-        { id: 'contemplative', name: 'Contemplativo', value: 'expressão pensativa, humor introspectivo', category: 'mood', isSelected: false },
-        { id: 'energetic', name: 'Energético', value: 'pose energética, expressão dinâmica', category: 'mood', isSelected: false },
-      ],
-      allowMultiple: false
-    },
-    {
-      name: 'environment',
-      blocks: [
-        { id: 'office', name: 'Escritório', value: 'ambiente de escritório moderno, ambiente corporativo', category: 'environment', isSelected: false },
-        { id: 'outdoor', name: 'Ar Livre', value: 'ambiente ao ar livre, fundo natural', category: 'environment', isSelected: false },
-        { id: 'home', name: 'Casa', value: 'ambiente doméstico, interior aconchegante', category: 'environment', isSelected: false },
-        { id: 'studio', name: 'Estúdio', value: 'estúdio de fotografia, fundo neutro', category: 'environment', isSelected: false },
-        { id: 'urban', name: 'Urbano', value: 'ambiente urbano, fundo de cidade', category: 'environment', isSelected: false },
-      ],
-      allowMultiple: false
-    },
-  ]
+    const styleSelection = selectedOptions.find(opt => opt.category === 'style')
+    if (!styleSelection) return []
+
+    if (category === 'lighting') {
+      return CONTEXTUAL_OPTIONS.lighting[styleSelection.id as keyof typeof CONTEXTUAL_OPTIONS.lighting] || []
+    }
+
+    if (category === 'mood') {
+      return CONTEXTUAL_OPTIONS.mood[styleSelection.id as keyof typeof CONTEXTUAL_OPTIONS.mood] || []
+    }
+
+    const lightingSelection = selectedOptions.find(opt => opt.category === 'lighting')
+    if (!lightingSelection) return []
+
+    if (category === 'camera') {
+      const cameraOptions = CONTEXTUAL_OPTIONS.camera[styleSelection.id as keyof typeof CONTEXTUAL_OPTIONS.camera]
+      if (cameraOptions) {
+        return cameraOptions[lightingSelection.id as keyof typeof cameraOptions] || []
+      }
+      return []
+    }
+
+    if (category === 'environment') {
+      const envOptions = CONTEXTUAL_OPTIONS.environment[styleSelection.id as keyof typeof CONTEXTUAL_OPTIONS.environment]
+      if (envOptions) {
+        return envOptions[lightingSelection.id as keyof typeof envOptions] || []
+      }
+      return []
+    }
+
+    return []
+  }
 
   const getCategoryIcon = (categoryName: string) => {
     switch (categoryName) {
@@ -221,55 +395,71 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelect
     }
   }
 
-  const toggleBlock = (block: PromptBlock) => {
-    const category = promptCategories.find(cat => cat.name === block.category)
-    if (!category) return
+  const allowsMultiple = (category: string) => {
+    return category === 'quality' // Only quality allows multiple selections
+  }
 
-    setSelectedBlocks(prev => {
-      let newSelectedBlocks
-
-      if (!category.allowMultiple) {
-        // Remove other blocks from the same category
-        const filtered = prev.filter(b => b.category !== block.category)
-        const isAlreadySelected = prev.some(b => b.id === block.id)
+  const toggleOption = (category: string, option: any) => {
+    setSelectedOptions(prev => {
+      const isMultiple = allowsMultiple(category)
+      
+      if (!isMultiple) {
+        // Single selection - replace existing selection in this category
+        const filtered = prev.filter(opt => opt.category !== category)
+        const isAlreadySelected = prev.some(opt => opt.id === option.id)
 
         if (isAlreadySelected) {
-          newSelectedBlocks = filtered // Remove this block
+          return filtered // Remove this option
         } else {
-          newSelectedBlocks = [...filtered, { ...block, isSelected: true }] // Add this block
+          const newSelection: SelectedOption = {
+            category,
+            id: option.id,
+            name: option.name,
+            value: option.value
+          }
+          
+          // If changing style or lighting, clear all subsequent selections
+          if (category === 'style') {
+            return [newSelection]
+          } else if (category === 'lighting') {
+            const styleSelection = prev.find(opt => opt.category === 'style')
+            return styleSelection ? [styleSelection, newSelection] : [newSelection]
+          }
+          
+          return [...filtered, newSelection]
         }
       } else {
-        // Allow multiple selections
-        const isAlreadySelected = prev.some(b => b.id === block.id)
+        // Multiple selection allowed
+        const isAlreadySelected = prev.some(opt => opt.id === option.id)
 
         if (isAlreadySelected) {
-          newSelectedBlocks = prev.filter(b => b.id !== block.id) // Remove this block
+          return prev.filter(opt => opt.id !== option.id)
         } else {
-          newSelectedBlocks = [...prev, { ...block, isSelected: true }] // Add this block
+          return [...prev, {
+            category,
+            id: option.id,
+            name: option.name,
+            value: option.value
+          }]
         }
       }
-
-      // Check if environment (last block) is selected
-      const hasEnvironment = newSelectedBlocks.some(b => b.category === 'environment')
-      onLastBlockSelected?.(hasEnvironment)
-
-      // Auto-generate prompt when last block is selected
-      if (hasEnvironment && newSelectedBlocks.length > 0) {
-        // Generate prompt immediately using the same logic as generatePrompt()
-        const modelGender = getModelGender(modelClass)
-        const genderPrefix = getGenderPrefix(modelGender)
-        const combinedPrompt = newSelectedBlocks.map(block => block.value).join(', ')
-        const fullPrompt = genderPrefix + combinedPrompt
-        if (fullPrompt) {
-          console.log('✅ [PROMPT_BUILDER] Last block selected, generating prompt:', fullPrompt.substring(0, 100) + '...')
-          // Update prompt immediately when last block is selected
-          onPromptGenerated(fullPrompt)
-        }
-      }
-
-      return newSelectedBlocks
     })
   }
+
+  // Check when environment (last step) is selected
+  useEffect(() => {
+    const hasEnvironment = selectedOptions.some(opt => opt.category === 'environment')
+    onLastBlockSelected?.(hasEnvironment)
+
+    // Auto-generate prompt when last block is selected
+    if (hasEnvironment && selectedOptions.length > 0) {
+      const prompt = generatePrompt()
+      if (prompt) {
+        console.log('✅ [PROMPT_BUILDER] Last block selected, generating prompt:', prompt.substring(0, 100) + '...')
+        onPromptGenerated(prompt)
+      }
+    }
+  }, [selectedOptions])
 
   const toggleCategory = (categoryName: string) => {
     setExpandedCategories(prev =>
@@ -280,18 +470,22 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelect
   }
 
   const generatePrompt = () => {
-    if (selectedBlocks.length === 0) return ''
+    if (selectedOptions.length === 0) return ''
 
-    // Add gender prefix based on model class using centralized utility
+    // Add gender prefix based on model class
     const modelGender = getModelGender(modelClass)
     const genderPrefix = getGenderPrefix(modelGender)
 
-    // Combine selected block values
-    const combinedPrompt = selectedBlocks
-      .map(block => block.value)
+    // Combine selected option values in order
+    const orderedValues = categoryOrder
+      .map(category => {
+        const options = selectedOptions.filter(opt => opt.category === category)
+        return options.map(opt => opt.value).join(', ')
+      })
+      .filter(Boolean)
       .join(', ')
 
-    const fullPrompt = genderPrefix + combinedPrompt
+    const fullPrompt = genderPrefix + orderedValues
 
     return fullPrompt
   }
@@ -302,7 +496,7 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelect
       onPromptGenerated(prompt)
 
       // Show feedback
-      setCopiedBlocks(selectedBlocks.map(b => b.id))
+      setCopiedBlocks(selectedOptions.map(opt => opt.id))
       setTimeout(() => setCopiedBlocks([]), 2000)
     }
   }
@@ -311,13 +505,14 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelect
     const prompt = generatePrompt()
     if (prompt) {
       navigator.clipboard.writeText(prompt)
-      setCopiedBlocks(selectedBlocks.map(b => b.id))
+      setCopiedBlocks(selectedOptions.map(opt => opt.id))
       setTimeout(() => setCopiedBlocks([]), 2000)
     }
   }
 
   const clearAll = () => {
-    setSelectedBlocks([])
+    setSelectedOptions([])
+    setExpandedCategories(['style'])
     onLastBlockSelected?.(false)
   }
 
@@ -329,14 +524,14 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelect
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-bold text-white">Prompt Builder</h3>
-          <p className="text-sm text-gray-400">Construa seu prompt</p>
+          <p className="text-sm text-gray-400">Construa seu prompt passo a passo</p>
         </div>
         <div className="flex space-x-2">
           <Button
             variant="outline"
             size="sm"
             onClick={clearAll}
-            disabled={selectedBlocks.length === 0}
+            disabled={selectedOptions.length === 0}
             className="border-slate-500 text-slate-300 hover:bg-slate-700"
           >
             <RotateCcw className="w-4 h-4 mr-1" />
@@ -347,37 +542,40 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelect
 
       {/* Categories */}
       <div className="space-y-3">
-        {categoryOrder.map((categoryName) => {
-          const category = promptCategories.find(cat => cat.name === categoryName)
-          if (!category) return null
-
-          const isExpanded = expandedCategories.includes(category.name)
-          const selectedInCategory = selectedBlocks.find(b => b.category === category.name)
+        {categoryOrder.map((categoryName, index) => {
+          const isExpanded = expandedCategories.includes(categoryName)
+          const selectedInCategory = selectedOptions.find(opt => opt.category === categoryName)
+          const availableOptions = getAvailableOptions(categoryName)
 
           // Check if this category should be available based on sequential flow
-          const categoryIndex = categoryOrder.indexOf(category.name)
-          const isAvailable = categoryIndex === 0 ||
-            selectedBlocks.some(block => block.category === categoryOrder[categoryIndex - 1])
+          const isAvailable = index === 0 ||
+            selectedOptions.some(opt => opt.category === categoryOrder[index - 1])
+
+          // Don't show category if no options available (contextually filtered out)
+          if (isAvailable && availableOptions.length === 0 && categoryName !== 'style') {
+            return null
+          }
 
           return (
-            <Card key={category.name} id={`category-${category.name}`} className={`bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border-slate-600/30 ${!isAvailable && !selectedInCategory ? 'opacity-50' : ''}`}>
+            <Card key={categoryName} id={`category-${categoryName}`} className={`bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border-slate-600/30 ${!isAvailable && !selectedInCategory ? 'opacity-50' : ''}`}>
               <CardHeader
                 className={`pb-2 transition-colors ${(isAvailable || selectedInCategory) ? 'cursor-pointer hover:bg-gray-750' : 'cursor-not-allowed'}`}
-                onClick={() => (isAvailable || selectedInCategory) && toggleCategory(category.name)}
+                onClick={() => (isAvailable || selectedInCategory) && toggleCategory(categoryName)}
               >
                 <CardTitle className="flex items-center justify-between text-sm">
                   <div className="flex items-center space-x-2">
+                    {getCategoryIcon(categoryName)}
                     <span className={`font-medium ${selectedInCategory ? 'text-[#667EEA]' : 'text-white'}`}>
-                      {getCategoryLabel(category.name)}
+                      {getCategoryLabel(categoryName)}
                     </span>
                     {selectedInCategory && (
                       <Badge className="bg-[#667EEA] text-white text-xs px-2">
                         ✓ {selectedInCategory.name}
                       </Badge>
                     )}
-                    {!category.allowMultiple && !selectedInCategory && (
+                    {allowsMultiple(categoryName) && (
                       <Badge variant="outline" className="text-xs border-gray-500 text-gray-400">
-                        Único
+                        Múltiplo
                       </Badge>
                     )}
                     {!isAvailable && (
@@ -399,36 +597,29 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelect
               {isExpanded && (
                 <CardContent className="pt-0 pb-4">
                   <div className="grid grid-cols-1 gap-2">
-                    {category.blocks.map((block) => {
-                      const isSelected = selectedBlocks.some(b => b.id === block.id)
-                      const isCopied = copiedBlocks.includes(block.id)
-                      const isCompatible = isBlockCompatible(block)
-                      const isBlockDisabled = (!isAvailable && !selectedInCategory) || !isCompatible
+                    {availableOptions.map((option: any) => {
+                      const isSelected = selectedOptions.some(opt => opt.id === option.id)
+                      const isCopied = copiedBlocks.includes(option.id)
 
                       return (
                         <Button
-                          key={block.id}
+                          key={option.id}
                           variant={isSelected ? "default" : "outline"}
                           size="sm"
-                          onClick={() => (isAvailable || selectedInCategory) && isCompatible && toggleBlock(block)}
-                          disabled={isBlockDisabled}
+                          onClick={() => toggleOption(categoryName, option)}
+                          disabled={!isAvailable && !selectedInCategory}
                           className={`w-full justify-between text-left h-auto py-3 px-4 transition-all ${
                             isSelected
                               ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-[#667EEA]'
-                              : isBlockDisabled
-                              ? 'bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
                               : 'bg-gray-700 border-slate-600/30 text-white hover:bg-gray-600 hover:border-gray-500'
                           }`}
                         >
                           <div className="flex flex-col items-start">
-                            <span className="text-sm font-medium">{block.name}</span>
-                            {block.description && category.name === 'camera' ? (
-                              <span className="text-xs opacity-75 mt-0.5">{block.description}</span>
+                            <span className="text-sm font-medium">{option.name}</span>
+                            {option.description && categoryName === 'camera' ? (
+                              <span className="text-xs opacity-75 mt-0.5">{option.description}</span>
                             ) : (
-                              <span className="text-xs opacity-75 mt-0.5">{block.value.slice(0, 50)}...</span>
-                            )}
-                            {!isCompatible && (isAvailable || selectedInCategory) && (
-                              <span className="text-xs text-yellow-400 mt-1">⚠️ Incompatível com seleção anterior</span>
+                              <span className="text-xs opacity-75 mt-0.5">{option.value.slice(0, 50)}...</span>
                             )}
                           </div>
                           {isCopied && <Check className="w-4 h-4 text-[#667EEA]" />}
@@ -460,7 +651,7 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelect
               <Button
                 variant="outline"
                 onClick={handleCopyPrompt}
-                disabled={selectedBlocks.length === 0}
+                disabled={selectedOptions.length === 0}
                 className="border-slate-500 text-slate-300 hover:bg-slate-700"
               >
                 <Copy className="w-4 h-4" />
