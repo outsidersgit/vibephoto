@@ -42,8 +42,8 @@ export function PackageConfigModal({
 }: PackageConfigModalProps) {
   const [models, setModels] = useState<AIModel[]>([])
   const [selectedModel, setSelectedModel] = useState<string>('')
-  const [selectedGender, setSelectedGender] = useState<'MALE' | 'FEMALE'>('MALE')
-  const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>('1:1')
+  const [selectedGender, setSelectedGender] = useState<'MALE' | 'FEMALE'>('FEMALE') // Pre-select FEMALE (maior público)
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>('3:4') // Pre-select 3:4 (retrato)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 

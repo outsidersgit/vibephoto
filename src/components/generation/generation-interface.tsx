@@ -71,6 +71,7 @@ export function GenerationInterface({
   const [isMobile, setIsMobile] = useState(false)
   const [isButtonLocked, setIsButtonLocked] = useState(false)
   const [showCreditPurchase, setShowCreditPurchase] = useState(false)
+  const [promptBuilderResetKey, setPromptBuilderResetKey] = useState(0) // Key to force PromptBuilder reset
   const buttonFallbackTimerRef = useRef<NodeJS.Timeout | null>(null)
   const pendingGenerationIdRef = useRef<string | null>(null)
 
@@ -250,6 +251,7 @@ export function GenerationInterface({
     setIsLastBlockSelected(false)
     setIsGuidedMode(false)
     setCurrentGeneration(null)
+    setPromptBuilderResetKey(prev => prev + 1) // Force PromptBuilder to reset by changing key
     // Clear persisted data (idempotent cleanup)
     finalizeDraft('generation')
   }, [])
@@ -885,6 +887,7 @@ export function GenerationInterface({
             </CardHeader>
             <CardContent className="space-y-4">
               <PromptInput
+                key={promptBuilderResetKey}
                 prompt={prompt}
                 negativePrompt={negativePrompt}
                 onPromptChange={setPrompt}

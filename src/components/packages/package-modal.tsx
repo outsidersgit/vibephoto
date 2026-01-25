@@ -53,7 +53,7 @@ export function PackageModal({ package: pkg, onClose }: PackageModalProps) {
   const [showProgressModal, setShowProgressModal] = useState(false)
   const [activeUserPackageId, setActiveUserPackageId] = useState<string | null>(null)
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
-  const [previewGender, setPreviewGender] = useState<'MALE' | 'FEMALE'>('MALE')
+  const [previewGender, setPreviewGender] = useState<'MALE' | 'FEMALE'>('FEMALE') // Pre-select FEMALE (maior público)
 
   const router = useRouter()
 

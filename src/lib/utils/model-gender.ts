@@ -47,11 +47,11 @@ export function getModelGender(modelClass: string | null | undefined): ModelGend
 export function getGenderPrefix(gender: ModelGender): string {
   switch (gender) {
     case 'female':
-      return 'Mulher bonita, '
+      return 'Retrato fotográfico profissional de uma mulher, '
     case 'male':
-      return 'Homem bonito, '
+      return 'Retrato fotográfico profissional de um homem, '
     default:
-      return 'Pessoa, '
+      return 'Retrato fotográfico profissional, '
   }
 }
 
