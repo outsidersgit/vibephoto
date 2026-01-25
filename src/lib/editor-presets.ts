@@ -53,7 +53,7 @@ export const EDITOR_PRESETS: EditorPreset[] = [
         title: 'Clean (e-commerce)',
         description: 'Fundo branco, iluminação de estúdio',
         promptBase: 'Crie uma foto de produto clean para e-commerce de alta conversão. Use a imagem anexada como referência do produto, mantendo 100% de fidelidade visual (forma exata, proporções, cores, texturas, detalhes e acabamentos). FUNDO: branco puro ou gradiente neutro sutil, sem elementos distrativos. ILUMINAÇÃO: estúdio profissional com softbox (luz principal a 45°, luz de preenchimento suave, backlight para separação do fundo), sombras suaves e difusas para profundidade. COMPOSIÇÃO: produto centralizado em destaque absoluto, perspectiva frontal levemente superior, aparência hiper-realista e apetecível. RESULTADO: imagem limpa e profissional, pronta para marketplace premium (Amazon, Mercado Livre, loja virtual).',
-        instruction: 'Anexe a foto do produto'
+        instruction: 'Anexe a(s) foto(s) do(s) produto(s)'
       },
       {
         id: 'product-model',
@@ -67,7 +67,7 @@ export const EDITOR_PRESETS: EditorPreset[] = [
         title: 'Editorial (premium)',
         description: 'Composição sofisticada com styling',
         promptBase: 'Crie uma fotografia editorial premium e sofisticada do produto, estilo revista de luxo. Use a imagem anexada como referência do produto, mantendo 100% de fidelidade visual. ESTILO EDITORIAL: composição artística e refinada, iluminação dramática e cinematográfica (luz direcionada, sombras marcadas, contraste elegante), elementos de styling complementares (tecidos nobres, superfícies premium, objetos de design discretos). COMPOSIÇÃO: assimétrica e dinâmica, uso criativo de espaço negativo, ângulos interessantes mas não extremos, profundidade de campo seletiva (produto em foco, background artisticamente desfocado). PALETA: cores harmoniosas e elegantes, tons ricos e profundos ou minimalismo sofisticado conforme produto. CONTEXTO: elementos que elevam percepção de valor (mármore, madeira nobre, metal escovado, vidro, tecidos luxuosos), sem competir com produto principal. ATMOSFERA: sofisticação, exclusividade, desejo, aspiração. IDEAL PARA: perfumes, cosméticos, joias, relógios, produtos premium, itens de luxo. RESULTADO: imagem editorial de alto impacto, pronta para campanha publicitária premium, revista ou catálogo sofisticado.',
-        instruction: 'Anexe a foto do produto'
+        instruction: 'Anexe a(s) foto(s) do(s) produto(s)'
       }
     ]
   },
@@ -81,7 +81,7 @@ export const EDITOR_PRESETS: EditorPreset[] = [
     id: 'ugc-content',
     title: 'Conteúdo UGC',
     promptBase: 'Crie conteúdo UGC (User-Generated Content) autêntico e realista, como se fosse uma captura espontânea feita por um influenciador digital no celular. PRIMEIRA IMAGEM (se anexada) = pessoa/influencer, preserve 100% a identidade: rosto, traços, tom de pele, cabelo, expressão. IMAGENS SEGUINTES = produto(s) a serem apresentados naturalmente. ESTÉTICA SMARTPHONE: foto tirada com iPhone ou Android moderno (câmera traseira principal 12-48MP), qualidade natural de smartphone (não profissional), leve grain/ruído digital sutil, profundidade de campo natural (foco no rosto/produto, background suavemente desfocado). ILUMINAÇÃO NATURAL: luz de janela, golden hour, ambiente interno com luz natural, sem flash, sem iluminação de estúdio, sombras suaves e orgânicas, exposição balanceada mas não perfeita. COMPOSIÇÃO CASUAL: ângulo levemente inclinado ou imperfeito (não totalmente reto), enquadramento espontâneo, regra dos terços mas não óbvio, pessoa segurando produto de forma natural e relaxada, mão parcialmente visível se segurando celular ou produto. AMBIENTE COTIDIANO: quarto, sala, cozinha, café, parque, rua urbana, cenário identificável e crível, elementos do dia-a-dia no background (plantas, livros, móveis, objetos pessoais), background desfocado mas reconhecível. EXPRESSÃO AUTÊNTICA: sorriso natural (não forçado), olhar direto ou levemente desviado da câmera, linguagem corporal relaxada e genuína, sem pose profissional rígida. INTERAÇÃO COM PRODUTO: pessoa usando, segurando, mostrando ou interagindo naturalmente com o produto, produto integrado à cena de forma orgânica (não apenas exposto), contexto de uso real e cotidiano. IMPERFEIÇÕES INTENCIONAIS: leve motion blur sutil, ângulo não perfeitamente alinhado, iluminação não uniforme, pequenas imperfeições que aumentam autenticidade (fio de cabelo solto, roupa amassada). DETALHES REALISTAS: textura de pele com poros visíveis, cabelo com fios individuais, unhas naturais, micro-expressões faciais, sombras e reflexos coerentes com iluminação ambiente. NÃO FAÇA: iluminação de estúdio, fundo infinito branco, pose profissional, edição pesada, perfeição excessiva, elementos artificiais. SE NÃO HOUVER PESSOA ANEXADA: crie um influencer digital diverso, natural e contemporâneo que combine com o produto e contexto. Resultado: imagem indistinguível de conteúdo real gerado por usuário, autêntica, casual e altamente engajadora para anúncios.',
-    instruction: 'Anexe a foto do produto • Opcional: anexe também a foto da pessoa'
+    instruction: 'Anexe a(s) foto(s) do(s) produto(s) • Opcional: anexe também a foto da pessoa'
   },
   {
     id: 'banner',

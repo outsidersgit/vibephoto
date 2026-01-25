@@ -1437,10 +1437,13 @@ function detectOperationContext(generation: any): {
   if (prompt.startsWith('[EDITOR]')) {
     return { operationType: 'edit', storageContext: 'edited' }
   }
+  if (prompt.startsWith('[STUDIO IA')) {
+    return { operationType: 'edit', storageContext: 'edited' }
+  }
   if (prompt.startsWith('[VIDEO]')) {
     return { operationType: 'video', storageContext: 'videos' }
   }
-  
+
   // Default: geração normal
   return { operationType: 'generation', storageContext: 'generated' }
 }

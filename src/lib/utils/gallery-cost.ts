@@ -14,7 +14,7 @@ interface CostOverrides {
   metadata?: CostMetadata
 }
 
-const EDIT_PROMPT_PREFIXES = ['[EDITOR]', '[EDITED]', '[GERADO]']
+const EDIT_PROMPT_PREFIXES = ['[EDITOR]', '[EDITED]', '[GERADO]', '[STUDIO IA']
 const UPSCALE_PROMPT_PREFIXES = ['[UPSCALED]', '[UPSCALING]']
 
 function parseNumber(value: unknown): number | undefined {

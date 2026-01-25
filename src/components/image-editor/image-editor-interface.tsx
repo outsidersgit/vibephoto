@@ -1258,9 +1258,13 @@ export function ImageEditorInterface({
               <p className="text-xs text-gray-600">Escolha um atalho e gere mais rápido</p>
             </div>
 
-            {/* Atalhos Horizontal Scroll - Com sombra */}
-            <div className="flex gap-2.5 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide">
-              {EDITOR_PRESETS.map((preset) => (
+            {/* Atalhos Horizontal Scroll - Com sombra e indicador de scroll */}
+            <div className="relative">
+              {/* Gradiente indicador de scroll à direita */}
+              <div className="absolute right-0 top-0 bottom-3 w-8 bg-gradient-to-l from-white via-white/90 to-transparent pointer-events-none z-10" />
+
+              <div className="flex gap-2.5 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide">
+                {EDITOR_PRESETS.map((preset) => (
                 <div key={preset.id} className="flex-shrink-0">
                   <button
                     onClick={() => handlePresetSelect(preset.id)}
@@ -1275,7 +1279,7 @@ export function ImageEditorInterface({
 
                   {/* Sub-presets expandidos abaixo do botão principal */}
                   {preset.subPresets && selectedPreset === preset.id && (
-                    <div className="mt-2 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden min-w-[200px]">
+                    <div className="mt-2 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden w-full max-w-xs">
                       {preset.subPresets.map((subPreset, index) => (
                         <button
                           key={subPreset.id}
@@ -1294,6 +1298,7 @@ export function ImageEditorInterface({
                   )}
                 </div>
               ))}
+              </div>
             </div>
 
             {/* Modo Livre - Separado */}

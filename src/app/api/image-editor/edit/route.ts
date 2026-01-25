@@ -230,12 +230,34 @@ export async function POST(request: NextRequest) {
     if (webhookUrl && (result.status === 'processing' || result.status === 'starting') && !result.resultImage) {
       console.log('📡 Editor using async webhook processing:', result.id)
 
+      // Find preset name if presetId provided
+      let presetName = ''
+      if (presetId) {
+        // Try to find the preset in EDITOR_PRESETS
+        const { EDITOR_PRESETS } = await import('@/lib/editor-presets')
+        const preset = EDITOR_PRESETS.find(p => p.id === presetId)
+        if (preset) {
+          presetName = ` - ${preset.title}`
+        } else {
+          // Maybe it's a sub-preset, search in subPresets
+          for (const p of EDITOR_PRESETS) {
+            if (p.subPresets) {
+              const subPreset = p.subPresets.find(sp => sp.id === presetId)
+              if (subPreset) {
+                presetName = ` - ${subPreset.title}`
+                break
+              }
+            }
+          }
+        }
+      }
+
       // Also create a placeholder generation for gallery preview
       const placeholderGeneration = await prisma.generation.create({
         data: {
           userId: session.user.id,
           modelId: null,
-          prompt: (images.length > 0 || imageUrls.length > 0) ? `[EDITOR] ${prompt}` : `[GERADO] ${prompt}`,
+          prompt: `[STUDIO IA${presetName}] ${prompt}`,
           status: 'PROCESSING',
           imageUrls: [],
           thumbnailUrls: [],
@@ -250,7 +272,8 @@ export async function POST(request: NextRequest) {
             replicateId: result.id,
             generatedFromScratch: images.length === 0 && imageUrls.length === 0,
             processingStartedAt: new Date().toISOString(),
-            webhookEnabled: true
+            webhookEnabled: true,
+            resolution: resolution // 'standard' ou '4k' para cálculo de custo
           }
         }
       })
@@ -427,6 +450,28 @@ export async function POST(request: NextRequest) {
     let generationRecord = null
     try {
       if (result.resultImage) {
+        // Find preset name if presetId provided
+        let presetName = ''
+        if (presetId) {
+          // Try to find the preset in EDITOR_PRESETS
+          const { EDITOR_PRESETS } = await import('@/lib/editor-presets')
+          const preset = EDITOR_PRESETS.find(p => p.id === presetId)
+          if (preset) {
+            presetName = ` - ${preset.title}`
+          } else {
+            // Maybe it's a sub-preset, search in subPresets
+            for (const p of EDITOR_PRESETS) {
+              if (p.subPresets) {
+                const subPreset = p.subPresets.find(sp => sp.id === presetId)
+                if (subPreset) {
+                  presetName = ` - ${subPreset.title}`
+                  break
+                }
+              }
+            }
+          }
+        }
+
         const generationMetadata = {
           source: (images.length > 0 || imageUrls.length > 0) ? 'editor' : 'editor_generate',
           editHistoryId: editHistoryEntry?.id,
@@ -436,7 +481,8 @@ export async function POST(request: NextRequest) {
           permanentUrl: permanentImageUrl,
           cost: creditsNeeded,
           originalImageUrl: (images.length > 0 || imageUrls.length > 0) ? 'uploaded-image' : 'generated-from-scratch',
-          processingCompletedAt: new Date().toISOString()
+          processingCompletedAt: new Date().toISOString(),
+          resolution: resolution // 'standard' ou '4k' para cálculo de custo
         }
 
         // Create new generation record for gallery
@@ -444,7 +490,7 @@ export async function POST(request: NextRequest) {
           data: {
             userId: session.user.id,
             modelId: null,
-            prompt: (images.length > 0 || imageUrls.length > 0) ? `[EDITOR] ${prompt}` : `[GERADO] ${prompt}`,
+            prompt: `[STUDIO IA${presetName}] ${prompt}`,
             status: 'COMPLETED',
             imageUrls: [permanentImageUrl], // Use permanent S3 URL
             thumbnailUrls: [permanentThumbnailUrl], // Use permanent S3 URL
