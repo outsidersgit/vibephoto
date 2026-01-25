@@ -77,13 +77,65 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelect
     manageCategories()
   }, [selectedBlocks])
 
+  // Compatibility rules: which options are incompatible with each other
+  const incompatibilityRules = {
+    // Lighting incompatibilities
+    lighting: {
+      golden: ['office', 'studio'], // Golden hour doesn't work in indoor spaces
+      studio: ['outdoor'], // Studio lighting is indoor only
+      natural: ['studio'], // Natural light conflicts with controlled studio lighting
+    },
+    // Style incompatibilities
+    style: {
+      prof: ['outdoor'], // Professional style typically not in outdoor casual settings
+      casual: ['office', 'studio'], // Casual style doesn't match formal environments
+      fashion: ['home'], // Fashion shoots rarely in home environments
+    },
+    // Camera incompatibilities
+    camera: {
+      macro: ['outdoor', 'urban'], // Macro doesn't work well in wide outdoor settings
+    },
+    // Environment incompatibilities
+    environment: {
+      outdoor: ['studio'], // Outdoor and studio are mutually exclusive
+      studio: ['outdoor', 'urban'], // Studio is indoor only
+      office: ['golden'], // Office doesn't have golden hour lighting
+    }
+  }
+
+  // Function to check if a block is compatible with current selections
+  const isBlockCompatible = (block: PromptBlock): boolean => {
+    if (selectedBlocks.length === 0) return true
+
+    // Check if this block is incompatible with any selected blocks
+    for (const selectedBlock of selectedBlocks) {
+      const categoryRules = incompatibilityRules[selectedBlock.category as keyof typeof incompatibilityRules]
+      if (categoryRules) {
+        const blockIncompatibilities = categoryRules[selectedBlock.id as keyof typeof categoryRules] as string[] | undefined
+        if (blockIncompatibilities?.includes(block.id)) {
+          return false
+        }
+      }
+
+      const blockCategoryRules = incompatibilityRules[block.category as keyof typeof incompatibilityRules]
+      if (blockCategoryRules) {
+        const selectedIncompatibilities = blockCategoryRules[block.id as keyof typeof blockCategoryRules] as string[] | undefined
+        if (selectedIncompatibilities?.includes(selectedBlock.id)) {
+          return false
+        }
+      }
+    }
+
+    return true
+  }
+
   // Prompt building blocks organized by category
   const promptCategories: PromptCategory[] = [
     {
       name: 'style',
       blocks: [
-        { id: 'prof', name: 'Profissional', value: 'foto profissional de negócios, expressão confiante, fundo de escritório', category: 'style', isSelected: false },
-        { id: 'casual', name: 'Casual', value: 'retrato casual ao ar livre, pose natural relaxada, roupas confortáveis', category: 'style', isSelected: false },
+        { id: 'prof', name: 'Profissional', value: 'foto profissional de negócios, expressão confiante', category: 'style', isSelected: false },
+        { id: 'casual', name: 'Casual', value: 'retrato casual, pose natural relaxada, roupas confortáveis', category: 'style', isSelected: false },
         { id: 'artistic', name: 'Artístico', value: 'retrato artístico, composição criativa, humor expressivo', category: 'style', isSelected: false },
         { id: 'fashion', name: 'Fashion', value: 'retrato de alta moda, roupa elegante, pose sofisticada', category: 'style', isSelected: false },
         { id: 'lifestyle', name: 'Lifestyle', value: 'fotografia lifestyle, momento espontâneo, ambiente cotidiano', category: 'style', isSelected: false },
@@ -350,19 +402,21 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelect
                     {category.blocks.map((block) => {
                       const isSelected = selectedBlocks.some(b => b.id === block.id)
                       const isCopied = copiedBlocks.includes(block.id)
+                      const isCompatible = isBlockCompatible(block)
+                      const isBlockDisabled = (!isAvailable && !selectedInCategory) || !isCompatible
 
                       return (
                         <Button
                           key={block.id}
                           variant={isSelected ? "default" : "outline"}
                           size="sm"
-                          onClick={() => (isAvailable || selectedInCategory) && toggleBlock(block)}
-                          disabled={!isAvailable && !selectedInCategory}
+                          onClick={() => (isAvailable || selectedInCategory) && isCompatible && toggleBlock(block)}
+                          disabled={isBlockDisabled}
                           className={`w-full justify-between text-left h-auto py-3 px-4 transition-all ${
                             isSelected
                               ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:from-[#5a6bd8] hover:to-[#6a4190] text-white border-[#667EEA]'
-                              : (!isAvailable && !selectedInCategory)
-                              ? 'bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border-gray-700 text-gray-500 cursor-not-allowed'
+                              : isBlockDisabled
+                              ? 'bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border-gray-700 text-gray-500 cursor-not-allowed opacity-50'
                               : 'bg-gray-700 border-slate-600/30 text-white hover:bg-gray-600 hover:border-gray-500'
                           }`}
                         >
@@ -372,6 +426,9 @@ export function PromptBuilder({ onPromptGenerated, onGenerate, onLastBlockSelect
                               <span className="text-xs opacity-75 mt-0.5">{block.description}</span>
                             ) : (
                               <span className="text-xs opacity-75 mt-0.5">{block.value.slice(0, 50)}...</span>
+                            )}
+                            {!isCompatible && (isAvailable || selectedInCategory) && (
+                              <span className="text-xs text-yellow-400 mt-1">⚠️ Incompatível com seleção anterior</span>
                             )}
                           </div>
                           {isCopied && <Check className="w-4 h-4 text-[#667EEA]" />}
