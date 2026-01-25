@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
       where: {
         createdAt: { gte: last24h },
         source: 'SUBSCRIPTION',
-        type: { in: ['EARNED', 'RENEWED'] }
+        type: 'EARNED' // Renovação de créditos é sempre EARNED
       },
       include: {
         user: {
