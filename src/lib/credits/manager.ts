@@ -74,6 +74,11 @@ export const PLAN_LIMITS: Record<Plan, CreditLimits> = {
 }
 
 export class CreditManager {
+  /**
+   * Retorna total de créditos disponíveis do usuário
+   * 
+   * ✅ CORREÇÃO 25/01/2026: Adicionado grace period de 24h para expiração
+   */
   static async getUserCredits(userId: string): Promise<number> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -81,7 +86,8 @@ export class CreditManager {
         creditsUsed: true, 
         creditsLimit: true, 
         creditsBalance: true,
-        creditsExpiresAt: true // CRITICAL: Check expiration
+        creditsExpiresAt: true,
+        lastCreditRenewalAt: true  // ✅ NOVO
       }
     })
     
@@ -89,15 +95,26 @@ export class CreditManager {
       return 0
     }
     
-    // CRITICAL: Check if plan credits expired (same logic as deductCredits)
     const now = new Date()
     let planCreditsAvailable = 0
     
+    // ✅ NOVA LÓGICA: Verificar expiração com grace period
     if (user.creditsExpiresAt && user.creditsExpiresAt < now) {
-      // Plan credits expired - can't use them
-      planCreditsAvailable = 0
+      const jaRenovou = user.lastCreditRenewalAt && 
+                        user.lastCreditRenewalAt >= user.creditsExpiresAt
+      
+      if (jaRenovou) {
+        planCreditsAvailable = Math.max(0, user.creditsLimit - user.creditsUsed)
+      } else {
+        const umDiaAposExpiracao = new Date(user.creditsExpiresAt.getTime() + 24 * 60 * 60 * 1000)
+        
+        if (now < umDiaAposExpiracao) {
+          planCreditsAvailable = Math.max(0, user.creditsLimit - user.creditsUsed)
+        } else {
+          planCreditsAvailable = 0
+        }
+      }
     } else {
-      // Plan credits still valid
       planCreditsAvailable = Math.max(0, user.creditsLimit - user.creditsUsed)
     }
     
@@ -205,7 +222,8 @@ export class CreditManager {
           creditsLimit: true,
           creditsBalance: true,
           creditsExpiresAt: true,
-          billingCycle: true
+          billingCycle: true,
+          lastCreditRenewalAt: true  // ✅ NOVO: Para verificar se renovou
         }
       })
 
@@ -213,12 +231,26 @@ export class CreditManager {
         return { success: false, error: 'User not found' }
       }
 
-      // VALIDAÇÃO: Créditos do plano (mensais ou anuais) expirados não podem ser usados
+      // ✅ CORREÇÃO 25/01/2026: Créditos do plano expirados com grace period
       const now = new Date()
       let planCreditsAvailable = 0
 
+      // ✅ NOVA LÓGICA: Com grace period
       if (user.creditsExpiresAt && user.creditsExpiresAt < now) {
-        planCreditsAvailable = 0
+        const jaRenovou = user.lastCreditRenewalAt && 
+                          user.lastCreditRenewalAt >= user.creditsExpiresAt
+        
+        if (jaRenovou) {
+          planCreditsAvailable = Math.max(0, user.creditsLimit - user.creditsUsed)
+        } else {
+          const umDiaAposExpiracao = new Date(user.creditsExpiresAt.getTime() + 24 * 60 * 60 * 1000)
+          
+          if (now < umDiaAposExpiracao) {
+            planCreditsAvailable = Math.max(0, user.creditsLimit - user.creditsUsed)
+          } else {
+            planCreditsAvailable = 0
+          }
+        }
       } else {
         planCreditsAvailable = Math.max(0, user.creditsLimit - user.creditsUsed)
       }

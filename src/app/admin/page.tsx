@@ -13,6 +13,7 @@ export default async function AdminHomePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
           { title: 'Usuários', href: '/admin/users', desc: 'Gerencie usuários, planos e créditos' },
+          { title: '💰 Monitoramento de Créditos', href: '/admin/credits', desc: 'Dashboard de renovações, alertas e diagnóstico', highlight: true },
           { title: 'Cobranças 💳', href: '/admin/payments', desc: 'Histórico de todas as cobranças e inadimplência' },
           { title: 'Planos de Assinatura', href: '/admin/subscription-plans', desc: 'Gerencie planos, preços, créditos e features' },
           { title: 'Pacotes de Créditos', href: '/admin/credit-packages', desc: 'Gerencie pacotes de créditos avulsos' },
@@ -23,7 +24,13 @@ export default async function AdminHomePage() {
           { title: 'Ferramentas 🔧', href: '/admin/tools', desc: 'Sincronização, manutenção e correções do sistema' },
           { title: 'Client Errors 🔴', href: '/admin/client-errors', desc: 'Logs de erros do navegador (Safari/iOS)' },
         ].map(card => (
-          <a key={card.href} href={card.href} className="block rounded-lg border border-gray-200 p-4 hover:shadow-sm transition">
+          <a 
+            key={card.href} 
+            href={card.href} 
+            className={`block rounded-lg border p-4 hover:shadow-sm transition ${
+              card.highlight ? 'border-purple-300 bg-purple-50' : 'border-gray-200'
+            }`}
+          >
             <div className="font-semibold text-gray-800">{card.title}</div>
             <div className="text-sm text-gray-500 mt-1">{card.desc}</div>
           </a>

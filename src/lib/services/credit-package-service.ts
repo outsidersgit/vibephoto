@@ -229,6 +229,8 @@ export class CreditPackageService {
   
   /**
    * Calcula o saldo total de créditos de um usuário
+   * 
+   * ✅ CORREÇÃO 25/01/2026: Adicionado grace period de 24h para evitar badge zerando entre expiração e renovação
    */
   static async getUserCreditBalance(userId: string): Promise<CreditBalance> {
     const user = await prisma.user.findUnique({
@@ -237,8 +239,10 @@ export class CreditPackageService {
         creditsUsed: true,
         creditsLimit: true,
         creditsBalance: true,
-        creditsExpiresAt: true, // CRITICAL: Check expiration
-        subscriptionEndsAt: true
+        creditsExpiresAt: true,
+        subscriptionEndsAt: true,
+        lastCreditRenewalAt: true,  // ✅ NOVO: Para verificar se renovou
+        billingCycle: true          // ✅ NOVO: Para lógica correta
       }
     })
 
@@ -246,15 +250,34 @@ export class CreditPackageService {
       throw new Error('Usuário não encontrado')
     }
 
-    // CRITICAL: Check if plan credits expired (same logic as CreditManager)
     const now = new Date()
     let subscriptionCredits = 0
     
+    // ✅ NOVA LÓGICA: Verificar expiração com grace period
     if (user.creditsExpiresAt && user.creditsExpiresAt < now) {
-      // Plan credits expired - can't use them
-      subscriptionCredits = 0
+      // Créditos expiraram, mas verificar se renovação já aconteceu
+      const jaRenovou = user.lastCreditRenewalAt && 
+                        user.lastCreditRenewalAt >= user.creditsExpiresAt
+      
+      if (jaRenovou) {
+        // ✅ Renovação já aconteceu, créditos são válidos
+        subscriptionCredits = Math.max(0, user.creditsLimit - user.creditsUsed)
+      } else {
+        // Renovação ainda não aconteceu, verificar grace period
+        const umDiaAposExpiracao = new Date(user.creditsExpiresAt.getTime() + 24 * 60 * 60 * 1000)
+        
+        if (now < umDiaAposExpiracao) {
+          // ✅ Dentro do grace period (24h), manter créditos disponíveis
+          subscriptionCredits = Math.max(0, user.creditsLimit - user.creditsUsed)
+          console.log(`⚠️ [getUserCreditBalance] User ${userId} in grace period (creditsExpiresAt: ${user.creditsExpiresAt}, now: ${now})`)
+        } else {
+          // ❌ Passou 24h e renovação não aconteceu, zerar
+          subscriptionCredits = 0
+          console.log(`❌ [getUserCreditBalance] User ${userId} credits expired (> 24h ago)`)
+        }
+      }
     } else {
-      // Plan credits still valid
+      // ✅ Créditos ainda válidos
       subscriptionCredits = Math.max(0, user.creditsLimit - user.creditsUsed)
     }
     
@@ -266,20 +289,19 @@ export class CreditPackageService {
       creditsUsed: user.creditsUsed,
       creditsBalance: user.creditsBalance,
       creditsExpiresAt: user.creditsExpiresAt,
+      lastCreditRenewalAt: user.lastCreditRenewalAt,
       subscriptionCredits,
       purchasedCredits,
       totalCredits,
       isExpired: user.creditsExpiresAt ? user.creditsExpiresAt < now : false
     })
 
-    // Calcular próxima renovação (primeiro do próximo mês ou data de término da assinatura)
+    // Calcular próxima renovação
     let nextReset: string | null = null
     if (user.subscriptionEndsAt) {
       nextReset = user.subscriptionEndsAt.toISOString()
-    } else {
-      const now = new Date()
-      const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-      nextReset = nextMonth.toISOString()
+    } else if (user.creditsExpiresAt) {
+      nextReset = user.creditsExpiresAt.toISOString()
     }
 
     return {

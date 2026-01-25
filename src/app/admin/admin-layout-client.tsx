@@ -7,6 +7,8 @@ import { ReactNode } from 'react'
 const items = [
   { href: '/admin', label: 'Home' },
   { href: '/admin/users', label: 'Usuários' },
+  { href: '/admin/credits', label: '💰 Créditos', highlight: true },
+  { href: '/admin/payments', label: 'Cobranças' },
   { href: '/admin/subscription-plans', label: 'Planos de Assinatura' },
   { href: '/admin/credit-packages', label: 'Pacotes de Créditos' },
   { href: '/admin/photo-packages', label: 'Pacotes de Fotos' },
@@ -14,6 +16,7 @@ const items = [
   { href: '/admin/analytics', label: 'Analytics' },
   { href: '/admin/retention', label: 'Retenção' },
   { href: '/admin/feedback', label: 'Feedback' },
+  { href: '/admin/tools', label: 'Ferramentas' },
 ]
 
 export default function AdminLayoutClient({ children }: { children: ReactNode }) {
@@ -29,7 +32,11 @@ export default function AdminLayoutClient({ children }: { children: ReactNode })
                 key={item.href}
                 href={item.href}
                 className={`block rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  pathname === item.href ? 'bg-purple-100 text-purple-800' : 'text-gray-700 hover:bg-gray-100'
+                  pathname === item.href 
+                    ? 'bg-purple-100 text-purple-800' 
+                    : item.highlight 
+                      ? 'text-purple-700 hover:bg-purple-50' 
+                      : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
                 {item.label}

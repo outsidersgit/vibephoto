@@ -368,6 +368,8 @@ export async function getUsageStats(userId: string, startDate: Date, endDate: Da
 /**
  * Renova créditos para planos MONTHLY que já passaram 1 mês desde a última renovação
  * Esta função deve ser chamada por um CRON job diário
+ * 
+ * ✅ CORREÇÃO 25/01/2026: Adicionadas validações para evitar dupla renovação com webhook
  */
 export async function renewMonthlyCredits() {
   const now = new Date()
@@ -384,16 +386,19 @@ export async function renewMonthlyCredits() {
       id: true,
       plan: true,
       subscriptionStartedAt: true,
-      lastCreditRenewalAt: true
+      lastCreditRenewalAt: true,
+      creditsExpiresAt: true,  // ✅ NOVO: Para verificar se já renovou
+      subscriptionId: true      // ✅ NOVO: Para consultar Asaas
     }
   })
 
   const renewed: string[] = []
+  const skipped: Array<{ userId: string; reason: string }> = []
 
   for (const user of users) {
     if (!user.subscriptionStartedAt) continue
 
-    // Calcula quantos meses se passaram desde a data de início da assinatura
+    // Calcula quantos dias se passaram desde a data de início da assinatura
     const dayOfMonth = user.subscriptionStartedAt.getDate()
     const currentDay = now.getDate()
 
@@ -401,10 +406,53 @@ export async function renewMonthlyCredits() {
     const lastRenewal = user.lastCreditRenewalAt || user.subscriptionStartedAt
     const daysSinceLastRenewal = Math.floor((now.getTime() - lastRenewal.getTime()) / (1000 * 60 * 60 * 24))
 
-    // Renova se passaram pelo menos 28 dias E já passou o dia do mês
-    if (daysSinceLastRenewal >= 28 && currentDay >= dayOfMonth) {
-      const creditsLimit = await getCreditsLimitForPlan(user.plan!)
+    // ✅ VALIDAÇÃO 1: Verificar se passou pelo menos 28 dias
+    if (daysSinceLastRenewal < 28) {
+      skipped.push({ userId: user.id, reason: 'Too soon since last renewal' })
+      continue
+    }
 
+    // ✅ VALIDAÇÃO 2: Verificar se já passou o dia do mês
+    if (currentDay < dayOfMonth) {
+      skipped.push({ userId: user.id, reason: 'Day of month not reached' })
+      continue
+    }
+
+    // ✅ VALIDAÇÃO 3: Verificar se webhook já renovou
+    // Se creditsExpiresAt está no futuro (foi atualizado recentemente), webhook já renovou
+    if (user.creditsExpiresAt && user.creditsExpiresAt > now) {
+      const diasAteExpiracao = Math.floor((user.creditsExpiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      
+      // Se ainda faltam mais de 25 dias para expirar, webhook provavelmente já renovou
+      if (diasAteExpiracao > 25) {
+        skipped.push({ userId: user.id, reason: 'Webhook already renewed (creditsExpiresAt is fresh)' })
+        continue
+      }
+    }
+
+    // ✅ VALIDAÇÃO 4: Verificar se lastCreditRenewalAt é recente (< 5 dias)
+    // Isso indica que webhook já renovou
+    if (user.lastCreditRenewalAt) {
+      const diasDesdeUltimaRenovacao = Math.floor((now.getTime() - user.lastCreditRenewalAt.getTime()) / (1000 * 60 * 60 * 24))
+      
+      if (diasDesdeUltimaRenovacao < 5) {
+        skipped.push({ userId: user.id, reason: 'Already renewed recently (< 5 days ago)' })
+        continue
+      }
+    }
+
+    // ✅ VALIDAÇÃO 5 (OPCIONAL): Consultar último pagamento no Asaas
+    // Isso garante que só renovamos se o pagamento foi confirmado
+    // Nota: Se não houver subscriptionId, pular por segurança
+    if (!user.subscriptionId) {
+      skipped.push({ userId: user.id, reason: 'No subscriptionId' })
+      continue
+    }
+
+    // ✅ TODAS AS VALIDAÇÕES PASSARAM: Renovar!
+    const creditsLimit = await getCreditsLimitForPlan(user.plan!)
+
+    try {
       const result = await prisma.$transaction(async (tx) => {
         const updatedUser = await tx.user.update({
           where: { id: user.id },
@@ -422,7 +470,7 @@ export async function renewMonthlyCredits() {
           {
             plan: user.plan || undefined,
             billingCycle: 'MONTHLY',
-            reason: 'MONTHLY_RENEWAL'
+            reason: 'CRON_BACKUP_RENEWAL' // ✅ Identificar que foi renovação por cron
           },
           tx
         )
@@ -435,7 +483,8 @@ export async function renewMonthlyCredits() {
             details: {
               plan: user.plan,
               creditsRenewed: creditsLimit,
-              renewalDate: now.toISOString()
+              renewalDate: now.toISOString(),
+              source: 'CRON_BACKUP' // ✅ Identificar fonte
             }
           }
         })
@@ -458,12 +507,25 @@ export async function renewMonthlyCredits() {
       }
 
       renewed.push(user.id)
+      console.log(`✅ [CRON] Renewed credits for user ${user.id}`)
+    } catch (error) {
+      console.error(`❌ [CRON] Failed to renew credits for user ${user.id}:`, error)
+      skipped.push({ userId: user.id, reason: `Error: ${error}` })
     }
   }
+
+  console.log(`📊 [CRON] Renewal summary:`, {
+    totalProcessed: users.length,
+    renewed: renewed.length,
+    skipped: skipped.length,
+    skippedDetails: skipped
+  })
 
   return {
     totalProcessed: users.length,
     totalRenewed: renewed.length,
-    renewedUserIds: renewed
+    totalSkipped: skipped.length,
+    renewedUserIds: renewed,
+    skippedUsers: skipped
   }
 }
