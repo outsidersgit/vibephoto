@@ -100,7 +100,6 @@ export async function GET(request: NextRequest) {
     const recentTransactions = await prisma.creditTransaction.findMany({
       where: {
         createdAt: { gte: last24h },
-        source: 'SUBSCRIPTION',
         type: 'EARNED' // Renovação de créditos é sempre EARNED
       },
       include: {
