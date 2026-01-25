@@ -118,12 +118,12 @@ export function PackagesPageClient({ initialPackages = [] }: PackagesPageClientP
   return (
     <div className="space-y-6">
       {/* Page Header with Explanation */}
-      <div className="text-center space-y-2 pb-4 border-b border-gray-700">
-        <h1 className="text-2xl md:text-3xl font-bold text-white">
-          Escolha um estilo e gere fotos profissionais prontas
+      <div className="text-center space-y-3 pb-6 border-b border-gray-700">
+        <h1 className="text-xl md:text-2xl font-semibold text-white tracking-tight">
+          Escolha um estilo e gere fotos prontas
         </h1>
-        <p className="text-gray-400 text-sm md:text-base max-w-3xl mx-auto">
-          Cada pacote gera fotos exatamente no estilo exibido nos previews. É só escolher o estilo e usar seus créditos para gerar.
+        <p className="text-gray-400 text-xs md:text-sm max-w-2xl mx-auto leading-relaxed">
+          Cada pacote gera fotos no estilo dos previews. Escolha o estilo e use seus créditos para gerar.
         </p>
       </div>
 

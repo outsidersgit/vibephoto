@@ -1123,6 +1123,10 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
             
             if (existingPlaceholder) {
               console.log(`🔄 Updating existing placeholder generation: ${existingPlaceholder.id}`)
+              
+              // Use the creditsUsed from editHistory (which already has the correct cost based on resolution)
+              const actualCost = editHistory.creditsUsed || 20 // Fallback to 20 if not set
+              
               await prisma.generation.update({
                 where: { id: existingPlaceholder.id },
                 data: {
@@ -1136,7 +1140,7 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
                     editHistoryId: editHistory.id,
                     operation: editHistory.operation,
                     webhook: true,
-                    cost: 15,
+                    cost: actualCost,
                     processedVia: 'webhook'
                   },
                   completedAt: new Date()
@@ -1145,6 +1149,10 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
               finalGenerationId = existingPlaceholder.id
             } else {
               console.log(`⚠️ No placeholder found, creating new generation record`)
+              
+              // Use the creditsUsed from editHistory (which already has the correct cost based on resolution)
+              const actualCost = editHistory.creditsUsed || 20 // Fallback to 20 if not set
+              
               const newGeneration = await prisma.generation.create({
                 data: {
                   userId: editHistory.userId,
@@ -1160,10 +1168,10 @@ async function processEditWebhook(payload: WebhookPayload, editHistory: any) {
                     editHistoryId: editHistory.id,
                     operation: editHistory.operation,
                     webhook: true,
-                    cost: 15,
+                    cost: actualCost,
                     processedVia: 'webhook'
                   },
-                  estimatedCost: 15,
+                  estimatedCost: actualCost,
                   aiProvider: 'hybrid',
                   completedAt: new Date()
                 }

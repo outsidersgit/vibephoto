@@ -1261,7 +1261,11 @@ export function ImageEditorInterface({
             {/* Atalhos Horizontal Scroll - Com sombra e indicador de scroll */}
             <div className="relative">
               {/* Gradiente indicador de scroll à direita */}
-              <div className="absolute right-0 top-0 bottom-3 w-8 bg-gradient-to-l from-white via-white/90 to-transparent pointer-events-none z-10" />
+              <div className="absolute right-0 top-0 bottom-3 w-12 bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none z-10 flex items-start justify-center pt-2">
+                <div className="text-gray-400 text-[10px] font-medium">
+                  →
+                </div>
+              </div>
 
               <div className="flex gap-2.5 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide">
                 {EDITOR_PRESETS.map((preset) => (
@@ -1279,25 +1283,34 @@ export function ImageEditorInterface({
 
                   {/* Sub-presets expandidos abaixo do botão principal */}
                   {preset.subPresets && selectedPreset === preset.id && (
-                    <div className="mt-2 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden w-full max-w-xs">
+                    <div className="mt-2 mb-3 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden w-full max-w-xs">
                       {preset.subPresets.map((subPreset, index) => (
                         <button
                           key={subPreset.id}
                           onClick={() => handleSubPresetSelect(subPreset.id)}
-                          className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                          className={`w-full text-left px-3 py-2.5 text-xs transition-colors ${
                             selectedSubPreset === subPreset.id
                               ? 'bg-blue-50 text-blue-900 font-semibold'
                               : 'text-gray-700 hover:bg-gray-50'
                           } ${index !== 0 ? 'border-t border-gray-100' : ''}`}
                         >
                           <div className="font-medium">{subPreset.title}</div>
-                          <div className="text-[10px] text-gray-500 mt-0.5">{subPreset.description}</div>
+                          <div className="text-[10px] text-gray-500 mt-0.5 leading-tight">{subPreset.description}</div>
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
               ))}
+              </div>
+              
+              {/* Indicador discreto de mais conteúdo ao deslizar */}
+              <div className="text-center mt-1 mb-2">
+                <p className="text-[10px] text-gray-400 flex items-center justify-center gap-1">
+                  <span>←</span>
+                  <span>Deslize para ver mais atalhos</span>
+                  <span>→</span>
+                </p>
               </div>
             </div>
 
