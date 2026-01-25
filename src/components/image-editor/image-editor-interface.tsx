@@ -1260,13 +1260,6 @@ export function ImageEditorInterface({
 
             {/* Atalhos Horizontal Scroll - Com sombra e indicador de scroll */}
             <div className="relative">
-              {/* Gradiente indicador de scroll à direita */}
-              <div className="absolute right-0 top-0 bottom-3 w-12 bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none z-10 flex items-start justify-center pt-2">
-                <div className="text-gray-400 text-[10px] font-medium">
-                  →
-                </div>
-              </div>
-
               <div className="flex gap-2.5 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide">
                 {EDITOR_PRESETS.map((preset) => (
                 <div key={preset.id} className="flex-shrink-0">
