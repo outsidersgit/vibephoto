@@ -301,6 +301,7 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
             <p>• Garanta boa iluminação e traços faciais claros</p>
             <p>• <strong>SEM bonés, chapéus ou óculos escuros</strong></p>
             <p>• <strong>Apenas UMA pessoa por foto</strong></p>
+            <p>• Use apenas fotos com aparência natural ou maquiagem mínima. Maquiagem pesada (contorno marcado, iluminação excessiva, sobrancelhas desenhadas ou olhos muito carregados) reduz a qualidade do modelo treinado</p>
             <p>• Inclua variedade em expressões, ângulos e fundos</p>
             <p>• Evite fotos com filtro, caretas ou olhos fechados</p>
             <p>• O treinamento geralmente leva 15-30 minutos</p>
