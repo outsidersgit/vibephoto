@@ -8,6 +8,9 @@ export type CriticalIssue =
   | 'multiple_people'
   | 'making_faces'
   | 'heavy_filters'
+  | 'heavy_makeup'
+  | 'not_human'
+  | 'object_or_thing'
   | 'low_light'
   | 'blurry'
   | 'hat_or_cap'
@@ -152,6 +155,9 @@ export const CRITICAL_ISSUE_LABELS: Record<CriticalIssue, string> = {
   multiple_people: 'Pessoas extras na foto',
   making_faces: 'Careta ou expressão exagerada',
   heavy_filters: 'Filtro digital pesado',
+  heavy_makeup: 'Maquiagem muito pesada',
+  not_human: 'Foto não contém humano',
+  object_or_thing: 'Foto de objeto/coisa/paisagem',
   low_light: 'Iluminação muito ruim',
   blurry: 'Foto muito desfocada',
   hat_or_cap: 'Chapéu/boné cobrindo cabeça',

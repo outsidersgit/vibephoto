@@ -245,10 +245,12 @@ Avaliar se a foto deve ser **APROVADA** ou **REPROVADA** para treino de um model
 ${subjectType === 'pessoa' ? `### 🔹 Se o sujeito for **PESSOA**
 Reprove **somente** se ocorrer **pelo menos 1 item abaixo**, de forma clara:
 
+- **FOTO NÃO CONTÉM HUMANO**: a foto é de animal, objeto, paisagem, comida, lugar, etc.
 - Imagem **claramente gerada por IA** (arte digital, pele irreal, inconsistências evidentes).
 - **Outra pessoa** com o **rosto claramente visível e nítido**, ocupando parte relevante da imagem.
   - ✅ **Permita** se a outra pessoa estiver desfocada, ao fundo, de costas, cortada ou irreconhecível.
 - **Filtros pesados** (Snapchat/AR): distorções, embelezamento extremo.
+- **MAQUIAGEM MUITO PESADA**: maquiagem artística/drag/teatral que altera drasticamente a aparência natural do rosto (base extrema, contorno exagerado, sombra muito pesada, lábios muito pintados). Maquiagem normal/natural é ACEITA.
 - **Careta extrema** que deforma o rosto (língua para fora, olhos arregalados, boca exageradamente aberta).
 - **Desfoque severo**: não dá para distinguir olhos, nariz e boca.
 - **Qualidade muito baixa**: pixelização grave **OU** rosto muito pequeno (< ~80–100px de altura).
@@ -259,6 +261,7 @@ Reprove **somente** se ocorrer **pelo menos 1 item abaixo**, de forma clara:
 - **BONÉ / CHAPÉU / GORRO**: qualquer tipo que esconda a testa/linha do cabelo de forma relevante.` : `### 🔹 Se o sujeito for **ANIMAL**
 Reprove **somente** se ocorrer **pelo menos 1 item abaixo**, de forma clara:
 
+- **FOTO NÃO CONTÉM ANIMAL**: a foto é de humano, objeto, paisagem, comida, lugar, etc.
 - **Múltiplos animais** claramente visíveis como sujeitos principais.
 - **Pessoas muito visíveis e nítidas** competindo com o animal.
 - **Fantasias/roupas exageradas** que alterem a aparência real do animal.
@@ -293,9 +296,9 @@ Marque como **alerta**, mas **APROVE**, quando houver:
 Responda APENAS em JSON válido (sem markdown):
 {
   "hasIssues": <true APENAS se houver problema GRAVE E ÓBVIO que impeça o treino, false se OK ou duvidoso>,
-  "criticalIssues": [<array com códigos: "ai_generated", "multiple_people", "making_faces", "heavy_filters", "low_light", "blurry", "hat_or_cap", "sunglasses", "extreme_angle", "face_cut_off", "low_quality", "face_covered">],
+  "criticalIssues": [<array com códigos: "not_human", "object_or_thing", "ai_generated", "multiple_people", "making_faces", "heavy_filters", "heavy_makeup", "low_light", "blurry", "hat_or_cap", "sunglasses", "extreme_angle", "face_cut_off", "low_quality", "face_covered">],
   "minorIssues": [],
-  "issuesSummary": "<se hasIssues=true, descreva APENAS os problemas graves de forma objetiva. Ex: 'Óculos escuros'. Se false, omita>"
+  "issuesSummary": "<se hasIssues=true, descreva APENAS os problemas graves de forma objetiva. Ex: 'Óculos escuros' ou 'Maquiagem muito pesada' ou 'Foto não contém humano'. Se false, omita>"
 }`
   }
 
