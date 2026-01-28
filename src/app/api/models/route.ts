@@ -169,26 +169,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate photo counts
-    if (facePhotoUrls.length < 10 || facePhotoUrls.length > 14) {
+    if (facePhotoUrls.length < 4 || facePhotoUrls.length > 8) {
       console.log(`❌ Invalid face photos count: ${facePhotoUrls.length}`)
       return NextResponse.json(
-        { error: 'Face photos must be between 10-14 images' },
+        { error: 'Face photos must be between 4-8 images' },
         { status: 400 }
       )
     }
 
-    if (halfBodyPhotoUrls.length < 6 || halfBodyPhotoUrls.length > 9) {
+    if (halfBodyPhotoUrls.length < 2 || halfBodyPhotoUrls.length > 4) {
       console.log(`❌ Invalid half body photos count: ${halfBodyPhotoUrls.length}`)
       return NextResponse.json(
-        { error: 'Half body photos must be between 6-9 images' },
+        { error: 'Half body photos must be between 2-4 images' },
         { status: 400 }
       )
     }
 
-    if (fullBodyPhotoUrls.length < 4 || fullBodyPhotoUrls.length > 7) {
+    if (fullBodyPhotoUrls.length < 2 || fullBodyPhotoUrls.length > 3) {
       console.log(`❌ Invalid full body photos count: ${fullBodyPhotoUrls.length}`)
       return NextResponse.json(
-        { error: 'Full body photos must be between 4-7 images' },
+        { error: 'Full body photos must be between 2-3 images' },
         { status: 400 }
       )
     }

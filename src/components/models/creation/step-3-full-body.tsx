@@ -313,12 +313,12 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
               Fotos de Corpo Inteiro
               {isAnalyzing && <Loader2 className="w-4 h-4 animate-spin text-purple-600" />}
             </span>
-            <Badge variant={modelData.fullBodyPhotos.length >= 4 ? 'default' : 'secondary'}>
-              {modelData.fullBodyPhotos.length}/7 fotos
+            <Badge variant={modelData.fullBodyPhotos.length >= 2 ? 'default' : 'secondary'}>
+              {modelData.fullBodyPhotos.length}/3 fotos
             </Badge>
           </CardTitle>
           <CardDescription>
-            Envie de 4 a 7 fotos de corpo inteiro (corpo completo da cabeça aos pés). Elas serão analisadas automaticamente para garantir qualidade ideal.
+            Envie de 2 a 3 fotos de corpo inteiro (corpo completo da cabeça aos pés). Elas serão analisadas automaticamente para garantir qualidade ideal.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

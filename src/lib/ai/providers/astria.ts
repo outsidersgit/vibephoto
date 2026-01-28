@@ -138,9 +138,8 @@ export class AstriaProvider extends AIProvider {
           // Valor fixo solicitado: 1504944 (Flux1.dev na doc)
           base_tune_id: 1504944,
           // Preset recomendado para LoRA (doc Astria)
-          preset: 'flux-lora-portrait',
-          // Training steps: 864 (sobrescreve o default do preset que é ~27 steps/imagem)
-          steps: options.steps || 864
+          preset: 'flux-lora-portrait'
+          // Removido parâmetro steps para usar o default do preset
         }
       }
 
@@ -162,7 +161,6 @@ export class AstriaProvider extends AIProvider {
         model_type: payload.tune.model_type,
         base_tune_id: payload.tune.base_tune_id,
         preset: payload.tune.preset,
-        steps: payload.tune.steps,
         images_count: images.length,
         token: payload.tune.token
       })
@@ -224,8 +222,8 @@ export class AstriaProvider extends AIProvider {
         triggerWord: request.triggerWord || 'ohwx',
         classWord: request.classWord, // Será usado como tune[name] conforme docs
         callback: request.webhookUrl,
-        title: request.modelId, // Idempotent title conforme doc Astria
-        steps: request.params?.steps || 864 // Training steps (default: 864)
+        title: request.modelId // Idempotent title conforme doc Astria
+        // Removido steps para usar default do preset
       })
 
       console.log(`✅ Astria tune created with ID: ${tuneResult.id}`)
@@ -234,7 +232,7 @@ export class AstriaProvider extends AIProvider {
         id: tuneResult.id,
         status: this.mapAstriaStatus(tuneResult.status),
         createdAt: new Date().toISOString(),
-        estimatedTime: this.estimateTrainingTime(request.imageUrls.length, request.params.steps),
+        estimatedTime: 20, // Tempo estimado padrão em minutos
         metadata: {
           tuneId: tuneResult.id,
           triggerWord: request.triggerWord || 'TOK',

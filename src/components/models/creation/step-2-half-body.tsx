@@ -312,12 +312,12 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
               Fotos de Meio Corpo
               {isAnalyzing && <Loader2 className="w-4 h-4 animate-spin text-purple-600" />}
             </span>
-            <Badge variant={modelData.halfBodyPhotos.length >= 6 ? 'default' : 'secondary'}>
-              {modelData.halfBodyPhotos.length}/9 fotos
+            <Badge variant={modelData.halfBodyPhotos.length >= 2 ? 'default' : 'secondary'}>
+              {modelData.halfBodyPhotos.length}/4 fotos
             </Badge>
           </CardTitle>
           <CardDescription>
-            Envie de 6 a 9 fotos de meio corpo (da cintura para cima). Elas serão analisadas automaticamente para garantir qualidade ideal.
+            Envie de 2 a 4 fotos de meio corpo (da cintura para cima). Elas serão analisadas automaticamente para garantir qualidade ideal.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

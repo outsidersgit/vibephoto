@@ -594,12 +594,12 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo, onA
               Fotos do Rosto
               {isAnalyzing && <Loader2 className="w-4 h-4 animate-spin text-purple-600" />}
             </span>
-            <Badge variant={modelData.facePhotos.length >= 10 ? 'default' : 'secondary'}>
-              {modelData.facePhotos.length}/14 fotos
+            <Badge variant={modelData.facePhotos.length >= 4 ? 'default' : 'secondary'}>
+              {modelData.facePhotos.length}/8 fotos
             </Badge>
           </CardTitle>
           <CardDescription>
-            Envie de 10 a 14 fotos claras do rosto. Elas serão analisadas automaticamente para garantir qualidade ideal.
+            Envie de 4 a 8 fotos claras do rosto. Elas serão analisadas automaticamente para garantir qualidade ideal.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
