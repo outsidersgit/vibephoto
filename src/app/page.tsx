@@ -450,7 +450,7 @@ const ScrollStackingCards = ({ scrollContainerRef }: { scrollContainerRef: React
     {
       id: 1,
       title: "Upload das Fotos",
-      description: "Carregue 20-30 fotos suas em diferentes poses. Nossa IA analisará seus traços únicos para criar seu modelo personalizado.",
+      description: "Carregue 8-15 fotos suas em diferentes poses. Nossa IA analisará seus traços únicos para criar seu modelo personalizado.",
       gradient: "from-blue-50 to-blue-100",
       borderColor: "border-blue-200",
       iconBg: "from-blue-500 to-blue-600"
@@ -458,7 +458,7 @@ const ScrollStackingCards = ({ scrollContainerRef }: { scrollContainerRef: React
     {
       id: 2,
       title: "Treinamento de Modelo",
-      description: "Nossa IA treina um modelo personalizado baseado nas suas fotos em alguns minutos. Processo 100% automático.",
+      description: "Nossa IA treina um modelo personalizado baseado nas suas fotos em 10-20 minutos. Processo 100% automático.",
       gradient: "from-purple-50 to-purple-100",
       borderColor: "border-purple-200",
       iconBg: "from-purple-500 to-purple-600"
@@ -611,7 +611,7 @@ const MobileStackingCards = () => {
     {
       id: 1,
       title: "Upload das Fotos",
-      description: "Carregue 20-30 fotos suas em diferentes poses. Nossa IA analisará seus traços únicos para criar seu modelo personalizado.",
+      description: "Carregue 8-15 fotos suas em diferentes poses. Nossa IA analisará seus traços únicos para criar seu modelo personalizado.",
       gradient: "from-blue-50 to-blue-100",
       borderColor: "border-blue-200",
       iconBg: "from-blue-500 to-blue-600"
@@ -619,7 +619,7 @@ const MobileStackingCards = () => {
     {
       id: 2,
       title: "Treinamento de Modelo",
-      description: "Nossa IA treina um modelo personalizado baseado nas suas fotos em alguns minutos. Processo 100% automático.",
+      description: "Nossa IA treina um modelo personalizado baseado nas suas fotos em 10-20 minutos. Processo 100% automático.",
       gradient: "from-purple-50 to-purple-100",
       borderColor: "border-purple-200",
       iconBg: "from-purple-500 to-purple-600"

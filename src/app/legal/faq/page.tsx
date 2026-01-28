@@ -43,12 +43,12 @@ const faqData: FAQItem[] = [
   {
     category: 'funcionamento',
     question: 'Quantas fotos preciso enviar para treinar meu modelo?',
-    answer: 'Recomendamos entre 20-30 fotos de alta qualidade, divididas em: 10-14 fotos do rosto, 6-9 fotos de meio corpo (cintura para cima) e 4-7 fotos de corpo inteiro. Inclua diferentes ângulos, expressões e iluminações. Quanto mais variadas as fotos de treinamento, melhor será a qualidade dos resultados gerados.'
+    answer: 'Recomendamos entre 8-15 fotos de alta qualidade, divididas em: 4-8 fotos do rosto, 2-4 fotos de meio corpo (cintura para cima) e 2-3 fotos de corpo inteiro. Inclua diferentes ângulos, expressões e iluminações. Quanto mais variadas as fotos de treinamento, melhor será a qualidade dos resultados gerados.'
   },
   {
     category: 'funcionamento',
     question: 'Quanto tempo demora para treinar um modelo?',
-    answer: 'O treinamento de um modelo personalizado leva entre 10-30 minutos, dependendo da complexidade e qualidade das fotos enviadas. Você receberá uma notificação por email quando o modelo estiver pronto para uso.'
+    answer: 'O treinamento de um modelo personalizado leva entre 10-20 minutos, dependendo da qualidade das fotos enviadas. Você receberá uma notificação por email quando o modelo estiver pronto para uso.'
   },
   {
     category: 'funcionamento',
