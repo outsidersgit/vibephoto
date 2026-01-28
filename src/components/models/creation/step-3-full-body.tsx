@@ -218,8 +218,8 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
     }
 
     const totalFiles = modelData.fullBodyPhotos.length + newFiles.length
-    if (totalFiles > 7) {
-      errors.push(`Máximo 7 fotos de corpo inteiro permitidas (você selecionou ${totalFiles})`)
+    if (totalFiles > 3) {
+      errors.push(`Máximo 3 fotos de corpo inteiro permitidas (você selecionou ${totalFiles})`)
       setValidationErrors(errors)
       return
     }
@@ -564,7 +564,7 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
         <Button
           type="button"
           onClick={onNextStep}
-          disabled={!canProceed || modelData.fullBodyPhotos.length < 4 || isAnalyzing}
+          disabled={!canProceed || modelData.fullBodyPhotos.length < 2 || isAnalyzing}
         >
           Próximo
           <ArrowRight className="w-4 h-4 ml-2" />

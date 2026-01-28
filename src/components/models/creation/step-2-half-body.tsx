@@ -217,8 +217,8 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
     }
 
     const totalFiles = modelData.halfBodyPhotos.length + newFiles.length
-    if (totalFiles > 9) {
-      errors.push(`Máximo de 9 fotos de meio corpo permitidas (você selecionou ${totalFiles})`)
+    if (totalFiles > 4) {
+      errors.push(`Máximo de 4 fotos de meio corpo permitidas (você selecionou ${totalFiles})`)
       setValidationErrors(errors)
       return
     }
@@ -563,7 +563,7 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
         <Button
           type="button"
           onClick={onNextStep}
-          disabled={!canProceed || modelData.halfBodyPhotos.length < 6 || isAnalyzing}
+          disabled={!canProceed || modelData.halfBodyPhotos.length < 2 || isAnalyzing}
         >
           Próximo
           <ArrowRight className="w-4 h-4 ml-2" />
