@@ -36,7 +36,7 @@ const faqData: FAQItem[] = [
   {
     category: 'geral',
     question: 'Qual o melhor plano para iniciantes?',
-    answer: 'Para iniciantes, recomendamos o plano Premium (R$ 179/mês) que oferece 1500 créditos, 1 modelo de IA e processamento rápido.'
+    answer: 'Para iniciantes, recomendamos o plano Premium (R$ 199/mês) que oferece 1500 créditos, 1 modelo de IA e processamento rápido.'
   },
 
   // Funcionamento

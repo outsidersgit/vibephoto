@@ -297,14 +297,14 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
       <Card className="bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border border-slate-600/30 shadow-2xl">
         <CardContent className="pt-3 pb-3">
           <div className="space-y-0.5 text-slate-300" style={{fontSize: '8px'}}>
-            <p>• <strong>Use apenas fotos com aparência natural ou maquiagem mínima</strong>. Maquiagem pesada (contorno marcado, iluminação excessiva, sobrancelhas desenhadas ou olhos muito carregados) reduz a qualidade do modelo treinado</p>
-            <p>• Use fotos de alta qualidade (pelo menos 512x512 pixels)</p>
-            <p>• Garanta boa iluminação e traços faciais claros</p>
+            <p>• <strong>Não use fotos processadas</strong>. Use fotos naturais, sem edição ou filtros (fotos comuns de celular)</p>
+            <p>• <strong>Envie entre 8 e 15 fotos apenas</strong></p>
+            <p>• <strong>Aparência natural ou maquiagem mínima</strong> (maquiagem pesada pode causar aparência artificial no modelo)</p>
+            <p>• Boa iluminação e rosto bem visível</p>
             <p>• <strong>SEM bonés, chapéus ou óculos escuros</strong></p>
             <p>• <strong>Apenas UMA pessoa por foto</strong></p>
-            <p>• Inclua variedade em expressões, ângulos e fundos</p>
-            <p>• Evite fotos com filtro, caretas ou olhos fechados</p>
-            <p>• O treinamento geralmente leva 15-30 minutos</p>
+            <p>• Evite caretas, olhos fechados ou baixa nitidez</p>
+            <p>• O treinamento leva cerca de 10–20 minutos</p>
           </div>
         </CardContent>
       </Card>
