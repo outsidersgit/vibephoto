@@ -17,7 +17,8 @@
       "Bash(ls:*)",
       "Bash(wc:*)",
       "Bash(git commit -m \"$(cat <<''EOF''\nForce match_input_image for skin-realism preset\n\nAdded presetId parameter throughout the image editor pipeline to enable special handling for the ''skin-realism'' preset. When this preset is used, the aspect_ratio is forcibly set to \"match_input_image\" to preserve the original image dimensions and ensure perfect alignment in before/after preview.\n\nChanges:\n- Added presetId to frontend requestBody\n- Modified API routes to pass presetId through the chain\n- Updated NanoBananaEditRequest interface to include presetId\n- Enhanced aspect_ratio logic in nano-banana.ts to force match_input_image for skin-realism\n- Updated all imageEditor method signatures to accept presetId parameter\n\nThis fixes the alignment issues in the skin preset slider where images were being stretched or cropped due to aspect ratio mismatch.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npx prisma:*)"
     ],
     "deny": [],
     "ask": []

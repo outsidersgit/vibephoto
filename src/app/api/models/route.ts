@@ -252,7 +252,87 @@ export async function POST(request: NextRequest) {
       // Step 3: As fotos já estão no storage; seguimos para processamento
       console.log('💾 Using provided photo URLs from direct uploads...')
 
-      // Step 3: Prepare training data
+      // Step 3.1: Inspect images with Astria /images/inspect API
+      console.log('🔍 Starting image inspection...')
+      await updateModelStatus(model.id, 'PROCESSING', 5)
+
+      const allImageUrls = [...facePhotoUrls, ...halfBodyPhotoUrls, ...fullBodyPhotoUrls]
+      const inspectionResults: any[] = []
+
+      // Map model class to Astria className
+      const classNameMapping: Record<string, string> = {
+        'MAN': 'man',
+        'WOMAN': 'woman',
+        'BOY': 'boy',
+        'GIRL': 'girl',
+        'ANIMAL': 'dog'
+      }
+      const astriaClassName = classNameMapping[modelClass] || 'man'
+
+      console.log(`🔍 [INSPECT] Inspecting ${allImageUrls.length} images (class: ${astriaClassName})...`)
+
+      // Inspect each image
+      for (let i = 0; i < allImageUrls.length; i++) {
+        const imageUrl = allImageUrls[i]
+        console.log(`🔍 [INSPECT] Image ${i + 1}/${allImageUrls.length}: ${imageUrl.substring(0, 60)}...`)
+
+        try {
+          const inspectResponse = await fetch(`${process.env.NEXTAUTH_URL}/api/ai/inspect-image`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Cookie': request.headers.get('Cookie') || ''
+            },
+            body: JSON.stringify({
+              imageUrl,
+              className: astriaClassName
+            })
+          })
+
+          if (inspectResponse.ok) {
+            const result = await inspectResponse.json()
+            if (result.success && result.data) {
+              inspectionResults.push({
+                imageUrl,
+                index: i,
+                ...result.data
+              })
+              console.log(`✅ [INSPECT] Image ${i + 1} inspected successfully`)
+            } else {
+              console.warn(`⚠️ [INSPECT] Image ${i + 1} inspection returned unexpected format`)
+            }
+          } else {
+            console.warn(`⚠️ [INSPECT] Image ${i + 1} inspection failed (${inspectResponse.status})`)
+          }
+        } catch (inspectError) {
+          console.error(`❌ [INSPECT] Error inspecting image ${i + 1}:`, inspectError)
+          // Continue with other images even if one fails
+        }
+
+        // Small delay to avoid rate limiting
+        if (i < allImageUrls.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 300))
+        }
+      }
+
+      console.log(`📊 [INSPECT] Inspection complete: ${inspectionResults.length}/${allImageUrls.length} images inspected`)
+
+      // Step 3.2: Aggregate characteristics from inspection results
+      let aggregatedCharacteristics: Record<string, string> = {}
+
+      if (inspectionResults.length > 0) {
+        const { aggregateCharacteristics, extractQualityWarnings, logAggregationSummary } =
+          await import('@/lib/ai/characteristics-aggregator')
+
+        aggregatedCharacteristics = aggregateCharacteristics(inspectionResults)
+        const qualityWarnings = extractQualityWarnings(inspectionResults)
+
+        logAggregationSummary(inspectionResults, aggregatedCharacteristics, qualityWarnings)
+      } else {
+        console.warn('⚠️ [INSPECT] No inspection results available - proceeding without characteristics')
+      }
+
+      // Step 3.3: Prepare training data
       console.log('🔄 Updating model status to PROCESSING...')
       await updateModelStatus(model.id, 'PROCESSING', 10)
 
@@ -276,9 +356,10 @@ export async function POST(request: NextRequest) {
         modelName: model.name,
         name: model.name,
         class: model.class as any,
-        imageUrls: [...facePhotoUrls, ...halfBodyPhotoUrls, ...fullBodyPhotoUrls],
+        imageUrls: allImageUrls,
         triggerWord: `${model.name.toLowerCase().replace(/\s+/g, '')}_person`,
         classWord: model.class.toLowerCase(),
+        characteristics: aggregatedCharacteristics, // ADD CHARACTERISTICS HERE
         params: {
           steps: finalSteps,
           resolution: 1024,
@@ -291,11 +372,12 @@ export async function POST(request: NextRequest) {
 
       console.log('🚀 Starting AI training...')
       console.log(`🔗 [TRAINING_CALLBACK] Callback URL: ${callbackUrl}`)
+      console.log(`📊 [TRAINING_CHARACTERISTICS] Characteristics count: ${Object.keys(aggregatedCharacteristics).length}`)
       const trainingResponse = await aiProvider.startTraining(trainingRequest)
       
       console.log(`✅ Training started with ID: ${trainingResponse.id}`)
 
-      // Step 5: Update model with training info and save training ID
+      // Step 5: Update model with training info and save training ID + inspection results
       await prisma.aIModel.update({
         where: { id: model.id },
         data: {
@@ -303,15 +385,21 @@ export async function POST(request: NextRequest) {
           progress: 20,
           trainingJobId: String(trainingResponse.id),
           aiProvider: trainingProvider === 'astria' ? 'astria' : runtimeProvider,
+          inspectionResults: inspectionResults.length > 0 ? inspectionResults : undefined, // Save raw inspection data
+          characteristics: Object.keys(aggregatedCharacteristics).length > 0 ? aggregatedCharacteristics : undefined, // Save aggregated characteristics
           trainingConfig: {
             trainingId: String(trainingResponse.id),
             fluxModel: true,
             startedAt: new Date().toISOString(),
             estimatedTime: trainingResponse.estimatedTime,
-            provider: 'astria'
+            provider: 'astria',
+            inspectedImages: inspectionResults.length,
+            characteristicsCount: Object.keys(aggregatedCharacteristics).length
           }
         }
       })
+
+      console.log(`💾 [DB] Saved inspection results (${inspectionResults.length}) and characteristics (${Object.keys(aggregatedCharacteristics).length}) to database`)
 
       // Iniciar polling como fallback caso webhook não funcione
       setTimeout(async () => {

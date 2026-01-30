@@ -7,6 +7,7 @@ export interface TrainingRequest {
   imageUrls: string[]
   params: TrainingParams
   webhookUrl?: string
+  characteristics?: Record<string, string> // Aggregated characteristics from image inspection (Astria)
 }
 
 export interface TrainingParams {

@@ -20,15 +20,15 @@ model User {
   role          UserRole  @default(USER)
 
   // Subscription and billing
-  plan                    Plan?     // STARTER, PREMIUM, or GOLD (all paid plans) - null for new users without subscription
-  billingCycle            String?   // MONTHLY, YEARLY
+  plan                    Plan? // STARTER, PREMIUM, or GOLD (all paid plans) - null for new users without subscription
+  billingCycle            String? // MONTHLY, YEARLY
   asaasCustomerId         String?   @unique // Asaas customer ID
   subscriptionId          String?   @unique // Asaas subscription ID
-  asaasCreditCardToken   String?   // Token do cartão de crédito do Asaas (fallback)
-  subscriptionStatus      String?   // ACTIVE, EXPIRED, CANCELLED, OVERDUE - controls access
+  asaasCreditCardToken    String? // Token do cartão de crédito do Asaas (fallback)
+  subscriptionStatus      String? // ACTIVE, EXPIRED, CANCELLED, OVERDUE - controls access
   subscriptionEndsAt      DateTime?
   subscriptionCancelledAt DateTime?
-  nextDueDate            DateTime? // Data da próxima renovação automática (do webhook SUBSCRIPTION_CREATED)
+  nextDueDate             DateTime? // Data da próxima renovação automática (do webhook SUBSCRIPTION_CREATED)
   subscriptionStartedAt   DateTime? // Data de início da assinatura (para calcular renovações mensais)
   lastCreditRenewalAt     DateTime? // Última vez que os créditos foram renovados (para planos mensais)
   creditsExpiresAt        DateTime? // Data de expiração dos créditos (para planos anuais - 1 ano após ativação)
@@ -37,22 +37,22 @@ model User {
   creditsBalance          Int       @default(0) // Purchased credits balance
 
   // Brazilian customer data for Asaas
-  cpfCnpj            String?
-  phone              String?
-  mobilePhone        String?
-  address            String?
-  addressNumber      String?
-  complement         String?
-  province           String?
-  city               String?
-  state              String?
-  postalCode         String?
+  cpfCnpj       String?
+  phone         String?
+  mobilePhone   String?
+  address       String?
+  addressNumber String?
+  complement    String?
+  province      String?
+  city          String?
+  state         String?
+  postalCode    String?
 
   // Influencer / referral tracking
-  referralCodeUsed        String?  @map("codigo_usado")
-  referredByInfluencerId  String?  @map("influencer_id")
-  referredByInfluencer    Influencer? @relation("InfluencerReferrals", fields: [referredByInfluencerId], references: [id])
-  influencerProfile       Influencer? @relation("InfluencerOwner")
+  referralCodeUsed       String?     @map("codigo_usado")
+  referredByInfluencerId String?     @map("influencer_id")
+  referredByInfluencer   Influencer? @relation("InfluencerReferrals", fields: [referredByInfluencerId], references: [id])
+  influencerProfile      Influencer? @relation("InfluencerOwner")
 
   // User statistics (from migrations) - TEMPORARILY COMMENTED (MISSING IN DB)
   // totalModels      Int       @default(0)
@@ -102,10 +102,10 @@ model Influencer {
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
-  user           User             @relation("InfluencerOwner", fields: [userId], references: [id], onDelete: Cascade)
-  referredUsers  User[]           @relation("InfluencerReferrals")
-  payments       Payment[]        @relation("InfluencerPayments")
-  coupons        DiscountCoupon[] @relation("CouponInfluencer")
+  user          User             @relation("InfluencerOwner", fields: [userId], references: [id], onDelete: Cascade)
+  referredUsers User[]           @relation("InfluencerReferrals")
+  payments      Payment[]        @relation("InfluencerPayments")
+  coupons       DiscountCoupon[] @relation("CouponInfluencer")
 
   @@map("influencers")
 }
@@ -161,48 +161,48 @@ enum Plan {
 }
 
 enum PlanType {
-  FREE      // Plano gratuito - créditos únicos, sem renovação mensal
-  PAID      // Plano pago - renovação mensal/anual de créditos
+  FREE // Plano gratuito - créditos únicos, sem renovação mensal
+  PAID // Plano pago - renovação mensal/anual de créditos
 }
 
 model SubscriptionPlan {
-  id                String   @id @default(cuid())
-  planId            String   @unique // ID único do plano (ex: STARTER, PREMIUM, FREE_TRIAL, etc)
+  id     String @id @default(cuid())
+  planId String @unique // ID único do plano (ex: STARTER, PREMIUM, FREE_TRIAL, etc)
 
   // Basic info
-  name              String
-  description       String   @db.Text
-  planType          PlanType @default(PAID) // FREE ou PAID
-  isActive          Boolean  @default(true)
-  popular           Boolean  @default(false)
-  displayOrder      Int      @default(0) @map("display_order") // Order for display in UI
-  color             String?  // 'blue', 'purple', 'yellow' - DEPRECATED: manter apenas para compatibilidade
+  name         String
+  description  String   @db.Text
+  planType     PlanType @default(PAID) // FREE ou PAID
+  isActive     Boolean  @default(true)
+  popular      Boolean  @default(false)
+  displayOrder Int      @default(0) @map("display_order") // Order for display in UI
+  color        String? // 'blue', 'purple', 'yellow' - DEPRECATED: manter apenas para compatibilidade
 
   // Pricing
-  monthlyPrice      Float    // Pode ser 0 para planos FREE
-  annualPrice       Float    // Pode ser 0 para planos FREE
-  monthlyEquivalent Float    // Preço equivalente mensal para planos anuais
+  monthlyPrice      Float // Pode ser 0 para planos FREE
+  annualPrice       Float // Pode ser 0 para planos FREE
+  monthlyEquivalent Float // Preço equivalente mensal para planos anuais
 
   // Limits and features
-  credits           Int      // Créditos (únicos para FREE, mensais para PAID)
-  models            Int      // Modelos incluídos
-  resolution        String   // Ex: "1024x1024"
-  features          Json     // Array de strings com features (stored as single JSON array)
+  credits    Int // Créditos (únicos para FREE, mensais para PAID)
+  models     Int // Modelos incluídos
+  resolution String // Ex: "1024x1024"
+  features   Json // Array de strings com features (stored as single JSON array)
 
   // Feature limits (optional - for enforcement)
-  maxPhotos         Int?     // Limite de fotos por mês
-  maxVideos         Int?     // Limite de vídeos por mês
-  maxModels         Int?     // Limite de modelos IA
-  maxStorage        Int?     // Limite de armazenamento em GB
-  
+  maxPhotos  Int? // Limite de fotos por mês
+  maxVideos  Int? // Limite de vídeos por mês
+  maxModels  Int? // Limite de modelos IA
+  maxStorage Int? // Limite de armazenamento em GB
+
   // Timestamps
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  deletedAt         DateTime? // Soft delete
-  
-  @@map("subscription_plans")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // Soft delete
+
   @@index([planId])
   @@index([isActive])
+  @@map("subscription_plans")
 }
 
 enum MediaType {
@@ -248,14 +248,18 @@ model AIModel {
   sampleImages Json[] // Array of sample generation URLs
 
   // AI Provider specific fields
-  aiProvider      String? @default("replicate") // "replicate", "astria", "runpod", "local"
-  trainingJobId   String? // External training job ID (Replicate prediction ID, Astria tune ID, etc)
-  triggerWord     String? // Display name/title of the model (NOT used in generation prompts)
-  classWord       String  // REQUIRED: Class word for generation (e.g., "person", "woman", "man", "boy", "girl")
+  aiProvider    String? @default("replicate") // "replicate", "astria", "runpod", "local"
+  trainingJobId String? // External training job ID (Replicate prediction ID, Astria tune ID, etc)
+  triggerWord   String? // Display name/title of the model (NOT used in generation prompts)
+  classWord     String // REQUIRED: Class word for generation (e.g., "person", "woman", "man", "boy", "girl")
 
   // Astria specific fields
-  astriaModelType String? // "faceid", "sd15", "sdxl1", "flux-lora"
+  astriaModelType  String? // "faceid", "sd15", "sdxl1", "flux-lora"
   astrisBaseTuneId String? // Base tune ID for Astria models
+
+  // Image inspection (Astria /images/inspect API)
+  inspectionResults Json? // Array of raw inspection results per image (for audit/debug)
+  characteristics   Json? // Aggregated characteristics sent to training (age, ethnicity, eye_color, etc.)
 
   // Progress tracking
   progress      Int  @default(0) // 0-100
@@ -318,17 +322,17 @@ model Generation {
   // }
 
   // Advanced generation parameters (FLUX, Astria, etc)
-  steps         Int?   // Inference steps
+  steps         Int? // Inference steps
   guidanceScale Float? // CFG scale
   scheduler     String? // "euler_a", "dpm++", etc
-  outputQuality Int?   // Output quality percentage
+  outputQuality Int? // Output quality percentage
   outputFormat  String? // "jpg", "png", etc
   rawMode       Boolean? // FLUX raw mode
 
   // Package generation fields
-  packageId            String? // ID of the photo package if this generation is part of a package
-  packagePromptIndex   Int?    // Index of the prompt within the package (0-4)
-  packageVariationIndex Int?   // Index of the variation for this prompt (0-3)
+  packageId             String? // ID of the photo package if this generation is part of a package
+  packagePromptIndex    Int? // Index of the prompt within the package (0-4)
+  packageVariationIndex Int? // Index of the variation for this prompt (0-3)
 
   // Results
   status        GenerationStatus @default(PENDING)
@@ -368,7 +372,7 @@ model Generation {
   model            AIModel?          @relation(fields: [modelId], references: [id], onDelete: Cascade)
   videoGenerations VideoGeneration[] // Videos created from this generation
   userPackage      UserPackage?      @relation(fields: [packageId], references: [id], onDelete: SetNull)
-  feedback         Feedback?         // User feedback for this generation
+  feedback         Feedback? // User feedback for this generation
 
   @@map("generations")
 }
@@ -453,10 +457,10 @@ model PhotoPackage {
 
   // Gender support
   gender            Gender? @default(BOTH) // MALE, FEMALE, or BOTH
-  promptsMale       Json[]  @default([])   // Prompts for male gender
-  promptsFemale     Json[]  @default([])   // Prompts for female gender
-  previewUrlsMale   Json[]  @default([])   // Preview URLs for male
-  previewUrlsFemale Json[]  @default([])   // Preview URLs for female
+  promptsMale       Json[]  @default([]) // Prompts for male gender
+  promptsFemale     Json[]  @default([]) // Prompts for female gender
+  previewUrlsMale   Json[]  @default([]) // Preview URLs for male
+  previewUrlsFemale Json[]  @default([]) // Preview URLs for female
 
   // Package content (DEPRECATED - use gender-specific fields above)
   prompts     Json[] // Array of prompt objects with metadata
@@ -491,15 +495,15 @@ model UserPackage {
   selectedGender Gender? // Which gender was selected (MALE or FEMALE)
 
   // Progress tracking
-  totalImages      Int // Number of images to generate (calculated from package.prompts.length)
-  generatedImages  Int @default(0)  // Count of completed generations
-  failedImages     Int @default(0)  // Count of failed generations
+  totalImages     Int // Number of images to generate (calculated from package.prompts.length)
+  generatedImages Int @default(0) // Count of completed generations
+  failedImages    Int @default(0) // Count of failed generations
 
   // Metadata
-  activatedAt DateTime  @default(now()) // When user activated the package
-  completedAt DateTime? // When all images were generated
-  errorMessage String?  // Error details if status is FAILED
-  successSeen Boolean   @default(false) // Whether user has seen the success modal/banner
+  activatedAt  DateTime  @default(now()) // When user activated the package
+  completedAt  DateTime? // When all images were generated
+  errorMessage String? // Error details if status is FAILED
+  successSeen  Boolean   @default(false) // Whether user has seen the success modal/banner
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -624,12 +628,12 @@ model UserConsent {
 enum PaymentStatus {
   PENDING
   CONFIRMED
-  COMPLETED  // Alias for CONFIRMED
+  COMPLETED // Alias for CONFIRMED
   OVERDUE
   REFUNDED
   CANCELLED
   FAILED
-  EXPIRED    // Checkout expired without payment
+  EXPIRED // Checkout expired without payment
 }
 
 enum PaymentType {
@@ -672,11 +676,11 @@ model Payment {
   influencerId      String? @map("influencer_id")
   referralCodeUsed  String? @map("codigo_usado")
   couponCodeUsed    String? @map("coupon_code_used") // Discount coupon code applied
-  discountApplied   Float? @map("discount_applied") // Discount amount applied
+  discountApplied   Float?  @map("discount_applied") // Discount amount applied
 
   // Coupon duration handling (for FIRST_CYCLE coupons)
-  needsPriceUpdate  Boolean? @default(false) @map("needs_price_update") // If true, webhook should update subscription price
-  originalPrice     Float? @map("original_price") // Original plan price before discount (from database)
+  needsPriceUpdate Boolean? @default(false) @map("needs_price_update") // If true, webhook should update subscription price
+  originalPrice    Float?   @map("original_price") // Original plan price before discount (from database)
 
   // Split duration handling (for FIRST_CYCLE splits on HYBRID coupons)
   needsSplitRemoval Boolean? @default(false) @map("needs_split_removal") // If true, webhook should remove split from subscription
@@ -692,9 +696,9 @@ model Payment {
   updatedAt DateTime @updatedAt
 
   // Relations
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  influencer Influencer? @relation("InfluencerPayments", fields: [influencerId], references: [id])
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  influencer   Influencer?   @relation("InfluencerPayments", fields: [influencerId], references: [id])
   couponUsages CouponUsage[]
 
   @@index([userId])
@@ -751,11 +755,11 @@ model WebhookEvent {
   asaasSubscriptionId String? // Subscription ID from Asaas
 
   // Processing status
-  status       String  @default("PENDING") // PENDING, PROCESSED, FAILED
+  status       String    @default("PENDING") // PENDING, PROCESSED, FAILED
   processedAt  DateTime?
   errorMessage String?
-  retryCount   Int     @default(0)
-  maxRetries   Int     @default(3)
+  retryCount   Int       @default(0)
+  maxRetries   Int       @default(3)
 
   // Raw data
   rawData Json @db.JsonB // Full webhook payload
@@ -959,15 +963,15 @@ model VideoGeneration {
 }
 
 model Feedback {
-  id           String   @id @default(cuid())
-  rating       Int // 1-5 stars
-  comment      String?  @db.Text
-  createdAt    DateTime @default(now()) @map("created_at")
+  id        String   @id @default(cuid())
+  rating    Int // 1-5 stars
+  comment   String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  userId       String   @map("user_id")
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  generationId String   @unique @map("generation_id")
+  userId       String     @map("user_id")
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generationId String     @unique @map("generation_id")
   generation   Generation @relation(fields: [generationId], references: [id], onDelete: Cascade)
 
   // Indexes
@@ -980,33 +984,33 @@ model Feedback {
 // Enums for Discount Coupons
 enum CouponType {
   DISCOUNT // Only discount
-  HYBRID   // Discount + influencer split
+  HYBRID // Discount + influencer split
 }
 
 enum DiscountType {
-  FIXED      // Fixed value discount
+  FIXED // Fixed value discount
   PERCENTAGE // Percentage discount
 }
 
 enum DurationType {
-  RECURRENT   // Discount applies to all billing cycles
+  RECURRENT // Discount applies to all billing cycles
   FIRST_CYCLE // Discount applies only to first payment
 }
 
 // Discount Coupons Model
 model DiscountCoupon {
-  id               String       @id @default(cuid())
-  code             String       @unique // Coupon code (uppercase)
-  type             CouponType   @default(DISCOUNT) // DISCOUNT or HYBRID
-  discountType     DiscountType @default(PERCENTAGE) @map("discount_type")
-  discountValue    Decimal      @db.Decimal(10, 2) @map("discount_value") // Value or percentage
+  id            String       @id @default(cuid())
+  code          String       @unique // Coupon code (uppercase)
+  type          CouponType   @default(DISCOUNT) // DISCOUNT or HYBRID
+  discountType  DiscountType @default(PERCENTAGE) @map("discount_type")
+  discountValue Decimal      @map("discount_value") @db.Decimal(10, 2) // Value or percentage
 
   // Duration type for DISCOUNT (RECURRENT or FIRST_CYCLE)
-  durationType     DurationType @default(FIRST_CYCLE) @map("duration_type")
+  durationType DurationType @default(FIRST_CYCLE) @map("duration_type")
 
   // Influencer relation (only for HYBRID coupons)
-  influencerId     String?      @map("influencer_id")
-  influencer       Influencer?  @relation("CouponInfluencer", fields: [influencerId], references: [id], onDelete: SetNull)
+  influencerId String?     @map("influencer_id")
+  influencer   Influencer? @relation("CouponInfluencer", fields: [influencerId], references: [id], onDelete: SetNull)
 
   // Custom commission for this specific coupon (overrides influencer defaults)
   customCommissionPercentage Decimal? @map("custom_commission_percentage") @db.Decimal(5, 2)
@@ -1016,25 +1020,25 @@ model DiscountCoupon {
   splitDurationType DurationType @default(FIRST_CYCLE) @map("split_duration_type")
 
   // Plan restrictions
-  applicablePlans  String[]     @default([]) @map("applicable_plans") // Empty = all plans, or ["STARTER", "PREMIUM", "GOLD"]
-  applicableCycles String[]     @default([]) @map("applicable_cycles") // Empty = all cycles, or ["MONTHLY", "ANNUAL"]
+  applicablePlans  String[] @default([]) @map("applicable_plans") // Empty = all plans, or ["STARTER", "PREMIUM", "GOLD"]
+  applicableCycles String[] @default([]) @map("applicable_cycles") // Empty = all cycles, or ["MONTHLY", "ANNUAL"]
 
   // Status and validity
-  isActive         Boolean      @default(true) @map("is_active")
-  validFrom        DateTime     @default(now()) @map("valid_from")
-  validUntil       DateTime?    @map("valid_until")
+  isActive   Boolean   @default(true) @map("is_active")
+  validFrom  DateTime  @default(now()) @map("valid_from")
+  validUntil DateTime? @map("valid_until")
 
   // Usage limits
-  maxUses          Int?         @map("max_uses") // Total usage limit (null = unlimited)
-  maxUsesPerUser   Int?         @default(1) @map("max_uses_per_user") // Per user limit
-  totalUses        Int          @default(0) @map("total_uses")
+  maxUses        Int? @map("max_uses") // Total usage limit (null = unlimited)
+  maxUsesPerUser Int? @default(1) @map("max_uses_per_user") // Per user limit
+  totalUses      Int  @default(0) @map("total_uses")
 
   // Timestamps
-  createdAt        DateTime     @default(now()) @map("created_at")
-  updatedAt        DateTime     @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  usages           CouponUsage[]
+  usages CouponUsage[]
 
   // Indexes
   @@index([code])
@@ -1045,23 +1049,22 @@ model DiscountCoupon {
 
 // Coupon Usage Tracking
 model CouponUsage {
-  id              String        @id @default(cuid())
-  couponId        String        @map("coupon_id")
-  userId          String        @map("user_id")
-  paymentId       String        @map("payment_id")
-  discountApplied Decimal       @db.Decimal(10, 2) @map("discount_applied")
-  usedAt          DateTime      @default(now()) @map("used_at")
+  id              String   @id @default(cuid())
+  couponId        String   @map("coupon_id")
+  userId          String   @map("user_id")
+  paymentId       String   @map("payment_id")
+  discountApplied Decimal  @map("discount_applied") @db.Decimal(10, 2)
+  usedAt          DateTime @default(now()) @map("used_at")
 
   // Relations
-  coupon          DiscountCoupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payment         Payment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  coupon  DiscountCoupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment Payment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
+  @@unique([couponId, userId, paymentId]) // Prevent duplicate usage
   // Indexes
   @@index([couponId])
   @@index([userId])
   @@index([paymentId])
-  @@unique([couponId, userId, paymentId]) // Prevent duplicate usage
   @@map("coupon_usage")
 }
-

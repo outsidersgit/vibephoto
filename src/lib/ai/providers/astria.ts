@@ -105,6 +105,7 @@ export class AstriaProvider extends AIProvider {
     classWord?: string
     title?: string // Idempotent title (idealmente modelId)
     steps?: number // Training steps (default: preset-based, recommended: 600-1200)
+    characteristics?: Record<string, string> // Aggregated characteristics from image inspection
   } = {}): Promise<{ id: string; status: string }> {
     try {
       // Conforme documentação Astria, podemos enviar JSON com image_urls
@@ -155,6 +156,15 @@ export class AstriaProvider extends AIProvider {
       }
       if (options.testMode) payload.tune.branch = 'fast'
 
+      // Add characteristics if provided (from image inspection)
+      if (options.characteristics && Object.keys(options.characteristics).length > 0) {
+        payload.tune.characteristics = options.characteristics
+        console.log(`📊 [ASTRIA_TUNE] Characteristics included in tune:`, {
+          count: Object.keys(options.characteristics).length,
+          characteristics: options.characteristics
+        })
+      }
+
       console.log(`🎯 [ASTRIA_TUNE] Tune creation payload:`, {
         title: payload.tune.title,
         name: payload.tune.name,
@@ -162,7 +172,8 @@ export class AstriaProvider extends AIProvider {
         base_tune_id: payload.tune.base_tune_id,
         preset: payload.tune.preset,
         images_count: images.length,
-        token: payload.tune.token
+        token: payload.tune.token,
+        has_characteristics: !!payload.tune.characteristics
       })
 
       // Retry resiliente para 429/5xx (ex.: 503 Service Unavailable)
@@ -222,7 +233,8 @@ export class AstriaProvider extends AIProvider {
         triggerWord: request.triggerWord || 'ohwx',
         classWord: request.classWord, // Será usado como tune[name] conforme docs
         callback: request.webhookUrl,
-        title: request.modelId // Idempotent title conforme doc Astria
+        title: request.modelId, // Idempotent title conforme doc Astria
+        characteristics: request.characteristics // Pass characteristics from image inspection
         // Removido steps para usar default do preset
       })
 
