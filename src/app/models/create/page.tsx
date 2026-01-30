@@ -184,29 +184,54 @@ export default function CreateModelPage() {
     }
   })
 
+  // Polling fallback: check model status every 10s as backup to SSE
   useEffect(() => {
     if (!pendingModelId || !trainingActive) return
 
+    console.log(`🔄 [CREATE_PAGE] Starting polling fallback for model ${pendingModelId}`)
+
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/models/${pendingModelId}/check-status`, {
-          method: 'POST'
+        console.log(`📡 [CREATE_PAGE] Polling model status for ${pendingModelId}...`)
+
+        const res = await fetch(`/api/models/${pendingModelId}/status`)
+        if (!res.ok) {
+          console.warn(`⚠️ [CREATE_PAGE] Polling failed: ${res.status}`)
+          return
+        }
+
+        const data = await res.json()
+        console.log(`📊 [CREATE_PAGE] Polled status:`, {
+          status: data.model?.status,
+          progress: data.model?.progress,
+          updatedAt: data.model?.updatedAt
         })
-        if (!res.ok) return
-        const data = await res.json().catch(() => null)
-        if (data?.currentStatus) {
-          handlePendingModelStatus(data.currentStatus, {
-            progress: data.progress,
-            errorMessage: data.error
-          })
+
+        if (data.success && data.model) {
+          const { status, progress, errorMessage, modelUrl, trainedAt } = data.model
+
+          // Update state if status changed
+          if (status !== pendingModelStatus) {
+            console.log(`🔄 [CREATE_PAGE] Status changed from ${pendingModelStatus} to ${status}`)
+            handlePendingModelStatus(status, {
+              progress,
+              errorMessage,
+              modelUrl,
+              trainedAt,
+              message: status === 'READY' ? 'Treinamento concluído!' : undefined
+            })
+          }
         }
       } catch (error) {
-        console.error('❌ Falha ao consultar status do modelo:', error)
+        console.error('❌ [CREATE_PAGE] Polling error:', error)
       }
-    }, 60000)
+    }, 10000) // Poll every 10 seconds (reduced from 60s)
 
-    return () => clearInterval(interval)
-  }, [pendingModelId, trainingActive, handlePendingModelStatus])
+    return () => {
+      console.log(`🛑 [CREATE_PAGE] Stopping polling for model ${pendingModelId}`)
+      clearInterval(interval)
+    }
+  }, [pendingModelId, trainingActive, pendingModelStatus, handlePendingModelStatus])
 
   const handleSubmit = async () => {
     if (trainingActive) {
