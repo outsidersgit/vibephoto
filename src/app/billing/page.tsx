@@ -60,6 +60,7 @@ function BillingPageContent() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [loadingPlans, setLoadingPlans] = useState(true)
   const [plansError, setPlansError] = useState<string | null>(null)
+  const [planFormat, setPlanFormat] = useState<'TRADITIONAL' | 'MEMBERSHIP'>('TRADITIONAL')
   const [creditPackages, setCreditPackages] = useState<CreditPackage[]>([])
   const [loadingCreditPackages, setLoadingCreditPackages] = useState(true)
 
@@ -72,7 +73,11 @@ function BillingPageContent() {
         if (response.ok) {
           const data = await response.json()
           const fetchedPlans = data.plans || []
-          
+          const format = data.format || 'TRADITIONAL'
+
+          console.log('📋 [BILLING] Formato recebido:', format)
+          setPlanFormat(format)
+
           // Se a API retornou planos, usar eles
           if (fetchedPlans.length > 0) {
             setPlans(fetchedPlans)
@@ -80,12 +85,14 @@ function BillingPageContent() {
             // Se não retornou planos, usar fallback hardcoded
             console.warn('⚠️ [BILLING] Nenhum plano retornado da API, usando fallback hardcoded')
             setPlans(PLANS)
+            setPlanFormat('TRADITIONAL')
           }
         } else {
           // Se a API retornou erro, usar fallback hardcoded
           console.warn('⚠️ [BILLING] Erro na API, usando fallback hardcoded')
           setPlans(PLANS)
-          
+          setPlanFormat('TRADITIONAL')
+
           const errorData = await response.json().catch(() => ({}))
           console.error('Erro ao buscar planos da API:', response.status, errorData)
         }
@@ -93,11 +100,12 @@ function BillingPageContent() {
         // Se houver erro de conexão, usar fallback hardcoded
         console.error('❌ [BILLING] Erro ao conectar com API, usando fallback hardcoded:', error)
         setPlans(PLANS)
+        setPlanFormat('TRADITIONAL')
       } finally {
         setLoadingPlans(false)
       }
     }
-    
+
     fetchPlans()
   }, [])
 
@@ -542,22 +550,67 @@ function BillingPageContent() {
                 {showSubscriptionDetails && (
                   <div className="mt-4 pt-4 border-t border-slate-600/30">
                     <div className="space-y-2 text-sm text-slate-300">
-                      <div className="flex items-start">
-                        <span className="text-white mr-2">•</span>
-                        <span>{currentPlan?.credits ?? 0} créditos mensais</span>
-                      </div>
-                      <div className="flex items-start">
-                        <span className="text-white mr-2">•</span>
-                        <span>{currentPlan?.models || 1} modelo{(currentPlan?.models || 1) > 1 ? 's' : ''} de IA</span>
-                      </div>
-                      <div className="flex items-start">
-                        <span className="text-white mr-2">•</span>
-                        <span>Ciclo: {(session.user as any)?.billingCycle === 'YEARLY' ? 'Anual' : 'Mensal'}</span>
-                      </div>
-                      <div className="flex items-start">
-                        <span className="text-white mr-2">•</span>
-                        <span>Próxima renovação: {subscription.subscriptionEndsAt.toLocaleDateString('pt-BR')}</span>
-                      </div>
+                      {planFormat === 'MEMBERSHIP' ? (
+                        // Formato B: Mostrar informações do membership
+                        <>
+                          <div className="flex items-start">
+                            <span className="text-white mr-2">•</span>
+                            <span>{currentPlan?.credits ?? 0} créditos por ciclo</span>
+                          </div>
+                          <div className="flex items-start">
+                            <span className="text-white mr-2">•</span>
+                            <span>{currentPlan?.models || 1} modelo{(currentPlan?.models || 1) > 1 ? 's' : ''} de IA</span>
+                          </div>
+                          <div className="flex items-start">
+                            <span className="text-white mr-2">•</span>
+                            <span>
+                              Ciclo: {
+                                (currentPlan as any)?.cycleDurationMonths === 3 ? 'Trimestral' :
+                                (currentPlan as any)?.cycleDurationMonths === 6 ? 'Semestral' :
+                                (currentPlan as any)?.cycleDurationMonths === 12 ? 'Anual' :
+                                `A cada ${(currentPlan as any)?.cycleDurationMonths || 1} meses`
+                              }
+                            </span>
+                          </div>
+                          {(currentPlan as any)?.price && (
+                            <div className="flex items-start">
+                              <span className="text-white mr-2">•</span>
+                              <span>
+                                Valor: R$ {(currentPlan as any).price} a cada {
+                                  (currentPlan as any)?.cycleDurationMonths === 3 ? '3 meses' :
+                                  (currentPlan as any)?.cycleDurationMonths === 6 ? '6 meses' :
+                                  (currentPlan as any)?.cycleDurationMonths === 12 ? '12 meses' :
+                                  `${(currentPlan as any)?.cycleDurationMonths || 1} meses`
+                                }
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex items-start">
+                            <span className="text-white mr-2">•</span>
+                            <span>Próxima renovação: {subscription.subscriptionEndsAt.toLocaleDateString('pt-BR')}</span>
+                          </div>
+                        </>
+                      ) : (
+                        // Formato A: Mostrar informações tradicionais
+                        <>
+                          <div className="flex items-start">
+                            <span className="text-white mr-2">•</span>
+                            <span>{currentPlan?.credits ?? 0} créditos mensais</span>
+                          </div>
+                          <div className="flex items-start">
+                            <span className="text-white mr-2">•</span>
+                            <span>{currentPlan?.models || 1} modelo{(currentPlan?.models || 1) > 1 ? 's' : ''} de IA</span>
+                          </div>
+                          <div className="flex items-start">
+                            <span className="text-white mr-2">•</span>
+                            <span>Ciclo: {(session.user as any)?.billingCycle === 'YEARLY' ? 'Anual' : 'Mensal'}</span>
+                          </div>
+                          <div className="flex items-start">
+                            <span className="text-white mr-2">•</span>
+                            <span>Próxima renovação: {subscription.subscriptionEndsAt.toLocaleDateString('pt-BR')}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
@@ -579,38 +632,54 @@ function BillingPageContent() {
               <ArrowLeft className="w-4 h-4" />
               Voltar
             </Button>
-            {/* Billing Cycle Toggle */}
-            <div className="flex justify-center mb-8">
-              <div className="bg-gray-50 p-0.5 rounded-lg border border-gray-200 flex w-full max-w-xs">
-                <button
-                  onClick={() => setBillingCycle('monthly')}
-                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                    billingCycle === 'monthly'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
-                >
-                  Mensal
-                </button>
-                <button
-                  onClick={() => setBillingCycle('annual')}
-                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all relative ${
-                    billingCycle === 'annual'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
-                >
-                  Anual
-                  {billingCycle === 'annual' && (
-                    <span className="absolute -top-2.5 -right-2 bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded-full font-semibold shadow-sm whitespace-nowrap">
-                      4 meses grátis
-                    </span>
-                  )}
-                </button>
+
+            {/* Mensagem explicativa para formato MEMBERSHIP */}
+            {planFormat === 'MEMBERSHIP' && (
+              <Alert className="mb-6 border-purple-600 bg-purple-50">
+                <AlertCircle className="h-5 w-5 text-purple-600" />
+                <AlertTitle className="text-lg font-bold text-purple-900">Planos de Membership</AlertTitle>
+                <AlertDescription className="mt-2 text-purple-800">
+                  <p>
+                    Escolha o ciclo que melhor se adapta às suas necessidades. Você receberá créditos fixos a cada renovação do ciclo escolhido (trimestral, semestral ou anual).
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Billing Cycle Toggle - Ocultar quando formato é MEMBERSHIP */}
+            {planFormat === 'TRADITIONAL' && (
+              <div className="flex justify-center mb-8">
+                <div className="bg-gray-50 p-0.5 rounded-lg border border-gray-200 flex w-full max-w-xs">
+                  <button
+                    onClick={() => setBillingCycle('monthly')}
+                    className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      billingCycle === 'monthly'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                    style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
+                  >
+                    Mensal
+                  </button>
+                  <button
+                    onClick={() => setBillingCycle('annual')}
+                    className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all relative ${
+                      billingCycle === 'annual'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                    style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
+                  >
+                    Anual
+                    {billingCycle === 'annual' && (
+                      <span className="absolute -top-2.5 -right-2 bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded-full font-semibold shadow-sm whitespace-nowrap">
+                        4 meses grátis
+                      </span>
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Loading State */}
             {loadingPlans && (
@@ -638,12 +707,26 @@ function BillingPageContent() {
                 const userPlan = (session.user as any)?.plan || 'STARTER'
                 const userBillingCycle = (session.user as any)?.billingCycle || 'MONTHLY'
 
-                // Bloquear apenas se for o MESMO plano E MESMO ciclo
-                const currentCycle = billingCycle === 'annual' ? 'YEARLY' : 'MONTHLY'
-                const isCurrentPlan = userPlan === plan.id && userBillingCycle === currentCycle
+                // Para formato MEMBERSHIP, verificar se é o plano atual
+                const isCurrentPlan = planFormat === 'MEMBERSHIP'
+                  ? userPlan === plan.id
+                  : userPlan === plan.id && userBillingCycle === (billingCycle === 'annual' ? 'YEARLY' : 'MONTHLY')
 
                 const isSelected = selectedPlanId === plan.id
                 const savings = plan.monthlyPrice * 12 - plan.annualPrice
+
+                // Para formato B, extrair informações do plano
+                const planPrice = planFormat === 'MEMBERSHIP' ? (plan as any).price : null
+                const cycleDurationMonths = planFormat === 'MEMBERSHIP' ? (plan as any).cycleDurationMonths : null
+
+                // Detectar tipo de ciclo para formato B
+                let cycleLabel = ''
+                if (planFormat === 'MEMBERSHIP' && cycleDurationMonths) {
+                  if (cycleDurationMonths === 3) cycleLabel = 'trimestral'
+                  else if (cycleDurationMonths === 6) cycleLabel = 'semestral'
+                  else if (cycleDurationMonths === 12) cycleLabel = 'anual'
+                  else cycleLabel = `a cada ${cycleDurationMonths} meses`
+                }
 
                 return (
                   <Card
@@ -662,7 +745,21 @@ function BillingPageContent() {
                     <CardHeader className="text-left pb-6">
                       <CardTitle className="text-3xl font-bold text-gray-900 mb-6" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>{plan.name}</CardTitle>
                       <div className="mb-6">
-                        {billingCycle === 'annual' ? (
+                        {planFormat === 'MEMBERSHIP' ? (
+                          // Formato B: Mostrar preço do ciclo
+                          <>
+                            <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                              R$ {planPrice}
+                              <span className="text-base font-normal text-gray-500">/{cycleLabel}</span>
+                            </div>
+                            {cycleDurationMonths && cycleDurationMonths > 1 && (
+                              <div className="text-sm text-gray-600 font-medium">
+                                R$ {(planPrice / cycleDurationMonths).toFixed(2)}/mês
+                              </div>
+                            )}
+                          </>
+                        ) : billingCycle === 'annual' ? (
+                          // Formato A: Anual
                           <>
                             <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
                               R$ {plan.annualPrice}
@@ -673,6 +770,7 @@ function BillingPageContent() {
                             </div>
                           </>
                         ) : (
+                          // Formato A: Mensal
                           <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
                             R$ {plan.monthlyPrice}
                             <span className="text-base font-normal text-gray-500">/mês</span>
@@ -686,7 +784,17 @@ function BillingPageContent() {
                         {plan.features.map((feature, index) => {
                           // Adjust credits display based on billing cycle
                           let displayFeature = feature
-                          if (billingCycle === 'annual') {
+
+                          if (planFormat === 'MEMBERSHIP') {
+                            // Para formato B, mostrar créditos por ciclo
+                            if (feature.includes('créditos/mês')) {
+                              displayFeature = feature.replace(/créditos\/mês/, `créditos por ciclo`)
+                            }
+                            if (feature.includes('fotos/mês') || feature.toLowerCase().includes('fotos por mês')) {
+                              displayFeature = displayFeature.replace(/fotos\/mês|fotos por mês/gi, 'fotos por ciclo')
+                            }
+                          } else if (billingCycle === 'annual') {
+                            // Para formato A anual
                             if (feature.includes('créditos/mês')) {
                               const yearlyCredits = (plan.credits || 0) * 12
                               displayFeature = feature.replace(/\d+[.,]?\d*\s*créditos\/mês/, `${yearlyCredits.toLocaleString('pt-BR')} créditos/ano`)
@@ -751,7 +859,11 @@ function BillingPageContent() {
                           style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
                           asChild
                         >
-                          <Link href={`/billing/upgrade?plan=${plan.id}&cycle=${billingCycle}`}>
+                          <Link href={
+                            planFormat === 'MEMBERSHIP'
+                              ? `/billing/upgrade?plan=${plan.id}`
+                              : `/billing/upgrade?plan=${plan.id}&cycle=${billingCycle}`
+                          }>
                             Escolher Plano
                           </Link>
                         </Button>

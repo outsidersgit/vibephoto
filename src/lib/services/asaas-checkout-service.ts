@@ -6,6 +6,7 @@ import { CreditPackageService } from '@/lib/services/credit-package-service'
 import { getAsaasEnvironment, getAsaasCheckoutUrl, getWebhookBaseUrl } from '@/lib/utils/environment'
 import { findInfluencerByCouponCode } from '@/lib/db/influencers'
 import { validateCoupon } from '@/lib/services/coupon-service'
+import { getSubscriptionPlanById } from '@/lib/db/subscription-plans'
 
 // URLs de callback para Asaas - usa domínio de produção
 const CALLBACK_BASE = getWebhookBaseUrl() || 'https://vibephoto.app'
@@ -282,45 +283,52 @@ export async function createCreditPackageCheckout(
 
 /**
  * Criar checkout para assinatura de plano
+ * Suporta dois formatos:
+ * - TRADITIONAL (Formato A): STARTER, PREMIUM, GOLD com cycles MONTHLY/YEARLY
+ * - MEMBERSHIP (Formato B): MEMBERSHIP_QUARTERLY, MEMBERSHIP_SEMI_ANNUAL, MEMBERSHIP_ANNUAL
  */
 export async function createSubscriptionCheckout(
-  planId: 'STARTER' | 'PREMIUM' | 'GOLD',
-  cycle: 'MONTHLY' | 'YEARLY',
+  planId: string, // Aceita qualquer plan ID (STARTER, PREMIUM, GOLD, MEMBERSHIP_QUARTERLY, etc)
+  cycle: string,  // MONTHLY, YEARLY, QUARTERLY, SEMI_ANNUAL, ANNUAL
   userId: string,
   referralCode?: string,
   couponCode?: string
 ): Promise<{ checkoutId: string; checkoutUrl: string }> {
-  // Buscar plano do banco de dados
-  console.log('🔍 [CHECKOUT] Buscando plano:', planId)
-  const plan = await getPlanById(planId)
-  
-  if (!plan) {
+  console.log('🔍 [CHECKOUT] Iniciando checkout:', { planId, cycle })
+
+  // Buscar plano do banco de dados (suporta ambos formatos)
+  let planFromDb: any = null
+
+  // Para planos tradicionais (STARTER, PREMIUM, GOLD), usar getPlanById
+  if (['STARTER', 'PREMIUM', 'GOLD'].includes(planId)) {
+    console.log('🔍 [CHECKOUT] Plano tradicional detectado, usando getPlanById')
+    planFromDb = await getPlanById(planId as 'STARTER' | 'PREMIUM' | 'GOLD')
+  } else {
+    // Para planos membership, buscar direto do banco
+    console.log('🔍 [CHECKOUT] Plano membership detectado, buscando do banco')
+    planFromDb = await getSubscriptionPlanById(planId as any)
+  }
+
+  if (!planFromDb) {
     console.error('❌ [CHECKOUT] Plano não encontrado:', planId)
     throw new Error(`Plano não encontrado: ${planId}`)
   }
-  
-  // Verificar se veio do banco ou fallback comparando com valores conhecidos do fallback
-  let source = 'BANCO DE DADOS'
-  try {
-    if (PLANS_FALLBACK && Array.isArray(PLANS_FALLBACK) && PLANS_FALLBACK.length > 0) {
-      const fallbackPlan = PLANS_FALLBACK.find(p => p.id === planId)
-      if (fallbackPlan && 
-          plan.monthlyPrice === fallbackPlan.monthlyPrice && 
-          plan.annualPrice === fallbackPlan.annualPrice) {
-        source = 'FALLBACK (código)'
-      }
-    }
-  } catch (error) {
-    console.warn('⚠️ [CHECKOUT] Erro ao verificar fallback:', error)
-    // Continuar com 'BANCO DE DADOS' como padrão
-  }
-  
+
+  // Detectar formato do plano
+  const planFormat = planFromDb.planFormat || 'TRADITIONAL'
+  console.log('✅ [CHECKOUT] Formato do plano:', planFormat)
+
+  // Determinar o objeto 'plan' baseado no formato
+  const plan = planFromDb // Usar o objeto do banco diretamente
+
   console.log('✅ [CHECKOUT] Plano encontrado:', {
-    id: plan.id,
+    id: plan.planId || plan.id,
     name: plan.name,
+    format: planFormat,
     monthlyPrice: plan.monthlyPrice,
     annualPrice: plan.annualPrice,
-    source
+    cycleCredits: plan.cycleCredits,
+    cycleDurationMonths: plan.cycleDurationMonths
   })
 
   // Buscar usuário
@@ -360,8 +368,34 @@ export async function createSubscriptionCheckout(
     }
   }
 
-  // Calcular valor baseado no ciclo (SEMPRE pegar do banco de dados)
-  const originalPrice = cycle === 'YEARLY' ? plan.annualPrice : plan.monthlyPrice
+  // Calcular valor baseado no formato e ciclo
+  let originalPrice: number
+  let asaasCycle: 'MONTHLY' | 'YEARLY' // Asaas só suporta MONTHLY e YEARLY
+
+  if (planFormat === 'TRADITIONAL') {
+    // Formato A: lógica atual (INTACTA)
+    originalPrice = cycle === 'YEARLY' ? plan.annualPrice : plan.monthlyPrice
+    asaasCycle = cycle === 'YEARLY' ? 'YEARLY' : 'MONTHLY'
+  } else {
+    // Formato B: preço do ciclo específico
+    // Para Asaas, converter ciclos longos para MONTHLY com valor total
+    originalPrice = plan.monthlyPrice // No formato B, monthlyPrice = preço total do ciclo
+
+    // Asaas subscription cycle - converter baseado na duração
+    // QUARTERLY (3 meses) → MONTHLY (mas cobrança única de 3 meses)
+    // SEMI_ANNUAL (6 meses) → MONTHLY (mas cobrança única de 6 meses)
+    // ANNUAL (12 meses) → YEARLY
+    const cycleDuration = plan.cycleDurationMonths || 3
+    asaasCycle = cycleDuration >= 12 ? 'YEARLY' : 'MONTHLY'
+
+    console.log('💰 [CHECKOUT] Formato B - Ciclo detectado:', {
+      billingCycle: cycle,
+      cycleDuration,
+      asaasCycle,
+      price: originalPrice
+    })
+  }
+
   let value = originalPrice
   let discountApplied = 0
   let validatedCoupon: Awaited<ReturnType<typeof validateCoupon>>['coupon'] | null = null
@@ -437,6 +471,20 @@ export async function createSubscriptionCheckout(
   // Formato já é YYYY-MM-DD (en-CA usa esse formato)
   const nextDueDate = brazilDateStr
 
+  // Preparar descrição baseada no formato
+  let planDescription: string
+  if (planFormat === 'TRADITIONAL') {
+    planDescription = `Assinatura ${plan.name} ${cycle === 'YEARLY' ? 'anual' : 'mensal'} - VibePhoto`
+  } else {
+    // Formato B: incluir duração do ciclo
+    const cycleNames: Record<string, string> = {
+      'QUARTERLY': 'trimestral (3 meses)',
+      'SEMI_ANNUAL': 'semestral (6 meses)',
+      'ANNUAL': 'anual (12 meses)'
+    }
+    planDescription = `${plan.name} ${cycleNames[cycle] || cycle} - VibePhoto`
+  }
+
   // Preparar dados do checkout
   const checkoutData: any = {
     billingTypes: ['CREDIT_CARD'], // Apenas CREDIT_CARD permitido para RECURRENT (limitação do Asaas)
@@ -445,13 +493,13 @@ export async function createSubscriptionCheckout(
     items: [
       {
         name: `Plano ${plan.name}`,
-        description: `Assinatura ${plan.name} ${cycle === 'YEARLY' ? 'anual' : 'mensal'} - VibePhoto`,
+        description: planDescription,
         value,
         quantity: 1
       }
     ],
     subscription: {
-      cycle,
+      cycle: asaasCycle, // Usar asaasCycle (MONTHLY ou YEARLY) para compatibilidade com Asaas
       nextDueDate // Data de hoje no fuso horário do Brasil (YYYY-MM-DD)
     },
     autoRedirect: true, // Redireciona automaticamente após pagamento
@@ -543,10 +591,10 @@ export async function createSubscriptionCheckout(
     status: 'PENDING',
     billingType: 'CREDIT_CARD',
     value,
-    description: `Assinatura ${plan.name} - ${cycle}`,
+    description: planDescription,
     dueDate: dueDateObj, // Agora é um Date object válido
-    planType: planId,
-    billingCycle: cycle
+    planType: ['STARTER', 'PREMIUM', 'GOLD'].includes(planId) ? planId : null, // Apenas planos tradicionais
+    billingCycle: asaasCycle // Salvar cycle que o Asaas entende (MONTHLY ou YEARLY)
   }
 
   // Add influencer data if applicable
@@ -594,8 +642,19 @@ export async function createSubscriptionCheckout(
   // CRÍTICO: Salvar plan e billingCycle diretamente na tabela users
   // Isso garante que os dados estejam disponíveis mesmo se o Payment não for encontrado no webhook
   const userUpdateData: Record<string, any> = {
-    plan: planId, // Salvar plan diretamente (Plan enum)
-    billingCycle: cycle // Salvar billingCycle diretamente (MONTHLY/YEARLY)
+    billingCycle: cycle // Salvar billingCycle original (MONTHLY, YEARLY, QUARTERLY, etc)
+  }
+
+  // Salvar planFormat e dados específicos do formato
+  if (planFormat === 'TRADITIONAL') {
+    // Formato A: salvar plan enum
+    userUpdateData.plan = planId
+    userUpdateData.planFormat = 'TRADITIONAL'
+  } else {
+    // Formato B: NÃO salvar plan (não é um enum válido), salvar formato e créditos de ciclo
+    userUpdateData.plan = null // Planos membership não usam o enum Plan
+    userUpdateData.planFormat = 'MEMBERSHIP'
+    userUpdateData.cycleCredits = plan.cycleCredits // Créditos fixos por ciclo
   }
 
   if (influencer) {
@@ -620,10 +679,12 @@ export async function createSubscriptionCheckout(
     data: userUpdateData
   })
 
-  console.log('✅ [CHECKOUT] Plan e billingCycle salvos na tabela users:', {
+  console.log('✅ [CHECKOUT] Dados salvos na tabela users:', {
     userId: user.id,
-    plan: planId,
-    billingCycle: cycle
+    planFormat,
+    plan: userUpdateData.plan,
+    billingCycle: cycle,
+    cycleCredits: userUpdateData.cycleCredits
   })
 
   // Montar URL do checkout

@@ -6,9 +6,15 @@ import { createSubscriptionCheckout } from '@/lib/services/asaas-checkout-servic
  * API para criar checkout de assinatura
  * POST /api/checkout/subscription
  *
+ * Suporta dois formatos:
+ * - TRADITIONAL: planId = STARTER/PREMIUM/GOLD, cycle = MONTHLY/YEARLY
+ * - MEMBERSHIP: planId = MEMBERSHIP_QUARTERLY/MEMBERSHIP_SEMI_ANNUAL/MEMBERSHIP_ANNUAL
+ *
  * Body: {
- *   planId: 'STARTER' | 'PREMIUM' | 'GOLD'
- *   cycle: 'MONTHLY' | 'YEARLY'
+ *   planId: string
+ *   cycle: string
+ *   referralCode?: string
+ *   couponCode?: string
  * }
  *
  * Returns: {
@@ -41,17 +47,20 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Validar plan ID
-    const validPlans = ['STARTER', 'PREMIUM', 'GOLD']
-    if (!validPlans.includes(planId)) {
+    // Validar plan ID (aceitar ambos formatos)
+    const validTraditionalPlans = ['STARTER', 'PREMIUM', 'GOLD']
+    const validMembershipPlans = ['MEMBERSHIP_QUARTERLY', 'MEMBERSHIP_SEMI_ANNUAL', 'MEMBERSHIP_ANNUAL']
+    const allValidPlans = [...validTraditionalPlans, ...validMembershipPlans]
+
+    if (!allValidPlans.includes(planId)) {
       return NextResponse.json(
         { success: false, error: 'Plan ID inválido' },
         { status: 400 }
       )
     }
 
-    // Validar cycle
-    const validCycles = ['MONTHLY', 'YEARLY']
+    // Validar cycle (aceitar ambos formatos)
+    const validCycles = ['MONTHLY', 'YEARLY', 'QUARTERLY', 'SEMI_ANNUAL', 'ANNUAL']
     if (!validCycles.includes(cycle)) {
       return NextResponse.json(
         { success: false, error: 'Cycle inválido' },

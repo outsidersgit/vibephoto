@@ -36,6 +36,11 @@ model User {
   creditsLimit            Int       @default(0) // Set based on plan when subscription is active
   creditsBalance          Int       @default(0) // Purchased credits balance
 
+  // Plan format tracking (Formato A vs Formato B)
+  planFormat           PlanFormat? @map("plan_format") // Formato do plano contratado (preserva formato original)
+  cycleCredits         Int? @map("cycle_credits") // Créditos fixos por ciclo (formato B)
+  lastCyclePaymentAt   DateTime? @map("last_cycle_payment_at") // Última cobrança do ciclo (formato B)
+
   // Brazilian customer data for Asaas
   cpfCnpj       String?
   phone         String?
@@ -165,6 +170,11 @@ enum PlanType {
   PAID // Plano pago - renovação mensal/anual de créditos
 }
 
+enum PlanFormat {
+  TRADITIONAL  // Formato A: 3 planos (Starter/Premium/Gold) × 2 ciclos (Mensal/Anual)
+  MEMBERSHIP   // Formato B: 1 plano (Membership) × 3 ciclos (Trimestral/Semestral/Anual)
+}
+
 model SubscriptionPlan {
   id     String @id @default(cuid())
   planId String @unique // ID único do plano (ex: STARTER, PREMIUM, FREE_TRIAL, etc)
@@ -178,13 +188,20 @@ model SubscriptionPlan {
   displayOrder Int      @default(0) @map("display_order") // Order for display in UI
   color        String? // 'blue', 'purple', 'yellow' - DEPRECATED: manter apenas para compatibilidade
 
+  // Plan format (Formato A vs Formato B)
+  planFormat               PlanFormat @default(TRADITIONAL) @map("plan_format")
+  billingCycle             String? @map("billing_cycle") // Para formato B: "QUARTERLY", "SEMI_ANNUAL", "ANNUAL"
+  cycleCredits             Int? @map("cycle_credits") // Créditos fixos por ciclo (formato B)
+  cycleDurationMonths      Int? @map("cycle_duration_months") // Duração do ciclo em meses (3, 6, 12)
+  minimumCommitmentMonths  Int @default(1) @map("minimum_commitment_months") // Mínimo de meses (formato B: 3+)
+
   // Pricing
   monthlyPrice      Float // Pode ser 0 para planos FREE
   annualPrice       Float // Pode ser 0 para planos FREE
   monthlyEquivalent Float // Preço equivalente mensal para planos anuais
 
   // Limits and features
-  credits    Int // Créditos (únicos para FREE, mensais para PAID)
+  credits    Int // Créditos (únicos para FREE, mensais para PAID formato A)
   models     Int // Modelos incluídos
   resolution String // Ex: "1024x1024"
   features   Json // Array de strings com features (stored as single JSON array)
@@ -202,6 +219,7 @@ model SubscriptionPlan {
 
   @@index([planId])
   @@index([isActive])
+  @@index([planFormat])
   @@map("subscription_plans")
 }
 

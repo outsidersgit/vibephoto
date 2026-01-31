@@ -348,73 +348,148 @@ async function handlePaymentSuccess(payment: any) {
       // This is a subscription payment
       console.log('🔄 Processing subscription payment for user:', user.id)
 
-      // Get subscription data from Asaas to extract plan info
-      let planType: any = null
-      let billingCycle: 'MONTHLY' | 'YEARLY' | null = null
+      // Detectar formato do plano do usuário
+      const userPlanFormat = user.planFormat || 'TRADITIONAL'
+      console.log(`📋 [WEBHOOK] Formato do plano do usuário: ${userPlanFormat}`)
 
-      if (payment.subscription) {
-        try {
-          const asaasSubscription = await asaas.getSubscription(payment.subscription)
-          console.log('📋 Asaas subscription data:', JSON.stringify(asaasSubscription, null, 2))
+      if (userPlanFormat === 'TRADITIONAL') {
+        // ========================================
+        // FORMATO A - Lógica ATUAL (INTACTA)
+        // ========================================
+        console.log('🔵 [WEBHOOK] Processando pagamento FORMATO A (Traditional)')
 
-          // Map cycle from Asaas format to our format
-          if (asaasSubscription.cycle === 'MONTHLY') billingCycle = 'MONTHLY'
-          if (asaasSubscription.cycle === 'YEARLY') billingCycle = 'YEARLY'
+        // Get subscription data from Asaas to extract plan info
+        let planType: any = null
+        let billingCycle: 'MONTHLY' | 'YEARLY' | null = null
 
-          // Try to infer plan from value
-          const value = asaasSubscription.value
-          if (billingCycle === 'MONTHLY') {
-            if (value === 39) planType = 'STARTER'
-            else if (value === 69) planType = 'PREMIUM'
-            else if (value === 149) planType = 'GOLD'
-          } else if (billingCycle === 'YEARLY') {
-            if (value === 390) planType = 'STARTER'  // 39 * 10
-            else if (value === 690) planType = 'PREMIUM'  // 69 * 10
-            else if (value === 1490) planType = 'GOLD'  // 149 * 10
+        if (payment.subscription) {
+          try {
+            const asaasSubscription = await asaas.getSubscription(payment.subscription)
+            console.log('📋 Asaas subscription data:', JSON.stringify(asaasSubscription, null, 2))
+
+            // Map cycle from Asaas format to our format
+            if (asaasSubscription.cycle === 'MONTHLY') billingCycle = 'MONTHLY'
+            if (asaasSubscription.cycle === 'YEARLY') billingCycle = 'YEARLY'
+
+            // Try to infer plan from value
+            const value = asaasSubscription.value
+            if (billingCycle === 'MONTHLY') {
+              if (value === 39) planType = 'STARTER'
+              else if (value === 69) planType = 'PREMIUM'
+              else if (value === 149) planType = 'GOLD'
+            } else if (billingCycle === 'YEARLY') {
+              if (value === 390) planType = 'STARTER'  // 39 * 10
+              else if (value === 690) planType = 'PREMIUM'  // 69 * 10
+              else if (value === 1490) planType = 'GOLD'  // 149 * 10
+            }
+
+            console.log(`💡 Inferred plan: ${planType}, cycle: ${billingCycle}, value: ${value}`)
+
+            // Save subscription ID if not saved
+            if (!user.subscriptionId || user.subscriptionId !== payment.subscription) {
+              await prisma.user.update({
+                where: { id: user.id },
+                data: { subscriptionId: payment.subscription }
+              })
+            }
+          } catch (error) {
+            console.error('Error fetching subscription from Asaas:', error)
           }
-
-          console.log(`💡 Inferred plan: ${planType}, cycle: ${billingCycle}, value: ${value}`)
-
-          // Save subscription ID if not saved
-          if (!user.subscriptionId || user.subscriptionId !== payment.subscription) {
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { subscriptionId: payment.subscription }
-            })
-          }
-        } catch (error) {
-          console.error('Error fetching subscription from Asaas:', error)
         }
-      }
 
-      // Calculate next billing date (subscriptionEndsAt / nextDueDate)
-      const now = new Date()
-      const nextBillingDate = new Date(now)
-      if (billingCycle === 'YEARLY') {
-        nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1)
+        // Calculate next billing date (subscriptionEndsAt / nextDueDate)
+        const now = new Date()
+        const nextBillingDate = new Date(now)
+        if (billingCycle === 'YEARLY') {
+          nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1)
+        } else {
+          nextBillingDate.setMonth(nextBillingDate.getMonth() + 1)
+        }
+
+        // Update subscription status to active with plan and cycle
+        if (planType && billingCycle) {
+          await updateSubscriptionStatus(
+            user.id,
+            'ACTIVE',
+            nextBillingDate, // Pass next billing date
+            planType,
+            billingCycle
+          )
+          console.log(`✅ Activated ${planType} ${billingCycle} subscription for user ${user.id}, next billing: ${nextBillingDate.toISOString()}`)
+        } else {
+          // Fallback: activate without changing plan (keeps existing plan if any)
+          await updateSubscriptionStatus(user.id, 'ACTIVE')
+          console.log(`⚠️ Activated subscription for user ${user.id} (plan could not be determined)`)
+        }
+
+        // ⚡ CRITICAL: Check if subscription price needs to be updated (FIRST_CYCLE coupons)
+        // This happens when user uses a coupon that only applies to first payment
+        await handleFirstCycleCouponPriceUpdate(payment, user.id)
+
       } else {
-        nextBillingDate.setMonth(nextBillingDate.getMonth() + 1)
-      }
+        // ========================================
+        // FORMATO B - Nova lógica (Membership)
+        // ========================================
+        console.log('🟣 [WEBHOOK] Processando pagamento FORMATO B (Membership)')
 
-      // Update subscription status to active with plan and cycle
-      if (planType && billingCycle) {
-        await updateSubscriptionStatus(
-          user.id,
-          'ACTIVE',
-          nextBillingDate, // Pass next billing date
-          planType,
-          billingCycle
-        )
-        console.log(`✅ Activated ${planType} ${billingCycle} subscription for user ${user.id}, next billing: ${nextBillingDate.toISOString()}`)
-      } else {
-        // Fallback: activate without changing plan (keeps existing plan if any)
-        await updateSubscriptionStatus(user.id, 'ACTIVE')
-        console.log(`⚠️ Activated subscription for user ${user.id} (plan could not be determined)`)
-      }
+        // Buscar ciclo e créditos do usuário
+        const billingCycle = user.billingCycle // QUARTERLY, SEMI_ANNUAL, ANNUAL
+        const cycleCredits = user.cycleCredits || 0
 
-      // ⚡ CRITICAL: Check if subscription price needs to be updated (FIRST_CYCLE coupons)
-      // This happens when user uses a coupon that only applies to first payment
-      await handleFirstCycleCouponPriceUpdate(payment, user.id)
+        console.log(`📊 [WEBHOOK] Dados do usuário Membership:`, {
+          billingCycle,
+          cycleCredits,
+          currentCreditsLimit: user.creditsLimit,
+          currentCreditsUsed: user.creditsUsed
+        })
+
+        // Calcular próxima data de cobrança baseada no ciclo
+        const now = new Date()
+        let nextBillingDate = new Date(now)
+
+        // Mapear billing cycle para duração em meses
+        const cycleDurationMap: Record<string, number> = {
+          'QUARTERLY': 3,
+          'SEMI_ANNUAL': 6,
+          'ANNUAL': 12
+        }
+        const cycleDurationMonths = cycleDurationMap[billingCycle] || 3
+
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + cycleDurationMonths)
+
+        console.log(`📅 [WEBHOOK] Próxima cobrança em ${cycleDurationMonths} meses: ${nextBillingDate.toISOString()}`)
+
+        // Atualizar usuário com créditos fixos do ciclo
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            subscriptionStatus: 'ACTIVE',
+            subscriptionEndsAt: nextBillingDate,
+            nextDueDate: nextBillingDate,
+            lastCyclePaymentAt: now, // Registrar pagamento do ciclo
+
+            // Créditos do formato B: resetar para o valor fixo do ciclo
+            creditsLimit: cycleCredits,
+            creditsUsed: 0, // Resetar créditos usados
+
+            // Expiração: créditos expiram no final do ciclo
+            creditsExpiresAt: nextBillingDate,
+
+            // Salvar subscription ID
+            subscriptionId: payment.subscription || user.subscriptionId
+          }
+        })
+
+        console.log(`✅ [WEBHOOK] Membership ativado:`, {
+          userId: user.id,
+          billingCycle,
+          cycleCredits,
+          creditsLimit: cycleCredits,
+          creditsUsed: 0,
+          nextBilling: nextBillingDate.toISOString(),
+          creditsExpire: nextBillingDate.toISOString()
+        })
+      }
     }
 
     // CRITICAL: Register coupon usage and increment influencer totalReferrals

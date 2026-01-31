@@ -115,55 +115,6 @@ const testimonials = [
   }
 ]
 
-// FAQ - Perguntas frequentes
-const faqItems = [
-  {
-    question: "O que é o Vibe Photo?",
-    answer: "O Vibe Photo é uma plataforma de IA que cria fotos profissionais personalizadas. Envie suas selfies, nossa IA treina um modelo único do seu rosto e gera fotos suas em qualquer cenário desejado."
-  },
-  {
-    question: "Qual a diferença entre Assinaturas e Pacotes Únicos?",
-    answer: "Assinaturas renovam créditos automaticamente (mensais/anuais) - ideais para uso constante. Pacotes únicos são compras avulsas válidas por 1 ano - perfeitos para uso esporádico. Nas assinaturas, créditos não utilizados expiram no final do período."
-  },
-  {
-    question: "Como funciona o sistema de créditos?",
-    answer: "Cada foto consome 10 créditos. Criar modelos é GRATUITO. Assinaturas: Starter (50 fotos/mês), Premium (120 fotos/mês), Gold (250 fotos/mês). Pacotes únicos: 35 a 500 fotos válidas por 1 ano."
-  },
-  {
-    question: "Quantas fotos preciso para treinar meu modelo?",
-    answer: "Entre 19-33 fotos de alta qualidade com diferentes ângulos, expressões e iluminações. Maior variedade = melhor qualidade dos resultados."
-  },
-  {
-    question: "Quanto tempo demora o treinamento?",
-    answer: "10-30 minutos dependendo da qualidade das fotos. Você recebe notificação por email quando estiver pronto."
-  },
-  {
-    question: "Quais formas de pagamento aceitam?",
-    answer: "Cartões (Visa, Mastercard, Elo) e PIX via Asaas. Processamento seguro e criptografado."
-  },
-  {
-    question: "Posso cancelar a assinatura?",
-    answer: "Sim, a qualquer momento em \"Minha Conta > Assinatura\". Cancelamento efetivo no final do período atual."
-  },
-  {
-    question: "Oferecem reembolso?",
-    answer: "7 dias para reembolso integral (CDC Art. 49) APENAS se não usar nenhum recurso. Após primeiro uso da IA, sem direito à desistência devido aos custos irreversíveis de processamento."
-  },
-  {
-    question: "Minhas fotos estão seguras?",
-    answer: "Sim! Criptografia militar, servidores seguros. Apenas você tem acesso. Nunca compartilhamos ou vendemos suas imagens."
-  },
-  {
-    question: "Usam minhas fotos para outros modelos?",
-    answer: "NÃO! Suas fotos são exclusivas para seu modelo pessoal. Não as utilizamos para treinar outros modelos. Privacidade é prioridade."
-  },
-  {
-    question: "Que formato de fotos enviar?",
-    answer: "JPG, PNG, WebP. Mínimo 512x512px, bem iluminadas, rosto visível. Evite fotos escuras, borradas ou com óculos escuros."
-  }
-]
-
-
 function PricingPageContent() {
   // CRITICAL: Todos os hooks DEVEM ser chamados ANTES de qualquer early return
   // Violar esta regra causa erro React #300/#310
@@ -177,7 +128,8 @@ function PricingPageContent() {
   const carouselRef = useRef<HTMLDivElement>(null)
   const [plans, setPlans] = useState<Plan[]>([])
   const [loadingPlans, setLoadingPlans] = useState(true)
-  
+  const [planFormat, setPlanFormat] = useState<'TRADITIONAL' | 'MEMBERSHIP'>('TRADITIONAL')
+
   const isRequired = searchParams.get('required') === 'true'
   const isNewUser = searchParams.get('newuser') === 'true'
 
@@ -189,7 +141,14 @@ function PricingPageContent() {
         if (response.ok) {
           const data = await response.json()
           const fetchedPlans = data.plans || []
-          
+          const format = data.format || 'TRADITIONAL'
+
+          console.log('📋 [PRICING] Formato recebido da API:', format)
+          console.log('📋 [PRICING] Planos recebidos:', fetchedPlans.length)
+
+          // Salvar formato
+          setPlanFormat(format)
+
           // Se a API retornou planos, usar eles
           if (fetchedPlans.length > 0) {
             setPlans(fetchedPlans)
@@ -197,12 +156,14 @@ function PricingPageContent() {
             // Se não retornou planos, usar fallback hardcoded
             console.warn('⚠️ [PRICING] Nenhum plano retornado da API, usando fallback hardcoded')
             setPlans(PLANS)
+            setPlanFormat('TRADITIONAL') // Fallback é sempre traditional
           }
         } else {
           // Se a API retornou erro, usar fallback hardcoded
           console.warn('⚠️ [PRICING] Erro na API, usando fallback hardcoded')
           setPlans(PLANS)
-          
+          setPlanFormat('TRADITIONAL')
+
           const errorData = await response.json().catch(() => ({}))
           console.error('Erro ao buscar planos da API:', response.status, errorData)
         }
@@ -210,11 +171,12 @@ function PricingPageContent() {
         // Se houver erro de conexão, usar fallback hardcoded
         console.error('❌ [PRICING] Erro ao conectar com API, usando fallback hardcoded:', error)
         setPlans(PLANS)
+        setPlanFormat('TRADITIONAL')
       } finally {
         setLoadingPlans(false)
       }
     }
-    
+
     fetchPlans()
   }, [])
 
@@ -269,17 +231,82 @@ function PricingPageContent() {
     return { savings, monthsEquivalent }
   }
 
-  const handlePlanSelect = (planId: 'STARTER' | 'PREMIUM' | 'GOLD') => {
-    setSelectedPlan(planId)
+  const handlePlanSelect = (planId: string) => {
+    setSelectedPlan(planId as any)
     if (!session?.user) {
       router.push('/auth/signup')
     } else {
       // Check subscription status to determine route
       const hasActiveSubscription = session.user.subscriptionStatus === 'ACTIVE'
       const targetRoute = hasActiveSubscription ? 'upgrade' : 'activate'
-      router.push(`/billing/${targetRoute}?plan=${planId}&cycle=${billingCycle}`)
+
+      // Determinar cycle baseado no formato
+      let cycle: string
+      if (planFormat === 'TRADITIONAL') {
+        cycle = billingCycle === 'annual' ? 'YEARLY' : 'MONTHLY'
+      } else {
+        // Formato B: extrair cycle do planId
+        if (planId.includes('QUARTERLY')) cycle = 'QUARTERLY'
+        else if (planId.includes('SEMI_ANNUAL')) cycle = 'SEMI_ANNUAL'
+        else if (planId.includes('ANNUAL')) cycle = 'ANNUAL'
+        else cycle = 'QUARTERLY' // fallback
+      }
+
+      router.push(`/billing/${targetRoute}?plan=${planId}&cycle=${cycle}`)
     }
   }
+
+  // FAQ - Perguntas frequentes (dinâmicas baseadas no formato)
+  const faqItems = [
+    {
+      question: "O que é o Vibe Photo?",
+      answer: "O Vibe Photo é uma plataforma de IA que cria fotos profissionais personalizadas. Envie suas selfies, nossa IA treina um modelo único do seu rosto e gera fotos suas em qualquer cenário desejado."
+    },
+    {
+      question: "Qual a diferença entre Assinaturas e Pacotes Únicos?",
+      answer: planFormat === 'MEMBERSHIP'
+        ? "Assinaturas Membership renovam créditos fixos a cada ciclo (trimestral/semestral/anual) - ideais para uso constante. Pacotes únicos são compras avulsas válidas por 1 ano - perfeitos para uso esporádico. Nos planos Membership, créditos não utilizados expiram no final do ciclo contratado."
+        : "Assinaturas renovam créditos automaticamente (mensais/anuais) - ideais para uso constante. Pacotes únicos são compras avulsas válidas por 1 ano - perfeitos para uso esporádico. Nas assinaturas, créditos não utilizados expiram no final do período."
+    },
+    {
+      question: "Como funciona o sistema de créditos?",
+      answer: planFormat === 'MEMBERSHIP'
+        ? "Cada foto consome 10 créditos. Criar modelos é GRATUITO. Membership: Trimestral (2.100 créditos a cada 3 meses), Semestral (4.500 créditos a cada 6 meses), Anual (9.600 créditos por ano). Pacotes únicos: 35 a 500 fotos válidas por 1 ano."
+        : "Cada foto consome 10 créditos. Criar modelos é GRATUITO. Assinaturas: Starter (50 fotos/mês), Premium (120 fotos/mês), Gold (250 fotos/mês). Pacotes únicos: 35 a 500 fotos válidas por 1 ano."
+    },
+    {
+      question: "Quantas fotos preciso para treinar meu modelo?",
+      answer: "Entre 19-33 fotos de alta qualidade com diferentes ângulos, expressões e iluminações. Maior variedade = melhor qualidade dos resultados."
+    },
+    {
+      question: "Quanto tempo demora o treinamento?",
+      answer: "10-30 minutos dependendo da qualidade das fotos. Você recebe notificação por email quando estiver pronto."
+    },
+    {
+      question: "Quais formas de pagamento aceitam?",
+      answer: "Cartões (Visa, Mastercard, Elo) e PIX via Asaas. Processamento seguro e criptografado."
+    },
+    {
+      question: "Posso cancelar a assinatura?",
+      answer: "Sim, a qualquer momento em \"Minha Conta > Assinatura\". Cancelamento efetivo no final do período atual."
+    },
+    {
+      question: "Oferecem reembolso?",
+      answer: "7 dias para reembolso integral (CDC Art. 49) APENAS se não usar nenhum recurso. Após primeiro uso da IA, sem direito à desistência devido aos custos irreversíveis de processamento."
+    },
+    {
+      question: "Minhas fotos estão seguras?",
+      answer: "Sim! Criptografia militar, servidores seguros. Apenas você tem acesso. Nunca compartilhamos ou vendemos suas imagens."
+    },
+    {
+      question: "Usam minhas fotos para outros modelos?",
+      answer: "NÃO! Suas fotos são exclusivas para seu modelo pessoal. Não as utilizamos para treinar outros modelos. Privacidade é prioridade."
+    },
+    {
+      question: "Que formato de fotos enviar?",
+      answer: "JPG, PNG, WebP. Mínimo 512x512px, bem iluminadas, rosto visível. Evite fotos escuras, borradas ou com óculos escuros."
+    }
+  ]
 
 
   return (
@@ -293,38 +320,49 @@ function PricingPageContent() {
             Escolha seu plano
           </h1>
 
-          {/* Billing Cycle Toggle */}
-          <div className="flex justify-center mb-12">
-            <div className="bg-gray-50 p-0.5 rounded-lg border border-gray-200 flex w-full max-w-xs">
-              <button
-                onClick={() => setBillingCycle('monthly')}
-                className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  billingCycle === 'monthly'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
-              >
-                Mensal
-              </button>
-              <button
-                onClick={() => setBillingCycle('annual')}
-                className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all relative ${
-                  billingCycle === 'annual'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
-              >
-                Anual
-                {billingCycle === 'annual' && (
-                  <span className="absolute -top-2.5 -right-2 bg-gray-900 text-white text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full font-semibold shadow-sm whitespace-nowrap">
-                    4 meses grátis
-                  </span>
-                )}
-              </button>
+          {/* Billing Cycle Toggle - Apenas para formato TRADITIONAL */}
+          {planFormat === 'TRADITIONAL' && (
+            <div className="flex justify-center mb-12">
+              <div className="bg-gray-50 p-0.5 rounded-lg border border-gray-200 flex w-full max-w-xs">
+                <button
+                  onClick={() => setBillingCycle('monthly')}
+                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    billingCycle === 'monthly'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
+                >
+                  Mensal
+                </button>
+                <button
+                  onClick={() => setBillingCycle('annual')}
+                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all relative ${
+                    billingCycle === 'annual'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
+                >
+                  Anual
+                  {billingCycle === 'annual' && (
+                    <span className="absolute -top-2.5 -right-2 bg-gray-900 text-white text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full font-semibold shadow-sm whitespace-nowrap">
+                      4 meses grátis
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Mensagem explicativa para formato MEMBERSHIP */}
+          {planFormat === 'MEMBERSHIP' && (
+            <div className="flex justify-center mb-12">
+              <p className="text-sm text-gray-600">
+                Escolha o período que melhor se adapta às suas necessidades
+              </p>
+            </div>
+          )}
 
         </div>
 
@@ -350,21 +388,37 @@ function PricingPageContent() {
               <CardHeader className="text-left pb-6">
                 <CardTitle className="text-3xl font-bold text-gray-900 mb-6" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>{plan.name}</CardTitle>
                 <div className="mb-6">
-                  {billingCycle === 'annual' ? (
+                  {planFormat === 'TRADITIONAL' ? (
+                    // Formato A: mostrar preço baseado no toggle mensal/anual
+                    billingCycle === 'annual' ? (
+                      <>
+                        <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                          R$ {plan.annualPrice}
+                          <span className="text-base font-normal text-gray-500">/ano</span>
+                        </div>
+                        <div className="text-sm text-gray-600 font-medium">
+                          R$ {plan.monthlyEquivalent}/mês
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                        R$ {plan.monthlyPrice}
+                        <span className="text-base font-normal text-gray-500">/mês</span>
+                      </div>
+                    )
+                  ) : (
+                    // Formato B: mostrar preço fixo do ciclo + equivalente mensal
                     <>
                       <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                        R$ {plan.annualPrice}
-                        <span className="text-base font-normal text-gray-500">/ano</span>
+                        R$ {(plan as any).price || plan.monthlyPrice}
+                        <span className="text-base font-normal text-gray-500">
+                          /{(plan as any).cycleDurationMonths === 3 ? '3 meses' : (plan as any).cycleDurationMonths === 6 ? '6 meses' : 'ano'}
+                        </span>
                       </div>
                       <div className="text-sm text-gray-600 font-medium">
                         R$ {plan.monthlyEquivalent}/mês
                       </div>
                     </>
-                  ) : (
-                    <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                      R$ {plan.monthlyPrice}
-                      <span className="text-base font-normal text-gray-500">/mês</span>
-                    </div>
                   )}
                 </div>
               </CardHeader>

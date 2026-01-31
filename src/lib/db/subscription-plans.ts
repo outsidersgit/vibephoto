@@ -20,6 +20,13 @@ export interface SubscriptionPlanData {
   createdAt: Date
   updatedAt: Date
   deletedAt?: Date | null
+
+  // Plan format fields (Formato A vs Formato B)
+  planFormat: string // 'TRADITIONAL' | 'MEMBERSHIP'
+  billingCycle?: string | null // 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL'
+  cycleCredits?: number | null
+  cycleDurationMonths?: number | null
+  minimumCommitmentMonths: number
 }
 
 /**
@@ -48,6 +55,11 @@ export async function getAllSubscriptionPlans(): Promise<SubscriptionPlanData[]>
     createdAt: Date
     updatedAt: Date
     deletedAt: Date | null
+    planFormat: string
+    billingCycle: string | null
+    cycleCredits: number | null
+    cycleDurationMonths: number | null
+    minimumCommitmentMonths: number
   }>>`
     SELECT
       id,
@@ -67,7 +79,12 @@ export async function getAllSubscriptionPlans(): Promise<SubscriptionPlanData[]>
       features,
       "createdAt",
       "updatedAt",
-      "deletedAt"
+      "deletedAt",
+      plan_format as "planFormat",
+      billing_cycle as "billingCycle",
+      cycle_credits as "cycleCredits",
+      cycle_duration_months as "cycleDurationMonths",
+      minimum_commitment_months as "minimumCommitmentMonths"
     FROM subscription_plans
     WHERE "deletedAt" IS NULL
     ORDER BY display_order ASC, "planId" ASC
@@ -126,6 +143,11 @@ export async function getSubscriptionPlanById(planId: Plan): Promise<Subscriptio
       createdAt: Date
       updatedAt: Date
       deletedAt: Date | null
+      planFormat: string
+      billingCycle: string | null
+      cycleCredits: number | null
+      cycleDurationMonths: number | null
+      minimumCommitmentMonths: number
     }>>`
       SELECT
         id,
@@ -144,7 +166,12 @@ export async function getSubscriptionPlanById(planId: Plan): Promise<Subscriptio
         features,
         "createdAt",
         "updatedAt",
-        "deletedAt"
+        "deletedAt",
+        plan_format as "planFormat",
+        billing_cycle as "billingCycle",
+        cycle_credits as "cycleCredits",
+        cycle_duration_months as "cycleDurationMonths",
+        minimum_commitment_months as "minimumCommitmentMonths"
       FROM subscription_plans
       WHERE "planId" = ${planId}
         AND "deletedAt" IS NULL

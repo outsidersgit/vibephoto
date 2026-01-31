@@ -7,15 +7,15 @@ import Link from 'next/link'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-type SearchParams = { searchParams?: Promise<{ status?: string }> }
+type SearchParams = { searchParams?: Promise<{ status?: string; format?: string }> }
 
 export default async function AdminSubscriptionPlansPage({ searchParams }: SearchParams) {
   noStore()
   await requireAdmin()
-  
-  const { status = 'all' } = (await (searchParams || Promise.resolve({}))) || {}
+
+  const { status = 'all', format = 'all' } = (await (searchParams || Promise.resolve({}))) || {}
   const where: any = { deletedAt: null }
-  
+
   if (status === 'active') where.isActive = true
   if (status === 'inactive') where.isActive = false
 
@@ -35,38 +35,52 @@ export default async function AdminSubscriptionPlansPage({ searchParams }: Searc
     models: number
     resolution: string
     features: any
+    planFormat: string
+    billingCycle: string | null
+    cycleCredits: number | null
+    cycleDurationMonths: number | null
     createdAt: Date
     updatedAt: Date
     deletedAt: Date | null
   }>>`
-    SELECT 
-      id, 
+    SELECT
+      id,
       "planId",
-      name, 
-      description, 
-      "isActive", 
-      popular, 
-      color, 
-      "monthlyPrice", 
-      "annualPrice", 
-      "monthlyEquivalent", 
-      credits, 
-      models, 
-      resolution, 
+      name,
+      description,
+      "isActive",
+      popular,
+      color,
+      "monthlyPrice",
+      "annualPrice",
+      "monthlyEquivalent",
+      credits,
+      models,
+      resolution,
       features,
-      "createdAt", 
-      "updatedAt", 
+      plan_format as "planFormat",
+      billing_cycle as "billingCycle",
+      cycle_credits as "cycleCredits",
+      cycle_duration_months as "cycleDurationMonths",
+      "createdAt",
+      "updatedAt",
       "deletedAt"
     FROM subscription_plans
     WHERE "deletedAt" IS NULL
       ${status === 'active' ? Prisma.sql`AND "isActive" = true` : Prisma.empty}
       ${status === 'inactive' ? Prisma.sql`AND "isActive" = false` : Prisma.empty}
-    ORDER BY 
+      ${format === 'traditional' ? Prisma.sql`AND plan_format = 'TRADITIONAL'` : Prisma.empty}
+      ${format === 'membership' ? Prisma.sql`AND plan_format = 'MEMBERSHIP'` : Prisma.empty}
+    ORDER BY
+      plan_format ASC,
       CASE "planId"
         WHEN 'STARTER' THEN 1
         WHEN 'PREMIUM' THEN 2
         WHEN 'GOLD' THEN 3
-        ELSE 4
+        WHEN 'MEMBERSHIP_QUARTERLY' THEN 4
+        WHEN 'MEMBERSHIP_SEMI_ANNUAL' THEN 5
+        WHEN 'MEMBERSHIP_ANNUAL' THEN 6
+        ELSE 7
       END ASC
   `
 
@@ -110,9 +124,14 @@ export default async function AdminSubscriptionPlansPage({ searchParams }: Searc
       
       <form className="flex flex-col md:flex-row gap-2">
         <select name="status" defaultValue={status} className="border rounded-md px-3 py-2">
-          <option value="all">Todos</option>
+          <option value="all">Todos os status</option>
           <option value="active">Ativos</option>
           <option value="inactive">Inativos</option>
+        </select>
+        <select name="format" defaultValue={format} className="border rounded-md px-3 py-2">
+          <option value="all">Todos os formatos</option>
+          <option value="traditional">Formato A (Tradicional)</option>
+          <option value="membership">Formato B (Membership)</option>
         </select>
         <button className="rounded-md border px-3 py-2 text-sm">Filtrar</button>
       </form>
@@ -126,13 +145,22 @@ export default async function AdminSubscriptionPlansPage({ searchParams }: Searc
             } ${!plan.isActive ? 'opacity-50' : ''}`}
           >
             <div className="flex items-start justify-between mb-2">
-              <div>
+              <div className="flex-1">
                 <h3 className="font-semibold text-lg">{plan.name}</h3>
-                {plan.popular && (
-                  <span className="inline-block mt-1 text-xs bg-purple-500 text-white px-2 py-0.5 rounded">
-                    Popular
+                <div className="flex gap-1 mt-1 flex-wrap">
+                  {plan.popular && (
+                    <span className="inline-block text-xs bg-purple-500 text-white px-2 py-0.5 rounded">
+                      Popular
+                    </span>
+                  )}
+                  <span className={`inline-block text-xs px-2 py-0.5 rounded ${
+                    plan.planFormat === 'MEMBERSHIP'
+                      ? 'bg-purple-100 text-purple-800'
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {plan.planFormat === 'MEMBERSHIP' ? 'Formato B' : 'Formato A'}
                   </span>
-                )}
+                </div>
               </div>
               <span className={`text-xs px-2 py-1 rounded ${
                 plan.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
