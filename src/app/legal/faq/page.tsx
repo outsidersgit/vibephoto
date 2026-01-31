@@ -110,7 +110,7 @@ const faqData: FAQItem[] = [
   {
     category: 'pagamento',
     question: 'Qual a diferença entre planos de assinatura e pacotes de créditos?',
-    answer: 'Os planos de assinatura (Starter, Premium e Gold) renovam automaticamente a cada mês, liberando novos crédito. Cada assinatura dá direito à criação de 1 modelo de IA, e modelos adicionais podem ser criados por 500 créditos cada. Já os pacotes de créditos únicos (Essencial, Avançado, Pro e Enterprise) são compras avulsas, não se renovam automaticamente, têm validade de 1 ano e são ideais para uso pontual ou complementar.'
+    answer: 'Os planos de assinatura renovam automaticamente a cada ciclo, liberando novos crédito. Cada assinatura dá direito à criação de 1 modelo de IA, e modelos adicionais podem ser criados por 500 créditos cada. Já os pacotes de créditos únicos são compras avulsas, não se renovam automaticamente, têm validade de 1 ano e são ideais para uso pontual ou complementar.'
   },
   {
     category: 'pagamento',
@@ -130,7 +130,7 @@ const faqData: FAQItem[] = [
   {
     category: 'pagamento',
     question: 'Qual é o valor dos pacotes de créditos únicos?',
-    answer: 'Oferecemos 4 opções: Pacote 350 (R$ 79 - 350 créditos), Pacote 1000 (R$ 169 - 1000 créditos), Pacote 2000 (R$ 319 - 2000 créditos) e Pacote 5000 (R$ 789 - 5000 créditos). Todos são válidos por 1 ano.'
+    answer: 'Oferecemos 4 opções: Pacote 350 (R$ 99 - 350 créditos), Pacote 1000 (R$ 249 - 1000 créditos), Pacote 2000 (R$ 439 - 2000 créditos) e Pacote 5000 (R$ 949 - 5000 créditos). Todos são válidos por 1 ano.'
   },
 
   // Privacidade

@@ -177,6 +177,7 @@ function PricingPageContent() {
   const carouselRef = useRef<HTMLDivElement>(null)
   const [plans, setPlans] = useState<Plan[]>([])
   const [loadingPlans, setLoadingPlans] = useState(true)
+  const [planFormat, setPlanFormat] = useState<'TRADITIONAL' | 'MEMBERSHIP'>('TRADITIONAL')
   
   const isRequired = searchParams.get('required') === 'true'
   const isNewUser = searchParams.get('newuser') === 'true'
@@ -189,7 +190,11 @@ function PricingPageContent() {
         if (response.ok) {
           const data = await response.json()
           const fetchedPlans = data.plans || []
-          
+          const format = data.format || 'TRADITIONAL'
+
+          // Set plan format
+          setPlanFormat(format)
+
           // Se a API retornou planos, usar eles
           if (fetchedPlans.length > 0) {
             setPlans(fetchedPlans)
@@ -293,38 +298,40 @@ function PricingPageContent() {
             Escolha seu plano
           </h1>
 
-          {/* Billing Cycle Toggle */}
-          <div className="flex justify-center mb-12">
-            <div className="bg-gray-50 p-0.5 rounded-lg border border-gray-200 flex w-full max-w-xs">
-              <button
-                onClick={() => setBillingCycle('monthly')}
-                className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  billingCycle === 'monthly'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
-              >
-                Mensal
-              </button>
-              <button
-                onClick={() => setBillingCycle('annual')}
-                className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all relative ${
-                  billingCycle === 'annual'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
-              >
-                Anual
-                {billingCycle === 'annual' && (
-                  <span className="absolute -top-2.5 -right-2 bg-gray-900 text-white text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full font-semibold shadow-sm whitespace-nowrap">
-                    4 meses grátis
-                  </span>
-                )}
-              </button>
+          {/* Billing Cycle Toggle - Only for TRADITIONAL format */}
+          {planFormat === 'TRADITIONAL' && (
+            <div className="flex justify-center mb-12">
+              <div className="bg-gray-50 p-0.5 rounded-lg border border-gray-200 flex w-full max-w-xs">
+                <button
+                  onClick={() => setBillingCycle('monthly')}
+                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    billingCycle === 'monthly'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
+                >
+                  Mensal
+                </button>
+                <button
+                  onClick={() => setBillingCycle('annual')}
+                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all relative ${
+                    billingCycle === 'annual'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
+                >
+                  Anual
+                  {billingCycle === 'annual' && (
+                    <span className="absolute -top-2.5 -right-2 bg-gray-900 text-white text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full font-semibold shadow-sm whitespace-nowrap">
+                      4 meses grátis
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
         </div>
 
@@ -350,7 +357,18 @@ function PricingPageContent() {
               <CardHeader className="text-left pb-6">
                 <CardTitle className="text-3xl font-bold text-gray-900 mb-6" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>{plan.name}</CardTitle>
                 <div className="mb-6">
-                  {billingCycle === 'annual' ? (
+                  {planFormat === 'MEMBERSHIP' ? (
+                    // Format B (Membership) - Preço fixo do ciclo
+                    <>
+                      <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                        R$ {(plan as any).price}
+                      </div>
+                      <div className="text-sm text-gray-600 font-medium">
+                        R$ {plan.monthlyEquivalent}/mês
+                      </div>
+                    </>
+                  ) : billingCycle === 'annual' ? (
+                    // Format A (Traditional) - Ciclo Anual
                     <>
                       <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
                         R$ {plan.annualPrice}
@@ -361,6 +379,7 @@ function PricingPageContent() {
                       </div>
                     </>
                   ) : (
+                    // Format A (Traditional) - Ciclo Mensal
                     <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
                       R$ {plan.monthlyPrice}
                       <span className="text-base font-normal text-gray-500">/mês</span>
@@ -374,7 +393,8 @@ function PricingPageContent() {
                   {plan.features.map((feature, index) => {
                     let displayFeature = feature
 
-                    if (billingCycle === 'annual') {
+                    // Only transform features for TRADITIONAL format in annual cycle
+                    if (planFormat === 'TRADITIONAL' && billingCycle === 'annual') {
                       if (feature.includes('créditos/mês')) {
                         const yearlyCredits = (plan.credits || 0) * 12
                         displayFeature = feature.replace(/\d+[.,]?\d*\s*créditos\/mês/, `${yearlyCredits.toLocaleString('pt-BR')} créditos/ano`)
@@ -399,7 +419,7 @@ function PricingPageContent() {
                         </div>
                         <span className="text-gray-700 flex items-center" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
                           {displayFeature}
-                          {feature === '1 modelo de IA' && (
+                          {(feature === '1 modelo de IA' || feature.includes('modelo de IA')) && (
                             <div className="relative ml-2 group">
                               <button className="w-3 h-3 bg-gray-600 text-white rounded-full flex items-center justify-center text-xs hover:bg-gray-700 transition-colors">
                                 !
