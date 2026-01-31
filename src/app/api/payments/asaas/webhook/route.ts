@@ -350,7 +350,7 @@ async function handlePaymentSuccess(payment: any) {
 
       // Get subscription data from Asaas to extract plan info
       let planType: any = null
-      let billingCycle: 'MONTHLY' | 'YEARLY' | null = null
+      let billingCycle: 'MONTHLY' | 'YEARLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL' | null = null
 
       if (payment.subscription) {
         try {
@@ -358,8 +358,18 @@ async function handlePaymentSuccess(payment: any) {
           console.log('📋 Asaas subscription data:', JSON.stringify(asaasSubscription, null, 2))
 
           // Map cycle from Asaas format to our format
-          if (asaasSubscription.cycle === 'MONTHLY') billingCycle = 'MONTHLY'
-          if (asaasSubscription.cycle === 'YEARLY') billingCycle = 'YEARLY'
+          // Asaas → VibePhoto:
+          // MONTHLY → MONTHLY
+          // YEARLY → YEARLY (could be YEARLY or ANNUAL - check plan)
+          // QUARTERLY → QUARTERLY
+          // SEMIANNUALLY → SEMI_ANNUAL
+          const asaasCycle = asaasSubscription.cycle
+          if (asaasCycle === 'MONTHLY') billingCycle = 'MONTHLY'
+          else if (asaasCycle === 'YEARLY') billingCycle = 'YEARLY'
+          else if (asaasCycle === 'QUARTERLY') billingCycle = 'QUARTERLY'
+          else if (asaasCycle === 'SEMIANNUALLY') billingCycle = 'SEMI_ANNUAL'
+
+          console.log(`🔄 [WEBHOOK] Mapeando cycle do Asaas: ${asaasCycle} → ${billingCycle}`)
 
           // Try to infer plan from value
           const value = asaasSubscription.value
@@ -569,16 +579,20 @@ async function handleCheckoutPaid(checkout: any) {
     let plan: 'STARTER' | 'PREMIUM' | 'GOLD' | undefined =
       (user.plan as 'STARTER' | 'PREMIUM' | 'GOLD' | undefined) || undefined
 
-    let billingCycle: 'MONTHLY' | 'YEARLY' | undefined =
-      (user.billingCycle === 'MONTHLY' || user.billingCycle === 'YEARLY')
-        ? (user.billingCycle as 'MONTHLY' | 'YEARLY')
+    let billingCycle: 'MONTHLY' | 'YEARLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL' | undefined =
+      (user.billingCycle === 'MONTHLY' || user.billingCycle === 'YEARLY' || user.billingCycle === 'QUARTERLY' || user.billingCycle === 'SEMI_ANNUAL' || user.billingCycle === 'ANNUAL')
+        ? (user.billingCycle as 'MONTHLY' | 'YEARLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL')
         : undefined
 
     if (!billingCycle && checkout?.subscription?.cycle) {
-      const cycle = checkout.subscription.cycle.toUpperCase()
-      if (cycle === 'MONTHLY' || cycle === 'YEARLY') {
-        billingCycle = cycle
-      }
+      const asaasCycle = checkout.subscription.cycle.toUpperCase()
+      // Map Asaas cycle to VibePhoto cycle
+      if (asaasCycle === 'MONTHLY') billingCycle = 'MONTHLY'
+      else if (asaasCycle === 'YEARLY') billingCycle = 'YEARLY'
+      else if (asaasCycle === 'QUARTERLY') billingCycle = 'QUARTERLY'
+      else if (asaasCycle === 'SEMIANNUALLY') billingCycle = 'SEMI_ANNUAL'
+
+      console.log(`🔄 [CHECKOUT_PAID] Mapeando cycle do Asaas: ${asaasCycle} → ${billingCycle}`)
     }
 
     if (!plan && checkout?.items?.length) {

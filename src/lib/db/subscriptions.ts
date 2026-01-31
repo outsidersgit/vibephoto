@@ -13,7 +13,7 @@ export async function createSubscription(data: {
   currentPeriodStart: Date
   currentPeriodEnd: Date
   cancelAtPeriodEnd?: boolean
-  billingCycle?: 'MONTHLY' | 'YEARLY'
+  billingCycle?: 'MONTHLY' | 'YEARLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL'
   influencerId?: string
   referralCodeUsed?: string
 }) {
@@ -124,7 +124,7 @@ export async function updateSubscriptionStatus(
   status: string,
   currentPeriodEnd?: Date,
   plan?: Plan,
-  billingCycle?: 'MONTHLY' | 'YEARLY'
+  billingCycle?: 'MONTHLY' | 'YEARLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL'
 ) {
   const updateData: any = {
     subscriptionStatus: status

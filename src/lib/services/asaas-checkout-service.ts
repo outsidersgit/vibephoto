@@ -437,6 +437,32 @@ export async function createSubscriptionCheckout(
   // Formato já é YYYY-MM-DD (en-CA usa esse formato)
   const nextDueDate = brazilDateStr
 
+  // Mapear cycle para formato aceito pelo Asaas
+  // VibePhoto → Asaas:
+  // MONTHLY → MONTHLY
+  // YEARLY → YEARLY
+  // QUARTERLY → QUARTERLY
+  // SEMI_ANNUAL → SEMIANNUALLY
+  // ANNUAL → YEARLY
+  let asaasCycle = cycle
+  if (cycle === 'SEMI_ANNUAL') {
+    asaasCycle = 'SEMIANNUALLY' // Asaas usa SEMIANNUALLY em vez de SEMI_ANNUAL
+  } else if (cycle === 'ANNUAL') {
+    asaasCycle = 'YEARLY' // ANNUAL do VibePhoto = YEARLY do Asaas
+  }
+
+  console.log(`🔄 [CHECKOUT] Mapeando cycle: ${cycle} → ${asaasCycle}`)
+
+  // Preparar descrição dinâmica
+  const cycleLabels: Record<string, string> = {
+    'MONTHLY': 'mensal',
+    'YEARLY': 'anual',
+    'QUARTERLY': 'trimestral',
+    'SEMI_ANNUAL': 'semestral',
+    'ANNUAL': 'anual'
+  }
+  const cycleLabel = cycleLabels[cycle] || 'mensal'
+
   // Preparar dados do checkout
   const checkoutData: any = {
     billingTypes: ['CREDIT_CARD'], // Apenas CREDIT_CARD permitido para RECURRENT (limitação do Asaas)
@@ -445,13 +471,13 @@ export async function createSubscriptionCheckout(
     items: [
       {
         name: `Plano ${plan.name}`,
-        description: `Assinatura ${plan.name} ${cycle === 'YEARLY' ? 'anual' : 'mensal'} - VibePhoto`,
+        description: `Assinatura ${plan.name} ${cycleLabel} - VibePhoto`,
         value,
         quantity: 1
       }
     ],
     subscription: {
-      cycle,
+      cycle: asaasCycle, // Usar cycle mapeado para Asaas
       nextDueDate // Data de hoje no fuso horário do Brasil (YYYY-MM-DD)
     },
     autoRedirect: true, // Redireciona automaticamente após pagamento

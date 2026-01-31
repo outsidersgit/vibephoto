@@ -20,6 +20,12 @@ export interface SubscriptionPlanData {
   createdAt: Date
   updatedAt: Date
   deletedAt?: Date | null
+  // Format B fields
+  planFormat?: 'TRADITIONAL' | 'MEMBERSHIP'
+  billingCycle?: string | null
+  cycleCredits?: number | null
+  cycleDurationMonths?: number | null
+  minimumCommitmentMonths?: number
 }
 
 /**
@@ -48,6 +54,11 @@ export async function getAllSubscriptionPlans(): Promise<SubscriptionPlanData[]>
     createdAt: Date
     updatedAt: Date
     deletedAt: Date | null
+    planFormat: 'TRADITIONAL' | 'MEMBERSHIP'
+    billingCycle: string | null
+    cycleCredits: number | null
+    cycleDurationMonths: number | null
+    minimumCommitmentMonths: number
   }>>`
     SELECT
       id,
@@ -67,7 +78,12 @@ export async function getAllSubscriptionPlans(): Promise<SubscriptionPlanData[]>
       features,
       "createdAt",
       "updatedAt",
-      "deletedAt"
+      "deletedAt",
+      "planFormat",
+      "billingCycle",
+      "cycleCredits",
+      "cycleDurationMonths",
+      "minimumCommitmentMonths"
     FROM subscription_plans
     WHERE "deletedAt" IS NULL
     ORDER BY display_order ASC, "planId" ASC
@@ -126,6 +142,11 @@ export async function getSubscriptionPlanById(planId: Plan): Promise<Subscriptio
       createdAt: Date
       updatedAt: Date
       deletedAt: Date | null
+      planFormat: 'TRADITIONAL' | 'MEMBERSHIP'
+      billingCycle: string | null
+      cycleCredits: number | null
+      cycleDurationMonths: number | null
+      minimumCommitmentMonths: number
     }>>`
       SELECT
         id,
@@ -144,7 +165,12 @@ export async function getSubscriptionPlanById(planId: Plan): Promise<Subscriptio
         features,
         "createdAt",
         "updatedAt",
-        "deletedAt"
+        "deletedAt",
+        "planFormat",
+        "billingCycle",
+        "cycleCredits",
+        "cycleDurationMonths",
+        "minimumCommitmentMonths"
       FROM subscription_plans
       WHERE "planId" = ${planId}
         AND "deletedAt" IS NULL
