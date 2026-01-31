@@ -3,6 +3,8 @@ import { unstable_noStore as noStore } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import Link from 'next/link'
+import { getActivePlanFormat } from '@/lib/services/system-config-service'
+import PlanFormatSelector from './plan-format-selector'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -12,12 +14,15 @@ type SearchParams = { searchParams?: Promise<{ status?: string }> }
 export default async function AdminSubscriptionPlansPage({ searchParams }: SearchParams) {
   noStore()
   await requireAdmin()
-  
+
   const { status = 'all' } = (await (searchParams || Promise.resolve({}))) || {}
   const where: any = { deletedAt: null }
-  
+
   if (status === 'active') where.isActive = true
   if (status === 'inactive') where.isActive = false
+
+  // Get active plan format
+  const activePlanFormat = await getActivePlanFormat()
 
   // Usar raw query para contornar o problema do Prisma com Json[]
   const plans = await prisma.$queryRaw<Array<{
@@ -107,6 +112,9 @@ export default async function AdminSubscriptionPlansPage({ searchParams }: Searc
           Novo Plano
         </Link>
       </div>
+
+      {/* Plan Format Selector */}
+      <PlanFormatSelector initialFormat={activePlanFormat} />
       
       <form className="flex flex-col md:flex-row gap-2">
         <select name="status" defaultValue={status} className="border rounded-md px-3 py-2">
