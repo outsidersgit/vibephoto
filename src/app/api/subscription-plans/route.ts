@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getAllSubscriptionPlans } from '@/lib/db/subscription-plans'
+import { getActivePlanFormat } from '@/lib/services/system-config-service'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 3600 // 1 hora
@@ -14,7 +15,7 @@ export async function GET() {
     if (!process.env.DATABASE_URL) {
       console.error('❌ [API_SUBSCRIPTION_PLANS] DATABASE_URL is not defined')
       return NextResponse.json(
-        { 
+        {
           error: 'Database configuration error',
           message: 'DATABASE_URL environment variable is not set'
         },
@@ -22,7 +23,17 @@ export async function GET() {
       )
     }
 
-    const plans = await getAllSubscriptionPlans()
+    // Get active plan format
+    const activePlanFormat = await getActivePlanFormat()
+    console.log(`📋 [API_SUBSCRIPTION_PLANS] Active plan format: ${activePlanFormat}`)
+
+    const allPlans = await getAllSubscriptionPlans()
+
+    // Filter plans by active format
+    const plans = allPlans.filter(plan => {
+      const planFormat = plan.planFormat || 'TRADITIONAL'
+      return planFormat === activePlanFormat
+    })
     
     console.log(`✅ [API_SUBSCRIPTION_PLANS] Found ${plans.length} plans in database`)
     
@@ -70,13 +81,16 @@ export async function GET() {
         }
       })
 
-    console.log(`✅ [API_SUBSCRIPTION_PLANS] Returning ${activePlans.length} active plans`)
-    
+    console.log(`✅ [API_SUBSCRIPTION_PLANS] Returning ${activePlans.length} active plans for format ${activePlanFormat}`)
+
     if (activePlans.length === 0) {
-      console.warn('⚠️ [API_SUBSCRIPTION_PLANS] No active plans found! Total plans:', plans.length)
+      console.warn('⚠️ [API_SUBSCRIPTION_PLANS] No active plans found! Total plans:', plans.length, 'Format:', activePlanFormat)
     }
 
-    return NextResponse.json({ plans: activePlans })
+    return NextResponse.json({
+      plans: activePlans,
+      format: activePlanFormat
+    })
   } catch (error: any) {
     console.error('❌ [API_SUBSCRIPTION_PLANS] Error fetching plans:', error)
     console.error('❌ [API_SUBSCRIPTION_PLANS] Error message:', error.message)
