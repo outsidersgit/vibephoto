@@ -390,7 +390,12 @@ function PricingPageContent() {
                   )}
                 </CardTitle>
                 <div className="mb-6">
-                  {planFormat === 'MEMBERSHIP' ? (
+                  {plan.id === 'CUSTOM' ? (
+                    // Custom plan - Sob consulta
+                    <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                      Sob consulta
+                    </div>
+                  ) : planFormat === 'MEMBERSHIP' ? (
                     // Format B (Membership) - Preço fixo do ciclo (sem proporção mensal)
                     <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
                       R$ {(plan as any).price}
@@ -475,10 +480,17 @@ function PricingPageContent() {
                   style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
                   onClick={(e) => {
                     e.stopPropagation()
-                    handlePlanSelect(plan.id)
+                    if (plan.id === 'CUSTOM') {
+                      // Redirect to WhatsApp for Custom plan
+                      const message = 'Olá! Gostaria de conversar sobre uma solução personalizada do VibePhoto.'
+                      const whatsappUrl = `https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5511999999999'}?text=${encodeURIComponent(message)}`
+                      window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
+                    } else {
+                      handlePlanSelect(plan.id)
+                    }
                   }}
                 >
-                  Começar Experiência
+                  {plan.id === 'CUSTOM' ? 'Falar com Consultor' : 'Começar Experiência'}
                 </Button>
               </CardContent>
             </Card>

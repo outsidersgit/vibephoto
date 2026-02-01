@@ -2229,7 +2229,12 @@ export default function HomePage() {
                       )}
                     </CardTitle>
                     <div className="mb-6">
-                      {planFormat === 'MEMBERSHIP' ? (
+                      {plan.id === 'CUSTOM' ? (
+                        // Custom plan - Sob consulta
+                        <div className="text-2xl font-bold text-gray-900 mb-1">
+                          Sob consulta
+                        </div>
+                      ) : planFormat === 'MEMBERSHIP' ? (
                         // Format B (Membership) - Preço fixo do ciclo (sem proporção mensal)
                         <>
                           <div className="text-2xl font-bold text-gray-900 mb-1">
@@ -2324,10 +2329,17 @@ export default function HomePage() {
                       }`}
                       onClick={(e) => {
                         e.stopPropagation()
-                        handlePlanSelect(plan.id)
+                        if (plan.id === 'CUSTOM') {
+                          // Redirect to WhatsApp for Custom plan
+                          const message = 'Olá! Gostaria de conversar sobre uma solução personalizada do VibePhoto.'
+                          const whatsappUrl = `https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5511999999999'}?text=${encodeURIComponent(message)}`
+                          window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
+                        } else {
+                          handlePlanSelect(plan.id)
+                        }
                       }}
                     >
-                      Começar Experiência
+                      {plan.id === 'CUSTOM' ? 'Falar com Consultor' : 'Começar Experiência'}
                     </Button>
                   </CardContent>
                 </Card>

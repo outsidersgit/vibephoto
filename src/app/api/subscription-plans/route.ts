@@ -29,9 +29,11 @@ export async function GET() {
 
     const allPlans = await getAllSubscriptionPlans()
 
-    // Filter plans by active format
+    // Filter plans by active format (Custom plan appears in all formats)
     const plans = allPlans.filter(plan => {
       const planFormat = plan.planFormat || 'TRADITIONAL'
+      // Custom plan appears in all formats
+      if (plan.planId === 'CUSTOM') return true
       return planFormat === activePlanFormat
     })
     
