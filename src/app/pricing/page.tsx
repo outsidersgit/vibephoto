@@ -374,16 +374,16 @@ function PricingPageContent() {
             >
               {plan.popular && (
                 <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white">
-                  Popular
+                  Mais escolhido
                 </Badge>
               )}
 
               <CardHeader className="text-left pb-6">
-                <CardTitle className="mb-6" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                <CardTitle className="mb-2" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
                   {planFormat === 'MEMBERSHIP' ? (
                     <div>
-                      <span className="text-3xl font-bold text-gray-900">Membership</span>
-                      <span className="text-lg font-normal text-gray-500 ml-2">{plan.billingCycle}</span>
+                      <div className="text-3xl font-bold text-gray-900">{plan.billingCycle}</div>
+                      <div className="text-sm font-normal text-gray-500 mt-1">Membership</div>
                     </div>
                   ) : (
                     <span className="text-3xl font-bold text-gray-900">{plan.name}</span>
@@ -468,7 +468,7 @@ function PricingPageContent() {
 
                 <Button
                   className={`w-full py-3 transition-colors ${
-                    plan.popular || isSelected
+                    isSelected
                       ? 'bg-gray-900 hover:bg-gray-800 text-white'
                       : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                   }`}

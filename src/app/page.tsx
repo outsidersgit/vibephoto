@@ -1984,7 +1984,7 @@ export default function HomePage() {
           {/* Coverflow Carousel Section */}
           <div id="gallery-section" className="py-20 w-full">
             <div className="text-center mb-16 px-4 md:px-6">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">Explore toda sua imaginação</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">Sua presença digital de alto impacto</h2>
               <p className="text-lg text-gray-600 max-w-3xl mx-auto">
                 Além de gerar fotos com seu modelo, você também pode criar imagens únicas usando nossas ferramentas de IA.
               </p>
@@ -2169,16 +2169,16 @@ export default function HomePage() {
                 >
                   {plan.popular && (
                     <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white">
-                      Popular
+                      Mais escolhido
                     </Badge>
                   )}
 
                   <CardHeader className="text-left pb-6">
-                    <CardTitle className="mb-6">
+                    <CardTitle className="mb-2">
                       {planFormat === 'MEMBERSHIP' ? (
                         <div>
-                          <span className="text-3xl font-bold text-gray-900">Membership</span>
-                          <span className="text-lg font-normal text-gray-500 ml-2">{plan.billingCycle}</span>
+                          <div className="text-3xl font-bold text-gray-900">{plan.billingCycle}</div>
+                          <div className="text-sm font-normal text-gray-500 mt-1">Membership</div>
                         </div>
                       ) : (
                         <span className="text-3xl font-bold text-gray-900">{plan.name}</span>
@@ -2274,7 +2274,7 @@ export default function HomePage() {
 
                     <Button
                       className={`w-full py-3 transition-colors ${
-                        plan.popular || isSelected
+                        isSelected
                           ? 'bg-gray-900 hover:bg-gray-800 text-white'
                           : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
