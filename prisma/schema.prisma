@@ -20,8 +20,8 @@ model User {
   role          UserRole  @default(USER)
 
   // Subscription and billing
-  plan                    Plan? // STARTER, PREMIUM, or GOLD (all paid plans) - null for new users without subscription
-  billingCycle            String? // MONTHLY, YEARLY
+  plan                    String? // Plan ID (ex: STARTER, PREMIUM, GOLD, MEMBERSHIP_QUARTERLY, etc) - null for new users without subscription
+  billingCycle            String? // MONTHLY, YEARLY, QUARTERLY, SEMIANNUALLY
   asaasCustomerId         String?   @unique // Asaas customer ID
   subscriptionId          String?   @unique // Asaas subscription ID
   asaasCreditCardToken    String? // Token do cartão de crédito do Asaas (fallback)
@@ -686,7 +686,7 @@ model Payment {
   needsSplitRemoval Boolean? @default(false) @map("needs_split_removal") // If true, webhook should remove split from subscription
 
   // Related data
-  planType     Plan? // If subscription payment
+  planType     String? // If subscription payment (ex: STARTER, PREMIUM, MEMBERSHIP_QUARTERLY, etc)
   billingCycle String? // MONTHLY or YEARLY for subscription
   creditAmount Int? // If credit purchase
   packageId    String? // If photo package purchase
