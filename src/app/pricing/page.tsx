@@ -170,7 +170,7 @@ function PricingPageContent() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [selectedPlan, setSelectedPlan] = useState<'STARTER' | 'PREMIUM' | 'GOLD'>('PREMIUM')
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
   const [mounted, setMounted] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
@@ -178,7 +178,7 @@ function PricingPageContent() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [loadingPlans, setLoadingPlans] = useState(true)
   const [planFormat, setPlanFormat] = useState<'TRADITIONAL' | 'MEMBERSHIP'>('TRADITIONAL')
-  
+
   const isRequired = searchParams.get('required') === 'true'
   const isNewUser = searchParams.get('newuser') === 'true'
 
@@ -198,16 +198,34 @@ function PricingPageContent() {
           // Se a API retornou planos, usar eles
           if (fetchedPlans.length > 0) {
             setPlans(fetchedPlans)
+
+            // Auto-select popular plan
+            const popularPlan = fetchedPlans.find((p: any) => p.popular)
+            if (popularPlan && !selectedPlan) {
+              setSelectedPlan(popularPlan.id)
+            }
           } else {
             // Se não retornou planos, usar fallback hardcoded
             console.warn('⚠️ [PRICING] Nenhum plano retornado da API, usando fallback hardcoded')
             setPlans(PLANS)
+
+            // Auto-select popular plan from fallback
+            const popularPlan = PLANS.find((p: any) => p.popular)
+            if (popularPlan && !selectedPlan) {
+              setSelectedPlan(popularPlan.id)
+            }
           }
         } else {
           // Se a API retornou erro, usar fallback hardcoded
           console.warn('⚠️ [PRICING] Erro na API, usando fallback hardcoded')
           setPlans(PLANS)
-          
+
+          // Auto-select popular plan from fallback
+          const popularPlan = PLANS.find((p: any) => p.popular)
+          if (popularPlan && !selectedPlan) {
+            setSelectedPlan(popularPlan.id)
+          }
+
           const errorData = await response.json().catch(() => ({}))
           console.error('Erro ao buscar planos da API:', response.status, errorData)
         }
@@ -215,6 +233,12 @@ function PricingPageContent() {
         // Se houver erro de conexão, usar fallback hardcoded
         console.error('❌ [PRICING] Erro ao conectar com API, usando fallback hardcoded:', error)
         setPlans(PLANS)
+
+        // Auto-select popular plan from fallback
+        const popularPlan = PLANS.find((p: any) => p.popular)
+        if (popularPlan && !selectedPlan) {
+          setSelectedPlan(popularPlan.id)
+        }
       } finally {
         setLoadingPlans(false)
       }

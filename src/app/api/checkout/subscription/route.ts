@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuthAPI } from '@/lib/auth'
 import { createSubscriptionCheckout } from '@/lib/services/asaas-checkout-service'
-import { getActivePlans } from '@/lib/db/subscription-plans'
+import { getAllSubscriptionPlans } from '@/lib/db/subscription-plans'
 import { getActivePlanFormat } from '@/lib/services/system-config-service'
 
 /**
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     // Buscar formato ativo e planos do banco
     const activePlanFormat = await getActivePlanFormat()
-    const dbPlans = await getActivePlans()
+    const dbPlans = await getAllSubscriptionPlans()
 
     // Validar se o plano existe no banco
     const planExists = dbPlans.some(p => p.planId === planId)

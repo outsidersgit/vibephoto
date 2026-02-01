@@ -1442,7 +1442,7 @@ export default function HomePage() {
   const { data: session, status } = useSession()
   const [mounted, setMounted] = useState(false)
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
-  const [selectedPlan, setSelectedPlan] = useState<'STARTER' | 'PREMIUM' | 'GOLD'>('PREMIUM')
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState<{src: string, alt: string, title: string} | null>(null)
   const [activeToolModal, setActiveToolModal] = useState<'skin' | 'editor' | 'video' | null>(null)
   const [selectedPackage, setSelectedPackage] = useState<'ESSENCIAL' | 'AVANÇADO' | 'PRO' | 'ENTERPRISE'>('AVANÇADO')
@@ -1468,6 +1468,12 @@ export default function HomePage() {
           if (fetchedPlans.length > 0) {
             setPlans(fetchedPlans)
             setPlanFormat(format)
+
+            // Auto-select popular plan
+            const popularPlan = fetchedPlans.find((p: any) => p.popular)
+            if (popularPlan && !selectedPlan) {
+              setSelectedPlan(popularPlan.id)
+            }
           }
           // Se não retornou, mantém o fallback já inicializado
         }
@@ -1480,6 +1486,16 @@ export default function HomePage() {
 
     // Buscar planos em background (não bloqueia renderização)
     fetchPlans()
+  }, [])
+
+  // Auto-select popular plan from initial fallback
+  useEffect(() => {
+    if (!selectedPlan && PLANS_FALLBACK.length > 0) {
+      const popularPlan = PLANS_FALLBACK.find((p: any) => p.popular)
+      if (popularPlan) {
+        setSelectedPlan(popularPlan.id)
+      }
+    }
   }, [])
   
   // Prevent hydration mismatch
