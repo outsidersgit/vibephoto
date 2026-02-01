@@ -284,8 +284,8 @@ export async function createCreditPackageCheckout(
  * Criar checkout para assinatura de plano
  */
 export async function createSubscriptionCheckout(
-  planId: 'STARTER' | 'PREMIUM' | 'GOLD',
-  cycle: 'MONTHLY' | 'YEARLY',
+  planId: string,
+  cycle: 'MONTHLY' | 'YEARLY' | undefined,
   userId: string,
   referralCode?: string,
   couponCode?: string
@@ -361,7 +361,10 @@ export async function createSubscriptionCheckout(
   }
 
   // Calcular valor baseado no ciclo (SEMPRE pegar do banco de dados)
-  const originalPrice = cycle === 'YEARLY' ? plan.annualPrice : plan.monthlyPrice
+  // Para Format B (Membership), cycle é undefined - usar price direto do plano
+  const originalPrice = cycle
+    ? (cycle === 'YEARLY' ? plan.annualPrice : plan.monthlyPrice)
+    : (plan as any).price || plan.monthlyPrice
   let value = originalPrice
   let discountApplied = 0
   let validatedCoupon: Awaited<ReturnType<typeof validateCoupon>>['coupon'] | null = null
@@ -438,30 +441,48 @@ export async function createSubscriptionCheckout(
   const nextDueDate = brazilDateStr
 
   // Mapear cycle para formato aceito pelo Asaas
-  // VibePhoto → Asaas:
-  // MONTHLY → MONTHLY
-  // YEARLY → YEARLY
-  // QUARTERLY → QUARTERLY
-  // SEMI_ANNUAL → SEMIANNUALLY
-  // ANNUAL → YEARLY
-  let asaasCycle = cycle
-  if (cycle === 'SEMI_ANNUAL') {
-    asaasCycle = 'SEMIANNUALLY' // Asaas usa SEMIANNUALLY em vez de SEMI_ANNUAL
-  } else if (cycle === 'ANNUAL') {
-    asaasCycle = 'YEARLY' // ANNUAL do VibePhoto = YEARLY do Asaas
+  // Para Format B (Membership), detectar ciclo do planId
+  let asaasCycle: string
+  let cycleLabel: string
+
+  if (!cycle) {
+    // Format B (Membership) - detectar pelo planId
+    if (planId.includes('QUARTERLY')) {
+      asaasCycle = 'QUARTERLY'
+      cycleLabel = 'trimestral'
+    } else if (planId.includes('SEMI_ANNUAL')) {
+      asaasCycle = 'SEMIANNUALLY'
+      cycleLabel = 'semestral'
+    } else if (planId.includes('ANNUAL')) {
+      asaasCycle = 'YEARLY'
+      cycleLabel = 'anual'
+    } else {
+      asaasCycle = 'MONTHLY'
+      cycleLabel = 'mensal'
+    }
+  } else {
+    // Format A (Traditional) - usar cycle fornecido
+    // VibePhoto → Asaas:
+    // MONTHLY → MONTHLY
+    // YEARLY → YEARLY
+    asaasCycle = cycle
+    if (cycle === 'SEMI_ANNUAL') {
+      asaasCycle = 'SEMIANNUALLY'
+    } else if (cycle === 'ANNUAL') {
+      asaasCycle = 'YEARLY'
+    }
+
+    const cycleLabels: Record<string, string> = {
+      'MONTHLY': 'mensal',
+      'YEARLY': 'anual',
+      'QUARTERLY': 'trimestral',
+      'SEMI_ANNUAL': 'semestral',
+      'ANNUAL': 'anual'
+    }
+    cycleLabel = cycleLabels[cycle] || 'mensal'
   }
 
-  console.log(`🔄 [CHECKOUT] Mapeando cycle: ${cycle} → ${asaasCycle}`)
-
-  // Preparar descrição dinâmica
-  const cycleLabels: Record<string, string> = {
-    'MONTHLY': 'mensal',
-    'YEARLY': 'anual',
-    'QUARTERLY': 'trimestral',
-    'SEMI_ANNUAL': 'semestral',
-    'ANNUAL': 'anual'
-  }
-  const cycleLabel = cycleLabels[cycle] || 'mensal'
+  console.log(`🔄 [CHECKOUT] Mapeando cycle: ${cycle || 'auto-detect'} → ${asaasCycle}`)
 
   // Preparar dados do checkout
   const checkoutData: any = {
@@ -569,10 +590,10 @@ export async function createSubscriptionCheckout(
     status: 'PENDING',
     billingType: 'CREDIT_CARD',
     value,
-    description: `Assinatura ${plan.name} - ${cycle}`,
+    description: `Assinatura ${plan.name} - ${cycle || asaasCycle}`,
     dueDate: dueDateObj, // Agora é um Date object válido
     planType: planId,
-    billingCycle: cycle
+    billingCycle: cycle || asaasCycle
   }
 
   // Add influencer data if applicable
@@ -621,7 +642,7 @@ export async function createSubscriptionCheckout(
   // Isso garante que os dados estejam disponíveis mesmo se o Payment não for encontrado no webhook
   const userUpdateData: Record<string, any> = {
     plan: planId, // Salvar plan diretamente (Plan enum)
-    billingCycle: cycle // Salvar billingCycle diretamente (MONTHLY/YEARLY)
+    billingCycle: cycle || asaasCycle // Salvar billingCycle diretamente (MONTHLY/YEARLY)
   }
 
   if (influencer) {
@@ -649,7 +670,7 @@ export async function createSubscriptionCheckout(
   console.log('✅ [CHECKOUT] Plan e billingCycle salvos na tabela users:', {
     userId: user.id,
     plan: planId,
-    billingCycle: cycle
+    billingCycle: cycle || asaasCycle
   })
 
   // Montar URL do checkout
