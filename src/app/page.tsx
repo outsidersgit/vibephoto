@@ -59,16 +59,23 @@ const creditPackages: CreditPackage[] = [
 ]
 
 interface Plan {
-  id: 'STARTER' | 'PREMIUM' | 'GOLD'
+  id: string
   name: string
-  monthlyPrice: number
-  annualPrice: number
+  monthlyPrice?: number
+  annualPrice?: number
+  price?: number // For Format B (Membership)
   monthlyEquivalent: number
   description: string
   features: string[]
   popular: boolean
-  color: 'blue' | 'purple' | 'yellow'
+  color?: string | null
   credits: number
+  models?: number
+  // Format B fields
+  planFormat?: 'TRADITIONAL' | 'MEMBERSHIP'
+  billingCycle?: string | null
+  cycleCredits?: number | null
+  cycleDurationMonths?: number | null
 }
 
 // Planos hardcoded como fallback (será substituído pelos planos do banco se disponíveis)
@@ -1445,7 +1452,8 @@ export default function HomePage() {
   const sectionRef = useRef<HTMLElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [plans, setPlans] = useState<Plan[]>(PLANS_FALLBACK) // Inicializar com fallback
-  
+  const [planFormat, setPlanFormat] = useState<'TRADITIONAL' | 'MEMBERSHIP'>('TRADITIONAL')
+
   // Buscar planos do banco de dados (opcional - apenas para manter sincronizado)
   useEffect(() => {
     async function fetchPlans() {
@@ -1454,9 +1462,12 @@ export default function HomePage() {
         if (response.ok) {
           const data = await response.json()
           const fetchedPlans = data.plans || []
+          const format = data.format || 'TRADITIONAL'
+
           // Se a API retornou planos, usar eles (atualiza dinamicamente)
           if (fetchedPlans.length > 0) {
             setPlans(fetchedPlans)
+            setPlanFormat(format)
           }
           // Se não retornou, mantém o fallback já inicializado
         }
@@ -1466,7 +1477,7 @@ export default function HomePage() {
         console.warn('⚠️ [LANDING] Erro ao buscar planos da API, usando fallback:', error)
       }
     }
-    
+
     // Buscar planos em background (não bloqueia renderização)
     fetchPlans()
   }, [])
@@ -2095,36 +2106,38 @@ export default function HomePage() {
             <div className="text-center mb-16">
               <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-12 tracking-tight">Planos</h2>
 
-              {/* Billing Cycle Toggle */}
-              <div className="flex justify-center mb-8">
-                <div className="bg-gray-50 p-0.5 rounded-lg border border-gray-200 flex w-full max-w-xs">
-                  <button
-                    onClick={() => setBillingCycle('monthly')}
-                    className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                      billingCycle === 'monthly'
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    Mensal
-                  </button>
-                  <button
-                    onClick={() => setBillingCycle('annual')}
-                    className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all relative ${
-                      billingCycle === 'annual'
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    Anual
-                    {billingCycle === 'annual' && (
-                      <span className="absolute -top-2.5 -right-2 bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded-full font-semibold shadow-sm whitespace-nowrap">
-                        4 meses grátis
-                      </span>
-                    )}
-                  </button>
+              {/* Billing Cycle Toggle - Only show for TRADITIONAL format */}
+              {planFormat === 'TRADITIONAL' && (
+                <div className="flex justify-center mb-8">
+                  <div className="bg-gray-50 p-0.5 rounded-lg border border-gray-200 flex w-full max-w-xs">
+                    <button
+                      onClick={() => setBillingCycle('monthly')}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                        billingCycle === 'monthly'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Mensal
+                    </button>
+                    <button
+                      onClick={() => setBillingCycle('annual')}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all relative ${
+                        billingCycle === 'annual'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Anual
+                      {billingCycle === 'annual' && (
+                        <span className="absolute -top-2.5 -right-2 bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded-full font-semibold shadow-sm whitespace-nowrap">
+                          4 meses grátis
+                        </span>
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className={`grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 mx-auto ${plans.length === 4 ? 'md:grid-cols-4 max-w-7xl' : 'md:grid-cols-3 max-w-6xl'}`}>
@@ -2133,9 +2146,11 @@ export default function HomePage() {
                 return (
                 <Card
                   key={plan.id}
-                  className={`relative transition-all hover:shadow-lg border-gray-300 bg-gray-200 cursor-pointer ${
-                    isSelected ? 'ring-2 ring-gray-900 shadow-md' : ''
-                  }`}
+                  className={`relative transition-all hover:shadow-lg cursor-pointer ${
+                    plan.popular
+                      ? 'border-2 border-purple-500 bg-purple-50 shadow-md'
+                      : 'border-gray-300 bg-gray-200'
+                  } ${isSelected ? 'ring-2 ring-gray-900 shadow-md' : ''}`}
                   onClick={() => setSelectedPlan(plan.id)}
                 >
                   {plan.popular && (
@@ -2145,23 +2160,44 @@ export default function HomePage() {
                   )}
 
                   <CardHeader className="text-left pb-6">
-                    <CardTitle className="text-3xl font-bold text-gray-900 mb-6">{plan.name}</CardTitle>
+                    <CardTitle className={`${planFormat === 'MEMBERSHIP' ? 'text-2xl font-semibold text-gray-700' : 'text-3xl font-bold text-gray-900'} mb-6`}>
+                      {plan.name}
+                    </CardTitle>
                     <div className="mb-6">
-                      {billingCycle === 'annual' ? (
+                      {planFormat === 'MEMBERSHIP' ? (
+                        // Format B (Membership) - Preço fixo do ciclo (sem proporção mensal)
                         <>
                           <div className="text-2xl font-bold text-gray-900 mb-1">
-                            R$ {plan.annualPrice}
-                            <span className="text-base font-normal text-gray-500">/ano</span>
+                            R$ {(plan as any).price}
                           </div>
-                          <div className="text-sm text-gray-600 font-medium">
-                            R$ {plan.monthlyEquivalent}/mês
-                          </div>
+                          {plan.billingCycle && (
+                            <div className="text-xs text-gray-500 font-normal">
+                              {plan.billingCycle === 'Trimestral' && 'Cobrado a cada 3 meses'}
+                              {plan.billingCycle === 'Semestral' && 'Cobrado a cada 6 meses'}
+                              {plan.billingCycle === 'Anual' && 'Cobrado anualmente'}
+                            </div>
+                          )}
                         </>
                       ) : (
-                        <div className="text-2xl font-bold text-gray-900 mb-1">
-                          R$ {plan.monthlyPrice}
-                          <span className="text-base font-normal text-gray-500">/mês</span>
-                        </div>
+                        // Format A (Traditional) - Mensal/Anual com toggle
+                        <>
+                          {billingCycle === 'annual' ? (
+                            <>
+                              <div className="text-2xl font-bold text-gray-900 mb-1">
+                                R$ {plan.annualPrice}
+                                <span className="text-base font-normal text-gray-500">/ano</span>
+                              </div>
+                              <div className="text-sm text-gray-600 font-medium">
+                                R$ {plan.monthlyEquivalent}/mês
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-2xl font-bold text-gray-900 mb-1">
+                              R$ {plan.monthlyPrice}
+                              <span className="text-base font-normal text-gray-500">/mês</span>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </CardHeader>
@@ -2217,7 +2253,7 @@ export default function HomePage() {
 
                     <Button
                       className={`w-full py-3 transition-colors ${
-                        isSelected
+                        plan.popular || isSelected
                           ? 'bg-gray-900 hover:bg-gray-800 text-white'
                           : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
