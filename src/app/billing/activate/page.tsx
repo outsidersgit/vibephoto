@@ -26,6 +26,7 @@ function ActivatePageContent() {
   const [loadingCEP, setLoadingCEP] = useState(false)
   const [plans, setPlans] = useState<Plan[]>([])
   const [loadingPlans, setLoadingPlans] = useState(true)
+  const [planFormat, setPlanFormat] = useState<'TRADITIONAL' | 'MEMBERSHIP'>('TRADITIONAL')
   const [customerData, setCustomerData] = useState({
     name: '',
     email: '',
@@ -98,10 +99,12 @@ function ActivatePageContent() {
         }
 
         const data = await response.json()
-        
+        const format = data.format || 'TRADITIONAL'
+
         if (data.plans && Array.isArray(data.plans) && data.plans.length > 0) {
           console.log('✅ [ACTIVATE] Planos carregados do banco:', data.plans.length)
           setPlans(data.plans)
+          setPlanFormat(format)
         } else {
           console.warn('⚠️ [ACTIVATE] Nenhum plano retornado, usando fallback')
           // Usar fallback se não houver planos
@@ -232,6 +235,22 @@ function ActivatePageContent() {
   )
 
   const currentPlan = planDetails[selectedPlan as keyof typeof planDetails]
+
+  // Helper function to get price based on plan format
+  const getPlanPrice = (plan: Plan | undefined): number => {
+    if (!plan) return 0
+
+    // Format B (Membership) - price fixo
+    if (planFormat === 'MEMBERSHIP') {
+      return (plan as any).price || 0
+    }
+
+    // Format A (Traditional) - mensal/anual
+    if (billingCycle === 'annual') {
+      return plan.annualPrice || 0
+    }
+    return plan.monthlyPrice || 0
+  }
 
   const calculateSavings = (monthlyPrice: number, annualPrice: number) => {
     const savings = (monthlyPrice * 12) - annualPrice
@@ -523,15 +542,21 @@ function ActivatePageContent() {
       }
 
       // Criar checkout transparente
+      const checkoutPayload: any = {
+        planId: selectedPlan,
+        referralCode: referralCodeForCheckout,
+        couponCode: couponCodeForCheckout
+      }
+
+      // Apenas adicionar cycle para Format A (Traditional)
+      if (planFormat === 'TRADITIONAL') {
+        checkoutPayload.cycle = billingCycle === 'annual' ? 'YEARLY' : 'MONTHLY'
+      }
+
       const response = await fetch('/api/checkout/subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          planId: selectedPlan,
-          cycle: billingCycle === 'annual' ? 'YEARLY' : 'MONTHLY',
-          referralCode: referralCodeForCheckout,
-          couponCode: couponCodeForCheckout
-        })
+        body: JSON.stringify(checkoutPayload)
       })
 
       if (!response.ok) {
@@ -635,7 +660,7 @@ function ActivatePageContent() {
                       {couponStatus === 'valid' && couponDetails && couponDetails.type !== 'REFERRAL' && couponDetails.finalPrice ? (
                         <>
                           <span className="line-through text-slate-400 text-base mr-2">
-                            R$ {billingCycle === 'annual' ? currentPlan.annualPrice : currentPlan.monthlyPrice}
+                            R$ {getPlanPrice(currentPlan)}
                           </span>
                           <span className="text-green-400">
                             R$ {couponDetails.finalPrice.toFixed(2)}
@@ -643,15 +668,21 @@ function ActivatePageContent() {
                         </>
                       ) : (
                         <>
-                          R$ {billingCycle === 'annual' ? currentPlan.annualPrice : currentPlan.monthlyPrice}
+                          R$ {getPlanPrice(currentPlan)}
                         </>
                       )}
                       <span className="text-sm text-slate-300 font-normal">
-                        {billingCycle === 'annual' ? '/ano' : '/mês'}
+                        {planFormat === 'MEMBERSHIP'
+                          ? (currentPlan?.billingCycle ? `/${currentPlan.billingCycle.toLowerCase()}` : '')
+                          : (billingCycle === 'annual' ? '/ano' : '/mês')
+                        }
                       </span>
                     </div>
                     <Badge className="bg-purple-600 text-white">
-                      {billingCycle === 'annual' ? 'Cobrança Anual' : 'Cobrança Mensal'}
+                      {planFormat === 'MEMBERSHIP'
+                        ? `Cobrança ${currentPlan?.billingCycle || ''}`
+                        : (billingCycle === 'annual' ? 'Cobrança Anual' : 'Cobrança Mensal')
+                      }
                     </Badge>
                     {/* Show discount badge with duration info */}
                     {couponStatus === 'valid' && couponDetails && couponDetails.type !== 'REFERRAL' && couponDetails.discountAmount && (

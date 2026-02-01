@@ -62,6 +62,7 @@ function BillingPageContent() {
   const [plansError, setPlansError] = useState<string | null>(null)
   const [creditPackages, setCreditPackages] = useState<CreditPackage[]>([])
   const [loadingCreditPackages, setLoadingCreditPackages] = useState(true)
+  const [planFormat, setPlanFormat] = useState<'TRADITIONAL' | 'MEMBERSHIP'>('TRADITIONAL')
 
   // Buscar planos do banco de dados (com fallback para planos hardcoded)
   useEffect(() => {
@@ -72,10 +73,12 @@ function BillingPageContent() {
         if (response.ok) {
           const data = await response.json()
           const fetchedPlans = data.plans || []
-          
+          const format = data.format || 'TRADITIONAL'
+
           // Se a API retornou planos, usar eles
           if (fetchedPlans.length > 0) {
             setPlans(fetchedPlans)
+            setPlanFormat(format)
           } else {
             // Se não retornou planos, usar fallback hardcoded
             console.warn('⚠️ [BILLING] Nenhum plano retornado da API, usando fallback hardcoded')
@@ -85,7 +88,7 @@ function BillingPageContent() {
           // Se a API retornou erro, usar fallback hardcoded
           console.warn('⚠️ [BILLING] Erro na API, usando fallback hardcoded')
           setPlans(PLANS)
-          
+
           const errorData = await response.json().catch(() => ({}))
           console.error('Erro ao buscar planos da API:', response.status, errorData)
         }
@@ -97,7 +100,7 @@ function BillingPageContent() {
         setLoadingPlans(false)
       }
     }
-    
+
     fetchPlans()
   }, [])
 
@@ -579,38 +582,40 @@ function BillingPageContent() {
               <ArrowLeft className="w-4 h-4" />
               Voltar
             </Button>
-            {/* Billing Cycle Toggle */}
-            <div className="flex justify-center mb-8">
-              <div className="bg-gray-50 p-0.5 rounded-lg border border-gray-200 flex w-full max-w-xs">
-                <button
-                  onClick={() => setBillingCycle('monthly')}
-                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                    billingCycle === 'monthly'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
-                >
-                  Mensal
-                </button>
-                <button
-                  onClick={() => setBillingCycle('annual')}
-                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all relative ${
-                    billingCycle === 'annual'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
-                >
-                  Anual
-                  {billingCycle === 'annual' && (
-                    <span className="absolute -top-2.5 -right-2 bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded-full font-semibold shadow-sm whitespace-nowrap">
-                      4 meses grátis
-                    </span>
-                  )}
-                </button>
+            {/* Billing Cycle Toggle - Only show for TRADITIONAL format */}
+            {planFormat === 'TRADITIONAL' && (
+              <div className="flex justify-center mb-8">
+                <div className="bg-gray-50 p-0.5 rounded-lg border border-gray-200 flex w-full max-w-xs">
+                  <button
+                    onClick={() => setBillingCycle('monthly')}
+                    className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      billingCycle === 'monthly'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                    style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
+                  >
+                    Mensal
+                  </button>
+                  <button
+                    onClick={() => setBillingCycle('annual')}
+                    className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all relative ${
+                      billingCycle === 'annual'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                    style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}
+                  >
+                    Anual
+                    {billingCycle === 'annual' && (
+                      <span className="absolute -top-2.5 -right-2 bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded-full font-semibold shadow-sm whitespace-nowrap">
+                        4 meses grátis
+                      </span>
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Loading State */}
             {loadingPlans && (

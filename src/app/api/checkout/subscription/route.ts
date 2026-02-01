@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuthAPI } from '@/lib/auth'
 import { createSubscriptionCheckout } from '@/lib/services/asaas-checkout-service'
+import { getActivePlans } from '@/lib/db/subscription-plans'
+import { getActivePlanFormat } from '@/lib/services/system-config-service'
 
 /**
  * API para criar checkout de assinatura
  * POST /api/checkout/subscription
  *
  * Body: {
- *   planId: 'STARTER' | 'PREMIUM' | 'GOLD'
- *   cycle: 'MONTHLY' | 'YEARLY'
+ *   planId: string (ID do plano - ex: 'STARTER', 'MEMBERSHIP_QUARTERLY', etc)
+ *   cycle?: 'MONTHLY' | 'YEARLY' (apenas para Format A - Traditional)
  * }
  *
  * Returns: {
@@ -33,30 +35,43 @@ export async function POST(req: NextRequest) {
         ? body.couponCode.trim().toUpperCase()
         : undefined
 
-    // Validação
-    if (!planId || !cycle) {
+    // Validação básica
+    if (!planId) {
       return NextResponse.json(
-        { success: false, error: 'Plan ID e cycle são obrigatórios' },
+        { success: false, error: 'Plan ID é obrigatório' },
         { status: 400 }
       )
     }
 
-    // Validar plan ID
-    const validPlans = ['STARTER', 'PREMIUM', 'GOLD']
-    if (!validPlans.includes(planId)) {
+    // Buscar formato ativo e planos do banco
+    const activePlanFormat = await getActivePlanFormat()
+    const dbPlans = await getActivePlans()
+
+    // Validar se o plano existe no banco
+    const planExists = dbPlans.some(p => p.planId === planId)
+    if (!planExists) {
       return NextResponse.json(
-        { success: false, error: 'Plan ID inválido' },
+        { success: false, error: 'Plan ID inválido ou inativo' },
         { status: 400 }
       )
     }
 
-    // Validar cycle
-    const validCycles = ['MONTHLY', 'YEARLY']
-    if (!validCycles.includes(cycle)) {
-      return NextResponse.json(
-        { success: false, error: 'Cycle inválido' },
-        { status: 400 }
-      )
+    // Para Format A (Traditional), validar cycle
+    if (activePlanFormat === 'TRADITIONAL') {
+      if (!cycle) {
+        return NextResponse.json(
+          { success: false, error: 'Cycle é obrigatório para planos Traditional' },
+          { status: 400 }
+        )
+      }
+
+      const validCycles = ['MONTHLY', 'YEARLY']
+      if (!validCycles.includes(cycle)) {
+        return NextResponse.json(
+          { success: false, error: 'Cycle inválido. Use MONTHLY ou YEARLY' },
+          { status: 400 }
+        )
+      }
     }
 
     // Criar checkout

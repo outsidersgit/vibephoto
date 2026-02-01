@@ -2148,7 +2148,7 @@ export default function HomePage() {
                   key={plan.id}
                   className={`relative transition-all hover:shadow-lg cursor-pointer ${
                     plan.popular
-                      ? 'border-2 border-purple-500 bg-purple-50 shadow-md'
+                      ? 'border-2 border-purple-500 shadow-md'
                       : 'border-gray-300 bg-gray-200'
                   } ${isSelected ? 'ring-2 ring-gray-900 shadow-md' : ''}`}
                   onClick={() => setSelectedPlan(plan.id)}
