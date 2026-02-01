@@ -1606,11 +1606,11 @@ export default function HomePage() {
               {/* Desktop/Tablet Content */}
               <div className="hidden lg:block">
                 <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-medium text-white mb-6 leading-tight tracking-tight">
-                  Retratos que parecem <span className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">arte</span>.
+                  A Excelência da Fotografia de Estúdio, <span className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">Redefinida por IA</span>.
                 </h1>
 
                 <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-8 leading-relaxed font-light">
-                  Crie fotos profissionais, ensaios fotográficos e imagens únicas de Você mesmo com IA.
+                  Ensaios fotográficos profissionais em 30 minutos. Sem deslocamento, sem espera.
                 </p>
 
                 <div className="flex">
@@ -1633,11 +1633,11 @@ export default function HomePage() {
               {/* Mobile Content - Simplified at Top */}
               <div className="lg:hidden">
                 <h1 className="text-4xl sm:text-5xl font-medium text-white mb-4 leading-tight tracking-tight">
-                  Retratos que parecem <span className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">arte</span>.
+                  A Excelência da Fotografia de Estúdio, <span className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">Redefinida por IA</span>.
                 </h1>
 
                 <p className="text-lg text-gray-300 leading-relaxed font-light">
-                  Crie fotos profissionais com IA.
+                  Ensaios profissionais em 30 minutos. Sem deslocamento, sem espera.
                 </p>
               </div>
             </div>
@@ -2119,6 +2119,50 @@ export default function HomePage() {
       {!session && (
         <section className="py-20 px-6 bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
           <div className="max-w-6xl mx-auto">
+            {/* Âncora de Valor */}
+            <div className="max-w-4xl mx-auto mb-16 text-center">
+              <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200">
+                <div className="grid md:grid-cols-2 gap-8 items-center">
+                  <div className="text-left">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Ensaio Tradicional</h3>
+                    <p className="text-gray-600 mb-4">Processo convencional</p>
+                    <div className="space-y-3">
+                      <div className="flex items-start">
+                        <span className="text-red-500 mr-2">✕</span>
+                        <span className="text-gray-700">Custo: <strong>R$ 2.500+</strong></span>
+                      </div>
+                      <div className="flex items-start">
+                        <span className="text-red-500 mr-2">✕</span>
+                        <span className="text-gray-700">Tempo: <strong>7-15 dias</strong></span>
+                      </div>
+                      <div className="flex items-start">
+                        <span className="text-red-500 mr-2">✕</span>
+                        <span className="text-gray-700">Deslocamento necessário</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-left border-l-4 border-purple-600 pl-8">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">VibePhoto</h3>
+                    <p className="text-gray-600 mb-4">Fotografia de estúdio com IA</p>
+                    <div className="space-y-3">
+                      <div className="flex items-start">
+                        <span className="text-green-500 mr-2">✓</span>
+                        <span className="text-gray-700">A partir de <strong>R$ 997</strong></span>
+                      </div>
+                      <div className="flex items-start">
+                        <span className="text-green-500 mr-2">✓</span>
+                        <span className="text-gray-700">Pronto em <strong>30 minutos</strong></span>
+                      </div>
+                      <div className="flex items-start">
+                        <span className="text-green-500 mr-2">✓</span>
+                        <span className="text-gray-700">100% online</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="text-center mb-16">
               <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-12 tracking-tight">Planos</h2>
 
@@ -2283,7 +2327,7 @@ export default function HomePage() {
                         handlePlanSelect(plan.id)
                       }}
                     >
-                      Escolher Plano
+                      Começar Experiência
                     </Button>
                   </CardContent>
                 </Card>

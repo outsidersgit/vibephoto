@@ -478,7 +478,7 @@ function PricingPageContent() {
                     handlePlanSelect(plan.id)
                   }}
                 >
-                  Escolher Plano
+                  Começar Experiência
                 </Button>
               </CardContent>
             </Card>

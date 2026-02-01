@@ -665,9 +665,23 @@ function BillingPageContent() {
                     )}
 
                     <CardHeader className="text-left pb-6">
-                      <CardTitle className="text-3xl font-bold text-gray-900 mb-6" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>{plan.name}</CardTitle>
+                      <CardTitle className="mb-2" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                        {planFormat === 'MEMBERSHIP' ? (
+                          <div>
+                            <div className="text-3xl font-bold text-gray-900">{plan.billingCycle}</div>
+                            <div className="text-sm font-normal text-gray-500 mt-1">Membership</div>
+                          </div>
+                        ) : (
+                          <span className="text-3xl font-bold text-gray-900">{plan.name}</span>
+                        )}
+                      </CardTitle>
                       <div className="mb-6">
-                        {billingCycle === 'annual' ? (
+                        {planFormat === 'MEMBERSHIP' ? (
+                          // Format B (Membership) - Preço fixo do ciclo
+                          <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                            R$ {(plan as any).price}
+                          </div>
+                        ) : billingCycle === 'annual' ? (
                           <>
                             <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
                               R$ {plan.annualPrice}
