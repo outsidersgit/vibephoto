@@ -343,7 +343,11 @@ function PricingPageContent() {
             return (
             <Card
               key={plan.id}
-              className={`relative transition-all hover:shadow-lg border-gray-300 bg-gray-200 cursor-pointer ${
+              className={`relative transition-all hover:shadow-lg cursor-pointer ${
+                plan.popular
+                  ? 'border-2 border-purple-500 bg-purple-50 shadow-md'
+                  : 'border-gray-300 bg-gray-200'
+              } ${
                 isSelected ? 'ring-2 ring-gray-900 shadow-md' : ''
               }`}
               onClick={() => setSelectedPlan(plan.id)}
@@ -355,18 +359,13 @@ function PricingPageContent() {
               )}
 
               <CardHeader className="text-left pb-6">
-                <CardTitle className="text-3xl font-bold text-gray-900 mb-6" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>{plan.name}</CardTitle>
+                <CardTitle className={`${planFormat === 'MEMBERSHIP' ? 'text-2xl font-semibold text-gray-700' : 'text-3xl font-bold text-gray-900'} mb-6`} style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>{plan.name}</CardTitle>
                 <div className="mb-6">
                   {planFormat === 'MEMBERSHIP' ? (
-                    // Format B (Membership) - Preço fixo do ciclo
-                    <>
-                      <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-                        R$ {(plan as any).price}
-                      </div>
-                      <div className="text-sm text-gray-600 font-medium">
-                        R$ {plan.monthlyEquivalent}/mês
-                      </div>
-                    </>
+                    // Format B (Membership) - Preço fixo do ciclo (sem proporção mensal)
+                    <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                      R$ {(plan as any).price}
+                    </div>
                   ) : billingCycle === 'annual' ? (
                     // Format A (Traditional) - Ciclo Anual
                     <>
@@ -440,7 +439,7 @@ function PricingPageContent() {
 
                 <Button
                   className={`w-full py-3 transition-colors ${
-                    isSelected
+                    plan.popular || isSelected
                       ? 'bg-gray-900 hover:bg-gray-800 text-white'
                       : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                   }`}

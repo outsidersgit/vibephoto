@@ -33,11 +33,6 @@ const faqData: FAQItem[] = [
     question: 'Quantos modelos de IA posso criar?',
     answer: 'Cada assinatura dá direito à criação de 1 modelo de IA. Modelos adicionais podem ser criados ao custo de 500 créditos cada. A compra de pacotes de créditos serve como alternativa para gerar novos modelos quando os créditos do plano forem insuficientes.'
   },
-  {
-    category: 'geral',
-    question: 'Qual o melhor plano para iniciantes?',
-    answer: 'Para iniciantes, recomendamos o plano Premium (R$ 199/mês) que oferece 1500 créditos, 1 modelo de IA e processamento rápido.'
-  },
 
   // Funcionamento
   {
