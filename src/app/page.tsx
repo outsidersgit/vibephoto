@@ -2146,11 +2146,9 @@ export default function HomePage() {
                 return (
                 <Card
                   key={plan.id}
-                  className={`relative transition-all hover:shadow-lg cursor-pointer ${
-                    plan.popular
-                      ? 'border-2 border-purple-500 shadow-md'
-                      : 'border-gray-300 bg-gray-200'
-                  } ${isSelected ? 'ring-2 ring-gray-900 shadow-md' : ''}`}
+                  className={`relative transition-all hover:shadow-lg cursor-pointer border-gray-300 bg-gray-200 ${
+                    isSelected ? 'ring-2 ring-gray-900 shadow-md' : ''
+                  }`}
                   onClick={() => setSelectedPlan(plan.id)}
                 >
                   {plan.popular && (
@@ -2160,8 +2158,15 @@ export default function HomePage() {
                   )}
 
                   <CardHeader className="text-left pb-6">
-                    <CardTitle className={`${planFormat === 'MEMBERSHIP' ? 'text-2xl font-semibold text-gray-700' : 'text-3xl font-bold text-gray-900'} mb-6`}>
-                      {plan.name}
+                    <CardTitle className="mb-6">
+                      {planFormat === 'MEMBERSHIP' ? (
+                        <div>
+                          <span className="text-3xl font-bold text-gray-900">Membership</span>
+                          <span className="text-lg font-normal text-gray-500 ml-2">{plan.billingCycle}</span>
+                        </div>
+                      ) : (
+                        <span className="text-3xl font-bold text-gray-900">{plan.name}</span>
+                      )}
                     </CardTitle>
                     <div className="mb-6">
                       {planFormat === 'MEMBERSHIP' ? (

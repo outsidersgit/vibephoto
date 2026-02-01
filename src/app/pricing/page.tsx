@@ -343,11 +343,7 @@ function PricingPageContent() {
             return (
             <Card
               key={plan.id}
-              className={`relative transition-all hover:shadow-lg cursor-pointer ${
-                plan.popular
-                  ? 'border-2 border-purple-500 bg-purple-50 shadow-md'
-                  : 'border-gray-300 bg-gray-200'
-              } ${
+              className={`relative transition-all hover:shadow-lg cursor-pointer border-gray-300 bg-gray-200 ${
                 isSelected ? 'ring-2 ring-gray-900 shadow-md' : ''
               }`}
               onClick={() => setSelectedPlan(plan.id)}
@@ -359,7 +355,16 @@ function PricingPageContent() {
               )}
 
               <CardHeader className="text-left pb-6">
-                <CardTitle className={`${planFormat === 'MEMBERSHIP' ? 'text-2xl font-semibold text-gray-700' : 'text-3xl font-bold text-gray-900'} mb-6`} style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>{plan.name}</CardTitle>
+                <CardTitle className="mb-6" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                  {planFormat === 'MEMBERSHIP' ? (
+                    <div>
+                      <span className="text-3xl font-bold text-gray-900">Membership</span>
+                      <span className="text-lg font-normal text-gray-500 ml-2">{plan.billingCycle}</span>
+                    </div>
+                  ) : (
+                    <span className="text-3xl font-bold text-gray-900">{plan.name}</span>
+                  )}
+                </CardTitle>
                 <div className="mb-6">
                   {planFormat === 'MEMBERSHIP' ? (
                     // Format B (Membership) - Preço fixo do ciclo (sem proporção mensal)
