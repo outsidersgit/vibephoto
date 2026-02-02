@@ -577,7 +577,7 @@ function PricingPageContent() {
       <div className="mb-20 overflow-hidden relative group/carousel" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
         <div className="mb-12 px-6 max-w-7xl mx-auto">
           <h2 className="text-3xl font-bold text-gray-900 mb-4 text-left" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
-            Possibilidades infinitas da sua <span className="bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent">vibe</span>
+            Imagem não é detalhe, <span className="bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent">é estratégia</span>
           </h2>
         </div>
 
