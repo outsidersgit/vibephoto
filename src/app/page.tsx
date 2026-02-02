@@ -15,7 +15,7 @@ import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'fra
 import { WhatsAppFloatingButton } from '@/components/ui/whatsapp-button'
 
 // Cache busting global - atualiza todas as imagens
-const CACHE_VERSION = '20260201-1'
+const CACHE_VERSION = '20260202-1'
 
 interface CreditPackage {
   id: 'ESSENCIAL' | 'AVANÇADO' | 'PRO' | 'ENTERPRISE'
@@ -2059,7 +2059,7 @@ export default function HomePage() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-left border-l-4 border-gray-900 pl-8">
+                  <div className="text-left md:border-l-4 border-t-4 md:border-t-0 border-gray-900 md:pl-8 pt-6 md:pt-0">
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">VibePhoto</h3>
                     <p className="text-gray-600 mb-4">Fotografia de estúdio com IA</p>
                     <div className="space-y-3">
@@ -2312,6 +2312,7 @@ export default function HomePage() {
                 sizes="100vw"
                 quality={95}
                 className="object-cover group-hover:scale-105 transition-all duration-700 ease-out"
+                style={{ objectPosition: 'center 30%' }}
               />
 
               {/* Subtle Light Sweep */}

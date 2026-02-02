@@ -359,6 +359,50 @@ function PricingPageContent() {
 
         </div>
 
+        {/* Âncora de Valor - Comparison Card */}
+        <div className="max-w-4xl mx-auto mb-16">
+          <div className="bg-gray-100 rounded-xl p-6 md:p-10">
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div className="text-left">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Ensaio Tradicional</h3>
+                <p className="text-gray-600 mb-4">Processo convencional</p>
+                <div className="space-y-3">
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-2">✕</span>
+                    <span className="text-gray-700">Custo: <strong>R$ 2.500+</strong></span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-2">✕</span>
+                    <span className="text-gray-700">Tempo: <strong>7-15 dias</strong></span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="text-red-500 mr-2">✕</span>
+                    <span className="text-gray-700">Deslocamento necessário</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-left md:border-l-4 border-t-4 md:border-t-0 border-gray-900 md:pl-8 pt-6 md:pt-0">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">VibePhoto</h3>
+                <p className="text-gray-600 mb-4">Fotografia de estúdio com IA</p>
+                <div className="space-y-3">
+                  <div className="flex items-start">
+                    <span className="text-green-500 mr-2">✓</span>
+                    <span className="text-gray-700">A partir de <strong>R$ 997</strong></span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="text-green-500 mr-2">✓</span>
+                    <span className="text-gray-700">Pronto em <strong>30 minutos</strong></span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="text-green-500 mr-2">✓</span>
+                    <span className="text-gray-700">100% online</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Plans Grid - Sempre mostrar planos (do banco ou fallback) */}
         {!loadingPlans && plans.length > 0 && (
           <div className={`grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 mx-auto mb-8 ${plans.length === 4 ? 'md:grid-cols-4 max-w-7xl' : 'md:grid-cols-3 max-w-6xl'}`} style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
