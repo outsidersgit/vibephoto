@@ -817,18 +817,6 @@ const MarqueeCarousel = ({ items, hoveredIndex, onHoverChange, onImageClick }: M
                   />
 
                   {/* Prompt Overlay - Bottom - only show on hover */}
-                  <div
-                    className={`absolute bottom-0 left-0 right-0 p-6 text-white transition-all duration-300 ${
-                      isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                    }`}
-                  >
-                    <div className="text-sm font-medium tracking-wide uppercase text-gray-300 mb-3">
-                      PROMPT
-                    </div>
-                    <p className="text-sm leading-relaxed text-gray-100">
-                      {item.prompt}
-                    </p>
-                  </div>
                 </div>
               </div>
             </div>
@@ -2117,7 +2105,7 @@ export default function HomePage() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-left border-l-4 border-purple-600 pl-8">
+                  <div className="text-left border-l-4 border-gray-900 pl-8">
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">VibePhoto</h3>
                     <p className="text-gray-600 mb-4">Fotografia de estúdio com IA</p>
                     <div className="space-y-3">
