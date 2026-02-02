@@ -2310,7 +2310,7 @@ export default function HomePage() {
       {!session && (
         <section className="w-full">
           <div className="relative group w-full">
-            <div className="relative overflow-hidden w-full" style={{ aspectRatio: '2.5/1' }}>
+            <div className="relative overflow-hidden w-full" style={{ aspectRatio: '4096/2286' }}>
               <Image
                 src={`/examples/hero/hero-image.jpg?v=${CACHE_VERSION}`}
                 alt="Transforme suas fotos com IA - Exemplo profissional"
@@ -2318,7 +2318,7 @@ export default function HomePage() {
                 priority
                 sizes="100vw"
                 quality={95}
-                className="object-contain group-hover:scale-105 transition-all duration-700 ease-out"
+                className="object-cover group-hover:scale-105 transition-all duration-700 ease-out"
               />
 
               {/* Subtle Light Sweep */}
