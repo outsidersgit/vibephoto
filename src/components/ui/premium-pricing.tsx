@@ -33,7 +33,7 @@ export function PremiumPricing() {
         'Suporte por email',
         'Templates básicos'
       ],
-      ctaText: 'Começar Agora',
+      ctaText: 'Acessar Agora',
       ctaHref: '/auth/signup?plan=starter'
     },
     {

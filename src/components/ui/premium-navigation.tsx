@@ -343,7 +343,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                     asChild
                   >
                     <Link href="/auth/signup">
-                      Começar Agora
+                      Acessar Agora
                     </Link>
                   </Button>
                 </motion.div>
@@ -485,7 +485,7 @@ export function PremiumNavigation({ className }: PremiumNavigationProps) {
                     </Button>
                     <Button className="w-full bg-gray-900 hover:bg-gray-800" asChild>
                       <Link href="/auth/signup" onClick={() => setIsMobileMenuOpen(false)}>
-                        Começar Agora
+                        Acessar Agora
                       </Link>
                     </Button>
                   </div>

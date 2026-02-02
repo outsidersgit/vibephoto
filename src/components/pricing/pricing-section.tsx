@@ -127,7 +127,7 @@ export default function PricingSection() {
                   )
                 })}
                 <Button className="w-full mt-6" variant={plan.popular ? 'default' : 'outline'} asChild>
-                  <Link href="/auth/signup">Começar Agora</Link>
+                  <Link href="/auth/signup">Acessar Agora</Link>
                 </Button>
               </CardContent>
             </Card>

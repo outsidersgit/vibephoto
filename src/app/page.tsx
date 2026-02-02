@@ -1595,7 +1595,7 @@ export default function HomePage() {
                     size="sm"
                     className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:opacity-90 text-white px-4 py-2.5 text-sm font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
                   >
-                    Começe a criar agora
+                    Elevar minha imagem agora
                     <span>→</span>
                   </Button>
                 </form>
@@ -1666,7 +1666,7 @@ export default function HomePage() {
                     size="sm"
                     className="w-full bg-gradient-to-r from-[#667EEA] to-[#764BA2] hover:opacity-90 text-white px-4 py-2.5 text-sm font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
                   >
-                    Começe a criar agora →
+                    Elevar minha imagem agora →
                   </Button>
                 </form>
 
@@ -2032,7 +2032,7 @@ export default function HomePage() {
                 className="bg-white text-black hover:bg-gray-100 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-medium rounded-lg border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 min-w-[160px] sm:min-w-[180px]"
               >
                 <Link href="/auth/signup">
-                  Começar Agora
+                  Acessar Agora
                 </Link>
               </Button>
             </div>
@@ -2370,7 +2370,7 @@ export default function HomePage() {
                   size="lg"
                   className="bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:from-[#5a6fd8] hover:to-[#6a4190] text-white px-8 shadow-lg hover:shadow-xl transition-all duration-300"
                 >
-                  Começar
+                  Acessar
                 </Button>
               </form>
             </div>

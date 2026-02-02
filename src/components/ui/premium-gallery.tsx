@@ -165,7 +165,7 @@ export function PremiumGallery({ images, onImageClick }: PremiumGalleryProps) {
                       background="linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)"
                       shimmerColor="rgba(255,255,255,0.6)"
                     >
-                      Começar Agora
+                      Acessar Agora
                       <ArrowRight className="ml-2 w-5 h-5" />
                     </ShimmerButton>
                   </Link>
