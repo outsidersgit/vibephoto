@@ -57,8 +57,8 @@ const aiExamples = [
     image: "/examples/card-filosofia-imagem.jpg"
   },
   {
-    title: "Fitness & Lifestyle",
-    description: "Fotos motivacionais com energia e estilo.",
+    title: "Palestras e Keynotes",
+    description: "Autoridade visual para quem lidera ideias no palco.",
     image: "/examples/card-fitness-lifestyle.jpg"
   },
   {
@@ -361,7 +361,7 @@ function PricingPageContent() {
 
         {/* Âncora de Valor - Comparison Card */}
         <div className="max-w-4xl mx-auto mb-16">
-          <div className="bg-gray-100 rounded-xl p-6 md:p-10">
+          <div className="bg-gray-100 rounded-xl p-10">
             <div className="grid md:grid-cols-2 gap-8 items-center">
               <div className="text-left">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Ensaio Tradicional</h3>

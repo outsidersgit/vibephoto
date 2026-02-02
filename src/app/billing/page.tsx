@@ -221,8 +221,11 @@ function BillingPageContent() {
   }
 
   // Buscar plano atual - se não tiver, mostrar "Sem plano"
+  // Se o formato ativo é diferente do formato do usuário, buscar também no fallback (PLANS)
   const userPlan = (session.user as any)?.plan
-  const currentPlan = userPlan ? plans.find(plan => plan.id === userPlan) : null
+  const currentPlan = userPlan
+    ? (plans.find(plan => plan.id === userPlan) || PLANS.find(plan => plan.id === userPlan))
+    : null
 
   const handleSelectPackage = (packageId: string) => {
     setSelectedPackageId(packageId)
@@ -676,7 +679,12 @@ function BillingPageContent() {
                         )}
                       </CardTitle>
                       <div className="mb-6">
-                        {planFormat === 'MEMBERSHIP' ? (
+                        {plan.id === 'CUSTOM' ? (
+                          // Custom plan - Sob consulta
+                          <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
+                            Sob consulta
+                          </div>
+                        ) : planFormat === 'MEMBERSHIP' ? (
                           // Format B (Membership) - Preço fixo do ciclo
                           <div className="text-2xl font-bold text-gray-900 mb-1" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
                             R$ {(plan as any).price}
