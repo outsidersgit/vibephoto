@@ -14,6 +14,9 @@ import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'fra
 // WhatsApp Contact Button
 import { WhatsAppFloatingButton } from '@/components/ui/whatsapp-button'
 
+// Cache busting global - atualiza todas as imagens
+const CACHE_VERSION = '20260201-1'
+
 interface CreditPackage {
   id: 'ESSENCIAL' | 'AVANÇADO' | 'PRO' | 'ENTERPRISE'
   name: string
@@ -139,14 +142,14 @@ const carouselStyles = [
     id: 'executive',
     title: 'Executive Minimalist',
     description: 'Professional headshots with clean, sophisticated aesthetics',
-    image: '/examples/card-executive-minimalista.jpg',
+    image: `/examples/card-executive-minimalista.jpg?v=${CACHE_VERSION}`,
     prompt: 'Foto elegante de terno preto e camisa branca... Vista da cidade ao entardecer ao fundo.'
   },
   {
     id: 'art-odyssey',
     title: 'Art Odyssey',
     description: 'Dramatic fine art scenes with painterly depth',
-    image: '/examples/card-art-odyssey.jpg',
+    image: `/examples/card-art-odyssey.jpg?v=${CACHE_VERSION}`,
     prompt:
       'Obra-prima barroca estilo Caravaggio... Luz lateral dourada, composição triangular sacra e introspectiva.'
   },
@@ -154,28 +157,28 @@ const carouselStyles = [
     id: 'fitness',
     title: 'Fitness Aesthetic',
     description: 'Athletic portraits with dynamic energy and motivation',
-    image: '/examples/business-presentation.jpg',
+    image: `/examples/business-presentation.jpg?v=${CACHE_VERSION}`,
     prompt: 'Alongando à beira-mar em conjunto fitness branco... ao amanhecer.'
   },
   {
     id: 'luxury',
     title: 'Quiet Luxury',
     description: 'Elegant portraits with subtle luxury and refinement',
-    image: '/examples/professional-woman.jpg',
+    image: `/examples/professional-woman.jpg?v=${CACHE_VERSION}`,
     prompt: 'Mulher loira com suéter bege e lenço de seda da Hermès... Deck de madeira sobre o mar e tempo nublado.'
   },
   {
     id: 'mirror',
     title: 'Mirror Selfie',
     description: 'Authentic casual moments with trendy styling',
-    image: '/examples/mirror-selfie.jpg',
+    image: `/examples/mirror-selfie.jpg?v=${CACHE_VERSION}`,
     prompt: 'Tirando uma selfie no espelho... Elevador metálico com estética moderna.'
   },
   {
     id: 'ethereal-muse',
     title: 'Ethereal Muse',
     description: 'Surreal dreamscapes with luminous color palettes',
-    image: '/examples/card-ethereal-muse.jpg',
+    image: `/examples/card-ethereal-muse.jpg?v=${CACHE_VERSION}`,
     prompt:
       'Escultura helenística Laocoonte em 3D hiper-realista... Mármore translúcido com iluminação dramática lateral.'
   },
@@ -183,7 +186,7 @@ const carouselStyles = [
     id: 'wanderlust',
     title: 'Wanderlust',
     description: 'Adventure portraits in exotic, inspiring locations',
-    image: '/examples/desert-adventure.png',
+    image: `/examples/desert-adventure.png?v=${CACHE_VERSION}`,
     prompt:
       'Recrie a icônica fotografia "Afghan Girl" de Steve McCurry... Estilo: fotojornalismo National Geographic, textura de filme Kodachrome, realismo emocional.'
   },
@@ -191,14 +194,14 @@ const carouselStyles = [
     id: 'urban',
     title: 'Urban',
     description: 'Contemporary city life with street style edge',
-    image: '/examples/urban-style.jpg',
+    image: `/examples/urban-style.jpg?v=${CACHE_VERSION}`,
     prompt: 'Caminhando pela rua segurando um copo de café... Cabelos soltos e usando óculos escuros.'
   },
   {
     id: 'rebel',
     title: 'Rebel',
     description: 'Bold, edgy portraits with alternative fashion',
-    image: '/examples/rebel-style.jpg',
+    image: `/examples/rebel-style.jpg?v=${CACHE_VERSION}`,
     prompt: 'Jovem magro de camiseta cropped branca... Cenário urbano decadente com atitude desafiadora.'
   }
 ]
@@ -841,39 +844,36 @@ const AIToolsShowcase = () => {
   const [activeTab, setActiveTab] = useState<'skin' | 'editor' | 'video'>('skin')
   const [selectedExample, setSelectedExample] = useState(0)
 
-  // Cache busting - atualiza quando as imagens mudarem
-  const imageVersion = '20260124-1'
-
   const toolsData = {
     skin: {
       title: "Upscale de pele",
       description: "Textura de pele naturalizada e realista com IA",
       type: "comparison",
-      beforeImage: `/examples/tools/upscale-before.jpg?v=${imageVersion}`,
-      afterImage: `/examples/tools/upscale-after.jpg?v=${imageVersion}`,
+      beforeImage: `/examples/tools/upscale-before.jpg?v=${CACHE_VERSION}`,
+      afterImage: `/examples/tools/upscale-after.jpg?v=${CACHE_VERSION}`,
       examples: [
-        { thumb: `/examples/tools/upscale-thumb-1.jpg?v=${imageVersion}`, before: `/examples/tools/upscale-before.jpg?v=${imageVersion}`, after: `/examples/tools/upscale-after.jpg?v=${imageVersion}`, label: "Retrato" },
-        { thumb: `/examples/tools/upscale-thumb-2.jpg?v=${imageVersion}`, before: `/examples/tools/upscale-before-2.jpg?v=${imageVersion}`, after: `/examples/tools/upscale-after-2.jpg?v=${imageVersion}`, label: "Paisagem" }
+        { thumb: `/examples/tools/upscale-thumb-1.jpg?v=${CACHE_VERSION}`, before: `/examples/tools/upscale-before.jpg?v=${CACHE_VERSION}`, after: `/examples/tools/upscale-after.jpg?v=${CACHE_VERSION}`, label: "Retrato" },
+        { thumb: `/examples/tools/upscale-thumb-2.jpg?v=${CACHE_VERSION}`, before: `/examples/tools/upscale-before-2.jpg?v=${CACHE_VERSION}`, after: `/examples/tools/upscale-after-2.jpg?v=${CACHE_VERSION}`, label: "Paisagem" }
       ]
     },
     editor: {
       title: "Studio IA",
       description: "Modifique, adicione, remova e combine fotos como quiser,  liberdade criativa absoluta.",
       type: "sidebyside",
-      beforeImage: "/examples/tools/editor-after-1.jpg",
-      afterImage: "/examples/tools/editor-after-2.jpg",
+      beforeImage: `/examples/tools/editor-after-1.jpg?v=${CACHE_VERSION}`,
+      afterImage: `/examples/tools/editor-after-2.jpg?v=${CACHE_VERSION}`,
       examples: [
         {
-          thumb: "/examples/tools/editor-example-1.jpg",
-          before: "/examples/tools/editor-example-2.jpg",
-          after: "/examples/tools/editor-example-1.jpg",
+          thumb: `/examples/tools/editor-example-1.jpg?v=${CACHE_VERSION}`,
+          before: `/examples/tools/editor-example-2.jpg?v=${CACHE_VERSION}`,
+          after: `/examples/tools/editor-example-1.jpg?v=${CACHE_VERSION}`,
           label: "Exemplo 1",
           prompt: "Retire os óculos."
         },
         {
-          thumb: "/examples/tools/editor-example-2.jpg",
-          before: "/examples/tools/editor-example-2.jpg",
-          after: "/examples/tools/editor-example-1.jpg",
+          thumb: `/examples/tools/editor-example-2.jpg?v=${CACHE_VERSION}`,
+          before: `/examples/tools/editor-example-2.jpg?v=${CACHE_VERSION}`,
+          after: `/examples/tools/editor-example-1.jpg?v=${CACHE_VERSION}`,
           label: "Exemplo 2",
           prompt: "Coloque os óculos escuros e troque o terno por uma polo bege com golas levantadas."
         }
@@ -883,11 +883,11 @@ const AIToolsShowcase = () => {
       title: "Vídeos",
       description: "Sua Autoridade em Movimento: Presença dinâmica para sites e palestras.",
       type: "video",
-      videoSrc: "/examples/tools/video-optimized.mp4",
-      poster: "/examples/tools/video-poster.jpg",
+      videoSrc: `/examples/tools/video-optimized.mp4?v=${CACHE_VERSION}`,
+      poster: `/examples/tools/video-poster.jpg?v=${CACHE_VERSION}`,
       examples: [
-        { thumb: "/examples/tools/video-thumb-1.jpg", video: "/examples/tools/video-optimized.mp4", label: "Animação facial" },
-        { thumb: "/examples/tools/video-thumb-2.jpg", video: "/examples/tools/video-optimized.mp4", label: "Movimento de cabelo" }
+        { thumb: `/examples/tools/video-thumb-1.jpg?v=${CACHE_VERSION}`, video: `/examples/tools/video-optimized.mp4?v=${CACHE_VERSION}`, label: "Animação facial" },
+        { thumb: `/examples/tools/video-thumb-2.jpg?v=${CACHE_VERSION}`, video: `/examples/tools/video-optimized.mp4?v=${CACHE_VERSION}`, label: "Movimento de cabelo" }
       ]
     }
   }
@@ -2008,7 +2008,7 @@ export default function HomePage() {
                   {/* Original Photos */}
                   <div className="aspect-square rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 transform-gpu relative">
                     <Image
-                      src="/examples/transformation/before-1.jpg"
+                      src={`/examples/transformation/before-1.jpg?v=${CACHE_VERSION}`}
                       alt="Foto original"
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
@@ -2018,7 +2018,7 @@ export default function HomePage() {
 
                   <div className="aspect-square rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 transform-gpu relative">
                     <Image
-                      src="/examples/transformation/before-2.jpg"
+                      src={`/examples/transformation/before-2.jpg?v=${CACHE_VERSION}`}
                       alt="Foto original"
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
@@ -2028,7 +2028,7 @@ export default function HomePage() {
 
                   <div className="aspect-square rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 transform-gpu relative">
                     <Image
-                      src="/examples/transformation/before-3.jpg"
+                      src={`/examples/transformation/before-3.jpg?v=${CACHE_VERSION}`}
                       alt="Foto original"
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
@@ -2038,7 +2038,7 @@ export default function HomePage() {
 
                   <div className="aspect-square rounded-2xl overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 transform-gpu relative">
                     <Image
-                      src="/examples/transformation/before-4.jpg"
+                      src={`/examples/transformation/before-4.jpg?v=${CACHE_VERSION}`}
                       alt="Foto original"
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
@@ -2053,14 +2053,14 @@ export default function HomePage() {
                 <div className="relative group">
                   <div className="aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl hover:shadow-3xl hover:-translate-y-2 transition-all duration-500 transform-gpu bg-white relative">
                     <Image
-                      src="/examples/transformation/after-3.jpg"
+                      src={`/examples/transformation/after-3.jpg?v=${CACHE_VERSION}`}
                       alt="Resultado gerado por IA"
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1024px) 60vw, 600px"
                       quality={95}
                       className="object-cover group-hover:scale-105 transition-transform duration-700 cursor-pointer"
                       onClick={() => setSelectedImage({
-                        src: "/examples/transformation/after-3.jpg",
+                        src: `/examples/transformation/after-3.jpg?v=${CACHE_VERSION}`,
                         alt: "Resultado gerado por IA",
                         title: "Gerado por IA"
                       })}
@@ -2363,7 +2363,7 @@ export default function HomePage() {
           <div className="relative group">
             <div className="relative overflow-hidden" style={{ aspectRatio: '2.5/1' }}>
               <Image
-                src="/examples/hero/hero-image.jpg"
+                src={`/examples/hero/hero-image.jpg?v=${CACHE_VERSION}`}
                 alt="Transforme suas fotos com IA - Exemplo profissional"
                 fill
                 priority
