@@ -1038,13 +1038,6 @@ const AIToolsShowcase = () => {
                   e.currentTarget.src = '/examples/professional-woman.jpg'
                 }}
               />
-
-              {/* Prompt Overlay - Mobile optimized: smaller and more transparent */}
-              <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 bg-black bg-opacity-60 md:bg-opacity-80 text-white px-2 py-1.5 md:px-3 md:py-2 rounded-lg max-w-[calc(100%-1rem)] md:max-w-xs">
-                <p className="text-[10px] md:text-xs font-light leading-relaxed">
-                  "Coloque os óculos escuros e troque o terno por uma polo bege com golas levantadas."
-                </p>
-              </div>
             </div>
           )}
 
@@ -1062,12 +1055,6 @@ const AIToolsShowcase = () => {
                       e.currentTarget.src = '/examples/professional-woman.jpg'
                     }}
                   />
-                  {/* Prompt Overlay - Mobile optimized: smaller and more transparent */}
-                  <div className="absolute bottom-2 left-2 right-2 md:bottom-4 md:left-4 md:right-auto bg-black bg-opacity-60 md:bg-opacity-80 text-white px-2 py-1.5 md:px-3 md:py-2 rounded-lg max-w-[calc(100%-1rem)] md:max-w-xs">
-                    <p className="text-[10px] md:text-xs font-light leading-relaxed">
-                      Prompt: Coloque os óculos escuros e troque o terno por uma polo bege com gola alta.
-                    </p>
-                  </div>
                 </div>
                 <div className="w-0.5 bg-white shadow-lg"></div>
                 <div className="relative flex-1">
@@ -1080,11 +1067,6 @@ const AIToolsShowcase = () => {
                       e.currentTarget.src = '/examples/card-artisticas-conceituais.jpg'
                     }}
                   />
-                  <div className="absolute bottom-4 left-4 bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg max-w-xs">
-                    <p className="text-xs font-light leading-relaxed">
-                      Prompt: Retire os óculos.
-                    </p>
-                  </div>
                 </div>
               </div>
 
@@ -1962,9 +1944,10 @@ export default function HomePage() {
                       src={`/examples/transformation/before-1.jpg?v=${CACHE_VERSION}`}
                       alt="Foto original"
                       fill
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
-                      quality={90}
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 400px"
+                      quality={100}
                       className="object-cover hover:scale-105 transition-transform duration-500"
+                      priority
                     />
                   </div>
 
@@ -1973,9 +1956,10 @@ export default function HomePage() {
                       src={`/examples/transformation/before-2.jpg?v=${CACHE_VERSION}`}
                       alt="Foto original"
                       fill
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
-                      quality={90}
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 400px"
+                      quality={100}
                       className="object-cover hover:scale-105 transition-transform duration-500"
+                      priority
                     />
                   </div>
 
@@ -1984,9 +1968,10 @@ export default function HomePage() {
                       src={`/examples/transformation/before-3.jpg?v=${CACHE_VERSION}`}
                       alt="Foto original"
                       fill
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
-                      quality={90}
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 400px"
+                      quality={100}
                       className="object-cover hover:scale-105 transition-transform duration-500"
+                      priority
                     />
                   </div>
 
@@ -1995,9 +1980,10 @@ export default function HomePage() {
                       src={`/examples/transformation/before-4.jpg?v=${CACHE_VERSION}`}
                       alt="Foto original"
                       fill
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
-                      quality={90}
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 400px"
+                      quality={100}
                       className="object-cover hover:scale-105 transition-transform duration-500"
+                      priority
                     />
                   </div>
                 </div>
@@ -2011,9 +1997,10 @@ export default function HomePage() {
                       src={`/examples/transformation/after-3.jpg?v=${CACHE_VERSION}`}
                       alt="Resultado gerado por IA"
                       fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 60vw, 600px"
-                      quality={95}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 60vw, 800px"
+                      quality={100}
                       className="object-cover group-hover:scale-105 transition-transform duration-700 cursor-pointer"
+                      priority
                       onClick={() => setSelectedImage({
                         src: `/examples/transformation/after-3.jpg?v=${CACHE_VERSION}`,
                         alt: "Resultado gerado por IA",
