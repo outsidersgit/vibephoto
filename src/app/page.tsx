@@ -917,7 +917,7 @@ const AIToolsShowcase = () => {
 
               <div className="absolute inset-0">
                 <Image
-                  src={currentExample?.before || currentTool.beforeImage}
+                  src={currentTool.beforeImage}
                   alt="Antes"
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1920px"
@@ -932,7 +932,7 @@ const AIToolsShowcase = () => {
                   }}
                 >
                   <Image
-                    src={currentExample?.after || currentTool.afterImage}
+                    src={currentTool.afterImage}
                     alt="Depois"
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1920px"
@@ -1095,7 +1095,7 @@ const AIToolsShowcase = () => {
           {currentTool.type === 'video' && (
             <div className="aspect-video rounded-2xl overflow-hidden bg-black">
               <video
-                key={currentExample?.video || currentTool.videoSrc}
+                key={currentTool.videoSrc}
                 className="w-full h-full object-contain"
                 style={{ objectPosition: 'center' }}
                 controls
@@ -1105,7 +1105,7 @@ const AIToolsShowcase = () => {
                   e.currentTarget.poster = '/examples/professional-woman.jpg'
                 }}
               >
-                <source src={currentExample?.video || currentTool.videoSrc} type="video/mp4" />
+                <source src={currentTool.videoSrc} type="video/mp4" />
                 Seu navegador não suporta reprodução de vídeo.
               </video>
             </div>
