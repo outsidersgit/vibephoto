@@ -185,15 +185,7 @@ const carouselStyles = [
     description: 'Adventure portraits in exotic, inspiring locations',
     image: '/examples/desert-adventure.png',
     prompt:
-      'Recrie a icônica fotografia “Afghan Girl” de Steve McCurry... Estilo: fotojornalismo National Geographic, textura de filme Kodachrome, realismo emocional.'
-  },
-  {
-    id: 'future-drive',
-    title: 'Future Drive',
-    description: 'Automotive visions with neon cyberpunk atmospheres',
-    image: '/examples/card-future-drive.jpg',
-    prompt:
-      'Supercarro futurista em estúdio minimalista... Faróis LED neon e partículas de luz em alta velocidade.'
+      'Recrie a icônica fotografia "Afghan Girl" de Steve McCurry... Estilo: fotojornalismo National Geographic, textura de filme Kodachrome, realismo emocional.'
   },
   {
     id: 'urban',
@@ -208,22 +200,6 @@ const carouselStyles = [
     description: 'Bold, edgy portraits with alternative fashion',
     image: '/examples/rebel-style.jpg',
     prompt: 'Jovem magro de camiseta cropped branca... Cenário urbano decadente com atitude desafiadora.'
-  },
-  {
-    id: 'cosmic-pillars',
-    title: 'Pilares da Criação',
-    description: 'Aventuras cósmicas com detalhes astronômicos impressionantes',
-    image: '/examples/card-pilares-criacao.jpg',
-    prompt:
-      'Imagem em alta resolução dos Pilares da Criação, capturada pelo Telescópio Hubble... Estilo: realismo astrofotográfico NASA Hubble, escala cósmica, nitidez ultra-alta.'
-  },
-  {
-    id: 'casual',
-    title: 'Wild Gallop',
-    description: 'Epic motion portraits with untamed desert energy',
-    image: '/examples/neo-casual.jpg',
-    prompt:
-      'Um cavalo selvagem galopando pelo deserto dourado... com areia levantando e crina esvoaçante.'
   }
 ]
 
@@ -905,7 +881,7 @@ const AIToolsShowcase = () => {
     },
     video: {
       title: "Vídeos",
-      description: "Transforme fotos ou ideias em vídeos realistas com poucos cliques",
+      description: "Sua Autoridade em Movimento: Presença dinâmica para sites e palestras.",
       type: "video",
       videoSrc: "/examples/tools/video-optimized.mp4",
       poster: "/examples/tools/video-poster.jpg",
@@ -924,7 +900,7 @@ const AIToolsShowcase = () => {
       {/* Header */}
       <div className="max-w-4xl mx-auto mb-8">
         <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 tracking-tight">
-          Criatividade sem limites
+          Ferramentas de Nível Profissional
         </h2>
       </div>
 
@@ -2121,7 +2097,7 @@ export default function HomePage() {
           <div className="max-w-6xl mx-auto">
             {/* Âncora de Valor */}
             <div className="max-w-4xl mx-auto mb-16 text-center">
-              <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200">
+              <div className="bg-gray-100 rounded-xl p-10">
                 <div className="grid md:grid-cols-2 gap-8 items-center">
                   <div className="text-left">
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">Ensaio Tradicional</h3>
