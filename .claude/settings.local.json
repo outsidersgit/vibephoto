@@ -22,7 +22,8 @@
       "Bash(npx ts-node:*)",
       "Bash(set DATABASE_URL=\"postgresql://postgres.bdxfiwxdcarnygrzqnek:tangoMikeBravo9212!@aws-1-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require\")",
       "Bash(timeout 120 npx prisma db push --accept-data-loss)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []
