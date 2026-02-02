@@ -142,7 +142,7 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger }) {
       if (user) {
         token.role = (user.role || 'user').toUpperCase()
         token.plan = user.plan // Pode ser null - não usar fallback
