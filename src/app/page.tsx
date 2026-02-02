@@ -203,6 +203,13 @@ const carouselStyles = [
     description: 'Bold, edgy portraits with alternative fashion',
     image: `/examples/rebel-style.jpg?v=${CACHE_VERSION}`,
     prompt: 'Jovem magro de camiseta cropped branca... Cenário urbano decadente com atitude desafiadora.'
+  },
+  {
+    id: 'glamour',
+    title: 'Glamour',
+    description: 'High-fashion elegance with sophisticated styling',
+    image: `/examples/card-glamour.jpg?v=${CACHE_VERSION}`,
+    prompt: 'Retrato glamouroso com iluminação profissional e styling sofisticado.'
   }
 ]
 
@@ -2311,8 +2318,7 @@ export default function HomePage() {
                 priority
                 sizes="100vw"
                 quality={95}
-                className="object-cover group-hover:scale-105 transition-all duration-700 ease-out"
-                style={{ objectPosition: 'center 30%' }}
+                className="object-contain group-hover:scale-105 transition-all duration-700 ease-out"
               />
 
               {/* Subtle Light Sweep */}
