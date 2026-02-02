@@ -15,7 +15,7 @@ import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'fra
 import { WhatsAppFloatingButton } from '@/components/ui/whatsapp-button'
 
 // Cache busting global - atualiza todas as imagens
-const CACHE_VERSION = '20260202-1'
+const CACHE_VERSION = '20260202-2'
 
 interface CreditPackage {
   id: 'ESSENCIAL' | 'AVANÇADO' | 'PRO' | 'ENTERPRISE'
@@ -2308,9 +2308,9 @@ export default function HomePage() {
 
       {/* Hero Image Section */}
       {!session && (
-        <section className="bg-white">
-          <div className="relative group">
-            <div className="relative overflow-hidden" style={{ aspectRatio: '2.5/1' }}>
+        <section className="w-full">
+          <div className="relative group w-full">
+            <div className="relative overflow-hidden w-full" style={{ aspectRatio: '2.5/1' }}>
               <Image
                 src={`/examples/hero/hero-image.jpg?v=${CACHE_VERSION}`}
                 alt="Transforme suas fotos com IA - Exemplo profissional"
