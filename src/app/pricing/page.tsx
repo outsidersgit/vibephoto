@@ -387,11 +387,11 @@ function PricingPageContent() {
                 <div className="space-y-3">
                   <div className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
-                    <span className="text-gray-700">A partir de <strong>R$ 997</strong></span>
+                    <span className="text-gray-700">A partir de <strong>R$ 397</strong></span>
                   </div>
                   <div className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
-                    <span className="text-gray-700">Pronto em <strong>30 minutos</strong></span>
+                    <span className="text-gray-700">Pronto em <strong>20 minutos</strong></span>
                   </div>
                   <div className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
