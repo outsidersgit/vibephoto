@@ -846,26 +846,11 @@ const AIToolsShowcase = () => {
     },
     editor: {
       title: "Studio IA",
-      description: "Modifique, adicione, remova e combine fotos como quiser,  liberdade criativa absoluta.",
+      description: "Modifique, combine e refine suas fotos com precisão absoluta.\nAlfaiataria digital para resultados sob medida.",
       type: "sidebyside",
       beforeImage: `/examples/tools/editor-after-1.jpg?v=${CACHE_VERSION}`,
       afterImage: `/examples/tools/editor-after-2.jpg?v=${CACHE_VERSION}`,
-      examples: [
-        {
-          thumb: `/examples/tools/editor-example-1.jpg?v=${CACHE_VERSION}`,
-          before: `/examples/tools/editor-example-2.jpg?v=${CACHE_VERSION}`,
-          after: `/examples/tools/editor-example-1.jpg?v=${CACHE_VERSION}`,
-          label: "Exemplo 1",
-          prompt: "Retire os óculos."
-        },
-        {
-          thumb: `/examples/tools/editor-example-2.jpg?v=${CACHE_VERSION}`,
-          before: `/examples/tools/editor-example-2.jpg?v=${CACHE_VERSION}`,
-          after: `/examples/tools/editor-example-1.jpg?v=${CACHE_VERSION}`,
-          label: "Exemplo 2",
-          prompt: "Coloque os óculos escuros e troque o terno por uma polo bege com golas levantadas."
-        }
-      ]
+      examples: []
     },
     video: {
       title: "Vídeos",
@@ -881,7 +866,6 @@ const AIToolsShowcase = () => {
   }
 
   const currentTool = toolsData[activeTab]
-  const currentExample = currentTool.examples[selectedExample]
 
   return (
     <div className="space-y-8">
@@ -1128,33 +1112,12 @@ const AIToolsShowcase = () => {
           )}
         </div>
 
-        {/* Bottom Section: Thumbnails + Text */}
-        <div className="flex gap-6 items-start">
-          {/* Example Thumbnails - Only for Editor */}
-          {activeTab === 'editor' && (
-            <div className="flex gap-3">
-              {currentTool.examples.map((example, index) => (
-                <div
-                  key={index}
-                  className="relative aspect-square w-24 md:w-32 rounded-lg overflow-hidden shadow-md"
-                >
-                  <img
-                    src={example.thumb}
-                    alt={example.label}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = '/examples/professional-woman.jpg'
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
+        {/* Bottom Section: Text Only */}
+        <div className="flex justify-center">
           {/* Text Description */}
-          <div className="flex-1">
+          <div className="max-w-2xl">
             <div className="bg-white bg-opacity-90 backdrop-blur-sm rounded-lg p-6 shadow-lg">
-              <p className="text-gray-900 text-lg leading-relaxed font-medium tracking-wide">
+              <p className="text-gray-900 text-lg leading-relaxed font-medium tracking-wide whitespace-pre-line text-center">
                 {currentTool.description}
               </p>
             </div>
@@ -2000,6 +1963,7 @@ export default function HomePage() {
                       alt="Foto original"
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
+                      quality={90}
                       className="object-cover hover:scale-105 transition-transform duration-500"
                     />
                   </div>
@@ -2010,6 +1974,7 @@ export default function HomePage() {
                       alt="Foto original"
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
+                      quality={90}
                       className="object-cover hover:scale-105 transition-transform duration-500"
                     />
                   </div>
@@ -2020,6 +1985,7 @@ export default function HomePage() {
                       alt="Foto original"
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
+                      quality={90}
                       className="object-cover hover:scale-105 transition-transform duration-500"
                     />
                   </div>
@@ -2030,6 +1996,7 @@ export default function HomePage() {
                       alt="Foto original"
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 200px"
+                      quality={90}
                       className="object-cover hover:scale-105 transition-transform duration-500"
                     />
                   </div>
@@ -2372,7 +2339,7 @@ export default function HomePage() {
         <section className="py-16 px-6 bg-gray-50" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
           <div className="max-w-4xl mx-auto text-center">
             <p className="text-lg text-gray-600 mb-8">
-              Digite seu email para começar sua jornada com IA
+              Digite seu email para elevar sua imagem com IA
             </p>
             <div className="max-w-md mx-auto">
               <form 
