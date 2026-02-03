@@ -32,7 +32,7 @@ const aiExamples = [
     image: "/examples/card-instagram-redes-sociais.jpg"
   },
   {
-    title: "Campanhas Publicitárias",
+    title: "Campanhas Publicitárias & E-commerce",
     description: "Imagens comerciais que vendem por si só.",
     image: "/examples/card-fotos-profissionais.jpg"
   },
