@@ -14,72 +14,75 @@ import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { WhatsAppFloatingButton } from '@/components/ui/whatsapp-button'
 import { WHATSAPP_CONFIG } from '@/lib/config/whatsapp'
 
+// Cache busting global
+const CACHE_VERSION = '20260202-4'
+
 // Exemplos de uso da IA - Carrossel
 const aiExamples = [
   {
     title: "Obras Reinventadas",
     description: "Ícones visuais recriados com a força da IA.",
-    image: "/examples/card-obras-reinventadas.jpg"
+    image: `/examples/card-obras-reinventadas.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Banners & Criativos",
     description: "Criativos para anúncios e sites.",
-    image: "/examples/card-visual-cinematografico.jpg"
+    image: `/examples/card-visual-cinematografico.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Redes Sociais",
     description: "Conteúdo profissional para destacar seu feed.",
-    image: "/examples/card-instagram-redes-sociais.jpg"
+    image: `/examples/card-instagram-redes-sociais.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Campanhas Publicitárias & E-commerce",
     description: "Imagens comerciais que vendem por si só.",
-    image: "/examples/card-fotos-profissionais.jpg"
+    image: `/examples/card-fotos-profissionais.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Selfies de IA",
     description: "Você em qualquer cenário, pose ou estilo.",
-    image: "/examples/card-selfies-ia.jpg"
+    image: `/examples/card-selfies-ia.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Fotos de CEO",
     description: "Retratos executivos com presença e impacto.",
-    image: "/examples/card-fotos-ceo.jpg"
+    image: `/examples/card-fotos-ceo.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Marketing UGC",
-    description: "Conteúdo autêntico para anúncios e redes.vibephoto-preview-2026-02-03T17-10-35-542Z.jpeg",
-    image: "/examples/card-artisticas-conceituais.jpg"
+    description: "Conteúdo autêntico para anúncios e redes.",
+    image: `/examples/card-artisticas-conceituais.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Ambientes & Decoração",
     description: "Visual realista para projetos, inspiração e apresentação de espaços.",
-    image: "/examples/card-filosofia-imagem.jpg"
+    image: `/examples/card-filosofia-imagem.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Palestras e Keynotes",
     description: "Autoridade visual para quem lidera ideias no palco.",
-    image: "/examples/card-fitness-lifestyle.jpg"
+    image: `/examples/card-fitness-lifestyle.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Urbano & Street",
     description: "Autenticidade e atitude em cada clique.",
-    image: "/examples/card-urbano-street.jpg"
+    image: `/examples/card-urbano-street.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Nômade Digital",
     description: "Profissionalismo em qualquer lugar do mundo.",
-    image: "/examples/card-nomade-digital.jpg"
+    image: `/examples/card-nomade-digital.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Moda Virtual",
     description: "Experimente looks em você ou crie fotos comerciais sem precisar de ensaio.",
-    image: "/examples/card-moda.jpg"
+    image: `/examples/card-moda.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Influência sob Medida",
     description: "O influenciador que você imagina, pronto para ganhar vida.",
-    image: "/examples/card-influencer.jpg"
+    image: `/examples/card-influencer.jpg?v=${CACHE_VERSION}`
   }
 ]
 

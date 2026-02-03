@@ -15,7 +15,7 @@ import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'fra
 import { WhatsAppFloatingButton } from '@/components/ui/whatsapp-button'
 
 // Cache busting global - atualiza todas as imagens
-const CACHE_VERSION = '20260202-3'
+const CACHE_VERSION = '20260202-4'
 
 interface CreditPackage {
   id: 'ESSENCIAL' | 'AVANÇADO' | 'PRO' | 'ENTERPRISE'
