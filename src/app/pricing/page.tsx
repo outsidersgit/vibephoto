@@ -20,19 +20,14 @@ const CACHE_VERSION = '20260202-4'
 // Exemplos de uso da IA - Carrossel
 const aiExamples = [
   {
-    title: "Obras Reinventadas",
-    description: "Ícones visuais recriados com a força da IA.",
-    image: `/examples/card-obras-reinventadas.jpg?v=${CACHE_VERSION}`
+    title: "Redes Sociais",
+    description: "Conteúdo profissional para destacar seu feed.",
+    image: `/examples/card-instagram-redes-sociais.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Banners & Criativos",
     description: "Criativos para anúncios e sites.",
     image: `/examples/card-visual-cinematografico.jpg?v=${CACHE_VERSION}`
-  },
-  {
-    title: "Redes Sociais",
-    description: "Conteúdo profissional para destacar seu feed.",
-    image: `/examples/card-instagram-redes-sociais.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Campanhas Publicitárias & E-commerce",
