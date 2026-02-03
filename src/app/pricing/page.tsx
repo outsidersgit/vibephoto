@@ -22,8 +22,8 @@ const aiExamples = [
     image: "/examples/card-obras-reinventadas.jpg"
   },
   {
-    title: "Visual Cinematográfico",
-    description: "Crie cenas que parecem saídas de um filme.",
+    title: "Banners & Criativos",
+    description: "Criativos para anúncios e sites.",
     image: "/examples/card-visual-cinematografico.jpg"
   },
   {
@@ -47,13 +47,13 @@ const aiExamples = [
     image: "/examples/card-fotos-ceo.jpg"
   },
   {
-    title: "Artísticas & Conceituais",
-    description: "Exploração criativa sem limites.",
+    title: "Marketing UGC",
+    description: "Conteúdo autêntico para anúncios e redes.vibephoto-preview-2026-02-03T17-10-35-542Z.jpeg",
     image: "/examples/card-artisticas-conceituais.jpg"
   },
   {
-    title: "Filosofia em imagem",
-    description: "Ideias profundas ganham forma visual.",
+    title: "Ambientes & Decoração",
+    description: "Visual realista para projetos, inspiração e apresentação de espaços.",
     image: "/examples/card-filosofia-imagem.jpg"
   },
   {
