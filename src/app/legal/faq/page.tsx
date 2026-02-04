@@ -21,7 +21,7 @@ const faqData: FAQItem[] = [
   {
     category: 'geral',
     question: 'Como funciona o sistema de créditos?',
-    answer: 'Cada geração de foto consome créditos do seu plano. O plano Starter oferece 500 créditos/mês, o Premium 1500 créditos/mês e o Gold 3500 créditos/mês. Nos planos anuais, os créditos são multiplicados por 12 e disponibilizados de uma só vez, com validade de 1 ano. Nos planos mensais, os créditos são renovados a cada mês e não acumulam entre os períodos. Você também pode comprar pacotes de créditos avulsos, válidos por 1 ano.'
+    answer: 'Cada geração de foto consome créditos do seu plano.Ao contratar um plano, você recebe uma quantidade de créditos para usar durante o período contratado. Os créditos não acumulam para períodos seguintes e possuem validade. Créditos adquiridos por pacotes avulsos têm validade de 1 ano, independentemente do plano.'
   },
   {
     category: 'geral',
@@ -53,7 +53,7 @@ const faqData: FAQItem[] = [
   {
     category: 'funcionamento',
     question: 'Qual a qualidade das fotos geradas?',
-    answer: 'Todas as imagens são geradas na qualidade máxima disponível, independentemente do plano. Vale lembrar que a qualidade final depende das fotos de treinamento que você enviar.'
+    answer: 'As fotos são geradas em alta resolução (2K), independentemente do plano. Dependendo das opções escolhidas no Studio IA, é possível gerar imagens em resolução ainda maior, chegando a 4K. A qualidade final também está diretamente ligada às fotos de treinamento enviadas, por isso imagens bem iluminadas e sem filtros garantem melhores resultados.'
   },
   {
     category: 'funcionamento',
@@ -78,7 +78,7 @@ const faqData: FAQItem[] = [
   {
     category: 'funcionamento',
     question: 'O que são Pacotes de Fotos?',
-    answer: 'Pacotes de Fotos são coleções temáticas pré-configuradas. Você seleciona um pacote (ex: "Quiet luxury", "Summer vibes"), escolhe seu modelo de IA e gera automaticamente 20 fotos no mesmo estilo. Cada pacote tem seu próprio custo em créditos, variando entre 200-400 créditos dependendo da categoria e exclusividade das fotos geradas.'
+    answer: 'Pacotes de Fotos são coleções temáticas pré-configuradas. Você seleciona um pacote (ex: “Quiet Luxury”, “Summer Vibes”), escolhe seu modelo de IA e o sistema gera automaticamente um conjunto de fotos no mesmo estilo. Cada pacote possui quantidade de fotos e custo em créditos próprios, que variam conforme a categoria e o nível de exclusividade das imagens geradas.'
   },
 
   // Pagamento
