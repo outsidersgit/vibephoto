@@ -1526,7 +1526,7 @@ export default function HomePage() {
                 </h1>
 
                 <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-8 leading-relaxed font-light">
-                  Ensaios fotográficos profissionais em 30 minutos. Sem deslocamento, sem espera.
+                  Ensaios fotográficos profissionais em 20 minutos. Sem deslocamento, sem espera.
                 </p>
 
                 <div className="flex">
