@@ -55,13 +55,13 @@ const aiExamples = [
     image: `/examples/card-filosofia-imagem.jpg?v=${CACHE_VERSION}`
   },
   {
-    title: "Palestras e Keynotes",
+    title: "Palestras & Keynotes",
     description: "Autoridade visual para quem lidera ideias no palco.",
     image: `/examples/card-fitness-lifestyle.jpg?v=${CACHE_VERSION}`
   },
   {
-    title: "Urbano & Street",
-    description: "Autenticidade e atitude em cada clique.",
+    title: "Lifestyle Aesthetic",
+    description: "Imagem aspiracional para posicionamento pessoal e social.",
     image: `/examples/card-urbano-street.jpg?v=${CACHE_VERSION}`
   },
   {
