@@ -21,7 +21,7 @@ const faqData: FAQItem[] = [
   {
     category: 'geral',
     question: 'Como funciona o sistema de créditos?',
-    answer: 'Cada geração de foto consome créditos do seu plano.Ao contratar um plano, você recebe uma quantidade de créditos para usar durante o período contratado. Os créditos não acumulam para períodos seguintes e possuem validade. Créditos adquiridos por pacotes avulsos têm validade de 1 ano, independentemente do plano.'
+    answer: 'Cada geração de foto consome créditos do seu plano. Ao contratar um plano, você recebe uma quantidade de créditos para usar durante o período contratado. Os créditos não acumulam para períodos seguintes. Créditos adquiridos por pacotes avulsos têm validade de 1 ano, independentemente do plano.'
   },
   {
     category: 'geral',

@@ -363,12 +363,7 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo, onA
         <CardContent className="pt-3 pb-3">
           <div className="space-y-0.5 text-slate-300" style={{fontSize: '8px'}}>
             <p>• <strong>Não use fotos processadas</strong>. Use fotos naturais, sem edição ou filtros (fotos comuns de celular)</p>
-            <p>• <strong>Envie entre 8 e 15 fotos apenas</strong></p>
-            <p>• <strong>Aparência natural ou maquiagem mínima</strong> (maquiagem pesada pode causar aparência artificial no modelo)</p>
-            <p>• Boa iluminação e rosto bem visível</p>
-            <p>• <strong>SEM bonés, chapéus ou óculos escuros</strong></p>
-            <p>• <strong>Apenas UMA pessoa por foto</strong></p>
-            <p>• Evite caretas, olhos fechados ou baixa nitidez</p>
+            <p>• <strong>Não envie fotos com maquiagem, envie fotos com aparência natural</strong> (maquiagem pode causar aparência artificial no modelo)</p>
             <p>• O treinamento leva cerca de 10–20 minutos</p>
           </div>
         </CardContent>
