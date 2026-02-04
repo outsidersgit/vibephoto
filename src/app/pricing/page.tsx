@@ -722,7 +722,7 @@ function PricingPageContent() {
                 <strong className="text-gray-800">Cancelamento:</strong> Possível a qualquer momento em sua área de usuário. O cancelamento será efetivo no final do período atual, e você continuará tendo acesso até o vencimento.
               </p>
               <p>
-                <strong className="text-gray-800">Créditos:</strong> 10 créditos por foto. Pacotes de fotos e outras ferramentaspodem ter custos de créditos maiores. Assinaturas: créditos expiram no fim do período. Pacotes únicos: válidos por 1 ano. Créditos não são reembolsáveis.
+                <strong className="text-gray-800">Créditos:</strong> 10 créditos por foto. Pacotes de fotos e outras ferramentas podem ter custos de créditos maiores. Assinaturas: créditos expiram no fim do período. Pacotes únicos: válidos por 1 ano. Créditos não são reembolsáveis.
               </p>
             </div>
             <div className="mt-8 pt-6 border-t border-gray-100">
