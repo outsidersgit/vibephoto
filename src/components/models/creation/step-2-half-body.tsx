@@ -306,7 +306,11 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
     <div className="space-y-6">
       {/* Good and Bad Examples */}
       <Card className="bg-white border-gray-200">
-        <CardContent className="pt-6">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Fotos de Meio Corpo</CardTitle>
+          <CardDescription>Veja exemplos do que funciona e o que evitar</CardDescription>
+        </CardHeader>
+        <CardContent>
           <div className="grid grid-cols-2 gap-4">
             {/* Good Examples */}
             <div className="space-y-2">

@@ -1553,7 +1553,7 @@ export default function HomePage() {
                 </h1>
 
                 <p className="text-lg text-gray-300 leading-relaxed font-light">
-                  Ensaios profissionais em 30 minutos. Sem deslocamento, sem espera.
+                  Ensaios profissionais em 20 minutos. Sem deslocamento, sem espera.
                 </p>
               </div>
             </div>
