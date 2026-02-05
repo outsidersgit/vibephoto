@@ -304,6 +304,161 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
 
   return (
     <div className="space-y-6">
+      {/* Good and Bad Examples */}
+      <Card className="bg-white border-gray-200">
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Good Examples */}
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                </div>
+                <h3 className="font-semibold text-sm text-gray-900">Bons Exemplos</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
+                  <img
+                    src="/images/examples/step-2-half-body/good-1.jpg?v=2"
+                    alt="Bom exemplo 1"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%2310b981" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✓%3C/text%3E%3C/svg%3E'
+                    }}
+                  />
+                </div>
+                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
+                  <img
+                    src="/images/examples/step-2-half-body/good-2.jpg?v=2"
+                    alt="Bom exemplo 2"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%2310b981" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✓%3C/text%3E%3C/svg%3E'
+                    }}
+                  />
+                </div>
+                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
+                  <img
+                    src="/images/examples/step-2-half-body/good-3.jpg?v=2"
+                    alt="Bom exemplo 3"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%2310b981" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✓%3C/text%3E%3C/svg%3E'
+                    }}
+                  />
+                </div>
+                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
+                  <img
+                    src="/images/examples/step-2-half-body/good-4.jpg?v=2"
+                    alt="Bom exemplo 4"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%2310b981" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✓%3C/text%3E%3C/svg%3E'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Good Examples Guidelines */}
+              <div className="mt-3 space-y-1.5">
+                <div className="flex items-start space-x-2">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-700">Cintura para cima bem enquadrada</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-700">Postura natural e relaxada</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-700">Roupas variadas em diferentes fotos</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-700">Fundos diversos (interno, externo)</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-700">Iluminação adequada no corpo e rosto</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bad Examples */}
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertCircle className="w-4 h-4 text-red-600" />
+                </div>
+                <h3 className="font-semibold text-sm text-gray-900">Maus Exemplos</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
+                  <img
+                    src="/images/examples/step-2-half-body/bad-1.jpg?v=2"
+                    alt="Mau exemplo 1"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ef4444" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✕%3C/text%3E%3C/svg%3E'
+                    }}
+                  />
+                </div>
+                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
+                  <img
+                    src="/images/examples/step-2-half-body/bad-2.jpg?v=2"
+                    alt="Mau exemplo 2"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ef4444" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✕%3C/text%3E%3C/svg%3E'
+                    }}
+                  />
+                </div>
+                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
+                  <img
+                    src="/images/examples/step-2-half-body/bad-3.jpg?v=2"
+                    alt="Mau exemplo 3"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ef4444" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✕%3C/text%3E%3C/svg%3E'
+                    }}
+                  />
+                </div>
+                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
+                  <img
+                    src="/images/examples/step-2-half-body/bad-4.jpg?v=2"
+                    alt="Mau exemplo 4"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ef4444" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✕%3C/text%3E%3C/svg%3E'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Bad Examples Guidelines */}
+              <div className="mt-3 space-y-1.5">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-700">Postura forçada ou não natural</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-700">Outras pessoas visíveis</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-700">Filtros ou edições pesadas</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-gray-700">Imagens geradas por IA</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Half Body Photos Upload */}
       <Card>
         <CardHeader>
@@ -569,161 +724,6 @@ export function ModelCreationStep2HalfBody({ modelData, setModelData, onNextStep
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       </div>
-
-      {/* Good and Bad Examples */}
-      <Card className="bg-white border-gray-200">
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-2 gap-4">
-            {/* Good Examples */}
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2 mb-3">
-                <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                </div>
-                <h3 className="font-semibold text-sm text-gray-900">Bons Exemplos</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
-                  <img
-                    src="/images/examples/step-2-half-body/good-1.jpg?v=2"
-                    alt="Bom exemplo 1"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%2310b981" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✓%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
-                  <img
-                    src="/images/examples/step-2-half-body/good-2.jpg?v=2"
-                    alt="Bom exemplo 2"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%2310b981" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✓%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
-                  <img
-                    src="/images/examples/step-2-half-body/good-3.jpg?v=2"
-                    alt="Bom exemplo 3"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%2310b981" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✓%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-green-200">
-                  <img
-                    src="/images/examples/step-2-half-body/good-4.jpg?v=2"
-                    alt="Bom exemplo 4"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%2310b981" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✓%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Good Examples Guidelines */}
-              <div className="mt-3 space-y-1.5">
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Cintura para cima bem enquadrada</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Postura natural e relaxada</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Roupas variadas em diferentes fotos</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Fundos diversos (interno, externo)</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Iluminação adequada no corpo e rosto</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Bad Examples */}
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2 mb-3">
-                <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
-                  <AlertCircle className="w-4 h-4 text-red-600" />
-                </div>
-                <h3 className="font-semibold text-sm text-gray-900">Maus Exemplos</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
-                  <img
-                    src="/images/examples/step-2-half-body/bad-1.jpg?v=2"
-                    alt="Mau exemplo 1"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ef4444" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✕%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
-                  <img
-                    src="/images/examples/step-2-half-body/bad-2.jpg?v=2"
-                    alt="Mau exemplo 2"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ef4444" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✕%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
-                  <img
-                    src="/images/examples/step-2-half-body/bad-3.jpg?v=2"
-                    alt="Mau exemplo 3"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ef4444" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✕%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 border-2 border-red-200">
-                  <img
-                    src="/images/examples/step-2-half-body/bad-4.jpg?v=2"
-                    alt="Mau exemplo 4"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ef4444" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="white" font-size="14"%3E✕%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Bad Examples Guidelines */}
-              <div className="mt-3 space-y-1.5">
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Postura forçada ou não natural</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Outras pessoas visíveis</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Filtros ou edições pesadas</p>
-                </div>
-                <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-700">Imagens geradas por IA</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
     </div>
   )

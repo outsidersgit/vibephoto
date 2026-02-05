@@ -18,6 +18,7 @@ import { WHATSAPP_CONFIG } from '@/lib/config/whatsapp'
 const CACHE_VERSION = '20260202-5'
 
 // Exemplos de uso da IA - Carrossel
+// Ordem estratégica: impacto visual → identificação → autoridade → versatilidade → nichos
 const aiExamples = [
   {
     title: "Redes Sociais",
@@ -25,19 +26,14 @@ const aiExamples = [
     image: `/examples/card-instagram-redes-sociais.jpg?v=${CACHE_VERSION}`
   },
   {
-    title: "Banners & Criativos",
-    description: "Criativos para anúncios e sites.",
-    image: `/examples/card-visual-cinematografico.jpg?v=${CACHE_VERSION}`
-  },
-  {
-    title: "Campanhas Publicitárias & E-commerce",
-    description: "Imagens comerciais que vendem por si só.",
-    image: `/examples/card-fotos-profissionais.jpg?v=${CACHE_VERSION}`
-  },
-  {
     title: "Selfies de IA",
     description: "Você em qualquer cenário, pose ou estilo.",
     image: `/examples/card-selfies-ia.jpg?v=${CACHE_VERSION}`
+  },
+  {
+    title: "Influência sob Medida",
+    description: "O influenciador que você imagina, pronto para ganhar vida.",
+    image: `/examples/card-influencer.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Fotos de CEO",
@@ -45,19 +41,29 @@ const aiExamples = [
     image: `/examples/card-fotos-ceo.jpg?v=${CACHE_VERSION}`
   },
   {
+    title: "Campanhas Publicitárias & E-commerce",
+    description: "Imagens comerciais que vendem por si só.",
+    image: `/examples/card-fotos-profissionais.jpg?v=${CACHE_VERSION}`
+  },
+  {
     title: "Marketing UGC",
     description: "Conteúdo autêntico para anúncios e redes.",
     image: `/examples/card-artisticas-conceituais.jpg?v=${CACHE_VERSION}`
   },
   {
-    title: "Ambientes & Decoração",
-    description: "Visual realista para projetos, inspiração e apresentação de espaços.",
-    image: `/examples/card-filosofia-imagem.jpg?v=${CACHE_VERSION}`
+    title: "Moda Virtual",
+    description: "Experimente looks em você ou crie fotos comerciais sem precisar de ensaio.",
+    image: `/examples/card-moda.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Palestras & Keynotes",
     description: "Autoridade visual para quem lidera ideias no palco.",
     image: `/examples/card-fitness-lifestyle.jpg?v=${CACHE_VERSION}`
+  },
+  {
+    title: "Banners & Criativos",
+    description: "Criativos para anúncios e sites.",
+    image: `/examples/card-visual-cinematografico.jpg?v=${CACHE_VERSION}`
   },
   {
     title: "Lifestyle Aesthetic",
@@ -70,14 +76,9 @@ const aiExamples = [
     image: `/examples/card-nomade-digital.jpg?v=${CACHE_VERSION}`
   },
   {
-    title: "Moda Virtual",
-    description: "Experimente looks em você ou crie fotos comerciais sem precisar de ensaio.",
-    image: `/examples/card-moda.jpg?v=${CACHE_VERSION}`
-  },
-  {
-    title: "Influência sob Medida",
-    description: "O influenciador que você imagina, pronto para ganhar vida.",
-    image: `/examples/card-influencer.jpg?v=${CACHE_VERSION}`
+    title: "Ambientes & Decoração",
+    description: "Visual realista para projetos, inspiração e apresentação de espaços.",
+    image: `/examples/card-filosofia-imagem.jpg?v=${CACHE_VERSION}`
   }
 ]
 
@@ -358,42 +359,42 @@ function PricingPageContent() {
         </div>
 
         {/* Âncora de Valor - Comparison Card */}
-        <div className="max-w-4xl mx-auto mb-16">
-          <div className="bg-gray-100 rounded-xl p-10">
-            <div className="grid md:grid-cols-2 gap-8 items-center">
+        <div className="max-w-2xl mx-auto mb-16">
+          <div className="bg-gray-100 rounded-xl p-6">
+            <div className="grid md:grid-cols-2 gap-6 items-center">
               <div className="text-left">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Ensaio Tradicional</h3>
-                <p className="text-gray-600 mb-4">Processo convencional</p>
-                <div className="space-y-3">
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-2">✕</span>
-                    <span className="text-gray-700">Custo: <strong>R$ 2.500+</strong></span>
+                <h3 className="text-base font-bold text-gray-900 mb-1">Ensaio Tradicional</h3>
+                <p className="text-gray-500 text-xs mb-3">Processo convencional</p>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <span className="text-red-500 mr-2 text-sm">✕</span>
+                    <span className="text-gray-700 text-sm">Custo: <strong>R$ 2.500+</strong></span>
                   </div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-2">✕</span>
-                    <span className="text-gray-700">Tempo: <strong>7-15 dias</strong></span>
+                  <div className="flex items-center">
+                    <span className="text-red-500 mr-2 text-sm">✕</span>
+                    <span className="text-gray-700 text-sm">Tempo: <strong>7-15 dias</strong></span>
                   </div>
-                  <div className="flex items-start">
-                    <span className="text-red-500 mr-2">✕</span>
-                    <span className="text-gray-700">Deslocamento necessário</span>
+                  <div className="flex items-center">
+                    <span className="text-red-500 mr-2 text-sm">✕</span>
+                    <span className="text-gray-700 text-sm">Deslocamento necessário</span>
                   </div>
                 </div>
               </div>
-              <div className="text-left md:border-l-4 border-t-4 md:border-t-0 border-gray-900 md:pl-8 pt-6 md:pt-0">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">VibePhoto</h3>
-                <p className="text-gray-600 mb-4">Fotografia de estúdio com IA</p>
-                <div className="space-y-3">
-                  <div className="flex items-start">
-                    <span className="text-green-500 mr-2">✓</span>
-                    <span className="text-gray-700">A partir de <strong>R$ 397</strong></span>
+              <div className="text-left md:border-l-4 border-t-4 md:border-t-0 border-gray-900 md:pl-6 pt-4 md:pt-0">
+                <h3 className="text-base font-bold text-gray-900 mb-1">VibePhoto</h3>
+                <p className="text-gray-500 text-xs mb-3">Fotografia de estúdio com IA</p>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <span className="text-green-500 mr-2 text-sm">✓</span>
+                    <span className="text-gray-700 text-sm">A partir de <strong>R$ 397</strong></span>
                   </div>
-                  <div className="flex items-start">
-                    <span className="text-green-500 mr-2">✓</span>
-                    <span className="text-gray-700">Pronto em <strong>20 minutos</strong></span>
+                  <div className="flex items-center">
+                    <span className="text-green-500 mr-2 text-sm">✓</span>
+                    <span className="text-gray-700 text-sm">Pronto em <strong>20 minutos</strong></span>
                   </div>
-                  <div className="flex items-start">
-                    <span className="text-green-500 mr-2">✓</span>
-                    <span className="text-gray-700">100% online</span>
+                  <div className="flex items-center">
+                    <span className="text-green-500 mr-2 text-sm">✓</span>
+                    <span className="text-gray-700 text-sm">100% online</span>
                   </div>
                 </div>
               </div>
