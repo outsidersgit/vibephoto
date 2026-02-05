@@ -308,7 +308,7 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
       {/* Good and Bad Examples */}
       <Card className="bg-white border-gray-200">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Fotos de Corpo Inteiro</CardTitle>
+          <CardTitle className="text-lg font-semibold">Fotos de Corpo Inteiro</CardTitle>
           <CardDescription>Veja exemplos do que funciona e o que evitar</CardDescription>
         </CardHeader>
         <CardContent>
@@ -473,7 +473,6 @@ export function ModelCreationStep3FullBody({ modelData, setModelData, onNextStep
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
-              Fotos de Corpo Inteiro
               {isAnalyzing && <Loader2 className="w-4 h-4 animate-spin text-purple-600" />}
             </span>
             <Badge variant={modelData.fullBodyPhotos.length >= 2 ? 'default' : 'secondary'}>

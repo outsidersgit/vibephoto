@@ -362,9 +362,9 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo, onA
       <Card className="bg-gradient-to-br from-[#1e293b] via-[#334155] to-[#475569] border border-slate-600/30 shadow-2xl">
         <CardContent className="pt-3 pb-3">
           <div className="space-y-0.5 text-slate-300" style={{fontSize: '8px'}}>
-            <p>• <strong>Não use fotos processadas</strong>. Use fotos naturais, sem edição ou filtros (fotos comuns de celular)</p>
-            <p>• <strong>Não envie fotos com maquiagem, envie fotos com aparência natural</strong> (maquiagem pode causar aparência artificial no modelo)</p>
-            <p>• O treinamento leva cerca de 10–20 minutos</p>
+            <p>• Use <strong>apenas fotos naturais</strong>, sem filtros, edições ou retoques.</p>
+            <p>• <strong>Evite maquiagem</strong>: aparência natural garante resultados mais realistas.</p>
+            <p>• O treinamento leva cerca de <strong>10–20 minutos.</strong></p>
           </div>
         </CardContent>
       </Card>
@@ -421,7 +421,7 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo, onA
       {/* Good and Bad Examples */}
       <Card className="bg-white border-gray-200">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Fotos do Rosto</CardTitle>
+          <CardTitle className="text-lg font-semibold">Fotos do Rosto</CardTitle>
           <CardDescription>Veja exemplos do que funciona e o que evitar</CardDescription>
         </CardHeader>
         <CardContent>
@@ -590,7 +590,6 @@ export function ModelCreationStep1({ modelData, setModelData, modelCostInfo, onA
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
-              Fotos do Rosto
               {isAnalyzing && <Loader2 className="w-4 h-4 animate-spin text-purple-600" />}
             </span>
             <Badge variant={modelData.facePhotos.length >= 4 ? 'default' : 'secondary'}>
