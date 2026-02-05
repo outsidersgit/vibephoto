@@ -15,7 +15,7 @@ import { WhatsAppFloatingButton } from '@/components/ui/whatsapp-button'
 import { WHATSAPP_CONFIG } from '@/lib/config/whatsapp'
 
 // Cache busting global
-const CACHE_VERSION = '20260202-4'
+const CACHE_VERSION = '20260202-5'
 
 // Exemplos de uso da IA - Carrossel
 const aiExamples = [
