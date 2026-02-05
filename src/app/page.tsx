@@ -15,7 +15,7 @@ import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'fra
 import { WhatsAppFloatingButton } from '@/components/ui/whatsapp-button'
 
 // Cache busting global - atualiza todas as imagens
-const CACHE_VERSION = '20260202-5'
+const CACHE_VERSION = '20260204-1'
 
 interface CreditPackage {
   id: 'ESSENCIAL' | 'AVANÇADO' | 'PRO' | 'ENTERPRISE'
@@ -1037,12 +1037,12 @@ const AIToolsShowcase = () => {
           {currentTool.type === 'single' && (
             <div className="aspect-video rounded-2xl overflow-hidden bg-gray-200 relative">
               <img
-                src="/examples/tools/editor-after.jpg"
+                src={`/examples/tools/editor-after.jpg?v=${CACHE_VERSION}`}
                 alt="Resultado editado"
                 className="w-full h-full object-cover"
                 style={{ objectPosition: 'center top' }}
                 onError={(e) => {
-                  e.currentTarget.src = '/examples/professional-woman.jpg'
+                  e.currentTarget.src = `/examples/professional-woman.jpg?v=${CACHE_VERSION}`
                 }}
               />
             </div>
@@ -1059,7 +1059,7 @@ const AIToolsShowcase = () => {
                     className="w-full h-full object-cover"
                     style={{ objectPosition: 'center top' }}
                     onError={(e) => {
-                      e.currentTarget.src = '/examples/professional-woman.jpg'
+                      e.currentTarget.src = `/examples/professional-woman.jpg?v=${CACHE_VERSION}`
                     }}
                   />
                 </div>
@@ -1071,7 +1071,7 @@ const AIToolsShowcase = () => {
                     className="w-full h-full object-cover"
                     style={{ objectPosition: 'center top' }}
                     onError={(e) => {
-                      e.currentTarget.src = '/examples/card-artisticas-conceituais.jpg'
+                      e.currentTarget.src = `/examples/card-artisticas-conceituais.jpg?v=${CACHE_VERSION}`
                     }}
                   />
                 </div>
@@ -1091,7 +1091,7 @@ const AIToolsShowcase = () => {
                 poster={currentTool.poster}
                 preload="metadata"
                 onError={(e) => {
-                  e.currentTarget.poster = '/examples/professional-woman.jpg'
+                  e.currentTarget.poster = `/examples/professional-woman.jpg?v=${CACHE_VERSION}`
                 }}
               >
                 <source src={currentTool.videoSrc} type="video/mp4" />
@@ -2432,11 +2432,11 @@ export default function HomePage() {
                   <div className="relative aspect-video max-w-4xl mx-auto rounded-xl overflow-hidden shadow-xl bg-gray-200 group/modal-slider">
                     <div className="absolute inset-0">
                       <img
-                        src="/examples/tools/upscale-before.jpg"
+                        src={`/examples/tools/upscale-before.jpg?v=${CACHE_VERSION}`}
                         alt="Antes do upscale"
                         className="absolute inset-0 w-full h-full object-cover object-center"
                         onError={(e) => {
-                          e.currentTarget.src = '/examples/professional-woman.jpg';
+                          e.currentTarget.src = `/examples/professional-woman.jpg?v=${CACHE_VERSION}`;
                         }}
                       />
                       <div
@@ -2446,11 +2446,11 @@ export default function HomePage() {
                         }}
                       >
                         <img
-                          src="/examples/tools/upscale-after.jpg"
+                          src={`/examples/tools/upscale-after.jpg?v=${CACHE_VERSION}`}
                           alt="Depois do upscale"
                           className="w-full h-full object-cover object-center"
                           onError={(e) => {
-                            e.currentTarget.src = '/examples/card-fotos-profissionais.jpg';
+                            e.currentTarget.src = `/examples/card-fotos-profissionais.jpg?v=${CACHE_VERSION}`;
                           }}
                         />
                       </div>
@@ -2568,11 +2568,11 @@ export default function HomePage() {
                     <div className="flex h-full">
                       <div className="relative flex-1">
                         <img
-                          src="/examples/tools/editor-before.jpg"
+                          src={`/examples/tools/editor-before.jpg?v=${CACHE_VERSION}`}
                           alt="Antes da edição IA"
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            e.currentTarget.src = '/examples/professional-woman.jpg';
+                            e.currentTarget.src = `/examples/professional-woman.jpg?v=${CACHE_VERSION}`;
                           }}
                         />
                         <div className="absolute top-6 left-6 bg-black bg-opacity-70 text-white px-4 py-2 rounded-lg text-base font-medium">
@@ -2582,11 +2582,11 @@ export default function HomePage() {
                       <div className="w-1 bg-white shadow-lg"></div>
                       <div className="relative flex-1">
                         <img
-                          src="/examples/tools/editor-after.jpg"
+                          src={`/examples/tools/editor-after.jpg?v=${CACHE_VERSION}`}
                           alt="Depois da edição IA"
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            e.currentTarget.src = '/examples/card-artisticas-conceituais.jpg';
+                            e.currentTarget.src = `/examples/card-artisticas-conceituais.jpg?v=${CACHE_VERSION}`;
                           }}
                         />
                         <div className="absolute top-6 right-6 bg-black bg-opacity-70 text-white px-4 py-2 rounded-lg text-base font-medium">
@@ -2621,16 +2621,16 @@ export default function HomePage() {
                       muted
                       playsInline
                       controls
-                      poster="/examples/tools/video-poster.jpg"
+                      poster={`/examples/tools/video-poster.jpg?v=${CACHE_VERSION}`}
                       preload="auto"
                       onLoadStart={() => console.log('🎬 Video loading started')}
                       onCanPlay={() => console.log('✅ Video can play')}
                       onError={(e) => {
                         console.error('❌ Video error:', e);
-                        e.currentTarget.poster = '/examples/professional-woman.jpg';
+                        e.currentTarget.poster = `/examples/professional-woman.jpg?v=${CACHE_VERSION}`;
                       }}
                     >
-                      <source src="/examples/tools/video-optimized.mp4" type="video/mp4" />
+                      <source src={`/examples/tools/video-optimized.mp4?v=${CACHE_VERSION}`} type="video/mp4" />
                       Seu navegador não suporta reprodução de vídeo.
                     </video>
                   </div>

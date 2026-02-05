@@ -15,7 +15,7 @@ import { WhatsAppFloatingButton } from '@/components/ui/whatsapp-button'
 import { WHATSAPP_CONFIG } from '@/lib/config/whatsapp'
 
 // Cache busting global
-const CACHE_VERSION = '20260202-5'
+const CACHE_VERSION = '20260204-1'
 
 // Exemplos de uso da IA - Carrossel
 // Ordem estratégica: impacto visual → identificação → autoridade → versatilidade → nichos
