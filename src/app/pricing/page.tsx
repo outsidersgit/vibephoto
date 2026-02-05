@@ -359,7 +359,7 @@ function PricingPageContent() {
         </div>
 
         {/* Âncora de Valor - Comparison Card */}
-        <div className="max-w-2xl mx-auto mb-16">
+        <div className="max-w-2xl mx-auto mb-16" style={{fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif'}}>
           <div className="bg-gray-100 rounded-xl p-6">
             <div className="grid md:grid-cols-2 gap-6 items-center">
               <div className="text-left">
